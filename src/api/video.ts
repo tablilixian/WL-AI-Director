@@ -2,13 +2,15 @@ import { supabase } from './supabase'
 
 const VERCEL_FUNCTION_URL = import.meta.env.VITE_VERCEL_FUNCTION_URL || ''
 
-interface GenerateVideoRequest {
+type GenerateVideoRequest = {
   shotId: string
   model: string
   prompt: string
   startFrameUrl?: string
   endFrameUrl?: string
+  [key: string]: unknown
 }
+
 
 interface VideoStatusResponse {
   shotId: string

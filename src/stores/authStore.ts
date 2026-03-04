@@ -91,12 +91,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           loading: false 
         })
         
-        // 登录成功后触发云端同步
+        // 登录成功后触发云端双向同步
         setTimeout(() => {
           import('../../services/hybridStorageService').then(({ syncFromCloud }) => {
-            syncFromCloud().then((count: number) => {
-              if (count > 0) {
-                console.log(`[Auth] 登录同步完成: ${count} 个项目`)
+            syncFromCloud().then((result: { uploaded: number; downloaded: number; conflicts: number }) => {
+              console.log(`[Auth] 登录双向同步完成: 上传 ${result.uploaded}, 下载 ${result.downloaded}, 冲突 ${result.conflicts}`)
+              if (result.uploaded > 0 || result.downloaded > 0) {
                 window.dispatchEvent(new CustomEvent('projects-synced'))
               }
             }).catch(console.error)

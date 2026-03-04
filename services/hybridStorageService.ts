@@ -286,22 +286,30 @@ class HybridStorageService {
    * 使用乐观锁和版本号防止并发冲突
    */
   async saveProject(project: ProjectState): Promise<void> {
+    console.log('[HybridStorage] 📝 saveProject 开始执行');
     const { user } = useAuthStore.getState();
+    console.log('[HybridStorage] user:', user ? '已登录' : '未登录');
 
     // 递增版本号
     const updatedProject = this.incrementVersion(project);
+    console.log('[HybridStorage] 版本号:', updatedProject.version);
 
     // 先保存到本地 IndexedDB（保证离线可用）
+    console.log('[HybridStorage] 💾 开始保存到 IndexedDB...');
     await saveProjectToDB(updatedProject);
+    console.log('[HybridStorage] ✅ IndexedDB 保存完成');
 
     // 如果已登录，同时保存到云端
     if (user) {
+      console.log('[HybridStorage] ☁️ 开始同步到云端...');
       try {
         // 初始化ID映射
         await initIdMapping();
+        console.log('[HybridStorage] ✅ ID映射初始化完成');
         
         // 检查是否是旧格式项目ID（proj_xxx）
         const isOldFormat = project.id.startsWith('proj_');
+        console.log('[HybridStorage] 旧格式ID:', isOldFormat);
         
         let cloudId = project.id;
         
@@ -311,6 +319,7 @@ class HybridStorageService {
           
           // 如果映射表中没有，检查云端是否已有该项目的记录
           if (cloudId === project.id) {
+            console.log('[HybridStorage] 🔍 检查云端是否存在项目...');
             const { data: existing } = await supabase
               .from('projects')
               .select('id')
@@ -338,8 +347,9 @@ class HybridStorageService {
           return;
         }
         
+        console.log('[HybridStorage] 🔒 获取锁成功，开始 upsert...');
         try {
-          const { error } = await supabase
+          const supabasePromise = supabase
             .from('projects')
             .upsert({
               id: cloudId,
@@ -353,17 +363,26 @@ class HybridStorageService {
               onConflict: 'id'
             });
 
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Supabase 请求超时')), 5000);
+          });
+
+          const { error } = await Promise.race([supabasePromise, timeoutPromise]) as any;
+
           if (error) throw error;
-          console.log(`[HybridStorage] 项目 ${project.id} (云端ID: ${cloudId}) 版本 ${updatedProject.version} 已同步到云端`);
+          console.log(`[HybridStorage] ✅ 项目 ${project.id} (云端ID: ${cloudId}) 版本 ${updatedProject.version} 已同步到云端`);
         } finally {
           // 释放锁
           this.releaseLock(cloudId);
+          console.log('[HybridStorage] 🔓 释放锁');
         }
       } catch (error) {
-        console.error('[HybridStorage] 同步到云端失败:', error);
+        console.error('[HybridStorage] ❌ 同步到云端失败:', error);
         // 本地保存成功，云端失败不影响
       }
     }
+    
+    console.log('[HybridStorage] ✅ saveProject 执行完成');
   }
 
   /**
@@ -392,71 +411,114 @@ class HybridStorageService {
     }
   }
 
+
   /**
-   * 登录后从云端同步数据到本地
+   * 登录时双向同步
+   * - 本地新 → 推送到云端
+   * - 云端新 → 恢复到本地
+   * 根据 version 和 lastModified 时间戳进行数据取舍
    */
-  async syncFromCloud(): Promise<number> {
+  async syncFromCloud(): Promise<{uploaded:number; downloaded:number; conflicts:number}> {
     const { user } = useAuthStore.getState();
     
     if (!user) {
-      console.log('[HybridStorage] 未登录，无法同步');
-      return 0;
+      console.log('[HybridStorage] 未登录，无法执行登录同步');
+      return { uploaded: 0, downloaded: 0, conflicts: 0 };
     }
 
+    console.log('[HybridStorage] ========== 登录时双向同步开始 ==========');
+    
+    const result = { uploaded: 0, downloaded: 0, conflicts: 0 };
+
     try {
-      const { data, error } = await supabase
+      console.log('[HybridStorage] 获取本地项目列表...');
+      const localProjects = await getAllProjectsMetadata();
+      console.log(`[HybridStorage] 本地项目数量: ${localProjects.length}`);
+      console.log('[HybridStorage] 获取云端项目列表...');
+      const { data: cloudProjects, error: cloudError } = await supabase
         .from('projects')
-        .select('id, title, settings, updated_at')
-        .eq('user_id', user.id);
+        .select('id, title, version, updated_at, data, settings')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
 
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        console.log('[HybridStorage] 云端没有数据');
-        return 0;
+      if (cloudError) {
+        console.error('[HybridStorage] 获取云端项目失败:', cloudError);
+        throw cloudError;
       }
 
-      // 先获取所有本地项目，用于去重
-      const localProjects = await getAllProjectsMetadata();
-      const localIds = new Set(localProjects.map(p => p.id));
-      const localTitles = new Map(localProjects.map(p => [p.title, p.id]));
+      const cloudProjectList = cloudProjects || [];
+      console.log(`[HybridStorage] 云端项目数量: ${cloudProjectList.length}`);
 
-      let syncedCount = 0;
+      const cloudMap = new Map<string, { id: string; title: string; version: number; lastModified: number; data: ProjectState }>();
 
-      for (const cloudProject of data) {
-        if (!cloudProject.settings) continue;
-
-        // 检查是否已存在（通过 ID 或标题）
-        const existingId = localIds.has(cloudProject.id) 
-          ? cloudProject.id 
-          : localTitles.get(cloudProject.settings.title);
-
-        if (!existingId) {
-          // 本地没有，直接保存
-          await saveProjectToDB(cloudProject.settings);
-          syncedCount++;
-          console.log(`[HybridStorage] 新增项目: ${cloudProject.settings.title}`);
-        } else {
-          // 检查是否需要更新
-          const localProject = await loadProjectFromDB(existingId);
-          if (localProject && new Date(cloudProject.updated_at) > new Date(localProject.lastModified)) {
-            // 云端更新，使用云端数据覆盖本地
-            // 保持本地 ID 不变，避免重复创建
-            const updatedProject = { ...cloudProject.settings, id: existingId };
-            await saveProjectToDB(updatedProject);
-            syncedCount++;
-            console.log(`[HybridStorage] 更新项目: ${cloudProject.settings.title}`);
-          }
+      for (const cp of cloudProjectList) {
+        // 优先使用 data 字段，其次使用 settings 字段（向后兼容）
+        const cloudData = cp.data || cp.settings;
+        if (cloudData) {
+          cloudMap.set(cp.title, {
+            id: cp.id,
+            title: cp.title,
+            version: cp.version || 1,
+            lastModified: new Date(cp.updated_at).getTime(),
+            data: cloudData
+          });
         }
       }
 
-      console.log(`[HybridStorage] 同步完成: ${syncedCount} 个项目`);
-      return syncedCount;
+      for (const localMeta of localProjects) {
+        const localFull = await loadProjectFromDB(localMeta.id);
+        if (!localFull) continue;
+
+        const cloudProject = cloudMap.get(localFull.title);
+
+        if (!cloudProject) {
+          console.log(`[HybridStorage] ⬆️  云端无此项目，推送本地: ${localFull.title}`);
+          await this.saveProject(localFull);
+          result.uploaded++;
+        } else {
+          const localVersion = localFull.version || 1;
+          const cloudVersion = cloudProject.version || 1;
+          const localTime = localFull.lastModified;
+          const cloudTime = cloudProject.lastModified;
+
+          console.log(`[HybridStorage] 🔄 比较项目: ${localFull.title}`);
+          console.log(`  本地: version=${localVersion}, time=${localTime}`);
+          console.log(`  云端: version=${cloudVersion}, time=${cloudTime}`);
+
+          if (localVersion > cloudVersion || (localVersion === cloudVersion && localTime > cloudTime)) {
+            console.log(`[HybridStorage] ⬆️  本地比云端新，推送本地到云端`);
+            const localToCloud = { ...localFull, id: cloudProject.id };
+            await this.saveProject(localToCloud);
+            result.uploaded++;
+          } else if (cloudVersion > localVersion || (cloudVersion === localVersion && cloudTime > localTime)) {
+            console.log(`[HybridStorage] ⬇️  云端比本地新，下载到本地`);
+            const cloudToLocal = { ...cloudProject.data, id: localMeta.id };
+            await saveProjectToDB(cloudToLocal);
+            result.downloaded++;
+          } else {
+            console.log(`[HybridStorage] ✅ 版本相同，无需同步: ${localFull.title}`);
+          }
+        }
+
+        cloudMap.delete(localFull.title);
+      }
+
+      for (const [title, cloudProj] of cloudMap) {
+        console.log(`[HybridStorage] ⬇️  本地无此项目，从云端下载: ${title}`);
+        await saveProjectToDB(cloudProj.data);
+        result.downloaded++;
+      }
+
+      console.log(`[HybridStorage] ========== 登录同步完成 ==========`);
+      console.log(`[HybridStorage] 上传: ${result.uploaded}, 下载: ${result.downloaded}, 冲突: ${result.conflicts}`);
+
+      return result;
     } catch (error) {
-      console.error('[HybridStorage] 同步失败:', error);
-      return 0;
+      console.error('[HybridStorage] 登录同步失败:', error);
+      return result;
     }
   }
+
 
   /**
    * 将本地所有数据导出到云端（手动触发）

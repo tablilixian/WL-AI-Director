@@ -122,7 +122,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     }
   }, [project.id]);
 
-  // 定期检测卡住的生成状态（每10秒检测一次）
+  // 定期检测卡住的生成状态（每30秒检测一次）
   useEffect(() => {
     if (!project.scriptData) return;
     
@@ -160,7 +160,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       }
     };
     
-    const intervalId = setInterval(checkStuckGeneration, 10000);
+    const intervalId = setInterval(checkStuckGeneration, 30000);
     return () => clearInterval(intervalId);
   }, [project.id]);
 
@@ -306,7 +306,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             s.status = 'completed';
           }
         }
-        updateProject({ scriptData: newData });
+        updateProject({ scriptData: newData }, { forceSync: true });
       }
 
     } catch (e: any) {
@@ -321,7 +321,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           const s = newData.scenes.find(s => compareIds(s.id, id));
           if (s) s.status = 'failed';
         }
-        updateProject({ scriptData: newData });
+        updateProject({ scriptData: newData }, { forceSync: true });
       }
       if (onApiKeyError && onApiKeyError(e)) {
         return;

@@ -10,7 +10,7 @@ import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/
 import ModelConfigModal from './components/ModelConfig';
 import { ProjectState } from './types';
 import { Save, CheckCircle } from 'lucide-react';
-import { saveProjectToDB } from './services/storageService';
+import { saveProjectToDB, loadProjectFromDB } from './services/storageService';
 import { hybridStorage } from './services/hybridStorageService';
 import { setGlobalApiKey } from './services/aiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
@@ -36,9 +36,12 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   
   const saveTimeoutRef = useRef<any>(null);
   const hideStatusTimeoutRef = useRef<any>(null);
+  const initialProjectRef = useRef<ProjectState | null>(null);
+  const isFirstLoadRef = useRef(true);
 
   // Initialize auth on mount
   useEffect(() => {
@@ -166,7 +169,14 @@ function App() {
 
   // Auto-save logic
   useEffect(() => {
-    if (!project) return;
+    if (!project || isExiting) return;
+
+    // 首次加载时跳过 auto-save
+    if (isFirstLoadRef.current) {
+      console.log('[App] 📥 首次加载项目，跳过 auto-save');
+      isFirstLoadRef.current = false;
+      return;
+    }
 
     setSaveStatus('unsaved');
     setShowSaveStatus(true);
@@ -177,6 +187,8 @@ function App() {
       try {
         await hybridStorage.saveProject(project);
         setSaveStatus('saved');
+        // 更新初始快照，避免重复保存
+        initialProjectRef.current = JSON.parse(JSON.stringify(project));
       } catch (e) {
         console.error("Auto-save failed", e);
       }
@@ -185,7 +197,7 @@ function App() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [project]);
+  }, [project, isExiting]);
 
   // Auto-hide save status
   useEffect(() => {
@@ -236,12 +248,65 @@ function App() {
   };
 
   // Handle open project
-  const handleOpenProject = (proj: ProjectState) => {
-    setProject(proj);
+  const handleOpenProject = async (proj: string | ProjectState) => {
+    // 重置首次加载标记
+    isFirstLoadRef.current = true;
+    
+    // 如果传入的是字符串（项目ID），则先从本地加载完整项目
+    if (typeof proj === 'string') {
+      console.log('[App] 正在从本地加载项目:', proj);
+      const fullProject = await loadProjectFromDB(proj);
+      if (fullProject) {
+        setProject(fullProject);
+        initialProjectRef.current = JSON.parse(JSON.stringify(fullProject));
+        console.log('[App] 项目加载成功:', fullProject.title);
+      } else {
+        console.error('[App] 无法加载项目，项目不存在:', proj);
+      }
+    } else {
+      // 如果传入的是完整项目对象，直接使用
+      setProject(proj);
+      initialProjectRef.current = JSON.parse(JSON.stringify(proj));
+    }
+  };
+
+  // 比较两个项目对象是否相等（深度比较）
+  const isProjectEqual = (p1: ProjectState | null, p2: ProjectState | null): boolean => {
+    if (!p1 || !p2) return false;
+    
+    // 比较关键字段
+    return (
+      p1.id === p2.id &&
+      p1.title === p2.title &&
+      p1.stage === p2.stage &&
+      p1.rawScript === p2.rawScript &&
+      p1.targetDuration === p2.targetDuration &&
+      p1.language === p2.language &&
+      p1.visualStyle === p2.visualStyle &&
+      JSON.stringify(p1.scriptData) === JSON.stringify(p2.scriptData) &&
+      JSON.stringify(p1.shots) === JSON.stringify(p2.shots)
+    );
   };
 
   // Handle exit project
   const handleExitProject = async () => {
+    console.log('[App] 🚪 handleExitProject 开始执行');
+    console.log('[App] isGenerating:', isGenerating);
+    console.log('[App] project:', project);
+    
+    // 比较项目是否有变化
+    const hasChanges = !isProjectEqual(project, initialProjectRef.current);
+    console.log('[App] 项目是否有变化:', hasChanges);
+    
+    if (!hasChanges) {
+      console.log('[App] ⏭️ 项目无变化，直接退出，跳过保存');
+      setProject(null);
+      setTimeout(() => setIsExiting(false), 100);
+      return;
+    }
+    
+    console.log('[App] 💾 项目有变化，开始保存...');
+    
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
         title: '生成任务进行中',
@@ -250,19 +315,29 @@ function App() {
         confirmText: '确定退出',
         cancelText: '继续等待',
         onConfirm: async () => {
+          console.log('[App] ⚠️ 用户确认退出生成任务');
           setIsGenerating(false);
+          setIsExiting(true);
           if (project) {
             await hybridStorage.saveProject(project);
           }
+          console.log('[App] 🚪 调用 setProject(null)');
           setProject(null);
+          setTimeout(() => setIsExiting(false), 100);
         }
       });
       return;
     }
+    
+    console.log('[App] 💾 开始保存项目...');
+    setIsExiting(true);
     if (project) {
-        await hybridStorage.saveProject(project);
+      await hybridStorage.saveProject(project);
     }
+    console.log('[App] 🚪 调用 setProject(null)');
     setProject(null);
+    setTimeout(() => setIsExiting(false), 100);
+    console.log('[App] ✅ handleExitProject 执行完成');
   };
 
   // Render stage
@@ -341,8 +416,8 @@ function App() {
           <img src={logoImg} alt="Logo" className="w-20 h-20 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">BigBanana AI Director</h1>
           <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-8">
-            <p className="text-[var(--text-tertiary)] text-base leading-relaxed mb-4">
-              为了获得最佳体验，请使用 PC 端浏览器访问。
+            <p className="text-[var(--text-tertiary)] text-base leading-relaxed              为了获得最佳 mb-4">
+体验，请使用 PC 端浏览器访问。
             </p>
             <p className="text-[var(--text-muted)] text-sm">
               本应用需要较大的屏幕空间和桌面级浏览器环境才能正常运行。

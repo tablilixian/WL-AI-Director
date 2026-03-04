@@ -12,7 +12,7 @@ import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 
 interface Props {
-  onOpenProject: (project: ProjectState) => void;
+  onOpenProject: (projectId: string | ProjectState) => void;
   onShowOnboarding?: () => void;
   onShowModelConfig?: () => void;
 }
@@ -42,18 +42,21 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const loadProjects = async () => {
     // 防止重复加载
     if (isLoadingRef.current) {
-      console.log('[Dashboard] 正在加载项目，跳过重复请求');
+      console.log('[Dashboard] ⚠️ 正在加载项目，跳过重复请求');
       return;
     }
     
+    console.log('[Dashboard] 📋 开始加载项目列表...');
     isLoadingRef.current = true;
     setIsLoading(true);
     
     try {
       const list = await hybridStorage.getAllProjects();
+      console.log(`[Dashboard] ✅ 加载完成，获取到 ${list.length} 个项目`);
+      console.log('[Dashboard] 项目列表:', list.map(p => ({ id: p.id, title: p.title, version: p.version })));
       setProjects(list);
     } catch (e) {
-      console.error("Failed to load projects", e);
+      console.error('[Dashboard] ❌ 加载项目失败:', e);
     } finally {
       setIsLoading(false);
       // 延迟重置loading标志，防止快速连续调用
@@ -100,6 +103,18 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     };
     window.addEventListener('projects-synced', handleSync);
     return () => window.removeEventListener('projects-synced', handleSync);
+  }, []);
+
+  // 监听后台刷新完成事件
+  useEffect(() => {
+    const handleRefresh = (event: CustomEvent<ProjectState[]>) => {
+      console.log('[Dashboard] 📢 收到后台刷新事件，更新项目列表');
+      console.log('[Dashboard] 新项目数量:', event.detail.length);
+      console.log('[Dashboard] 新项目列表:', event.detail.map(p => ({ id: p.id, title: p.title })));
+      setProjects(event.detail);
+    };
+    window.addEventListener('projects-refreshed', handleRefresh as EventListener);
+    return () => window.removeEventListener('projects-refreshed', handleRefresh as EventListener);
   }, []);
 
   useEffect(() => {
@@ -377,7 +392,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             {projects.map((proj) => (
               <div 
                 key={proj.id}
-                onClick={() => onOpenProject(proj)}
+                onClick={() => onOpenProject(proj.id)}
                 className="group bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] p-0 flex flex-col cursor-pointer transition-all relative overflow-hidden h-[280px]"
               >
                   {/* Delete Confirmation Overlay */}

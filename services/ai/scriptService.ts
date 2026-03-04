@@ -158,7 +158,7 @@ export const parseScriptToData = async (
           if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
           console.log(`  生成角色提示词: ${characters[i].name}`);
           logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
-          const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language);
+          const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language, artDirection);
           characters[i].visualPrompt = prompts.visualPrompt;
           characters[i].negativePrompt = prompts.negativePrompt;
         } catch (e) {

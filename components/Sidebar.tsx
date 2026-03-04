@@ -61,7 +61,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
         )}
 
         <button 
-          onClick={onExit}
+          onClick={() => {
+            console.log('[Sidebar] 🚪 返回项目列表按钮被点击');
+            console.log('[Sidebar] isNavigationLocked:', isNavigationLocked);
+            if (!isNavigationLocked) {
+              console.log('[Sidebar] ✅ 调用 onExit');
+              onExit();
+            } else {
+              console.log('[Sidebar] ❌ 导航已锁定，无法退出');
+            }
+          }}
           className={`flex items-center gap-2 transition-colors text-xs font-mono uppercase tracking-wide group ${
             isNavigationLocked 
               ? 'text-[var(--text-muted)] opacity-50 cursor-not-allowed' 

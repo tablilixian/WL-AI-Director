@@ -6,6 +6,9 @@ const STORE_NAME = 'projects';
 const ASSET_STORE_NAME = 'assetLibrary';
 const EXPORT_SCHEMA_VERSION = 1;
 
+// 本地存储开关 - 由 hybridStorage 自动启用
+export const storageConfig = { _enabled: true, get enabled() { return this._enabled; }, enableForHybrid() { this._enabled = true; }, setEnabled(v: boolean) { this._enabled = v; } };
+
 export interface IndexedDBExportPayload {
   schemaVersion: number;
   exportedAt: number;
@@ -145,14 +148,26 @@ export const importIndexedDBData = async (
 };
 
 export const saveProjectToDB = async (project: ProjectState): Promise<void> => {
+  if (!storageConfig.enabled) { console.log('[Storage] 本地存储已禁用'); return; }
+  
+  console.log('[Storage] 💾 开始保存项目到 IndexedDB:', project.title);
   const db = await openDB();
+  console.log('[Storage] ✅ IndexedDB 数据库已打开');
+  
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     const p = { ...project, lastModified: Date.now() };
+    console.log('[Storage] 💾 正在执行 put 操作...');
     const request = store.put(p);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      console.log('[Storage] ✅ IndexedDB put 操作成功');
+      resolve();
+    };
+    request.onerror = () => {
+      console.error('[Storage] ❌ IndexedDB put 操作失败:', request.error);
+      reject(request.error);
+    };
   });
 };
 
