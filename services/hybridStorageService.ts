@@ -176,17 +176,25 @@ class HybridStorageService {
       
       let data: CloudProject[] | null = null;
       try {
-        const result = await supabase
+        // 添加超时机制：10秒超时
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('查询云端项目超时（10秒）')), 10000);
+        });
+        
+        const queryPromise = supabase
           .from('projects')
           .select('id, title, data, settings, updated_at')
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false });
+        
+        const result = await Promise.race([queryPromise, timeoutPromise]);
         
         if (result.error) throw result.error;
         data = result.data as CloudProject[] | null;
         console.log('[HybridStorage] ✅ 云端查询完成，返回数据:', data?.length || 0, '条');
       } catch (queryError) {
         console.error('[HybridStorage] 查询云端项目失败:', queryError);
+        console.log('[HybridStorage] 回退到本地 IndexedDB');
         return getAllProjectsMetadata();
       }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, RefreshCw, Grid3x3, AlertCircle, Edit2, Save, ArrowRight, Wand2, ImagePlus } from 'lucide-react';
 import { Character, CharacterTurnaroundPanel } from '../../types';
 import { CHARACTER_TURNAROUND_LAYOUT } from '../../services/aiService';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface TurnaroundModalProps {
   character: Character;
@@ -25,6 +26,8 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
   onImageClick,
 }) => {
   const turnaround = character.turnaround;
+  const { src: turnaroundImageSrc, loading: turnaroundImageLoading } = useImageLoader(turnaround?.imageUrl);
+  const { src: characterImageSrc, loading: characterImageLoading } = useImageLoader(character.referenceImage);
   const [editingPanel, setEditingPanel] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{ viewAngle: string; shotSize: string; description: string }>({
     viewAngle: '', shotSize: '', description: ''
@@ -81,9 +84,13 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
         <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[var(--bg-hover)] overflow-hidden border border-[var(--border-secondary)]">
-              {character.referenceImage && (
-                <img src={character.referenceImage} className="w-full h-full object-cover" alt={character.name} />
-              )}
+              {characterImageSrc ? (
+                <img src={characterImageSrc} className="w-full h-full object-cover" alt={character.name} />
+              ) : characterImageLoading ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <Grid3x3 className="w-4 h-4 text-[var(--accent-text)]" />
@@ -365,12 +372,24 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
             <div className="p-6 space-y-4">
               {/* 九宫格图片 */}
               <div>
-                <img
-                  src={turnaround.imageUrl}
-                  alt={`${character.name} Turnaround Sheet`}
-                  className="w-full rounded-lg border border-[var(--border-primary)] cursor-pointer"
-                  onClick={() => onImageClick(turnaround.imageUrl!)}
-                />
+                {turnaroundImageLoading ? (
+                  <div className="w-full aspect-square bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-primary)] flex flex-col items-center justify-center text-[var(--text-muted)]">
+                    <Loader2 className="w-12 h-12 mb-3 animate-spin text-[var(--accent)]" />
+                    <span className="text-xs">加载中...</span>
+                  </div>
+                ) : turnaroundImageSrc ? (
+                  <img
+                    src={turnaroundImageSrc}
+                    alt={`${character.name} Turnaround Sheet`}
+                    className="w-full rounded-lg border border-[var(--border-primary)] cursor-pointer"
+                    onClick={() => onImageClick(turnaround.imageUrl!)}
+                  />
+                ) : (
+                  <div className="w-full aspect-square bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-primary)] flex flex-col items-center justify-center text-[var(--text-muted)]">
+                    <AlertCircle className="w-12 h-12 mb-3" />
+                    <span className="text-xs">图片加载失败</span>
+                  </div>
+                )}
               </div>
 
               {/* 视角描述列表 */}

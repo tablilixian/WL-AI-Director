@@ -27,6 +27,8 @@ export interface CharacterTurnaroundPanel {
 export interface CharacterTurnaroundData {
   panels: CharacterTurnaroundPanel[];  // 9个格子的描述数据
   imageUrl?: string;                    // 生成的九宫格整图 (base64)，直接作为多视角参考图使用
+  imageUrlSource?: 'local' | 'cloud';  // 图片来源：本地或云端
+  localImageId?: string;                 // 本地图片在 IndexedDB 中的 ID
   prompt?: string;                      // 生成时使用的完整提示词
   status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
   // generating_panels: AI正在生成9个视角描述

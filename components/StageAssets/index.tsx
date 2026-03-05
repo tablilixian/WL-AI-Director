@@ -1190,6 +1190,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const c = newData.characters.find(c => compareIds(c.id, charId));
         if (c && c.turnaround) {
           c.turnaround.imageUrl = imageUrl;
+          c.turnaround.imageUrlSource = 'local';
+          c.turnaround.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
           c.turnaround.status = 'completed';
         }
         return { ...prev, scriptData: newData };

@@ -60,14 +60,13 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     } catch (e) {
       console.error('[Dashboard] ❌ 加载项目失败:', e);
       console.error('[Dashboard] 错误详情:', e instanceof Error ? e.stack : String(e));
+      // 即使失败也重置状态，允许重新加载
     } finally {
       console.log('[Dashboard] 🔚 加载流程结束，重置状态');
       setIsLoading(false);
-      // 延迟重置loading标志，防止快速连续调用
-      setTimeout(() => {
-        isLoadingRef.current = false;
-        console.log('[Dashboard] ✅ isLoadingRef 已重置');
-      }, 500);
+      // 立即重置 loading 标志，不等待延迟
+      isLoadingRef.current = false;
+      console.log('[Dashboard] ✅ isLoadingRef 已重置');
     }
   };
 
