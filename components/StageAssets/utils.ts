@@ -1,5 +1,5 @@
 import { REGIONAL_FEATURES, LANGUAGE_MAP, DEFAULTS } from './constants';
-import { convertImageToBase64 } from '../../services/storageService';
+import { imageStorageService, generateImageId } from '../../services/imageStorageService';
 
 /**
  * 根据语言获取地域特征前缀
@@ -17,10 +17,14 @@ export const getRegionalPrefix = (
 
 /**
  * 通用图片上传处理函数
+ * 保存到本地 IndexedDB，返回 local:{id} 格式的 ID
  */
 export const handleImageUpload = async (file: File): Promise<string> => {
   try {
-    return await convertImageToBase64(file);
+    const localImageId = generateImageId();
+    await imageStorageService.saveImage(localImageId, file);
+    console.log(`[Utils] 图片已保存到本地: ${localImageId}`);
+    return `local:${localImageId}`;
   } catch (e: any) {
     console.error('图片上传失败:', e);
     throw new Error(e.message || '图片上传失败');

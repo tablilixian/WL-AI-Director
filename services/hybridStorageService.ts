@@ -389,7 +389,7 @@ class HybridStorageService {
             });
 
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Supabase 请求超时')), 5000);
+            setTimeout(() => reject(new Error('Supabase 请求超时')), 30000);  // 30 秒超时
           });
 
           const { error } = await Promise.race([supabasePromise, timeoutPromise]) as any;

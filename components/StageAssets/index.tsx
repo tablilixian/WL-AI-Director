@@ -383,14 +383,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleUploadCharacterImage = async (charId: string, file: File) => {
     try {
-      const base64 = await handleImageUpload(file);
+      const localImageId = await handleImageUpload(file);
 
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
         const char = newData.characters.find(c => compareIds(c.id, charId));
         if (char) {
-          char.referenceImage = base64;
+          char.referenceImage = localImageId;
+          char.referenceImageSource = 'local';
+          char.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
           char.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -405,14 +407,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleUploadSceneImage = async (sceneId: string, file: File) => {
     try {
-      const base64 = await handleImageUpload(file);
+      const localImageId = await handleImageUpload(file);
 
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
         const scene = newData.scenes.find(s => compareIds(s.id, sceneId));
         if (scene) {
-          scene.referenceImage = base64;
+          scene.referenceImage = localImageId;
+          scene.referenceImageSource = 'local';
+          scene.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
           scene.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -843,13 +847,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleUploadPropImage = async (propId: string, file: File) => {
     try {
-      const base64 = await handleImageUpload(file);
+      const localImageId = await handleImageUpload(file);
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
         const prop = (newData.props || []).find(p => compareIds(p.id, propId));
         if (prop) {
-          prop.referenceImage = base64;
+          prop.referenceImage = localImageId;
+          prop.referenceImageSource = 'local';
+          prop.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
           prop.status = 'completed';
         }
         return { ...prev, scriptData: newData };
