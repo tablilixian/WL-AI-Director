@@ -1,4 +1,4 @@
-import { AssetLibraryItem, Character, ProjectState, Prop, Scene } from '../types';
+import { AssetLibraryItem, Character, ProjectState, Prop, Scene, CharacterTurnaroundData } from '../types';
 
 const generateId = (prefix: string): string => {
   const rand = Math.random().toString(36).slice(2, 6);
@@ -10,6 +10,44 @@ const cloneCharacterVariation = (variation: Character['variations'][number]): Ch
   id: generateId('var'),
   status: variation.referenceImage ? 'completed' : 'pending'
 });
+
+export const createLibraryItemFromTurnaround = (
+  character: Character,
+  project?: Pick<ProjectState, 'id' | 'title'>
+): AssetLibraryItem => {
+  const now = Date.now();
+  
+  // 创建一个简化的角色对象，只包含九宫格图片信息
+  const turnaroundCharacter: Character = {
+    id: generateId('char'),
+    name: character.name,
+    gender: character.gender,
+    age: character.age,
+    personality: character.personality,
+    visualPrompt: character.visualPrompt,
+    negativePrompt: character.negativePrompt,
+    coreFeatures: character.coreFeatures,
+    // 使用九宫格图片作为参考图
+    referenceImage: character.turnaround?.imageUrl,
+    referenceImageSource: character.turnaround?.imageUrlSource,
+    localImageId: character.turnaround?.localImageId,
+    // 保存九宫格数据
+    turnaround: character.turnaround,
+    variations: [],
+    status: 'completed'
+  };
+
+  return {
+    id: generateId('asset'),
+    type: 'turnaround',
+    name: `${character.name} - 九宫格造型`,
+    projectId: project?.id,
+    projectName: project?.title,
+    createdAt: now,
+    updatedAt: now,
+    data: turnaroundCharacter
+  };
+};
 
 export const createLibraryItemFromCharacter = (
   character: Character,
@@ -106,6 +144,16 @@ export const applyLibraryItemToProject = (project: ProjectState, item: AssetLibr
   } else if (item.type === 'prop') {
     const prop = clonePropForProject(item.data as Prop);
     newData.props = [...(newData.props || []), prop];
+  } else if (item.type === 'turnaround') {
+    const turnaroundChar = item.data as Character;
+    const existingChar = newData.characters.find(c => c.name === turnaroundChar.name);
+    if (existingChar) {
+      existingChar.turnaround = turnaroundChar.turnaround;
+    } else {
+      const newChar = cloneCharacterForProject(turnaroundChar);
+      newChar.turnaround = turnaroundChar.turnaround;
+      newData.characters = [...newData.characters, newChar];
+    }
   }
 
   return {

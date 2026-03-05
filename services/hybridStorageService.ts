@@ -15,8 +15,9 @@ import {
   getAllProjectsMetadata, 
   createNewProjectState, 
   deleteProjectFromDB, 
-  getAllAssetLibraryItems,
-  deleteAssetFromLibrary,
+  getAllAssetLibraryItems as getAllAssetLibraryItemsFromDB,
+  deleteAssetFromLibrary as deleteAssetFromLibraryFromDB,
+  saveAssetToLibrary as saveAssetToLibraryToDB,
   loadProjectFromDB,
   saveProjectToDB
 } from './storageService';
@@ -81,6 +82,8 @@ export interface CloudProject {
   created_at: string;
   updated_at: string;
 }
+
+
 
 class HybridStorageService {
   private locks = new Map<string, { locked: boolean, timestamp: number, version: number }>();
@@ -598,6 +601,30 @@ class HybridStorageService {
       renderLogs: []
     };
   }
+
+  /**
+   * 获取所有素材库项目（仅本地 IndexedDB）
+   */
+  async getAllAssetLibraryItems(): Promise<AssetLibraryItem[]> {
+    console.log('[HybridStorage] 获取素材库项目（本地 IndexedDB）...');
+    return getAllAssetLibraryItemsFromDB();
+  }
+
+  /**
+   * 保存素材库项目（仅本地 IndexedDB）
+   */
+  async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
+    console.log('[HybridStorage] 保存素材库项目到本地 IndexedDB:', item.name);
+    await saveAssetToLibraryToDB(item);
+  }
+
+  /**
+   * 删除素材库项目（仅本地 IndexedDB）
+   */
+  async deleteAssetFromLibrary(id: string): Promise<void> {
+    console.log('[HybridStorage] 从本地 IndexedDB 删除素材库项目:', id);
+    await deleteAssetFromLibraryFromDB(id);
+  }
 }
 
 export const hybridStorage = new HybridStorageService();
@@ -609,3 +636,6 @@ export const saveProject = (project: ProjectState) => hybridStorage.saveProject(
 export const deleteProject = (id: string) => hybridStorage.deleteProject(id);
 export const syncFromCloud = () => hybridStorage.syncFromCloud();
 export const exportToCloud = () => hybridStorage.exportToCloud();
+export const getAllAssetLibraryItems = () => hybridStorage.getAllAssetLibraryItems();
+export const saveAssetToLibrary = (item: AssetLibraryItem) => hybridStorage.saveAssetToLibrary(item);
+export const deleteAssetFromLibrary = (id: string) => hybridStorage.deleteAssetFromLibrary(id);

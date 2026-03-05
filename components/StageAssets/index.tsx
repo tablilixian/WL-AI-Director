@@ -28,10 +28,12 @@ import PropCard from './PropCard';
 import WardrobeModal from './WardrobeModal';
 import TurnaroundModal from './TurnaroundModal';
 import { useAlert } from '../GlobalAlert';
-import { getAllAssetLibraryItems, saveAssetToLibrary, deleteAssetFromLibrary } from '../../services/storageService';
-import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene, createLibraryItemFromProp, cloneCharacterForProject } from '../../services/assetLibraryService';
+import { getAllAssetLibraryItems, deleteAssetFromLibrary } from '../../services/storageService';
+import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene, createLibraryItemFromProp, createLibraryItemFromTurnaround, cloneCharacterForProject } from '../../services/assetLibraryService';
+import { hybridStorage } from '../../services/hybridStorageService';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getUserAspectRatio, setUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
+import { useAuthStore } from '../../src/stores/authStore';
 
 interface Props {
   project: ProjectState;
@@ -42,6 +44,7 @@ interface Props {
 
 const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, onGeneratingChange }) => {
   const { showAlert } = useAlert();
+  const { user } = useAuthStore();
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -49,7 +52,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [libraryItems, setLibraryItems] = useState<AssetLibraryItem[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [libraryQuery, setLibraryQuery] = useState('');
-  const [libraryFilter, setLibraryFilter] = useState<'all' | 'character' | 'scene' | 'prop'>('all');
+  const [libraryFilter, setLibraryFilter] = useState<'all' | 'character' | 'scene' | 'prop' | 'turnaround'>('all');
   const [libraryProjectFilter, setLibraryProjectFilter] = useState('all');
   const [replaceTargetCharId, setReplaceTargetCharId] = useState<string | null>(null);
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
@@ -432,7 +435,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             const cloudUrl = await imageStorageService.uploadToCloud(
               char.localImageId,
               blob,
-              `users/${project.id}/assets/character/${char.id}`
+              `${user?.id || 'anonymous'}/asset_library/character/${char.id}`
             );
             charToSave.referenceImage = cloudUrl;
             charToSave.referenceImageSource = 'cloud';
@@ -451,7 +454,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         }
         
         const item = createLibraryItemFromCharacter(charToSave, project);
-        await saveAssetToLibrary(item);
+        await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
@@ -484,7 +487,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             const cloudUrl = await imageStorageService.uploadToCloud(
               scene.localImageId,
               blob,
-              `users/${project.id}/assets/scene/${scene.id}`
+              `${user?.id || 'anonymous'}/asset_library/scene/${scene.id}`
             );
             sceneToSave.referenceImage = cloudUrl;
             sceneToSave.referenceImageSource = 'cloud';
@@ -503,7 +506,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         }
         
         const item = createLibraryItemFromScene(sceneToSave, project);
-        await saveAssetToLibrary(item);
+        await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
@@ -534,7 +537,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   };
 
   const handleReplaceCharacterFromLibrary = (item: AssetLibraryItem, targetId: string) => {
-    if (item.type !== 'character') {
+    if (item.type !== 'character' && item.type !== 'turnaround') {
       showAlert('请选择角色资产进行替换', { type: 'warning' });
       return;
     }
@@ -900,7 +903,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             const cloudUrl = await imageStorageService.uploadToCloud(
               prop.localImageId,
               blob,
-              `users/${project.id}/assets/prop/${prop.id}`
+              `${user?.id || 'anonymous'}/asset_library/prop/${prop.id}`
             );
             propToSave.referenceImage = cloudUrl;
             propToSave.referenceImageSource = 'cloud';
@@ -919,7 +922,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         }
         
         const item = createLibraryItemFromProp(propToSave, project);
-        await saveAssetToLibrary(item);
+        await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
@@ -1246,6 +1249,65 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     handleConfirmTurnaroundPanels(charId, char.turnaround.panels);
   };
 
+  /**
+   * 将九宫格造型存入素材库
+   */
+  const handleAddTurnaroundToLibrary = async (charId: string) => {
+    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    if (!char || !char.turnaround?.imageUrl) {
+      showAlert('该角色暂无九宫格造型图', { type: 'warning' });
+      return;
+    }
+
+    const saveItem = async () => {
+      try {
+        const charToSave = { ...char };
+        
+        // 如果图片是本地存储的，需要先上传到云端
+        if (char.turnaround.imageUrlSource === 'local' && char.turnaround.localImageId) {
+          const localBlob = await imageStorageService.getImage(char.turnaround.localImageId);
+          if (localBlob) {
+            const cloudUrl = await imageStorageService.uploadToCloud(
+              char.turnaround.localImageId,
+              localBlob,
+              `${user?.id || 'anonymous'}/asset_library/turnaround/${char.id}`
+            );
+            if (cloudUrl) {
+              charToSave.turnaround = {
+                ...charToSave.turnaround,
+                imageUrl: cloudUrl,
+                imageUrlSource: 'cloud',
+                localImageId: undefined
+              };
+              
+              // 更新项目数据
+              updateProject((prev) => {
+                if (!prev.scriptData) return prev;
+                const newData = { ...prev.scriptData };
+                const c = newData.characters.find(c => compareIds(c.id, charId));
+                if (c && c.turnaround) {
+                  c.turnaround.imageUrl = cloudUrl;
+                  c.turnaround.imageUrlSource = 'cloud';
+                  c.turnaround.localImageId = undefined;
+                }
+                return { ...prev, scriptData: newData };
+              });
+            }
+          }
+        }
+        
+        const item = createLibraryItemFromTurnaround(charToSave, project);
+        await hybridStorage.saveAssetToLibrary(item);
+        showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
+        refreshLibrary();
+      } catch (e: any) {
+        showAlert(e?.message || '加入资产库失败', { type: 'error' });
+      }
+    };
+
+    void saveItem();
+  };
+
   // 空状态
   if (!project.scriptData) {
     return (
@@ -1327,6 +1389,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             onRegenerate={handleRegenerateTurnaround}
             onRegenerateImage={handleRegenerateTurnaroundImage}
             onImageClick={setPreviewImage}
+            onAddToLibrary={handleAddTurnaroundToLibrary}
           />
         ) : null;
       })()}
@@ -1385,7 +1448,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                   </select>
                 </div>
                 <div className="flex gap-2">
-                  {(['all', 'character', 'scene', 'prop'] as const).map((type) => (
+                  {(['all', 'character', 'scene', 'prop', 'turnaround'] as const).map((type) => (
                     <button
                       key={type}
                       onClick={() => setLibraryFilter(type)}
@@ -1395,7 +1458,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                           : 'bg-transparent text-[var(--text-tertiary)] border-[var(--border-primary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
                       }`}
                     >
-                      {type === 'all' ? '全部' : type === 'character' ? '角色' : type === 'scene' ? '场景' : '道具'}
+                      {type === 'all' ? '全部' : type === 'character' ? '角色' : type === 'scene' ? '场景' : type === 'prop' ? '道具' : '九宫格'}
                     </button>
                   ))}
                 </div>
@@ -1413,7 +1476,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredLibraryItems.map((item) => {
                     const preview =
-                      item.type === 'character'
+                      item.type === 'character' || item.type === 'turnaround'
                         ? (item.data as Character).referenceImage
                         : item.type === 'scene'
                         ? (item.data as Scene).referenceImage
@@ -1430,6 +1493,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                             <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
                               {item.type === 'character' ? (
                                 <Users className="w-8 h-8 opacity-30" />
+                              ) : item.type === 'turnaround' ? (
+                                <Users className="w-8 h-8 opacity-30" />
                               ) : item.type === 'scene' ? (
                                 <MapPin className="w-8 h-8 opacity-30" />
                               ) : (
@@ -1442,7 +1507,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                           <div>
                             <div className="text-sm text-[var(--text-primary)] font-bold line-clamp-1">{item.name}</div>
                             <div className="text-[10px] text-[var(--text-tertiary)] font-mono uppercase tracking-widest mt-1">
-                              {item.type === 'character' ? '角色' : item.type === 'scene' ? '场景' : '道具'}
+                              {item.type === 'character' ? '角色' : item.type === 'turnaround' ? '九宫格' : item.type === 'scene' ? '场景' : '道具'}
                             </div>
                             <div className="text-[10px] text-[var(--text-muted)] font-mono mt-1 line-clamp-1">
                               {(item.projectName && item.projectName.trim()) || '未知项目'}

@@ -83,7 +83,7 @@ export interface Prop {
   status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
 }
 
-export type AssetLibraryItemType = 'character' | 'scene' | 'prop';
+export type AssetLibraryItemType = 'character' | 'scene' | 'prop' | 'turnaround';
 
 export interface AssetLibraryItem {
   id: string;

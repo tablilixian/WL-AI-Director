@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, RefreshCw, Grid3x3, AlertCircle, Edit2, Save, ArrowRight, Wand2, ImagePlus } from 'lucide-react';
+import { X, Loader2, RefreshCw, Grid3x3, AlertCircle, Edit2, Save, ArrowRight, Wand2, ImagePlus, FolderPlus } from 'lucide-react';
 import { Character, CharacterTurnaroundPanel } from '../../types';
 import { CHARACTER_TURNAROUND_LAYOUT } from '../../services/aiService';
 import { useImageLoader } from '../../hooks/useImageLoader';
@@ -13,6 +13,7 @@ interface TurnaroundModalProps {
   onRegenerate: (charId: string) => void;
   onRegenerateImage: (charId: string) => void; // 仅重新生成图片（保留已有的视角描述）
   onImageClick: (imageUrl: string) => void;
+  onAddToLibrary: (charId: string) => void; // 加入资产库
 }
 
 const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
@@ -24,6 +25,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
   onRegenerate,
   onRegenerateImage,
   onImageClick,
+  onAddToLibrary,
 }) => {
   const turnaround = character.turnaround;
   const { src: turnaroundImageSrc, loading: turnaroundImageLoading } = useImageLoader(turnaround?.imageUrl);
@@ -422,6 +424,14 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
 
               {/* 底部操作按钮 */}
               <div className="flex justify-center gap-3 pt-2">
+                <button
+                  onClick={() => onAddToLibrary(character.id)}
+                  className="px-4 py-2 bg-[var(--success-bg)] hover:bg-[var(--success-hover-bg)] text-[var(--success-text)] border border-[var(--success-border)] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                  title="将九宫格图片加入资产库"
+                >
+                  <FolderPlus className="w-3 h-3" />
+                  加入资产库
+                </button>
                 <button
                   onClick={() => onRegenerateImage(character.id)}
                   className="px-4 py-2 bg-[var(--accent-bg)] hover:bg-[var(--accent-hover-bg)] text-[var(--accent-text)] border border-[var(--accent-border)] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
