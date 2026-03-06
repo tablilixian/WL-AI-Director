@@ -64,3 +64,55 @@ export const revokeObjectUrl = (url: string | null): void => {
     URL.revokeObjectURL(url);
   }
 };
+
+export const convertImageUrlToBase64 = async (imageUrl: string | undefined): Promise<string | undefined> => {
+  if (!imageUrl) {
+    return undefined;
+  }
+
+  const source = parseImageUrl(imageUrl);
+
+  if (source.type === 'base64') {
+    return source.url;
+  }
+
+  if (source.type === 'local') {
+    const blob = await imageStorageService.getImage(source.localImageId!);
+    if (!blob) {
+      console.warn('[ImageUtils] 本地图片不存在:', source.localImageId);
+      return undefined;
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        resolve(event.target?.result as string);
+      };
+      reader.onerror = () => {
+        reject(new Error('读取本地图片失败'));
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  if (source.type === 'cloud') {
+    try {
+      const response = await fetch(source.url!);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve(event.target?.result as string);
+        };
+        reader.onerror = () => {
+          reject(new Error('读取云端图片失败'));
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('[ImageUtils] 读取云端图片失败:', error);
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
