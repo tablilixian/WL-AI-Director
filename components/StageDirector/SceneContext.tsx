@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, User, Clock, X, Shirt, Edit2, Package } from 'lucide-react';
 import { Shot, Character, Scene, Prop } from '../../types';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface SceneContextProps {
   shot: Shot;
@@ -33,6 +34,59 @@ const SceneContext: React.FC<SceneContextProps> = ({
   onAddProp,
   onRemoveProp
 }) => {
+  const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
+  const [characterImageUrls, setCharacterImageUrls] = useState<Record<string, string | null>>({});
+  const [propImageUrls, setPropImageUrls] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    if (scene?.referenceImage) {
+      getImageUrl(scene.referenceImage).then(url => setSceneImageUrl(url));
+    } else {
+      setSceneImageUrl(null);
+    }
+  }, [scene?.referenceImage]);
+
+  useEffect(() => {
+    const loadCharacterImages = async () => {
+      const urls: Record<string, string | null> = {};
+      for (const char of characters) {
+        if (char.referenceImage) {
+          try {
+            const url = await getImageUrl(char.referenceImage);
+            urls[char.id] = url;
+          } catch (err) {
+            console.error(`[SceneContext] 加载角色图片失败: ${char.id}`, err);
+            urls[char.id] = null;
+          }
+        } else {
+          urls[char.id] = null;
+        }
+      }
+      setCharacterImageUrls(urls);
+    };
+    loadCharacterImages();
+  }, [characters]);
+
+  useEffect(() => {
+    const loadPropImages = async () => {
+      const urls: Record<string, string | null> = {};
+      for (const prop of props) {
+        if (prop.referenceImage) {
+          try {
+            const url = await getImageUrl(prop.referenceImage);
+            urls[prop.id] = url;
+          } catch (err) {
+            console.error(`[SceneContext] 加载道具图片失败: ${prop.id}`, err);
+            urls[prop.id] = null;
+          }
+        } else {
+          urls[prop.id] = null;
+        }
+      }
+      setPropImageUrls(urls);
+    };
+    loadPropImages();
+  }, [props]);
   return (
     <div className="bg-[var(--bg-surface)] p-5 rounded-xl border border-[var(--border-primary)] mb-6 space-y-4">
       <div className="flex items-center gap-2 mb-2">
@@ -44,7 +98,9 @@ const SceneContext: React.FC<SceneContextProps> = ({
       
       <div className="flex gap-4 min-w-0">
         <div className="w-28 h-20 bg-[var(--bg-elevated)] rounded-lg overflow-hidden flex-shrink-0 border border-[var(--border-secondary)] relative">
-          {scene?.referenceImage ? (
+          {sceneImageUrl ? (
+            <img src={sceneImageUrl} className="w-full h-full object-cover" alt={scene?.location} />
+          ) : scene?.referenceImage ? (
             <img src={scene.referenceImage} className="w-full h-full object-cover" alt={scene.location} />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[var(--bg-hover)]">
@@ -110,9 +166,11 @@ const SceneContext: React.FC<SceneContextProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-[var(--border-secondary)] overflow-hidden flex-shrink-0">
-                      {char.referenceImage && (
+                      {characterImageUrls[char.id] ? (
+                        <img src={characterImageUrls[char.id]} className="w-full h-full object-cover" alt={char.name} />
+                      ) : char.referenceImage ? (
                         <img src={char.referenceImage} className="w-full h-full object-cover" alt={char.name} />
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-[11px] text-[var(--text-secondary)] font-medium">{char.name}</span>
                   </div>
@@ -179,7 +237,9 @@ const SceneContext: React.FC<SceneContextProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded bg-[var(--border-secondary)] overflow-hidden flex-shrink-0">
-                      {prop.referenceImage ? (
+                      {propImageUrls[prop.id] ? (
+                        <img src={propImageUrls[prop.id]} className="w-full h-full object-cover" alt={prop.name} />
+                      ) : prop.referenceImage ? (
                         <img src={prop.referenceImage} className="w-full h-full object-cover" alt={prop.name} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

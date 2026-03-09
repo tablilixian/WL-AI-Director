@@ -20,7 +20,7 @@ import {
   buildPromptFromNineGridPanel,
   cropPanelFromNineGrid
 } from './utils';
-import { getImageUrl, convertImageUrlToBase64 } from '../../utils/imageUtils';
+import { getImageUrl, convertImageUrlToBase64, saveVideoToLocal } from '../../utils/imageUtils';
 import { DEFAULTS } from './constants';
 import EditModal from './EditModal';
 import ShotCard from './ShotCard';
@@ -364,7 +364,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       const startImageBase64 = await convertImageUrlToBase64(sKf?.imageUrl);
       const endImageBase64 = await convertImageUrlToBase64(eKf?.imageUrl);
       
-      const videoUrl = await generateVideo(
+      const videoBase64 = await generateVideo(
         videoPrompt, 
         startImageBase64,
         endImageBase64,
@@ -372,6 +372,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         aspectRatio,
         duration
       );
+
+      const videoUrl = await saveVideoToLocal(videoBase64);
 
       const updatedProject = {
         ...project,

@@ -9,6 +9,7 @@ import {
   getActiveVideoModel,
 } from '../../services/modelRegistry';
 import { VideoModelDefinition } from '../../types/model';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface VideoGeneratorProps {
   shot: Shot;
@@ -50,6 +51,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   );
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => getDefaultAspectRatio());
   const [duration, setDuration] = useState<VideoDuration>(() => getDefaultVideoDuration());
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   
   // 当前选中的模型
   const selectedModel = videoModels.find(m => m.id === selectedModelId) as VideoModelDefinition | undefined;
@@ -80,6 +82,18 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     setSelectedModelId(normalizeModelId(shot.videoModel));
     setVeoFastQuality(resolveVeoFastQuality(shot.videoModel));
   }, [shot.videoModel]);
+
+  useEffect(() => {
+    const loadVideoUrl = async () => {
+      if (shot.interval?.videoUrl) {
+        const url = await getImageUrl(shot.interval.videoUrl);
+        setVideoUrl(url);
+      } else {
+        setVideoUrl(null);
+      }
+    };
+    loadVideoUrl();
+  }, [shot.interval?.videoUrl]);
 
   const handleGenerate = () => {
     onGenerate(aspectRatio, duration, effectiveModelId);
@@ -208,9 +222,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       </div>
       
       {/* Video Preview */}
-      {hasVideo ? (
+      {videoUrl ? (
         <div className="w-full aspect-video bg-[var(--bg-base)] rounded-lg overflow-hidden border border-[var(--border-secondary)] relative shadow-lg">
-          <video src={shot.interval.videoUrl} controls className="w-full h-full" />
+          <video src={videoUrl} controls className="w-full h-full" />
         </div>
       ) : (
         <div className="w-full aspect-video bg-[var(--nav-hover-bg)] rounded-lg border border-dashed border-[var(--border-primary)] flex items-center justify-center">

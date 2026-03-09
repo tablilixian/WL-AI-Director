@@ -1,5 +1,6 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Loader2 } from 'lucide-react';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface ImagePreviewModalProps {
   imageUrl: string | null;
@@ -8,6 +9,32 @@ interface ImagePreviewModalProps {
 }
 
 const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, title, onClose }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!imageUrl) {
+        setSrc(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const url = await getImageUrl(imageUrl);
+        setSrc(url);
+      } catch (err) {
+        console.error('[ImagePreviewModal] 加载图片失败:', err);
+        setSrc(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+  }, [imageUrl]);
+
   if (!imageUrl) return null;
 
   return (
@@ -31,12 +58,18 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, title, 
       )}
       
       <div className="flex items-center justify-center p-8 w-full h-full">
-        <img 
-          src={imageUrl} 
-          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-          alt={title || 'Preview'}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[var(--accent)]" />
+          </div>
+        ) : src ? (
+          <img 
+            src={src} 
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            alt={title || 'Preview'}
+          />
+        ) : null}
       </div>
       
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">

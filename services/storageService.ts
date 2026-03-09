@@ -1,7 +1,7 @@
 import { ProjectState, AssetLibraryItem } from '../types';
 
 const DB_NAME = 'BigBananaDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_NAME = 'projects';
 const ASSET_STORE_NAME = 'assetLibrary';
 const EXPORT_SCHEMA_VERSION = 1;

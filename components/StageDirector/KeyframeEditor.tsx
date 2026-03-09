@@ -105,7 +105,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
               <img
                 src={imageUrl}
                 className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                onClick={() => onImageClick(imageUrl!, `${label} - 关键帧`)}
+                onClick={() => keyframe?.imageUrl && onImageClick(keyframe.imageUrl, `${label} - 关键帧`)}
                 alt={label}
               />
               <div className="absolute inset-0 bg-[var(--bg-base)]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">

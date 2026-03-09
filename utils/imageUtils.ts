@@ -1,9 +1,10 @@
-import { imageStorageService } from '../services/imageStorageService';
+import { imageStorageService, videoStorageService } from '../services/imageStorageService';
 
 export interface ImageSource {
-  type: 'local' | 'cloud' | 'base64';
+  type: 'local' | 'cloud' | 'base64' | 'video';
   url?: string;
   localImageId?: string;
+  localVideoId?: string;
 }
 
 export const parseImageUrl = (imageUrl: string | undefined): ImageSource => {
@@ -17,8 +18,17 @@ export const parseImageUrl = (imageUrl: string | undefined): ImageSource => {
     return { type: 'local', localImageId };
   }
 
+  if (imageUrl.startsWith('video:')) {
+    const localVideoId = imageUrl.substring(6);
+    return { type: 'video', localVideoId };
+  }
+
   // 检查是否是 base64 图片
   if (imageUrl.startsWith('data:image')) {
+    return { type: 'base64', url: imageUrl };
+  }
+
+  if (imageUrl.startsWith('data:video')) {
     return { type: 'base64', url: imageUrl };
   }
 
@@ -30,7 +40,6 @@ export const getImageUrl = async (imageUrl: string | undefined): Promise<string 
   const source = parseImageUrl(imageUrl);
 
   if (source.type === 'local') {
-    // 从本地 IndexedDB 加载
     const blob = await imageStorageService.getImage(source.localImageId!);
     if (!blob) {
       console.warn('[ImageUtils] 本地图片不存在:', source.localImageId);
@@ -39,12 +48,19 @@ export const getImageUrl = async (imageUrl: string | undefined): Promise<string 
     return URL.createObjectURL(blob);
   }
 
+  if (source.type === 'video') {
+    const blob = await videoStorageService.getVideo(source.localVideoId!);
+    if (!blob) {
+      console.warn('[ImageUtils] 本地视频不存在:', source.localVideoId);
+      return null;
+    }
+    return URL.createObjectURL(blob);
+  }
+
   if (source.type === 'base64') {
-    // 直接返回 base64
     return source.url;
   }
 
-  // 返回云端 URL
   return source.url || null;
 };
 
@@ -115,4 +131,20 @@ export const convertImageUrlToBase64 = async (imageUrl: string | undefined): Pro
   }
 
   return undefined;
+};
+
+export const saveVideoToLocal = async (videoBase64: string): Promise<string> => {
+  const cleanBase64 = videoBase64.replace(/^data:video\/[^;]+;base64,/, '');
+  const byteCharacters = atob(cleanBase64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'video/mp4' });
+  
+  const videoId = `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  await videoStorageService.saveVideo(videoId, blob);
+  
+  return `video:${videoId}`;
 };
