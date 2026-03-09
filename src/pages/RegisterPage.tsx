@@ -73,7 +73,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-            BigBanana AI Director
+            WL AI Director
           </h1>
           <p className="text-[var(--text-muted)]">
             AI 漫剧创作平台

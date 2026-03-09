@@ -34,7 +34,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* Logo / Title */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-            BigBanana AI Director
+            WL AI Director
           </h1>
           <p className="text-[var(--text-muted)]">
             AI 漫剧创作平台

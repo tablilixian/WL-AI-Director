@@ -1,4 +1,4 @@
-# BigBanana AI Director - Robots.txt
+# WL AI Director - Robots.txt
 # https://director.tree456.com/robots.txt
 
 User-agent: *
