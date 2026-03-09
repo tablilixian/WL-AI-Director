@@ -20,7 +20,8 @@ import {
   deleteAssetFromLibrary as deleteAssetFromLibraryFromDB,
   saveAssetToLibrary as saveAssetToLibraryToDB,
   loadProjectFromDB,
-  saveProjectToDB
+  saveProjectToDB,
+  deleteProjectStage
 } from './storageService';
 
 // 本地存储的ID映射表（旧格式ID -> 云端UUID）
@@ -419,6 +420,9 @@ class HybridStorageService {
 
     // 先删除本地
     await deleteProjectFromDB(id);
+    
+    // 删除 stage 记录
+    await deleteProjectStage(id);
 
     // 如果已登录，同时删除云端
     if (user) {

@@ -10,7 +10,7 @@ import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/
 import ModelConfigModal from './components/ModelConfig';
 import { ProjectState } from './types';
 import { Save, CheckCircle } from 'lucide-react';
-import { saveProjectToDB, loadProjectFromDB } from './services/storageService';
+import { saveProjectToDB, loadProjectFromDB, saveCurrentStage, getCurrentStage } from './services/storageService';
 import { hybridStorage } from './services/hybridStorageService';
 import { setGlobalApiKey } from './services/aiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
@@ -266,6 +266,15 @@ function App() {
     });
   };
 
+  // Update project state only (without triggering cloud sync)
+  const updateProjectState = (updates: Partial<ProjectState>) => {
+    if (!project) return;
+    setProject(prev => {
+      if (!prev) return null;
+      return { ...prev, ...updates };
+    });
+  };
+
   // Set stage
   const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts') => {
     if (isGenerating) {
@@ -277,12 +286,18 @@ function App() {
         cancelText: '继续等待',
         onConfirm: () => {
           setIsGenerating(false);
-          updateProject({ stage });
+          updateProjectState({ stage });
+          if (project) {
+            saveCurrentStage(project.id, stage);
+          }
         }
       });
       return;
     }
-    updateProject({ stage });
+    updateProjectState({ stage });
+    if (project) {
+      saveCurrentStage(project.id, stage);
+    }
   };
 
   // Handle open project
@@ -295,16 +310,26 @@ function App() {
       console.log('[App] 正在从本地加载项目:', proj);
       const fullProject = await loadProjectFromDB(proj);
       if (fullProject) {
-        setProject(fullProject);
-        initialProjectRef.current = JSON.parse(JSON.stringify(fullProject));
+        // 从单独存储中恢复 stage
+        const currentStage = await getCurrentStage(proj);
+        console.log('[App] 恢复 stage:', currentStage);
+        
+        const projectWithStage = { ...fullProject, stage: currentStage as any };
+        setProject(projectWithStage);
+        initialProjectRef.current = JSON.parse(JSON.stringify(projectWithStage));
         console.log('[App] 项目加载成功:', fullProject.title);
       } else {
         console.error('[App] 无法加载项目，项目不存在:', proj);
       }
     } else {
       // 如果传入的是完整项目对象，直接使用
-      setProject(proj);
-      initialProjectRef.current = JSON.parse(JSON.stringify(proj));
+      // 从单独存储中恢复 stage
+      const currentStage = await getCurrentStage(proj.id);
+      console.log('[App] 恢复 stage:', currentStage);
+      
+      const projectWithStage = { ...proj, stage: currentStage as any };
+      setProject(projectWithStage);
+      initialProjectRef.current = JSON.parse(JSON.stringify(projectWithStage));
     }
   };
 

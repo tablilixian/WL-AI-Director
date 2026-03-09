@@ -446,3 +446,103 @@ export const createNewProjectState = (): ProjectState => {
     renderLogs: [],
   };
 };
+
+// ============================================
+// Stage 专用存储（避免频繁云端同步）
+// ============================================
+
+const STAGE_STORE_NAME = 'projectStages';
+
+/**
+ * 保存项目的当前 stage 到单独的 store
+ * 这样 stage 变化不会触发完整的项目云端同步
+ */
+export const saveCurrentStage = async (projectId: string, stage: string): Promise<void> => {
+  try {
+    const db = await openDB();
+    
+    // 确保 projectStages store 存在
+    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
+      db.close();
+      await upgradeDBForStageStore();
+      return saveCurrentStage(projectId, stage);
+    }
+    
+    const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STAGE_STORE_NAME);
+    await store.put({ projectId, stage, updatedAt: Date.now() });
+    console.log(`[Storage] Stage 已保存: ${projectId} -> ${stage}`);
+  } catch (error) {
+    console.error('[Storage] 保存 stage 失败:', error);
+  }
+};
+
+/**
+ * 获取项目的当前 stage
+ * 如果没有保存过，返回默认值 'script'
+ */
+export const getCurrentStage = async (projectId: string): Promise<string> => {
+  try {
+    const db = await openDB();
+    
+    // 确保 projectStages store 存在
+    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
+      return 'script';
+    }
+    
+    return new Promise((resolve) => {
+      const tx = db.transaction(STAGE_STORE_NAME, 'readonly');
+      const store = tx.objectStore(STAGE_STORE_NAME);
+      const request = store.get(projectId);
+      request.onsuccess = () => {
+        const result = request.result as { projectId: string; stage: string; updatedAt: number } | undefined;
+        resolve(result?.stage || 'script');
+      };
+      request.onerror = () => {
+        console.error('[Storage] 获取 stage 失败:', request.error);
+        resolve('script');
+      };
+    });
+  } catch (error) {
+    console.error('[Storage] 获取 stage 失败:', error);
+    return 'script';
+  }
+};
+
+/**
+ * 删除项目的 stage 记录
+ * 用于删除项目时清理数据
+ */
+export const deleteProjectStage = async (projectId: string): Promise<void> => {
+  try {
+    const db = await openDB();
+    
+    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
+      return;
+    }
+    
+    const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STAGE_STORE_NAME);
+    await store.delete(projectId);
+    console.log(`[Storage] Stage 已删除: ${projectId}`);
+  } catch (error) {
+    console.error('[Storage] 删除 stage 失败:', error);
+  }
+};
+
+/**
+ * 升级数据库，添加 projectStages store
+ */
+const upgradeDBForStageStore = async (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION + 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
+        db.createObjectStore(STAGE_STORE_NAME, { keyPath: 'projectId' });
+      }
+    };
+  });
+};
