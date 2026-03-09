@@ -57,6 +57,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .single()
           
           set({ session, user: session.user, profile })
+          
+          // 登录成功后同步资产库
+          setTimeout(() => {
+            import('../../services/hybridStorageService').then(({ hybridStorage }) => {
+              hybridStorage.getAllAssetLibraryItems().then((items) => {
+                console.log(`[Auth] Auth state change 资产库同步完成: ${items.length} 个资产`)
+              }).catch(console.error)
+            }).catch(console.error)
+          }, 100)
         } else {
           set({ session: null, user: null, profile: null })
         }
@@ -93,12 +102,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // 登录成功后触发云端双向同步
         setTimeout(() => {
-          import('../../services/hybridStorageService').then(({ syncFromCloud }) => {
+          import('../../services/hybridStorageService').then(({ syncFromCloud, hybridStorage }) => {
+            // 同步项目
             syncFromCloud().then((result: { uploaded: number; downloaded: number; conflicts: number }) => {
               console.log(`[Auth] 登录双向同步完成: 上传 ${result.uploaded}, 下载 ${result.downloaded}, 冲突 ${result.conflicts}`)
               if (result.uploaded > 0 || result.downloaded > 0) {
                 window.dispatchEvent(new CustomEvent('projects-synced'))
               }
+            }).catch(console.error)
+            
+            // 同步资产库
+            hybridStorage.getAllAssetLibraryItems().then((items) => {
+              console.log(`[Auth] 登录后资产库同步完成: ${items.length} 个资产`)
             }).catch(console.error)
           }).catch(console.error)
         }, 100)

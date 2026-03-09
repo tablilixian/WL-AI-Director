@@ -8,6 +8,7 @@
 
 import { supabase } from '../src/api/supabase';
 import { useAuthStore } from '../src/stores/authStore';
+import { assetLibraryApi } from '../src/api/assetLibrary';
 import type { ProjectState, AssetLibraryItem } from '../types';
 
 // 复用现有的 IndexedDB 操作
@@ -603,27 +604,113 @@ class HybridStorageService {
   }
 
   /**
-   * 获取所有素材库项目（仅本地 IndexedDB）
+   * 获取所有素材库项目（云端 + 本地 IndexedDB）
+   * 优先从云端获取，云端不可用时回退到本地
    */
   async getAllAssetLibraryItems(): Promise<AssetLibraryItem[]> {
-    console.log('[HybridStorage] 获取素材库项目（本地 IndexedDB）...');
-    return getAllAssetLibraryItemsFromDB();
+    console.log('[HybridStorage] 获取素材库项目...');
+    console.log('[HybridStorage] 用户登录状态:', this.isOnline());
+    
+    // 如果在线，优先从云端获取
+    if (this.isOnline()) {
+      try {
+        console.log('[HybridStorage] 尝试从云端获取素材库...');
+        const cloudItems = await assetLibraryApi.list();
+        console.log(`[HybridStorage] ✅ 从云端获取 ${cloudItems.length} 个素材库项目`);
+        
+        // 同步到本地 IndexedDB
+        console.log('[HybridStorage] 开始同步到本地 IndexedDB...');
+        for (const item of cloudItems) {
+          try {
+            await saveAssetToLibraryToDB(item);
+          } catch (error) {
+            console.error('[HybridStorage] 同步素材库项目到本地失败:', item.id, error);
+          }
+        }
+        console.log('[HybridStorage] ✅ 同步到本地 IndexedDB 完成');
+        
+        return cloudItems;
+      } catch (error) {
+        console.error('[HybridStorage] ❌ 从云端获取素材库失败:', error);
+        console.warn('[HybridStorage] 回退到本地 IndexedDB');
+      }
+    } else {
+      console.log('[HybridStorage] 用户未登录，直接使用本地 IndexedDB');
+    }
+    
+    // 回退到本地 IndexedDB
+    console.log('[HybridStorage] 从本地 IndexedDB 获取素材库项目...');
+    const localItems = await getAllAssetLibraryItemsFromDB();
+    console.log(`[HybridStorage] 从本地 IndexedDB 获取 ${localItems.length} 个素材库项目`);
+    return localItems;
   }
 
   /**
-   * 保存素材库项目（仅本地 IndexedDB）
+   * 保存素材库项目（云端 + 本地 IndexedDB）
+   * 双写策略：同时保存到云端和本地
    */
   async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
-    console.log('[HybridStorage] 保存素材库项目到本地 IndexedDB:', item.name);
-    await saveAssetToLibraryToDB(item);
+    console.log('[HybridStorage] 保存素材库项目:', item.name);
+    
+    // 先保存到本地 IndexedDB
+    try {
+      await saveAssetToLibraryToDB(item);
+      console.log('[HybridStorage] 素材库项目已保存到本地 IndexedDB, ID:', item.id);
+    } catch (error) {
+      console.error('[HybridStorage] 保存素材库项目到本地失败:', error);
+    }
+    
+    // 如果在线，同步到云端
+    if (this.isOnline()) {
+      try {
+        const cloudItem = await assetLibraryApi.create(item);
+        console.log('[HybridStorage] 素材库项目已同步到云端, 云端 ID:', cloudItem.id);
+        
+        // 更新本地 ID 映射
+        if (item.id !== cloudItem.id) {
+          setIdMapping(item.id, cloudItem.id);
+        }
+        
+        // 更新本地 IndexedDB 中的 ID 为云端 UUID
+        try {
+          // 先删除旧记录
+          await deleteAssetFromLibraryFromDB(item.id);
+          // 保存新记录（使用云端 ID）
+          await saveAssetToLibraryToDB(cloudItem);
+          console.log('[HybridStorage] 本地 IndexedDB 已更新为云端 ID:', cloudItem.id);
+        } catch (error) {
+          console.error('[HybridStorage] 更新本地 IndexedDB ID 失败:', error);
+        }
+      } catch (error) {
+        console.error('[HybridStorage] 同步素材库项目到云端失败:', error);
+      }
+    }
   }
 
   /**
-   * 删除素材库项目（仅本地 IndexedDB）
+   * 删除素材库项目（云端 + 本地 IndexedDB）
+   * 双写策略：同时从云端和本地删除
    */
   async deleteAssetFromLibrary(id: string): Promise<void> {
-    console.log('[HybridStorage] 从本地 IndexedDB 删除素材库项目:', id);
-    await deleteAssetFromLibraryFromDB(id);
+    console.log('[HybridStorage] 删除素材库项目:', id);
+    
+    // 从本地 IndexedDB 删除
+    try {
+      await deleteAssetFromLibraryFromDB(id);
+      console.log('[HybridStorage] 素材库项目已从本地 IndexedDB 删除');
+    } catch (error) {
+      console.error('[HybridStorage] 从本地删除素材库项目失败:', error);
+    }
+    
+    // 如果在线，从云端删除
+    if (this.isOnline()) {
+      try {
+        await assetLibraryApi.delete(id);
+        console.log('[HybridStorage] 素材库项目已从云端删除');
+      } catch (error) {
+        console.error('[HybridStorage] 从云端删除素材库项目失败:', error);
+      }
+    }
   }
 }
 
