@@ -35,18 +35,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
     <aside className="w-72 bg-[var(--bg-base)] border-r border-[var(--border-primary)] h-screen fixed left-0 top-0 flex flex-col z-50 select-none">
       {/* Header */}
       <div className="p-6 border-b border-[var(--border-subtle)]">
-        <a 
-          href="https://tree456.com/" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 mb-4 group cursor-pointer"
-        >
+        <div className="flex items-center gap-3 mb-4 group cursor-pointer">
           <img src={logoImg} alt="Logo" className="w-8 h-8 flex-shrink-0 transition-transform group-hover:scale-110" />
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-[var(--text-primary)] tracking-wider group-hover:text-[var(--text-secondary)] transition-colors">WL</h1>
             <p className="text-[10px] text-[var(--text-tertiary)] tracking-widest group-hover:text-[var(--text-secondary)] transition-colors">Studio Pro</p>
           </div>
-        </a>
+        </div>
 
         {/* User Info */}
         {user && (

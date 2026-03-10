@@ -160,15 +160,13 @@ const GlobalSettings: React.FC<GlobalSettingsProps> = ({ onRefresh }) => {
               稳定快速，价格优惠。本开源项目由 BigBanana API 提供支持。
             </p>
             <div className="flex items-center gap-3">
-              <a 
-                href="https://api.antsk.cn" 
-                target="_blank" 
-                rel="noreferrer"
-                className="px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded-lg hover:bg-[var(--btn-primary-hover)] transition-colors inline-flex items-center gap-1.5"
+              <button 
+                className="px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
+                disabled
               >
                 立即购买
                 <ExternalLink className="w-3 h-3" />
-              </a>
+              </button>
               <a 
                 href="https://open.bigmodel.cn" 
                 target="_blank" 
