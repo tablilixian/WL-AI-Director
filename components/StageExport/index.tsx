@@ -297,6 +297,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
                 phase: downloadPhase,
                 progress: downloadProgress
               }}
+              project={project}
               onPreview={openVideoPlayer}
               onDownloadMaster={handleDownloadMaster}
             />
