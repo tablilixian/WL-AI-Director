@@ -19,6 +19,7 @@ import { useAuthStore } from './src/stores/authStore';
 import LoginPage from './src/pages/LoginPage';
 import RegisterPage from './src/pages/RegisterPage';
 import logoImg from './logo.png';
+import { logger, LogCategory } from './services/logger';
 import './src/i18n';
 
 type AuthView = 'login' | 'register' | 'app';
@@ -102,7 +103,7 @@ function App() {
   // Handle onboarding quick start
   const handleOnboardingQuickStart = (option: 'script' | 'example') => {
     setShowOnboarding(false);
-    console.log('Quick start option:', option);
+    logger.debug(LogCategory.APP, 'Quick start option:', option);
   };
 
   // Show onboarding
@@ -135,7 +136,7 @@ function App() {
         error?.message?.includes('API Key missing') ||
         error?.message?.includes('AntSK API Key') ||
         error?.message?.includes('API Key 缺失')) {
-      console.warn('检测到 API Key 错误，请配置 API Key...');
+      logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
       setShowModelConfig(true);
       return true;
     }
@@ -149,7 +150,7 @@ function App() {
           event.error?.message?.includes('API Key missing') ||
           event.error?.message?.includes('AntSK API Key') ||
           event.error?.message?.includes('API Key 缺失')) {
-        console.warn('检测到 API Key 错误，请配置 API Key...');
+        logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true);
         event.preventDefault();
       }
@@ -160,7 +161,7 @@ function App() {
           event.reason?.message?.includes('API Key missing') ||
           event.reason?.message?.includes('AntSK API Key') ||
           event.reason?.message?.includes('API Key 缺失')) {
-        console.warn('检测到 API Key 错误，请配置 API Key...');
+        logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true);
         event.preventDefault();
       }
@@ -200,7 +201,7 @@ function App() {
 
     // 首次加载时跳过 auto-save
     if (isFirstLoadRef.current) {
-      console.log('[App] 📥 首次加载项目，跳过 auto-save');
+      logger.debug(LogCategory.APP, '📥 首次加载项目，跳过 auto-save');
       isFirstLoadRef.current = false;
       lastSavedHashRef.current = computeProjectHash(project);
       return;
@@ -211,11 +212,11 @@ function App() {
     
     // 如果内容没有变化，跳过保存
     if (currentHash === lastSavedHashRef.current) {
-      console.log('[App] 🔄 项目内容未变化，跳过保存');
+      logger.debug(LogCategory.APP, '🔄 项目内容未变化，跳过保存');
       return;
     }
 
-    console.log('[App] 📝 项目内容已变化，准备保存...');
+    logger.debug(LogCategory.APP, '📝 项目内容已变化，准备保存...');
     setSaveStatus('unsaved');
     setShowSaveStatus(true);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -227,9 +228,9 @@ function App() {
         setSaveStatus('saved');
         // 更新 hash，避免重复保存
         lastSavedHashRef.current = currentHash;
-        console.log('[App] ✅ 项目保存成功，hash:', currentHash);
+        logger.debug(LogCategory.APP, '✅ 项目保存成功，hash:', currentHash);
       } catch (e) {
-        console.error("Auto-save failed", e);
+        logger.error(LogCategory.STORAGE, "Auto-save failed", e);
       }
     }, 1000);
 
@@ -308,25 +309,25 @@ function App() {
     
     // 如果传入的是字符串（项目ID），则先从本地加载完整项目
     if (typeof proj === 'string') {
-      console.log('[App] 正在从本地加载项目:', proj);
+      logger.debug(LogCategory.APP, '正在从本地加载项目:', proj);
       const fullProject = await loadProjectFromDB(proj);
       if (fullProject) {
         // 从单独存储中恢复 stage
         const currentStage = await getCurrentStage(proj);
-        console.log('[App] 恢复 stage:', currentStage);
+        logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
         
         const projectWithStage = { ...fullProject, stage: currentStage as any };
         setProject(projectWithStage);
         initialProjectRef.current = JSON.parse(JSON.stringify(projectWithStage));
-        console.log('[App] 项目加载成功:', fullProject.title);
+        logger.debug(LogCategory.APP, '项目加载成功:', fullProject.title);
       } else {
-        console.error('[App] 无法加载项目，项目不存在:', proj);
+        logger.error(LogCategory.STORAGE, '无法加载项目，项目不存在:', proj);
       }
     } else {
       // 如果传入的是完整项目对象，直接使用
       // 从单独存储中恢复 stage
       const currentStage = await getCurrentStage(proj.id);
-      console.log('[App] 恢复 stage:', currentStage);
+      logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
       
       const projectWithStage = { ...proj, stage: currentStage as any };
       setProject(projectWithStage);
@@ -354,22 +355,22 @@ function App() {
 
   // Handle exit project
   const handleExitProject = async () => {
-    console.log('[App] 🚪 handleExitProject 开始执行');
-    console.log('[App] isGenerating:', isGenerating);
-    console.log('[App] project:', project);
+    logger.debug(LogCategory.APP, '🚪 handleExitProject 开始执行');
+    logger.debug(LogCategory.APP, 'isGenerating:', isGenerating);
+    logger.debug(LogCategory.APP, 'project:', project);
     
     // 比较项目是否有变化
     const hasChanges = !isProjectEqual(project, initialProjectRef.current);
-    console.log('[App] 项目是否有变化:', hasChanges);
+    logger.debug(LogCategory.APP, '项目是否有变化:', hasChanges);
     
     if (!hasChanges) {
-      console.log('[App] ⏭️ 项目无变化，直接退出，跳过保存');
+      logger.debug(LogCategory.APP, '⏭️ 项目无变化，直接退出，跳过保存');
       setProject(null);
       setTimeout(() => setIsExiting(false), 100);
       return;
     }
     
-    console.log('[App] 💾 项目有变化，开始保存...');
+    logger.debug(LogCategory.APP, '💾 项目有变化，开始保存...');
     
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
@@ -379,13 +380,13 @@ function App() {
         confirmText: '确定退出',
         cancelText: '继续等待',
         onConfirm: async () => {
-          console.log('[App] ⚠️ 用户确认退出生成任务');
+          logger.debug(LogCategory.APP, '⚠️ 用户确认退出生成任务');
           setIsGenerating(false);
           setIsExiting(true);
           if (project) {
             await hybridStorage.saveProject(project);
           }
-          console.log('[App] 🚪 调用 setProject(null)');
+          logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
           setProject(null);
           setTimeout(() => setIsExiting(false), 100);
         }
@@ -393,15 +394,15 @@ function App() {
       return;
     }
     
-    console.log('[App] 💾 开始保存项目...');
+    logger.debug(LogCategory.APP, '💾 开始保存项目...');
     setIsExiting(true);
     if (project) {
       await hybridStorage.saveProject(project);
     }
-    console.log('[App] 🚪 调用 setProject(null)');
+    logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
     setProject(null);
     setTimeout(() => setIsExiting(false), 100);
-    console.log('[App] ✅ handleExitProject 执行完成');
+    logger.debug(LogCategory.APP, '✅ handleExitProject 执行完成');
   };
 
   // Render stage

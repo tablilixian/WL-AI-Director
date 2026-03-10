@@ -1,6 +1,7 @@
 import { ProjectState } from '../types';
 import { videoStorageService } from './imageStorageService';
 import { getImageUrl, parseImageUrl } from '../utils/imageUtils';
+import { logger, LogCategory } from './logger';
 
 /**
  * 下载单个文件并转换为 Blob
@@ -88,7 +89,7 @@ export async function downloadMasterVideo(
         const progress = 10 + Math.round((i + 1) / completedShots.length * 75);
         onProgress?.(`下载中 (${i + 1}/${completedShots.length})...`, progress);
       } catch (err) {
-        console.error(`下载视频片段 ${i + 1} 失败:`, err);
+        logger.error(LogCategory.STORAGE, `下载视频片段 ${i + 1} 失败:`, err);
         // 继续下载其他文件，不中断整个流程
       }
     }
@@ -118,7 +119,7 @@ export async function downloadMasterVideo(
 
     onProgress?.('完成！', 100);
   } catch (error) {
-    console.error('视频导出失败:', error);
+    logger.error(LogCategory.STORAGE, '视频导出失败:', error);
     throw error;
   }
 }
@@ -227,7 +228,7 @@ export async function downloadSourceAssets(
         const progress = 5 + Math.round((i + 1) / assets.length * 80);
         onProgress?.(`下载中 (${i + 1}/${assets.length})...`, progress);
       } catch (error) {
-        console.error(`下载资源失败: ${asset.path}`, error);
+        logger.error(LogCategory.STORAGE, `下载资源失败: ${asset.path}`, error);
         // 继续下载其他文件，不中断整个流程
       }
     }
@@ -255,7 +256,7 @@ export async function downloadSourceAssets(
 
     onProgress?.('完成！', 100);
   } catch (error) {
-    console.error('下载源资源失败:', error);
+    logger.error(LogCategory.STORAGE, '下载源资源失败:', error);
     throw error;
   }
 }

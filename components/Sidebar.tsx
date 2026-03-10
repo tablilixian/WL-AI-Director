@@ -3,6 +3,7 @@ import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle,
 import logoImg from '../logo.png';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
+import { logger, LogCategory } from '../services/logger';
 
 interface SidebarProps {
   currentStage: string;
@@ -57,13 +58,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
 
         <button 
           onClick={() => {
-            console.log('[Sidebar] 🚪 返回项目列表按钮被点击');
-            console.log('[Sidebar] isNavigationLocked:', isNavigationLocked);
+            logger.debug(LogCategory.UI, '🚪 返回项目列表按钮被点击');
+            logger.debug(LogCategory.UI, 'isNavigationLocked:', isNavigationLocked);
             if (!isNavigationLocked) {
-              console.log('[Sidebar] ✅ 调用 onExit');
+              logger.debug(LogCategory.UI, '✅ 调用 onExit');
               onExit();
             } else {
-              console.log('[Sidebar] ❌ 导航已锁定，无法退出');
+              logger.debug(LogCategory.UI, '❌ 导航已锁定，无法退出');
             }
           }}
           className={`flex items-center gap-2 transition-colors text-xs font-mono uppercase tracking-wide group ${
