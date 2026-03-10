@@ -125,7 +125,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
 
   // Handle master video download
   const handleDownloadMaster = async () => {
-    if (isDownloading || progress < 100) return;
+    if (isDownloading || completedShots.length === 0) return;
     
     setIsDownloading(true);
     setDownloadProgress(0);

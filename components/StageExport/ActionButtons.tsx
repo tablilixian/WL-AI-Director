@@ -130,11 +130,11 @@ const ActionButtons: React.FC<Props> = ({
 
         <button 
           onClick={onDownloadMaster}
-          disabled={progress < 100 || isDownloading} 
+          disabled={completedShotsCount === 0 || isDownloading} 
           className={
             isDownloading
               ? STYLES.button.loading
-              : progress === 100 
+              : completedShotsCount > 0 
               ? STYLES.button.secondary
               : STYLES.button.disabled
           }

@@ -1,10 +1,36 @@
 import { ProjectState } from '../types';
+import { videoStorageService } from './imageStorageService';
+import { getImageUrl, parseImageUrl } from '../utils/imageUtils';
 
 /**
  * 下载单个文件并转换为 Blob
- * 支持URL和base64两种格式
+ * 支持URL、base64和本地存储三种格式
  */
 async function downloadFile(urlOrBase64: string): Promise<Blob> {
+  const source = parseImageUrl(urlOrBase64);
+
+  // 处理本地视频存储 (video: 前缀)
+  if (source.type === 'video') {
+    const blob = await videoStorageService.getVideo(source.localVideoId!);
+    if (!blob) {
+      throw new Error(`本地视频不存在: ${source.localVideoId}`);
+    }
+    return blob;
+  }
+
+  // 处理本地图片存储 (local: 前缀)
+  if (source.type === 'local') {
+    const imageUrl = await getImageUrl(urlOrBase64);
+    if (!imageUrl) {
+      throw new Error(`本地图片不存在: ${source.localImageId}`);
+    }
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.statusText}`);
+    }
+    return await response.blob();
+  }
+
   // 检查是否为base64格式
   if (urlOrBase64.startsWith('data:video/')) {
     // 从base64 data URL中提取数据
