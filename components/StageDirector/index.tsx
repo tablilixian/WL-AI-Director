@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutGrid, Sparkles, Loader2, AlertCircle, Edit2, Film, Video as VideoIcon } from 'lucide-react';
 import { ProjectState, Shot, Keyframe, AspectRatio, VideoDuration, NineGridPanel, NineGridData } from '../../types';
+import { logger, LogCategory } from '../../services/logger';
 import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId } from '../../services/aiService';
 import { 
   getRefImagesForShot, 
@@ -86,7 +87,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     });
 
     if (hasStuckGenerating) {
-      console.log('🔧 检测到卡住的生成状态，正在重置...');
+      logger.debug(LogCategory.AI, '🔧 检测到卡住的生成状态，正在重置...');
       updateProject((prevProject: ProjectState) => ({
         ...prevProject,
         shots: prevProject.shots.map(shot => ({
@@ -207,7 +208,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       try {
         prompt = await buildKeyframePromptWithAI(basePrompt, visualStyle, shot.cameraMovement, type, true, propsInfo);
       } catch (error) {
-        console.error('AI增强失败,使用基础提示词:', error);
+        logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
         prompt = buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo);
       }
     } else {
@@ -232,12 +233,12 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       // 立即保存到云端
       try {
         await saveProjectToCloud(updatedProject);
-        console.log(`✅ 关键帧生成完成 (${type})，已保存到云端`);
+        logger.debug(LogCategory.AI, `✅ 关键帧生成完成 (${type})，已保存到云端`);
       } catch (error) {
-        console.error('❌ 保存关键帧失败:', error);
+        logger.error(LogCategory.AI, '❌ 保存关键帧失败:', error);
       }
     } catch (e: any) {
-      console.error(e);
+      logger.error(LogCategory.AI, e);
       updateProject((prevProject: ProjectState) => ({
         ...prevProject,
         shots: prevProject.shots.map(s => {

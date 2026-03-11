@@ -18,6 +18,7 @@ import {
   AspectRatio,
   VideoDuration,
 } from '../types/model';
+import { logger, LogCategory } from './logger';
 
 // localStorage 键名
 const STORAGE_KEY = 'bigbanana_model_registry';
@@ -153,7 +154,7 @@ export const loadRegistry = (): ModelRegistryState => {
       if (modelsRemoved > 0 || activeModelMigrated) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-          console.log(`🔄 模型注册中心迁移完成：清理 ${modelsRemoved} 个废弃模型`);
+          logger.debug(LogCategory.MODEL, `🔄 模型注册中心迁移完成：清理 ${modelsRemoved} 个废弃模型`);
         } catch (e) {
           // 回写失败不影响运行，下次加载仍会重新迁移
         }
@@ -162,7 +163,7 @@ export const loadRegistry = (): ModelRegistryState => {
       return parsed;
     }
   } catch (e) {
-    console.error('加载模型注册中心失败:', e);
+    logger.error(LogCategory.MODEL, '加载模型注册中心失败:', e);
   }
 
   registryState = getDefaultState();
@@ -177,7 +178,7 @@ export const saveRegistry = (state: ModelRegistryState): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     registryState = state;
   } catch (e) {
-    console.error('保存模型注册中心失败:', e);
+    logger.error(LogCategory.MODEL, '保存模型注册中心失败:', e);
   }
 };
 

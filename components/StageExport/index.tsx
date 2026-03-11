@@ -3,6 +3,7 @@ import { Film } from 'lucide-react';
 import { ProjectState } from '../../types';
 import { downloadMasterVideo, downloadSourceAssets } from '../../services/exportService';
 import { exportProjectData, importIndexedDBData } from '../../services/storageService';
+import { logger, LogCategory } from '../../services/logger';
 import { STYLES } from './constants';
 import {
   calculateEstimatedDuration,
@@ -65,7 +66,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
           playPromise
             .then(() => setIsPlaying(true))
             .catch(err => {
-              console.warn('Auto-play failed:', err);
+              logger.warn(LogCategory.VIDEO, 'Auto-play failed:', err);
               setIsPlaying(false);
             });
         }
@@ -142,7 +143,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
         setDownloadProgress(0);
       }, 2000);
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error(LogCategory.VIDEO, 'Download failed:', error);
       showAlert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
       setIsDownloading(false);
       setDownloadPhase('');
@@ -174,7 +175,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
         setAssetsProgress(0);
       }, 2000);
     } catch (error) {
-      console.error('Assets download failed:', error);
+      logger.error(LogCategory.VIDEO, 'Assets download failed:', error);
       showAlert(`下载源资源失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
       setIsDownloadingAssets(false);
       setAssetsPhase('');
@@ -203,7 +204,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
 
       showAlert('当前项目已导出，备份文件已下载。', { type: 'success' });
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error(LogCategory.VIDEO, 'Export failed:', error);
       showAlert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
     } finally {
       setIsDataExporting(false);
@@ -241,7 +242,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
             const result = await importIndexedDBData(payload, { mode: 'merge' });
             showAlert(`导入完成：项目 ${result.projects} 个，资产 ${result.assets} 个。`, { type: 'success' });
           } catch (error) {
-            console.error('Import failed:', error);
+            logger.error(LogCategory.VIDEO, 'Import failed:', error);
             showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
           } finally {
             setIsDataImporting(false);
@@ -249,7 +250,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
         }
       });
     } catch (error) {
-      console.error('Import failed:', error);
+      logger.error(LogCategory.VIDEO, 'Import failed:', error);
       showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
     }
   };

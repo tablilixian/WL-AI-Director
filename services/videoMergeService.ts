@@ -1,5 +1,6 @@
 import { ProjectState } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
+import { logger, LogCategory } from './logger';
 
 export interface MergeProgress {
   phase: string;
@@ -63,7 +64,7 @@ class VideoMergeService {
       const videoUrl = shot.interval!.videoUrl!;
 
       try {
-        console.log(`[VideoMergeService] 正在下载视频 ${i + 1}/${completedShots.length}:`, videoUrl);
+        logger.debug(LogCategory.VIDEO, `[VideoMergeService] 正在下载视频 ${i + 1}/${completedShots.length}: ${videoUrl}`);
         
         let url: string;
         
@@ -97,7 +98,7 @@ class VideoMergeService {
           totalShots: completedShots.length
         });
       } catch (err) {
-        console.error(`下载视频片段 ${i + 1} 失败:`, err);
+        logger.error(LogCategory.VIDEO, `下载视频片段 ${i + 1} 失败:`, err);
         throw new Error(`下载视频片段 ${i + 1} 失败: ${err instanceof Error ? err.message : '未知错误'}`);
       }
     }
@@ -141,7 +142,7 @@ class VideoMergeService {
       }
     }
     
-    console.log(`[VideoMergeService] 使用编码格式: ${mimeType}`);
+    logger.debug(LogCategory.VIDEO, `[VideoMergeService] 使用编码格式: ${mimeType}`);
     
     const mediaRecorder = new MediaRecorder(stream, {
       mimeType,
@@ -238,12 +239,12 @@ class VideoMergeService {
   }
 
   async cancel(): Promise<void> {
-    console.log('[VideoMergeService] 取消合并操作');
+    logger.debug(LogCategory.VIDEO, '[VideoMergeService] 取消合并操作');
     this.isCancelled = true;
   }
 
   async cleanup(): Promise<void> {
-    console.log('[VideoMergeService] 清理临时资源');
+    logger.debug(LogCategory.VIDEO, '[VideoMergeService] 清理临时资源');
     this.isCancelled = false;
   }
 }

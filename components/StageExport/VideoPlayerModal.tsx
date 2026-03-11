@@ -3,6 +3,7 @@ import { Play, Pause, SkipForward, SkipBack, X, Loader2 } from 'lucide-react';
 import { Shot, ProjectState } from '../../types';
 import { STYLES } from './constants';
 import { getImageUrl } from '../../utils/imageUtils';
+import { logger, LogCategory } from '../../services/logger';
 
 interface Props {
   completedShots: Shot[];
@@ -42,7 +43,7 @@ const VideoPlayerModal: React.FC<Props> = ({
           const url = await getImageUrl(currentShot.interval.videoUrl);
           setVideoUrl(url);
         } catch (err) {
-          console.error('[VideoPlayerModal] 加载视频失败:', err);
+          logger.error(LogCategory.VIDEO, '[VideoPlayerModal] 加载视频失败:', err);
           setVideoUrl(null);
         } finally {
           setLoading(false);

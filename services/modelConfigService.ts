@@ -13,6 +13,7 @@ import {
   ImageModelConfig,
   VideoModelConfig
 } from '../types';
+import { logger, LogCategory } from './logger';
 
 // localStorage 键名
 const STORAGE_KEY = 'bigbanana_model_config';
@@ -93,7 +94,7 @@ export const loadModelConfig = (): ModelManagerState => {
       return parsed;
     }
   } catch (e) {
-    console.error('加载模型配置失败:', e);
+    logger.error(LogCategory.MODEL, '加载模型配置失败:', e);
   }
 
   runtimeState = { ...DEFAULT_STATE };
@@ -108,7 +109,7 @@ export const saveModelConfig = (state: ModelManagerState): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     runtimeState = state;
   } catch (e) {
-    console.error('保存模型配置失败:', e);
+    logger.error(LogCategory.MODEL, '保存模型配置失败:', e);
   }
 };
 

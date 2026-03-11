@@ -4,6 +4,7 @@
  */
 
 import { AspectRatio } from "../../types";
+import { logger, LogCategory } from '../logger';
 import {
   getGlobalApiKey as getRegistryApiKey,
   setGlobalApiKey as setRegistryApiKey,
@@ -108,28 +109,28 @@ export const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string)
     // 首先尝试通过 id 精确匹配
     const model = getModelById(lookupId);
     if (model && model.type === type) {
-      console.log(`[resolveModel] 通过 id 找到模型:`, model.id, model.name);
+      logger.debug(LogCategory.AI, `[resolveModel] 通过 id 找到模型: ${model.id} ${model.name}`);
       return model;
     }
     
     // 然后尝试通过 apiModel 匹配
     const candidates = getModels(type).filter(m => m.apiModel === lookupId);
     if (candidates.length === 1) {
-      console.log(`[resolveModel] 通过 apiModel 找到模型:`, candidates[0].id, candidates[0].name);
+      logger.debug(LogCategory.AI, `[resolveModel] 通过 apiModel 找到模型: ${candidates[0].id} ${candidates[0].name}`);
       return candidates[0];
     }
     
     // 如果都找不到，记录警告并使用激活的模型
-    console.warn(`[resolveModel] 未找到模型: ${modelId}, 将使用激活的模型`);
+    logger.warn(LogCategory.AI, `[resolveModel] 未找到模型: ${modelId}, 将使用激活的模型`);
   }
   
   const activeModel = getActiveModel(type);
   if (activeModel) {
-    console.log(`[resolveModel] 使用激活的模型:`, activeModel.id, activeModel.name);
+    logger.debug(LogCategory.AI, `[resolveModel] 使用激活的模型: ${activeModel.id} ${activeModel.name}`);
     return activeModel;
   }
   
-  console.warn(`[resolveModel] 没有激活的模型，返回 undefined`);
+  logger.warn(LogCategory.AI, '[resolveModel] 没有激活的模型，返回 undefined');
   return undefined;
 };
 
@@ -150,12 +151,12 @@ export const resolveRequestModel = (type: 'chat' | 'image' | 'video', modelId?: 
  */
 export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: string): string => {
   const resolvedModel = resolveModel(type, modelId);
-  console.log(`[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=`, resolvedModel?.id, resolvedModel?.providerId);
+  logger.debug(LogCategory.AI, `[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=${resolvedModel?.id} ${resolvedModel?.providerId}`);
 
   if (resolvedModel) {
     const modelApiKey = getApiKeyForModel(resolvedModel.id);
     const apiKeySource = getApiKeySource(resolvedModel.id);
-    console.log(`[checkApiKey] modelApiKey found:`, !!modelApiKey, `source: ${apiKeySource}`);
+    logger.debug(LogCategory.AI, `[checkApiKey] modelApiKey found: ${!!modelApiKey}, source: ${apiKeySource}`);
     
     if (modelApiKey) return modelApiKey;
     
@@ -167,10 +168,10 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
   }
 
   const registryKey = getRegistryApiKey();
-  console.log(`[checkApiKey] registryKey found:`, !!registryKey);
+  logger.debug(LogCategory.AI, `[checkApiKey] registryKey found: ${!!registryKey}`);
   if (registryKey) return registryKey;
 
-  console.log(`[checkApiKey] runtimeApiKey found:`, !!runtimeApiKey);
+  logger.debug(LogCategory.AI, `[checkApiKey] runtimeApiKey found: ${!!runtimeApiKey}`);
   if (!runtimeApiKey) throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
   return runtimeApiKey;
 };
@@ -261,7 +262,7 @@ export const retryOperation = async <T>(
 
       if (isRetryableError && i < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, i);
-        console.warn(`请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试)`, e.message);
+        logger.warn(LogCategory.AI, `请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试) ${e.message}`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -533,11 +534,11 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
   if (url.includes('aigc-files.bigmodel.cn')) {
     const videoPath = url.replace('https://aigc-files.bigmodel.cn/', '');
     proxyUrl = `/bigmodel-files/${videoPath}`;
-    console.log('[Video] 使用 BigModel 文件代理:', proxyUrl);
+    logger.debug(LogCategory.VIDEO, `[Video] 使用 BigModel 文件代理: ${proxyUrl}`);
   } else if (url.includes('ufileos.com')) {
     const videoPath = url.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
     proxyUrl = `/video-proxy/${videoPath}`;
-    console.log('[Video] 使用 UCloud 代理:', proxyUrl);
+    logger.debug(LogCategory.VIDEO, `[Video] 使用 UCloud 代理: ${proxyUrl}`);
   }
 
   try {
@@ -558,7 +559,7 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
       reader.readAsDataURL(blob);
     });
   } catch (error: any) {
-    console.error('视频URL转base64失败:', error);
+    logger.error(LogCategory.VIDEO, '视频URL转base64失败:', error);
     throw new Error(`视频转换失败: ${error.message}`);
   }
 };

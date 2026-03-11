@@ -1,5 +1,6 @@
 import { ProjectState, AssetLibraryItem } from '../types';
 import { DB_NAME, DB_VERSION, STORE_NAMES, storageConfig } from './dbConfig';
+import { logger, LogCategory } from './logger';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -151,24 +152,24 @@ export const importIndexedDBData = async (
 };
 
 export const saveProjectToDB = async (project: ProjectState): Promise<void> => {
-  if (!storageConfig.enabled) { console.log('[Storage] 本地存储已禁用'); return; }
+  if (!storageConfig.enabled) { logger.debug(LogCategory.STORAGE, '本地存储已禁用'); return; }
   
-  console.log('[Storage] 💾 开始保存项目到 IndexedDB:', project.title);
+  logger.debug(LogCategory.STORAGE, '💾 开始保存项目到 IndexedDB:', project.title);
   const db = await openDB();
-  console.log('[Storage] ✅ IndexedDB 数据库已打开');
+  logger.debug(LogCategory.STORAGE, '✅ IndexedDB 数据库已打开');
   
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAMES.PROJECTS, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.PROJECTS);
     const p = { ...project, lastModified: Date.now() };
-    console.log('[Storage] 💾 正在执行 put 操作...');
+    logger.debug(LogCategory.STORAGE, '💾 正在执行 put 操作...');
     const request = store.put(p);
     request.onsuccess = () => {
-      console.log('[Storage] ✅ IndexedDB put 操作成功');
+      logger.debug(LogCategory.STORAGE, '✅ IndexedDB put 操作成功');
       resolve();
     };
     request.onerror = () => {
-      console.error('[Storage] ❌ IndexedDB put 操作失败:', request.error);
+      logger.error(LogCategory.STORAGE, '❌ IndexedDB put 操作失败:', request.error);
       reject(request.error);
     };
   });
@@ -206,7 +207,7 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
           openDB().then(writeDb => {
             const writeTx = writeDb.transaction(STORE_NAMES.PROJECTS, 'readwrite');
             writeTx.objectStore(STORE_NAMES.PROJECTS).put(project);
-            console.log(`🔄 项目 "${project.title}" 已迁移废弃的视频模型`);
+            logger.debug(LogCategory.STORAGE, `🔄 项目 "${project.title}" 已迁移废弃的视频模型`);
           }).catch(() => { /* 回写失败不影响运行 */ });
         }
         resolve(project);
@@ -218,9 +219,9 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
 };
 
 export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
-  console.log('[Storage] 📋 getAllProjectsMetadata 开始执行');
+  logger.debug(LogCategory.STORAGE, '📋 getAllProjectsMetadata 开始执行');
   const db = await openDB();
-  console.log('[Storage] ✅ 数据库已打开');
+  logger.debug(LogCategory.STORAGE, '✅ 数据库已打开');
   
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAMES.PROJECTS, 'readonly');
@@ -229,15 +230,15 @@ export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
     
     request.onsuccess = () => {
        const projects = request.result as ProjectState[];
-       console.log(`[Storage] ✅ 从 IndexedDB 获取到 ${projects.length} 个项目`);
+       logger.debug(LogCategory.STORAGE, `✅ 从 IndexedDB 获取到 ${projects.length} 个项目`);
        // Sort by last modified descending
        projects.sort((a, b) => b.lastModified - a.lastModified);
-       console.log('[Storage] ✅ 项目列表已排序');
+       logger.debug(LogCategory.STORAGE, '✅ 项目列表已排序');
        resolve(projects);
     };
     
     request.onerror = () => {
-      console.error('[Storage] ❌ 获取项目失败:', request.error);
+      logger.error(LogCategory.STORAGE, '❌ 获取项目失败:', request.error);
       reject(request.error);
     };
   });
@@ -299,11 +300,11 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
   export const deleteProjectFromDB = async (id: string): Promise<void> => {
   // 验证项目ID
   if (!id || typeof id !== 'string') {
-    console.error('❌ 无效的项目ID:', id);
+    logger.error(LogCategory.STORAGE, '❌ 无效的项目ID:', id);
     throw new Error('无效的项目ID');
   }
   
-  console.log(`🗑️ 开始删除项目: ${id}`);
+  logger.debug(LogCategory.STORAGE, `🗑️ 开始删除项目: ${id}`);
   
   const db = await openDB();
   
@@ -312,7 +313,7 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
   try {
     project = await loadProjectFromDB(id);
   } catch (e) {
-    console.warn('无法加载项目信息，直接删除');
+    logger.warn(LogCategory.STORAGE, '无法加载项目信息，直接删除');
   }
   
   return new Promise((resolve, reject) => {
@@ -357,24 +358,24 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
           });
         }
         
-        console.log(`✅ 项目已删除: ${project.title}`);
-        console.log(`📊 清理的资源统计:`, resourceCount);
-        console.log(`   - 角色参考图: ${resourceCount.characters}个`);
-        console.log(`   - 角色变体图: ${resourceCount.characterVariations}个`);
-        console.log(`   - 场景参考图: ${resourceCount.scenes}个`);
-        console.log(`   - 道具参考图: ${resourceCount.props}个`);
-        console.log(`   - 关键帧图像: ${resourceCount.keyframes}个`);
-        console.log(`   - 视频片段: ${resourceCount.videos}个`);
-        console.log(`   - 渲染日志: ${resourceCount.renderLogs}条`);
+        logger.info(LogCategory.STORAGE, `✅ 项目已删除: ${project.title}`);
+        logger.info(LogCategory.STORAGE, `📊 清理的资源统计:`, resourceCount);
+        logger.info(LogCategory.STORAGE, `   - 角色参考图: ${resourceCount.characters}个`);
+        logger.info(LogCategory.STORAGE, `   - 角色变体图: ${resourceCount.characterVariations}个`);
+        logger.info(LogCategory.STORAGE, `   - 场景参考图: ${resourceCount.scenes}个`);
+        logger.info(LogCategory.STORAGE, `   - 道具参考图: ${resourceCount.props}个`);
+        logger.info(LogCategory.STORAGE, `   - 关键帧图像: ${resourceCount.keyframes}个`);
+        logger.info(LogCategory.STORAGE, `   - 视频片段: ${resourceCount.videos}个`);
+        logger.info(LogCategory.STORAGE, `   - 渲染日志: ${resourceCount.renderLogs}条`);
       } else {
-        console.log(`✅ 项目已删除: ${id}`);
+        logger.info(LogCategory.STORAGE, `✅ 项目已删除: ${id}`);
       }
       
       resolve();
     };
     
     request.onerror = () => {
-      console.error(`❌ 删除项目失败: ${id}`, request.error);
+      logger.error(LogCategory.STORAGE, `❌ 删除项目失败: ${id}`, request.error);
       reject(request.error);
     };
   });
@@ -459,9 +460,9 @@ export const saveCurrentStage = async (projectId: string, stage: string): Promis
     const tx = db.transaction(STORE_NAMES.PROJECT_STAGES, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.PROJECT_STAGES);
     await store.put({ projectId, stage, updatedAt: Date.now() });
-    console.log(`[Storage] Stage 已保存: ${projectId} -> ${stage}`);
+    logger.debug(LogCategory.STORAGE, `Stage 已保存: ${projectId} -> ${stage}`);
   } catch (error) {
-    console.error('[Storage] 保存 stage 失败:', error);
+    logger.error(LogCategory.STORAGE, '保存 stage 失败:', error);
   }
 };
 
@@ -481,12 +482,12 @@ export const getCurrentStage = async (projectId: string): Promise<string> => {
         resolve(result?.stage || 'script');
       };
       request.onerror = () => {
-        console.error('[Storage] 获取 stage 失败:', request.error);
+        logger.error(LogCategory.STORAGE, '获取 stage 失败:', request.error);
         resolve('script');
       };
     });
   } catch (error) {
-    console.error('[Storage] 获取 stage 失败:', error);
+    logger.error(LogCategory.STORAGE, '获取 stage 失败:', error);
     return 'script';
   }
 };
@@ -501,8 +502,8 @@ export const deleteProjectStage = async (projectId: string): Promise<void> => {
     const tx = db.transaction(STORE_NAMES.PROJECT_STAGES, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.PROJECT_STAGES);
     await store.delete(projectId);
-    console.log(`[Storage] Stage 已删除: ${projectId}`);
+    logger.debug(LogCategory.STORAGE, `Stage 已删除: ${projectId}`);
   } catch (error) {
-    console.error('[Storage] 删除 stage 失败:', error);
+    logger.error(LogCategory.STORAGE, '删除 stage 失败:', error);
   }
 };

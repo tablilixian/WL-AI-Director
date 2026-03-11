@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProjectState, Shot } from '../../types';
 import { useAlert } from '../GlobalAlert';
+import { logger, LogCategory } from '../../services/logger';
 import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from '../../services/aiService';
 import { getFinalValue, validateConfig } from './utils';
 import { DEFAULTS } from './constants';
@@ -101,9 +102,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
       return;
     }
 
-    console.log('🎯 用户选择的模型:', localModel);
-    console.log('🎯 最终使用的模型:', finalModel);
-    console.log('🎨 视觉风格:', finalVisualStyle);
+    logger.debug(LogCategory.AI, `🎯 用户选择的模型: ${localModel}`);
+    logger.debug(LogCategory.AI, `🎯 最终使用的模型: ${finalModel}`);
+    logger.debug(LogCategory.AI, `🎨 视觉风格: ${finalVisualStyle}`);
     logScriptProgress(`已选择模型：${localModel}`);
     logScriptProgress(`最终使用模型：${finalModel}`);
     logScriptProgress(`视觉风格：${finalVisualStyle}`);
@@ -123,7 +124,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         isParsingScript: true
       });
 
-      console.log('📞 调用 parseScriptToData, 传入模型:', finalModel);
+      logger.debug(LogCategory.AI, `📞 调用 parseScriptToData, 传入模型: ${finalModel}`);
       logScriptProgress('开始解析剧本...');
       const scriptData = await parseScriptToData(localScript, localLanguage, finalModel, finalVisualStyle);
       
@@ -136,7 +137,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         scriptData.title = localTitle;
       }
 
-      console.log('📞 调用 generateShotList, 传入模型:', finalModel);
+      logger.debug(LogCategory.AI, `📞 调用 generateShotList, 传入模型: ${finalModel}`);
       logScriptProgress('开始生成分镜...');
       setProcessingMessage('正在生成分镜...');
       const shots = await generateShotList(scriptData, finalModel);
@@ -154,15 +155,15 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
       // 立即保存到云端
       try {
         await saveProjectToCloud(updatedProject);
-        console.log('✅ 分镜生成完成，已保存到云端');
+        logger.debug(LogCategory.AI, '✅ 分镜生成完成，已保存到云端');
       } catch (error) {
-        console.error('❌ 保存分镜失败:', error);
+        logger.error(LogCategory.AI, '❌ 保存分镜失败:', error);
       }
       
       setActiveTab('script');
 
     } catch (err: any) {
-      console.error(err);
+      logger.error(LogCategory.AI, err);
       setError(`错误: ${err.message || "AI 连接失败"}`);
       updateProject({ isParsingScript: false });
     } finally {
@@ -207,7 +208,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         updateProject({ rawScript: newScript });
       }
     } catch (err: any) {
-      console.error(err);
+      logger.error(LogCategory.AI, err);
       setError(`AI续写失败: ${err.message || "连接失败"}`);
       try {
         const continuedContent = await continueScript(baseScript, localLanguage, finalModel);
@@ -215,7 +216,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         setLocalScript(newScript);
         updateProject({ rawScript: newScript });
       } catch (fallbackErr: any) {
-        console.error(fallbackErr);
+        logger.error(LogCategory.AI, fallbackErr);
       }
     } finally {
       setIsContinuing(false);
@@ -259,14 +260,14 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         updateProject({ rawScript: rewrittenContent });
       }
     } catch (err: any) {
-      console.error(err);
+      logger.error(LogCategory.AI, err);
       setError(`AI改写失败: ${err.message || "连接失败"}`);
       try {
         const rewrittenContent = await rewriteScript(baseScript, localLanguage, finalModel);
         setLocalScript(rewrittenContent);
         updateProject({ rawScript: rewrittenContent });
       } catch (fallbackErr: any) {
-        console.error(fallbackErr);
+        logger.error(LogCategory.AI, fallbackErr);
       }
     } finally {
       setIsRewriting(false);

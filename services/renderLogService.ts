@@ -1,4 +1,5 @@
 import { RenderLog } from '../types';
+import { logger, LogCategory } from './logger';
 
 /**
  * Render Log Service
@@ -39,7 +40,7 @@ export const addRenderLog = (log: Omit<RenderLog, 'id' | 'timestamp'>): void => 
   if (logCallback) {
     logCallback(fullLog);
   } else {
-    console.warn('[RenderLog] No callback set - log not saved:', fullLog);
+    logger.warn(LogCategory.RENDER, '[RenderLog] No callback set - log not saved:', fullLog);
   }
 };
 

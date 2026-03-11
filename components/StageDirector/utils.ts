@@ -1,6 +1,7 @@
 import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData } from '../../types';
 import { VISUAL_STYLE_PROMPTS, VIDEO_PROMPT_TEMPLATES, NINE_GRID } from './constants';
 import { getCameraMovementCompositionGuide } from './cameraMovementGuides';
+import { logger, LogCategory } from '../../services/logger';
 
 /**
  * getRefImagesForShot 的返回类型
@@ -200,7 +201,7 @@ export const buildKeyframePromptWithAI = async (
     const enhanced = await enhanceKeyframePrompt(basicPrompt, visualStyle, cameraMovement, frameType);
     return enhanced;
   } catch (error) {
-    console.error('AI增强失败,使用基础提示词:', error);
+    logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
     return basicPrompt;
   }
 };
@@ -416,7 +417,7 @@ export const replaceShotWithSubShots = (
   const originalIndex = shots.findIndex(s => s.id === originalShotId);
   
   if (originalIndex === -1) {
-    console.error(`未找到ID为 ${originalShotId} 的镜头`);
+    logger.error(LogCategory.AI, `未找到ID为 ${originalShotId} 的镜头`);
     return shots;
   }
   

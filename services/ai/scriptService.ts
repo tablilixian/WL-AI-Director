@@ -5,6 +5,7 @@
 
 import { ScriptData, Shot, Scene, ArtDirection } from "../../types";
 import { addRenderLogWithTokens } from '../renderLogService';
+import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   cleanJsonString,
@@ -35,7 +36,7 @@ export const parseScriptToData = async (
   visualStyle: string = 'live-action'
 ): Promise<ScriptData> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('📝 parseScriptToData 调用 - 使用模型:', resolvedModel, '视觉风格:', visualStyle);
+  logger.debug(LogCategory.AI, `📝 parseScriptToData 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${visualStyle}`);
   logScriptProgress('正在解析剧本结构...');
   const startTime = Date.now();
 
@@ -70,7 +71,7 @@ export const parseScriptToData = async (
       const text = cleanJsonString(responseText);
       parsed = JSON.parse(text);
     } catch (e) {
-      console.error("Failed to parse script data JSON:", e);
+      logger.error(LogCategory.AI, 'Failed to parse script data JSON:', e);
       parsed = {};
     }
 
@@ -86,7 +87,7 @@ export const parseScriptToData = async (
     const genre = parsed.genre || "通用";
 
     // ========== Phase 1: 生成全局美术指导文档 ==========
-    console.log("🎨 正在为角色和场景生成视觉提示词...", `风格: ${visualStyle}`);
+    logger.debug(LogCategory.AI, `🎨 正在为角色和场景生成视觉提示词... 风格: ${visualStyle}`);
     logScriptProgress(`正在生成角色与场景的视觉提示词（风格：${visualStyle}）...`);
 
     let artDirection: ArtDirection | undefined;
@@ -101,9 +102,9 @@ export const parseScriptToData = async (
         language,
         model
       );
-      console.log("✅ 全局美术指导文档生成完成，风格关键词:", artDirection.moodKeywords.join(', '));
+      logger.debug(LogCategory.AI, `✅ 全局美术指导文档生成完成，风格关键词: ${artDirection.moodKeywords.join(', ')}`);
     } catch (e) {
-      console.error("⚠️ 全局美术指导文档生成失败，将使用默认风格:", e);
+      logger.warn(LogCategory.AI, '⚠️ 全局美术指导文档生成失败，将使用默认风格:', e);
     }
 
     // ========== Phase 2: 批量生成角色视觉提示词 ==========
@@ -125,33 +126,33 @@ export const parseScriptToData = async (
         // Fallback: individually generate failed characters
         const failedCharacters = characters.filter((c: any) => !c.visualPrompt);
         if (failedCharacters.length > 0) {
-          console.log(`⚠️ ${failedCharacters.length} 个角色需要单独重新生成提示词`);
+          logger.debug(LogCategory.AI, `⚠️ ${failedCharacters.length} 个角色需要单独重新生成提示词`);
           logScriptProgress(`${failedCharacters.length} 个角色需要单独重新生成...`);
           for (const char of failedCharacters) {
             try {
               await new Promise(resolve => setTimeout(resolve, 1500));
-              console.log(`  重新生成角色提示词: ${char.name}`);
+              logger.debug(LogCategory.AI, `  重新生成角色提示词: ${char.name}`);
               logScriptProgress(`重新生成角色视觉提示词：${char.name}`);
               const prompts = await generateVisualPrompt('character', char, genre, visualStyle, language, artDirection, resolvedModel);
               char.visualPrompt = prompts.visualPrompt;
               char.negativePrompt = prompts.negativePrompt;
             } catch (e) {
-              console.error(`Failed to generate visual prompt for character ${char.name}:`, e);
+              logger.error(LogCategory.AI, `Failed to generate visual prompt for character ${char.name}:`, e);
             }
           }
         }
       } catch (e) {
-        console.error("批量角色提示词生成失败，回退到逐个生成模式:", e);
+        logger.error(LogCategory.AI, '批量角色提示词生成失败，回退到逐个生成模式:', e);
         for (let i = 0; i < characters.length; i++) {
           try {
             if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log(`  生成角色提示词: ${characters[i].name}`);
+            logger.debug(LogCategory.AI, `  生成角色提示词: ${characters[i].name}`);
             logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
             const prompts = await generateVisualPrompt('character', characters[i], genre, visualStyle, language, artDirection, resolvedModel);
             characters[i].visualPrompt = prompts.visualPrompt;
             characters[i].negativePrompt = prompts.negativePrompt;
           } catch (e2) {
-            console.error(`Failed to generate visual prompt for character ${characters[i].name}:`, e2);
+            logger.error(LogCategory.AI, `Failed to generate visual prompt for character ${characters[i].name}:`, e2);
           }
         }
       }
@@ -159,13 +160,13 @@ export const parseScriptToData = async (
       for (let i = 0; i < characters.length; i++) {
         try {
           if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
-          console.log(`  生成角色提示词: ${characters[i].name}`);
+          logger.debug(LogCategory.AI, `  生成角色提示词: ${characters[i].name}`);
           logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
           const prompts = await generateVisualPrompt('character', characters[i], genre, visualStyle, language, artDirection, resolvedModel);
           characters[i].visualPrompt = prompts.visualPrompt;
           characters[i].negativePrompt = prompts.negativePrompt;
         } catch (e) {
-          console.error(`Failed to generate visual prompt for character ${characters[i].name}:`, e);
+          logger.error(LogCategory.AI, `Failed to generate visual prompt for character ${characters[i].name}:`, e);
         }
       }
     }
@@ -174,17 +175,17 @@ export const parseScriptToData = async (
     for (let i = 0; i < scenes.length; i++) {
       try {
         if (i > 0 || characters.length > 0) await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log(`  生成场景提示词: ${scenes[i].location}`);
+        logger.debug(LogCategory.AI, `  生成场景提示词: ${scenes[i].location}`);
         logScriptProgress(`生成场景视觉提示词：${scenes[i].location}`);
         const prompts = await generateVisualPrompt('scene', scenes[i], genre, visualStyle, language, artDirection, resolvedModel);
         scenes[i].visualPrompt = prompts.visualPrompt;
         scenes[i].negativePrompt = prompts.negativePrompt;
       } catch (e) {
-        console.error(`Failed to generate visual prompt for scene ${scenes[i].location}:`, e);
+        logger.error(LogCategory.AI, `Failed to generate visual prompt for scene ${scenes[i].location}:`, e);
       }
     }
 
-    console.log("✅ 视觉提示词生成完成！");
+    logger.debug(LogCategory.AI, '✅ 视觉提示词生成完成！');
     logScriptProgress('视觉提示词生成完成');
 
     const result = {
@@ -235,7 +236,7 @@ export const parseScriptToData = async (
  */
 export const generateShotList = async (scriptData: ScriptData, model?: string): Promise<Shot[]> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎬 generateShotList 调用 - 使用模型:', resolvedModel, '视觉风格:', scriptData.visualStyle);
+  logger.debug(LogCategory.AI, `🎬 generateShotList 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${scriptData.visualStyle}`);
   logScriptProgress('正在生成分镜列表...');
   const overallStartTime = Date.now();
 
@@ -362,7 +363,7 @@ ${artDirectionBlock}
 
     let responseText = '';
     try {
-      console.log(`  📡 场景 ${index + 1} API调用 - 模型:`, resolvedModel);
+      logger.debug(LogCategory.AI, `  📡 场景 ${index + 1} API调用 - 模型: ${resolvedModel}`);
       responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.5, 8192, 'json_object'));
       const text = cleanJsonString(responseText);
       const parsed = JSON.parse(text);
@@ -389,9 +390,9 @@ ${artDirectionBlock}
 
       return result;
     } catch (e: any) {
-      console.error(`Failed to generate shots for scene ${scene.id}`, e);
+      logger.error(LogCategory.AI, `Failed to generate shots for scene ${scene.id}`, e);
       try {
-        console.error(`  ↳ sceneId=${scene.id}, sceneIndex=${index}, responseText(snippet)=`, String(responseText || '').slice(0, 500));
+        logger.error(LogCategory.AI, `  ↳ sceneId=${scene.id}, sceneIndex=${index}, responseText(snippet)=`, String(responseText || '').slice(0, 500));
       } catch {
         // ignore
       }
@@ -449,7 +450,7 @@ ${artDirectionBlock}
  */
 export const continueScript = async (existingScript: string, language: string = '中文', model?: string): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('✍️ continueScript 调用 - 使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `✍️ continueScript 调用 - 使用模型: ${resolvedModel}`);
   const startTime = Date.now();
 
   const prompt = `
@@ -486,7 +487,7 @@ ${existingScript}
 
     return result;
   } catch (error) {
-    console.error('❌ 续写失败:', error);
+    logger.error(LogCategory.AI, '❌ 续写失败:', error);
     throw error;
   }
 };
@@ -501,7 +502,7 @@ export const continueScriptStream = async (
   onDelta?: (delta: string) => void
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('✍️ continueScriptStream 调用 - 使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `✍️ continueScriptStream 调用 - 使用模型: ${resolvedModel}`);
   const startTime = Date.now();
 
   const prompt = `
@@ -538,7 +539,7 @@ ${existingScript}
 
     return result;
   } catch (error) {
-    console.error('❌ 续写失败（流式）:', error);
+    logger.error(LogCategory.AI, '❌ 续写失败（流式）:', error);
     throw error;
   }
 };
@@ -548,7 +549,7 @@ ${existingScript}
  */
 export const rewriteScript = async (originalScript: string, language: string = '中文', model?: string): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🔄 rewriteScript 调用 - 使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🔄 rewriteScript 调用 - 使用模型: ${resolvedModel}`);
   const startTime = Date.now();
 
   const prompt = `
@@ -589,7 +590,7 @@ ${originalScript}
 
     return result;
   } catch (error) {
-    console.error('❌ 改写失败:', error);
+    logger.error(LogCategory.AI, '❌ 改写失败:', error);
     throw error;
   }
 };
@@ -604,7 +605,7 @@ export const rewriteScriptStream = async (
   onDelta?: (delta: string) => void
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🔄 rewriteScriptStream 调用 - 使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🔄 rewriteScriptStream 调用 - 使用模型: ${resolvedModel}`);
   const startTime = Date.now();
 
   const prompt = `
@@ -645,7 +646,7 @@ ${originalScript}
 
     return result;
   } catch (error) {
-    console.error('❌ 改写失败（流式）:', error);
+    logger.error(LogCategory.AI, '❌ 改写失败（流式）:', error);
     throw error;
   }
 };

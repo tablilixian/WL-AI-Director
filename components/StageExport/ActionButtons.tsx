@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Download, FileVideo, Loader2, Video } from 'lucide-react';
 import { STYLES, DownloadState } from './constants';
 import { useAlert } from '../GlobalAlert';
+import { logger, LogCategory } from '../../services/logger';
 import MergeProgressModal from './MergeProgressModal';
 import { mergeVideos, MergeProgress as MergeProgressType } from '../../services/videoMergeService';
 import { ProjectState } from '../../types';
@@ -66,7 +67,7 @@ const ActionButtons: React.FC<Props> = ({
 
       showAlert(`视频合并成功！已下载 ${extension.toUpperCase()} 格式的视频文件`, { type: 'success' });
     } catch (error) {
-      console.error('视频合并失败:', error);
+      logger.error(LogCategory.VIDEO, '视频合并失败:', error);
       
       let errorMessage = '视频合并失败';
       

@@ -5,6 +5,7 @@
 
 import { AspectRatio, NineGridPanel } from "../../types";
 import { addRenderLogWithTokens } from '../renderLogService';
+import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   cleanJsonString,
@@ -32,7 +33,7 @@ export const optimizeBothKeyframes = async (
   model?: string
 ): Promise<{ startPrompt: string; endPrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型: ${resolvedModel}`);
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);

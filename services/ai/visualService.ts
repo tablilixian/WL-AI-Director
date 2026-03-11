@@ -5,6 +5,7 @@
 
 import { Character, Scene, AspectRatio, ArtDirection, CharacterTurnaroundPanel } from "../../types";
 import { addRenderLogWithTokens } from '../renderLogService';
+import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   cleanJsonString,
@@ -43,7 +44,7 @@ export const generateArtDirection = async (
   model?: string
 ): Promise<ArtDirection> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateArtDirection 调用 - 生成全局美术指导文档，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateArtDirection 调用 - 生成全局美术指导文档，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成全局美术指导文档（Art Direction）...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -110,10 +111,10 @@ Output ONLY valid JSON with this exact structure:
       consistencyAnchors: parsed.consistencyAnchors,
     };
 
-    console.log('✅ 美术指导文档生成完成');
+    logger.debug(LogCategory.AI, '✅ 美术指导文档生成完成');
     return artDirection;
   } catch (error: any) {
-    console.error('❌ 美术指导文档生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 美术指导文档生成失败:', error);
     throw new Error(`美术指导文档生成失败: ${error.message}`);
   }
 };
@@ -166,10 +167,7 @@ Scene consistency requirements:
       }
     }
 
-    console.log('📝 图像生成提示词:');
-    console.log('='.repeat(80));
-    console.log(finalPrompt);
-    console.log('='.repeat(80));
+    logger.debug(LogCategory.AI, `📝 图像生成提示词:\n${'='.repeat(80)}\n${finalPrompt}\n${'='.repeat(80)}`);
 
     const imageUrl = await callImageApi({
       prompt: finalPrompt,
@@ -243,7 +241,7 @@ export const generateCharacterTurnaroundPanels = async (
   model?: string
 ): Promise<CharacterTurnaroundPanel[]> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成角色九宫格造型设计...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -330,10 +328,10 @@ Write all descriptions in ${language}.`;
       description: p.description,
     }));
 
-    console.log('✅ 角色九宫格造型设计生成完成');
+    logger.debug(LogCategory.AI, '✅ 角色九宫格造型设计生成完成');
     return panels;
   } catch (error: any) {
-    console.error('❌ 角色九宫格造型设计生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 角色九宫格造型设计生成失败:', error);
     throw new Error(`角色九宫格造型设计生成失败: ${error.message}`);
   }
 };
@@ -352,7 +350,7 @@ export const generateCharacterTurnaroundImage = async (
   model?: string
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成角色九宫格图片...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -389,12 +387,9 @@ CRITICAL REQUIREMENTS:
 - Equal spacing and borders between all panels
 - No panel should be larger or smaller than others
 
-Generate ONE square image with a perfect 3x3 grid of 9 equal-sized panels.`;
+Generate ONE square image with a perfect3x3 grid of 9 equal-sized panels.`;
 
-  console.log('📝 九宫格生成提示词:');
-  console.log('='.repeat(80));
-  console.log(prompt);
-  console.log('='.repeat(80));
+  logger.debug(LogCategory.AI, `📝 九宫格生成提示词:\n${'='.repeat(80)}\n${prompt}\n${'='.repeat(80)}`);
 
   try {
     const imageUrl = await callImageApi({
@@ -403,10 +398,10 @@ Generate ONE square image with a perfect 3x3 grid of 9 equal-sized panels.`;
       aspectRatio,
     });
 
-    console.log('✅ 角色九宫格图片生成完成');
+    logger.debug(LogCategory.AI, '✅ 角色九宫格图片生成完成');
     return imageUrl;
   } catch (error: any) {
-    console.error('❌ 角色九宫格图片生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 角色九宫格图片生成失败:', error);
     throw new Error(`角色九宫格图片生成失败: ${error.message}`);
   }
 };
@@ -427,7 +422,7 @@ export const generateCharacterVisualPrompt = async (
   model?: string
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -498,10 +493,10 @@ Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400
     const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
     const visualPrompt = responseText.trim();
 
-    console.log('✅ 角色视觉提示词生成完成');
+    logger.debug(LogCategory.AI, '✅ 角色视觉提示词生成完成');
     return visualPrompt;
   } catch (error: any) {
-    console.error('❌ 角色视觉提示词生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 角色视觉提示词生成失败:', error);
     throw new Error(`角色视觉提示词生成失败: ${error.message}`);
   }
 };
@@ -517,7 +512,7 @@ export const generateSceneVisualPrompt = async (
   model?: string
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成场景视觉提示词...');
 
   const stylePrompt = getStylePrompt('anime');
@@ -592,10 +587,10 @@ Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400
     const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
     const visualPrompt = responseText.trim();
 
-    console.log('✅ 场景视觉提示词生成完成');
+    logger.debug(LogCategory.AI, '✅ 场景视觉提示词生成完成');
     return visualPrompt;
   } catch (error: any) {
-    console.error('❌ 场景视觉提示词生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 场景视觉提示词生成失败:', error);
     throw new Error(`场景视觉提示词生成失败: ${error.message}`);
   }
 };
@@ -618,7 +613,7 @@ export const generateVisualPrompt = async (
   model?: string
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log(`🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词，使用模型:`, resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress(`正在生成${type === 'character' ? '角色' : '场景'}视觉提示词...`);
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -704,13 +699,13 @@ Output the result in the following JSON format:
     const cleanedText = cleanJsonString(responseText);
     const result = JSON.parse(cleanedText);
 
-    console.log(`✅ ${type === 'character' ? '角色' : '场景'}视觉提示词生成完成`);
+    logger.debug(LogCategory.AI, `✅ ${type === 'character' ? '角色' : '场景'}视觉提示词生成完成`);
     return {
       visualPrompt: result.visualPrompt || '',
       negativePrompt: result.negativePrompt || ''
     };
   } catch (error: any) {
-    console.error(`❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`, error);
+    logger.error(LogCategory.AI, `❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`, error);
     throw new Error(`${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`);
   }
 };
@@ -723,7 +718,7 @@ export async function generateVisualPrompts(
   model?: string
 ): Promise<{ characters: string[]; scenes: string[] }> {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}`);
 
   const characterPromises = characters.map(char => 
     generateCharacterVisualPrompt(char, artDirection, language, resolvedModel)
@@ -738,7 +733,7 @@ export async function generateVisualPrompts(
     Promise.all(scenePromises)
   ]);
 
-  console.log('✅ 所有视觉提示词生成完成');
+  logger.debug(LogCategory.AI, '✅ 所有视觉提示词生成完成');
   return {
     characters: characterResults,
     scenes: sceneResults
@@ -758,7 +753,7 @@ export const generateAllCharacterPrompts = async (
   model?: string
 ): Promise<Array<{ visualPrompt: string; negativePrompt: string }>> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词，使用模型:', resolvedModel);
+  logger.debug(LogCategory.AI, `🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress('正在批量生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -852,10 +847,10 @@ Output ONLY valid JSON with this exact structure:
       negativePrompt: r.negativePrompt || ''
     }));
 
-    console.log('✅ 批量角色视觉提示词生成完成');
+    logger.debug(LogCategory.AI, '✅ 批量角色视觉提示词生成完成');
     return results;
   } catch (error: any) {
-    console.error('❌ 批量角色视觉提示词生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 批量角色视觉提示词生成失败:', error);
     throw new Error(`批量角色视觉提示词生成失败: ${error.message}`);
   }
 };

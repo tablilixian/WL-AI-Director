@@ -4,6 +4,7 @@
  */
 
 import { AspectRatio, VideoDuration } from "../../types";
+import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   checkApiKey,
@@ -43,18 +44,18 @@ const generateVideoAsync = async (
     throw new Error('Sora-2 不支持首尾帧模式，请只传一张参考图。');
   }
 
-  console.log(`🎬 使用异步模式生成视频 (${resolvedModelName}, ${aspectRatio}, ${duration}秒)...`);
+  logger.debug(LogCategory.VIDEO, `🎬 使用异步模式生成视频 (${resolvedModelName}, ${aspectRatio}, ${duration}秒)...`);
 
   const videoSize = getSoraVideoSize(aspectRatio);
   const [VIDEO_WIDTH, VIDEO_HEIGHT] = videoSize.split('x').map(Number);
 
-  console.log(`📐 视频尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
+  logger.debug(LogCategory.VIDEO, `📐 视频尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
 
   const apiBase = getApiBase('video', resolvedModelName);
   
   // 判断是否为 BigModel 模型
   const isBigModel = resolvedModel?.providerId === 'bigmodel';
-  console.log('[Video] isBigModel:', isBigModel, 'providerId:', resolvedModel?.providerId);
+  logger.debug(LogCategory.VIDEO, `[Video] isBigModel: ${isBigModel}, providerId: ${resolvedModel?.providerId}`);
 
   let createResponse: Response;
   
@@ -80,7 +81,7 @@ const generateVideoAsync = async (
       }
     }
     
-    console.log('[BigModel] Request:', JSON.stringify(requestBody));
+    logger.debug(LogCategory.VIDEO, `[BigModel] Request: ${JSON.stringify(requestBody)}`);
     
     createResponse = await fetch(`${apiBase}${resolvedModel?.endpoint || '/v1/videos'}`, {
       method: 'POST',
@@ -151,7 +152,7 @@ const generateVideoAsync = async (
     throw new Error('创建视频任务失败：未返回任务ID');
   }
 
-  console.log(`📋 ${resolvedModelName} 任务已创建，任务ID:`, taskId);
+  logger.debug(LogCategory.VIDEO, `📋 ${resolvedModelName} 任务已创建，任务ID: ${taskId}`);
 
   // Step 2: 轮询查询任务状态
   const maxPollingTime = 1200000; // 20分钟超时
@@ -177,7 +178,7 @@ const generateVideoAsync = async (
     });
 
     if (!statusResponse.ok) {
-      console.warn('⚠️ 查询任务状态失败，继续重试...');
+      logger.warn(LogCategory.VIDEO, '⚠️ 查询任务状态失败，继续重试...');
       continue;
     }
 
@@ -186,8 +187,8 @@ const generateVideoAsync = async (
     const status = statusData.task_status || statusData.status;
     const isBigModel = resolvedModel?.providerId === 'bigmodel';
 
-    console.log(`🔄 ${resolvedModelName} 任务状态:`, status, '进度:', statusData.progress);
-    console.log(`📋 ${resolvedModelName} 完整响应数据:`, JSON.stringify(statusData, null, 2));
+    logger.debug(LogCategory.VIDEO, `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`);
+    logger.debug(LogCategory.VIDEO, `📋 ${resolvedModelName} 完整响应数据: ${JSON.stringify(statusData, null, 2)}`);
 
     if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
       // BigModel 返回 video_result 数组
@@ -197,11 +198,11 @@ const generateVideoAsync = async (
         if (rawUrl.includes('ufileos.com')) {
           const videoPath = rawUrl.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
           videoUrlFromStatus = `/video-proxy/${videoPath}`;
-          console.log('[BigModel] 视频 URL (代理):', videoUrlFromStatus);
+          logger.debug(LogCategory.VIDEO, `[BigModel] 视频 URL (代理): ${videoUrlFromStatus}`);
         } else {
           videoUrlFromStatus = rawUrl;
         }
-        console.log('✅ BigModel 视频 URL:', videoUrlFromStatus);
+        logger.debug(LogCategory.VIDEO, `✅ BigModel 视频 URL: ${videoUrlFromStatus}`);
       } else {
         videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
         if (statusData.id && statusData.id.startsWith('video_')) {
@@ -213,17 +214,17 @@ const generateVideoAsync = async (
           videoId = statusData.outputs[0];
         }
       }
-      console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
+      logger.debug(LogCategory.VIDEO, `✅ 任务完成，视频: ${videoUrlFromStatus || videoId}`);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
-      console.error(`❌ ${resolvedModelName} 任务失败，完整错误数据:`, JSON.stringify(statusData, null, 2));
+      logger.error(LogCategory.VIDEO, `❌ ${resolvedModelName} 任务失败，完整错误数据: ${JSON.stringify(statusData, null, 2)}`);
       const errorMessage =
         statusData?.error?.message ||
         statusData?.error?.code ||
         statusData?.message ||
         statusData?.error ||
         '未知错误';
-      console.error(`❌ ${resolvedModelName} 错误详情:`, {
+      logger.error(LogCategory.VIDEO, `❌ ${resolvedModelName} 错误详情:`, {
         error: statusData?.error,
         message: statusData?.message,
         code: statusData?.error?.code,
@@ -232,7 +233,7 @@ const generateVideoAsync = async (
       throw new Error(`视频生成失败: ${errorMessage}`);
     }
 
-    console.log(`🔄 ${resolvedModelName} 任务状态:`, status, '进度:', statusData.progress);
+    logger.debug(LogCategory.VIDEO, `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`);
 
     if (status === 'completed' || status === 'succeeded') {
       videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
@@ -244,7 +245,7 @@ const generateVideoAsync = async (
       if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
         videoId = statusData.outputs[0];
       }
-      console.log('✅ 任务完成，视频ID:', videoId);
+      logger.debug(LogCategory.VIDEO, `✅ 任务完成，视频ID: ${videoId}`);
       break;
     } else if (status === 'failed' || status === 'error') {
       const errorMessage =
@@ -260,11 +261,11 @@ const generateVideoAsync = async (
     throw new Error('视频生成超时 (20分钟) 或未返回视频ID');
   }
 
-  console.log(`✅ ${resolvedModelName} 视频生成完成，视频ID:`, videoId);
+  logger.debug(LogCategory.VIDEO, `✅ ${resolvedModelName} 视频生成完成，视频ID: ${videoId}`);
 
   if (videoUrlFromStatus) {
     const videoBase64 = await convertVideoUrlToBase64(videoUrlFromStatus);
-    console.log(`✅ ${resolvedModelName} 视频已转换为base64格式`);
+    logger.debug(LogCategory.VIDEO, `✅ ${resolvedModelName} 视频已转换为base64格式`);
     return videoBase64;
   }
 
@@ -274,7 +275,7 @@ const generateVideoAsync = async (
 
   for (let attempt = 1; attempt <= maxDownloadRetries; attempt++) {
     try {
-      console.log(`📥 尝试下载视频 (第${attempt}/${maxDownloadRetries}次)...`);
+      logger.debug(LogCategory.VIDEO, `📥 尝试下载视频 (第${attempt}/${maxDownloadRetries}次)...`);
 
       const downloadController = new AbortController();
       const downloadTimeoutId = setTimeout(() => downloadController.abort(), downloadTimeout);
@@ -292,7 +293,7 @@ const generateVideoAsync = async (
 
       if (!downloadResponse.ok) {
         if (downloadResponse.status >= 500 && attempt < maxDownloadRetries) {
-          console.warn(`⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`);
+          logger.warn(LogCategory.VIDEO, `⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`);
           await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
           continue;
         }
@@ -307,7 +308,7 @@ const generateVideoAsync = async (
           const reader = new FileReader();
           reader.onloadend = () => {
             const result = reader.result as string;
-            console.log(`✅ ${resolvedModelName} 视频已转换为base64格式`);
+            logger.debug(LogCategory.VIDEO, `✅ ${resolvedModelName} 视频已转换为base64格式`);
             resolve(result);
           };
           reader.onerror = () => reject(new Error('视频转base64失败'));
@@ -322,12 +323,12 @@ const generateVideoAsync = async (
         }
 
         const videoBase64 = await convertVideoUrlToBase64(videoUrl);
-        console.log(`✅ ${resolvedModelName} 视频已转换为base64格式`);
+        logger.debug(LogCategory.VIDEO, `✅ ${resolvedModelName} 视频已转换为base64格式`);
         return videoBase64;
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.warn(`⚠️ 下载超时，${5 * attempt}秒后重试...`);
+        logger.warn(LogCategory.VIDEO, `⚠️ 下载超时，${5 * attempt}秒后重试...`);
         if (attempt < maxDownloadRetries) {
           await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
           continue;
@@ -337,7 +338,7 @@ const generateVideoAsync = async (
       if (attempt === maxDownloadRetries) {
         throw error;
       }
-      console.warn(`⚠️ 下载出错: ${error.message}，${5 * attempt}秒后重试...`);
+      logger.warn(LogCategory.VIDEO, `⚠️ 下载出错: ${error.message}，${5 * attempt}秒后重试...`);
       await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
     }
   }
@@ -389,11 +390,11 @@ export const generateVideo = async (
   if (actualModel === 'veo' || actualModel.startsWith('veo_3_1')) {
     const hasReferenceImage = !!startImageBase64;
     actualModel = getVeoModelName(hasReferenceImage, aspectRatio);
-    console.log(`🎬 使用 Veo 首尾帧模式: ${actualModel} (${aspectRatio})`);
+    logger.debug(LogCategory.VIDEO, `🎬 使用 Veo 首尾帧模式: ${actualModel} (${aspectRatio})`);
   }
 
   if (aspectRatio === '1:1' && actualModel.startsWith('veo_')) {
-    console.warn('⚠️ Veo 不支持方形视频 (1:1)，将使用横屏 (16:9)');
+    logger.warn(LogCategory.VIDEO, '⚠️ Veo 不支持方形视频 (1:1)，将使用横屏 (16:9)');
     actualModel = getVeoModelName(!!startImageBase64, '16:9');
   }
 
@@ -477,14 +478,14 @@ export const generateVideo = async (
       throw new Error("视频生成失败 (No video URL returned)");
     }
 
-    console.log('🎬 视频URL获取成功,正在转换为base64...');
+    logger.debug(LogCategory.VIDEO, '🎬 视频URL获取成功,正在转换为base64...');
 
     try {
       const videoBase64 = await convertVideoUrlToBase64(videoUrl);
-      console.log('✅ 视频已转换为base64格式,可安全存储到IndexedDB');
+      logger.debug(LogCategory.VIDEO, '✅ 视频已转换为base64格式,可安全存储到IndexedDB');
       return videoBase64;
     } catch (error: any) {
-      console.error('❌ 视频转base64失败,返回原始URL:', error);
+      logger.error(LogCategory.VIDEO, '❌ 视频转base64失败,返回原始URL:', error);
       return videoUrl;
     }
   } catch (error: any) {
