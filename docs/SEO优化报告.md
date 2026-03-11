@@ -4,7 +4,7 @@
 2025-12-18
 
 ## 优化目标
-为 BigBanana AI Director 首页增加全面的 SEO 优化，提升搜索引擎排名和社交媒体分享效果。
+为 WL AI Director 首页增加全面的 SEO 优化，提升搜索引擎排名和社交媒体分享效果。
 
 ---
 
@@ -43,13 +43,13 @@
 ```html
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://bigbanana.tree456.com/" />
-<meta property="og:title" content="BigBanana AI Director - 工业级 AI 漫剧与视频生成工作台" />
+<meta property="og:title" content="WL AI Director - 工业级 AI 漫剧与视频生成工作台" />
 <meta property="og:description" content="专为 AI 漫剧、动态漫画及影视分镜设计的专业生产力工具..." />
 <meta property="og:image" content="https://bigbanana.tree456.com/UI.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:locale" content="zh_CN" />
-<meta property="og:site_name" content="BigBanana AI Director" />
+<meta property="og:site_name" content="WL AI Director" />
 ```
 
 **优势：**
@@ -66,7 +66,7 @@
 ```html
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:url" content="https://bigbanana.tree456.com/" />
-<meta name="twitter:title" content="BigBanana AI Director - 工业级 AI 漫剧与视频生成工作台" />
+<meta name="twitter:title" content="WL AI Director - 工业级 AI 漫剧与视频生成工作台" />
 <meta name="twitter:description" content="专为 AI 漫剧、动态漫画及影视分镜设计的专业生产力工具..." />
 <meta name="twitter:image" content="https://bigbanana.tree456.com/UI.png" />
 ```
@@ -85,7 +85,7 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "BigBanana AI Director",
+  "name": "WL AI Director",
   "applicationCategory": "MultimediaApplication",
   "operatingSystem": "Web Browser",
   "description": "工业级 AI 漫剧与视频生成工作台...",
@@ -101,7 +101,7 @@
   },
   "creator": {
     "@type": "Organization",
-    "name": "BigBanana Team",
+    "name": "WL Team",
     "url": "https://tree456.com"
   },
   "featureList": [

@@ -74,7 +74,7 @@ https://<your-project>.vercel.app/functions/v1/webhook-video-complete
 #!/bin/bash
 # deploy.sh
 
-echo "开始部署 BigBanana AI Director..."
+echo "开始部署 WL AI Director..."
 
 # 检查环境变量
 if [ -z "$SUPABASE_URL" ]; then

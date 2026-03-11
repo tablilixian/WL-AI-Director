@@ -131,7 +131,7 @@ FCM: NON-DROP FRAME
 
 ### 数据映射
 
-| BigBanana 数据 | EDL/XML 数据 | 说明 |
+| WL AI Director 数据 | EDL/XML 数据 | 说明 |
 |---------------|---------------|------|
 | Shot.id | Clip 名称 | 镜头编号 |
 | Shot.actionSummary | 片段描述 | 动作摘要 |
@@ -214,7 +214,7 @@ FCM: NON-DROP FRAME
 ### 用户操作流程
 
 1. **进入成片与导出页签**
-   - 在 BigBanana 中完成视频生成
+   - 在 WL AI Director 中完成视频生成
    - 确保至少有一个镜头的视频已生成完成
 
 2. **选择导出格式**
@@ -335,7 +335,7 @@ const fcpxmlPreview = getFCPXMLPreview(project);
    - 支持团队协作
 
 2. **自动导入**
-   - 直接从剪辑软件导入到 BigBanana
+   - 直接从剪辑软件导入到 WL AI Director
    - 双向同步
 
 3. **智能匹配**

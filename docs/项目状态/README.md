@@ -222,5 +222,5 @@
 
 ---
 
-**文档维护**: BigBanana AI Director Team  
+**文档维护**: WL AI Director Team  
 **最后更新**: 2026-03-06

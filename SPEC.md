@@ -1,8 +1,8 @@
-# BigBanana AI Director - 功能规范文档 (SPEC)
+# WL AI Director - 功能规范文档 (SPEC)
 
 ## 1. 项目概述
 
-**项目名称**: BigBanana AI Director (AI 漫剧工场)  
+**项目名称**: WL AI Director (AI 漫剧工场)  
 **项目类型**: AI 一站式短剧/漫剧生成平台  
 **技术栈**: React 19, TypeScript, Zustand (状态管理), IndexedDB (本地存储), Supabase (Edge Functions)  
 **目标用户**: 短剧/漫剧创作者

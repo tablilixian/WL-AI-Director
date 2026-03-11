@@ -1,5 +1,5 @@
 -- =====================================================
--- BigBanana AI Director - Supabase 数据库初始化脚本
+-- WL AI Director - Supabase 数据库初始化脚本
 -- 执行方式: Supabase Dashboard → SQL Editor
 -- =====================================================
 

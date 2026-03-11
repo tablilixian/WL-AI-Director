@@ -1,4 +1,4 @@
-# BigBanana AI Director (AI 漫劇工場)
+# WL AI Director (AI 漫劇工場)
 
 > **AI 一站式 短編ドラマ／モーションコミック生成プラットフォーム**
 > *Industrial AI Motion Comic & Video Workbench*
@@ -8,7 +8,7 @@
 [![日本語](https://img.shields.io/badge/Language-日本語-blue.svg)](./README_JA.md)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
-**BigBanana AI Director** は、**AI 一站式の短編ドラマ／モーションコミックプラットフォーム**です。アイデアから完成動画までを高速に制作したいクリエイター向けに設計されています。
+**WL AI Director** は、**AI 一站式の短編ドラマ／モーションコミックプラットフォーム**です。アイデアから完成動画までを高速に制作したいクリエイター向けに設計されています。
 
 従来の「ガチャ」的な生成手法を捨て、**「脚本 -> アセット -> キーフレーム」** という産業用ワークフローを採用しています。AntSK API の先進的な AI モデルを深く統合することで、**「一文で完全な短編ドラマを生成し、脚本から完成動画までを全自動化」** しつつ、キャラクターの一貫性、シーンの連続性、そしてカメラワークの精密な制御を実現しました。
 
@@ -39,7 +39,7 @@
 
 ## 核となる概念：キーフレーム駆動 (Keyframe-Driven)
 
-従来の Text-to-Video モデルでは、具体的なカメラの動きや開始・終了状態を制御することが困難でした。BigBanana はアニメーション制作における **キーフレーム (Keyframe)** の概念を導入しました：
+従来の Text-to-Video モデルでは、具体的なカメラの動きや開始・終了状態を制御することが困難でした。WL AI Director はアニメーション制作における **キーフレーム (Keyframe)** の概念を導入しました：
 
 1.  **静止画先行**: まず、正確な開始フレーム (Start) と終了フレーム (End) を生成します。
 2.  **補間生成**: Veo モデルを使用して、2つのフレーム間に滑らかな動画トランジションを生成します。
@@ -123,7 +123,7 @@
 
 ## 💬 コミュニティに参加
 
-QRコードをスキャンして **BigBanana プロダクト体験グループ** に参加しましょう。他のクリエイターと交流し、最新情報を入手できます：
+QRコードをスキャンして **WL プロダクト体験グループ** に参加しましょう。他のクリエイターと交流し、最新情報を入手できます：
 
 <div align="center">
 <img src="./images/qrcode.jpg" width="300" alt="WeChat グループ QR コード">
@@ -265,4 +265,4 @@ docker-compose up -d --force-recreate
 商用ライセンスについては、お問い合わせください：antskpro@qq.com
 
 ---
-*Built for Creators, by BigBanana.*
+*Built for Creators, by WL.*

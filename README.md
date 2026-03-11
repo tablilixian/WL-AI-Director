@@ -39,7 +39,7 @@
 
 ## 核心理念：关键帧驱动 (Keyframe-Driven)
 
-传统的 Text-to-Video 往往难以控制具体的运镜和起止画面。BigBanana 引入了动画制作中的 **关键帧 (Keyframe)** 概念：
+传统的 Text-to-Video 往往难以控制具体的运镜和起止画面。WL AI Director 引入了动画制作中的 **关键帧 (Keyframe)** 概念：
 1.  **先画后动**：先生成精准的起始帧 (Start) 和结束帧 (End)。
 2.  **插值生成**：利用 Veo 模型在两帧之间生成平滑的视频过渡。
 3.  **资产约束**：所有画面生成均受到“角色定妆照”和“场景概念图”的强约束，杜绝人物变形。
@@ -267,4 +267,4 @@ docker-compose up -d --force-recreate
 
 ---
 
-*Built for Creators, by BigBanana.*
+*Built for Creators, by WL.*

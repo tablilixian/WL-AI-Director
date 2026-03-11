@@ -1,4 +1,4 @@
-# BigBanana AI Director - TODO 列表
+# WL AI Director - TODO 列表
 
 **最后更新时间**: 2026-03-11  
 **项目版本**: v1.0  
@@ -6,7 +6,7 @@
 
 ## 📋 概述
 
-本文档列出了 BigBanana AI Director 项目的待办事项，按优先级和模块分类。
+本文档列出了 WL AI Director 项目的待办事项，按优先级和模块分类。
 
 ---
 

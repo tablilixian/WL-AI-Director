@@ -1,4 +1,4 @@
-# BigBanana AI Director - 前后端分离开发计划
+# WL AI Director - 前后端分离开发计划
 
 ## 一、项目概述
 

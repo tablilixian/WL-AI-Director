@@ -1,4 +1,4 @@
-# BigBanana AI Director
+# WL AI Director
 
 > **AI-Powered End-to-End Short Drama & Motion Comic Platform**
 
@@ -7,9 +7,9 @@
 [![日本語](https://img.shields.io/badge/Language-日本語-gray.svg)](./README_JA.md)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
-**BigBanana AI Director** is an **AI-powered, one-stop platform** for **short dramas** and **motion comics**, built for creators who want to go from idea to final video fast.
+**WL AI Director** is an **AI-powered, one-stop platform** for **short dramas** and **motion comics**, built for creators who want to go from idea to final video fast.
 
-Moving away from the traditional "slot machine" style of random generation, BigBanana adopts an industrial **"Script-to-Asset-to-Keyframe"** workflow. With deep integration of AntSK API’s advanced AI models, it enables **one-sentence to complete drama** — fully automated from **script** to **final video**, while maintaining precise control over character consistency, scene continuity, and camera movement.
+Moving away from the traditional "slot machine" style of random generation, WL AI Director adopts an industrial **"Script-to-Asset-to-Keyframe"** workflow. With deep integration of AntSK API's advanced AI models, it enables **one-sentence to complete drama** — fully automated from **script** to **final video**, while maintaining precise control over character consistency, scene continuity, and camera movement.
 ## UI Showcase
 
 ### Project Management
@@ -36,7 +36,7 @@ Moving away from the traditional "slot machine" style of random generation, BigB
 ![Prompt Management](./images/提示词管理.png)
 ## Core Philosophy: Keyframe-Driven
 
-Traditional Text-to-Video models often struggle with specific camera movements and precise start/end states. BigBanana introduces the animation concept of **Keyframes**:
+Traditional Text-to-Video models often struggle with specific camera movements and precise start/end states. WL AI Director introduces the animation concept of **Keyframes**:
 
 1.  **Draw First, Move Later**: First, generate precise Start and End frames.
 2.  **Interpolation**: Use the Veo model to generate smooth video transitions between these two frames.
@@ -120,7 +120,7 @@ This project deeply integrates [**AntSK API Platform**](https://api.antsk.cn/), 
 
 ## 💬 Join Our Community
 
-Scan the QR code to join our **BigBanana Product Experience Group** on WeChat. Connect with fellow creators, share tips, and get the latest updates:
+Scan the QR code to join our **WL Product Experience Group** on WeChat. Connect with fellow creators, share tips, and get the latest updates:
 
 <div align="center">
 <img src="./images/qrcode.jpg" width="300" alt="WeChat Group QR Code">
@@ -262,4 +262,4 @@ This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/lic
 For commercial licensing, please contact: antskpro@qq.com
 
 ---
-*Built for Creators, by BigBanana.*
+*Built for Creators, by WL.*
