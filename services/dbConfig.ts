@@ -5,7 +5,7 @@
  * 确保数据库版本号统一管理，避免版本冲突
  */
 
-export const DB_NAME = 'BigBananaDB';
+export const DB_NAME = 'WLDB';
 
 /**
  * 数据库版本号

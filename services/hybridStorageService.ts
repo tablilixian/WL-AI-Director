@@ -25,6 +25,13 @@ import {
   deleteProjectStage
 } from './storageService';
 
+// ============================================================================
+// 历史遗留数据处理（已废弃）
+// ============================================================================
+// 用于处理旧格式 ID (proj_xxx) 到云端 UUID 的映射
+// 正式版本可删除此部分代码
+// ============================================================================
+/*
 // 本地存储的ID映射表（旧格式ID -> 云端UUID）
 const ID_MAPPING_KEY = 'bigbanana_id_mapping';
 const idMappingCache = new Map<string, string>();
@@ -73,6 +80,7 @@ const setIdMapping = (localId: string, cloudId: string) => {
     logger.debug(LogCategory.STORAGE, `设置ID映射: ${localId} -> ${cloudId}`);
   }
 };
+*/
 
 export interface CloudProject {
   id: string;
@@ -331,6 +339,7 @@ class HybridStorageService {
     if (user) {
       logger.debug(LogCategory.STORAGE, '☁️ 开始同步到云端...');
       try {
+        /*
         // 初始化ID映射
         await initIdMapping();
         logger.debug(LogCategory.STORAGE, '✅ ID映射初始化完成');
@@ -368,6 +377,10 @@ class HybridStorageService {
             }
           }
         }
+        */
+        
+        // 直接使用项目ID（不再处理旧格式）
+        const cloudId = project.id;
         
         // 获取乐观锁
         if (!this.acquireLock(cloudId, project.version || 0)) {
@@ -428,6 +441,53 @@ class HybridStorageService {
     // 如果已登录，同时删除云端
     if (user) {
       try {
+        /*
+        // 初始化ID映射
+        await initIdMapping();
+        
+        // 获取云端ID（处理旧格式ID）
+        let cloudId = id;
+        if (id.startsWith('proj_')) {
+          cloudId = getCloudId(id);
+          if (cloudId === id) {
+            // 映射表中没有，尝试通过标题查找云端项目
+            const project = await loadProjectFromDB(id);
+            if (project) {
+              const { data: cloudProject } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('title', project.title)
+                .maybeSingle();
+              
+              if (cloudProject) {
+                cloudId = cloudProject.id;
+                setIdMapping(id, cloudId);
+              }
+            }
+          }
+        }
+        
+        // 如果找到了云端ID，则删除
+        if (cloudId !== id) {
+          const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', cloudId)
+            .eq('user_id', user.id);
+
+          if (error) throw error;
+          logger.debug(LogCategory.STORAGE, `项目 ${id} (云端ID: ${cloudId}) 已从云端删除`);
+          
+          // 从映射表中删除该映射
+          idMappingCache.delete(id);
+          saveIdMapping();
+        } else {
+          logger.debug(LogCategory.STORAGE, `项目 ${id} 未找到云端记录，跳过云端删除`);
+        }
+        */
+        
+        // 直接使用项目ID删除（不再处理旧格式）
         const { error } = await supabase
           .from('projects')
           .delete()
@@ -671,6 +731,7 @@ class HybridStorageService {
         const cloudItem = await assetLibraryApi.create(item);
         logger.debug(LogCategory.STORAGE, '素材库项目已同步到云端, 云端 ID:', cloudItem.id);
         
+        /*
         // 更新本地 ID 映射
         if (item.id !== cloudItem.id) {
           setIdMapping(item.id, cloudItem.id);
@@ -686,6 +747,7 @@ class HybridStorageService {
         } catch (error) {
           logger.error(LogCategory.STORAGE, '更新本地 IndexedDB ID 失败:', error);
         }
+        */
       } catch (error) {
         logger.error(LogCategory.STORAGE, '同步素材库项目到云端失败:', error);
       }

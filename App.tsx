@@ -14,6 +14,7 @@ import { saveProjectToDB, loadProjectFromDB, saveCurrentStage, getCurrentStage }
 import { hybridStorage } from './services/hybridStorageService';
 import { setGlobalApiKey } from './services/aiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
+// import { checkOldDatabaseExists, migrateDatabase, deleteOldDatabase } from './services/dbMigrationService';
 import { useAlert } from './components/GlobalAlert';
 import { useAuthStore } from './src/stores/authStore';
 import LoginPage from './src/pages/LoginPage';
@@ -62,6 +63,41 @@ function App() {
   useEffect(() => {
     initialize();
   }, []);
+
+  // ============================================================================
+  // 历史遗留数据处理（已废弃）
+  // ============================================================================
+  // 用于从 BigBananaDB 迁移到 WLDB
+  // 正式版本可删除此部分代码
+  // ============================================================================
+  /*
+  // Check and migrate old database on mount
+  useEffect(() => {
+    const checkAndMigrate = async () => {
+      try {
+        const oldDbExists = await checkOldDatabaseExists();
+        if (oldDbExists) {
+          logger.info(LogCategory.APP, '🔄 检测到旧数据库 BigBananaDB，开始迁移...');
+          const result = await migrateDatabase();
+          if (result.success) {
+            logger.info(LogCategory.APP, '✅ 数据库迁移成功');
+            showAlert('数据库迁移成功', 'success');
+            const deleted = await deleteOldDatabase();
+            if (deleted) {
+              logger.info(LogCategory.APP, '✅ 旧数据库已删除');
+            }
+          } else {
+            logger.error(LogCategory.APP, '❌ 数据库迁移失败', result.errors);
+            showAlert('数据库迁移失败，请检查控制台', 'error');
+          }
+        }
+      } catch (error) {
+        logger.error(LogCategory.APP, '数据库迁移检查失败:', error);
+      }
+    };
+    checkAndMigrate();
+  }, []);
+  */
 
   // Redirect to login if not authenticated
   useEffect(() => {

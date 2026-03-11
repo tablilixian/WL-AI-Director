@@ -178,6 +178,15 @@ const generateVideoAsync = async (
     });
 
     if (!statusResponse.ok) {
+      const errorText = await statusResponse.text();
+      logger.error(LogCategory.VIDEO, `❌ 查询任务状态失败: HTTP ${statusResponse.status}`);
+      logger.error(LogCategory.VIDEO, `❌ 错误详情: ${errorText}`);
+      logger.error(LogCategory.VIDEO, `❌ 请求URL: ${apiBase}${statusEndpoint}/${taskId}`);
+      
+      if (statusResponse.status === 400) {
+        throw new Error(`查询任务状态失败 (400): ${errorText}`);
+      }
+      
       logger.warn(LogCategory.VIDEO, '⚠️ 查询任务状态失败，继续重试...');
       continue;
     }

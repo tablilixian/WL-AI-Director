@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 import { useImageLoader } from '../hooks/useImageLoader';
+import DebugExportModal from './DebugExportModal';
 
 const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; type: 'character' | 'scene' | 'turnaround' }> = ({ imageUrl, alt, type }) => {
   const { src, loading } = useImageLoader(imageUrl);
@@ -61,6 +62,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const [assetToUse, setAssetToUse] = useState<AssetLibraryItem | null>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDebugModal, setShowDebugModal] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isDataImporting, setIsDataImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -611,6 +613,22 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                 </div>
                 <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导入全部项目与资产库备份</div>
               </button>
+
+              <button
+                onClick={() => {
+                  console.log('[Dashboard] 🔧 点击数据库调试按钮');
+                  setShowSettingsModal(false);
+                  setShowDebugModal(true);
+                  console.log('[Dashboard] ✅ 调试模态框状态已设置');
+                }}
+                className="p-4 border border-[var(--border-primary)] hover:border-[var(--border-secondary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-2 text-[var(--text-primary)] text-sm font-bold">
+                  <Database className="w-4 h-4 text-[var(--accent-text)]" />
+                  数据库调试
+                </div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导出本地数据库用于调试</div>
+              </button>
             </div>
           </div>
         </div>
@@ -792,6 +810,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
         className="hidden"
         onChange={handleImportFileChange}
       />
+
+      {/* Debug Export Modal */}
+      <DebugExportModal isOpen={showDebugModal} onClose={() => setShowDebugModal(false)} />
     </div>
   );
 };
