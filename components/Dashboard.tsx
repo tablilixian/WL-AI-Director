@@ -268,7 +268,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bigbanana_backup_${timestamp}.json`;
+      a.download = `wl_backup_${timestamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

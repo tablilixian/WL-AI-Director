@@ -4,7 +4,7 @@
 
 EDL (Edit Decision List) 和 FCPXML 是视频编辑行业的标准项目交换格式，用于在不同的视频剪辑软件之间传递剪辑信息。
 
-BigBanana AI Director 支持将项目导出为这两种格式，让你可以在专业剪辑软件中进一步编辑和精修。
+WL AI Director 支持将项目导出为这两种格式，让你可以在专业剪辑软件中进一步编辑和精修。
 
 ---
 

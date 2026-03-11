@@ -196,7 +196,7 @@ const StageExport: React.FC<Props> = ({ project }) => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bigbanana_project_${project.id}_${timestamp}.json`;
+      a.download = `wl_project_${project.id}_${timestamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
