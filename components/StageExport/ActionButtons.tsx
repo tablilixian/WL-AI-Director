@@ -1,10 +1,12 @@
-import React from 'react';
-import { Play, Download, FileVideo, Loader2, Video } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Play, Download, FileVideo, Loader2, Video, ChevronDown, FileCode, FileText } from 'lucide-react';
 import { STYLES, DownloadState } from './constants';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
 import MergeProgressModal from './MergeProgressModal';
 import { mergeVideos, MergeProgress as MergeProgressType } from '../../services/videoMergeService';
+import { downloadEDL } from '../../services/edlExportService';
+import { downloadFCPXML } from '../../services/fcpxmlExportService';
 import { ProjectState } from '../../types';
 
 interface Props {
@@ -34,6 +36,22 @@ const ActionButtons: React.FC<Props> = ({
     phase: '',
     progress: 0
   });
+
+  const [showExportMenu, setShowExportMenu] = React.useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleMergeVideos = async () => {
     if (completedShotsCount === 0) {
@@ -98,6 +116,36 @@ const ActionButtons: React.FC<Props> = ({
     }
   };
 
+  const handleExportEDL = () => {
+    if (completedShotsCount === 0) {
+      showAlert('没有可导出的镜头，请先生成视频', { type: 'warning' });
+      return;
+    }
+    try {
+      downloadEDL(project);
+      showAlert('EDL 文件导出成功！可在 Premiere Pro、DaVinci Resolve 等软件中使用', { type: 'success' });
+    } catch (error) {
+      logger.error(LogCategory.VIDEO, 'EDL 导出失败:', error);
+      showAlert(`EDL 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+    }
+    setShowExportMenu(false);
+  };
+
+  const handleExportFCPXML = () => {
+    if (completedShotsCount === 0) {
+      showAlert('没有可导出的镜头，请先生成视频', { type: 'warning' });
+      return;
+    }
+    try {
+      downloadFCPXML(project);
+      showAlert('FCPXML 文件导出成功！可在 Final Cut Pro、DaVinci Resolve 等软件中使用', { type: 'success' });
+    } catch (error) {
+      logger.error(LogCategory.VIDEO, 'FCPXML 导出失败:', error);
+      showAlert(`FCPXML 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+    }
+    setShowExportMenu(false);
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -147,14 +195,47 @@ const ActionButtons: React.FC<Props> = ({
           )}
           {isDownloading ? `${phase} ${downloadProgress}%` : 'Download ZIP'}
         </button>
-        
-        <button 
-          className={STYLES.button.tertiary}
-          onClick={() => showAlert('暂未开发', { type: 'info', title: '提示' })}
-        >
-          <FileVideo className="w-4 h-4" />
-          Export EDL / XML
-        </button>
+
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={completedShotsCount === 0} 
+            className={
+              completedShotsCount > 0 
+              ? STYLES.button.tertiary
+              : STYLES.button.disabled
+            }
+          >
+            <FileVideo className="w-4 h-4" />
+            Export EDL / XML
+            <ChevronDown className="w-3 h-3 ml-1" />
+          </button>
+
+          {showExportMenu && (
+            <div className="absolute top-full left-0 mt-2 w-full bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-lg shadow-xl z-50 overflow-hidden">
+              <button
+                onClick={handleExportEDL}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-[var(--nav-hover-bg)] transition-colors"
+              >
+                <FileCode className="w-4 h-4 text-[var(--text-muted)]" />
+                <div className="flex-1">
+                  <div className="text-[var(--text-primary)] font-medium">Export EDL</div>
+                  <div className="text-[var(--text-tertiary)] text-[10px]">Premiere Pro / DaVinci Resolve</div>
+                </div>
+              </button>
+              <button
+                onClick={handleExportFCPXML}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left hover:bg-[var(--nav-hover-bg)] transition-colors border-t border-[var(--border-primary)]"
+              >
+                <FileText className="w-4 h-4 text-[var(--text-muted)]" />
+                <div className="flex-1">
+                  <div className="text-[var(--text-primary)] font-medium">Export FCPXML</div>
+                  <div className="text-[var(--text-tertiary)] text-[10px]">Final Cut Pro / DaVinci Resolve</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Merge Progress Modal */}
