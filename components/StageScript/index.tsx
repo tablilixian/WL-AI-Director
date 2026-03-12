@@ -3,12 +3,19 @@ import { ProjectState, Shot } from '../../types';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
 import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from '../../services/aiService';
+import { getActiveChatModel } from '../../services/modelRegistry';
 import { getFinalValue, validateConfig } from './utils';
 import { DEFAULTS } from './constants';
 import ConfigPanel from './ConfigPanel';
 import ScriptEditor from './ScriptEditor';
 import SceneBreakdown from './SceneBreakdown';
 import { saveProject as saveProjectToCloud } from '../../services/hybridStorageService';
+
+// 获取默认的对话模型 ID：优先使用注册中心的激活模型，兜底到常量
+const getDefaultChatModelId = (): string => {
+  const active = getActiveChatModel();
+  return active?.id || DEFAULTS.model;
+};
 
 interface Props {
   project: ProjectState;
@@ -30,7 +37,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const [localTitle, setLocalTitle] = useState(project.title);
   const [localDuration, setLocalDuration] = useState(project.targetDuration || DEFAULTS.duration);
   const [localLanguage, setLocalLanguage] = useState(project.language || DEFAULTS.language);
-  const [localModel, setLocalModel] = useState(project.shotGenerationModel || DEFAULTS.model);
+  const [localModel, setLocalModel] = useState(project.shotGenerationModel || getDefaultChatModelId());
   const [localVisualStyle, setLocalVisualStyle] = useState(project.visualStyle || DEFAULTS.visualStyle);
   const [customDurationInput, setCustomDurationInput] = useState('');
   const [customModelInput, setCustomModelInput] = useState('');
@@ -59,7 +66,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     setLocalTitle(project.title);
     setLocalDuration(project.targetDuration || DEFAULTS.duration);
     setLocalLanguage(project.language || DEFAULTS.language);
-    setLocalModel(project.shotGenerationModel || DEFAULTS.model);
+    setLocalModel(project.shotGenerationModel || getDefaultChatModelId());
     setLocalVisualStyle(project.visualStyle || DEFAULTS.visualStyle);
   }, [project.id]);
 
