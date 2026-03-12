@@ -220,23 +220,25 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       // 使用当前设置的横竖屏比例生成关键帧，传递 hasTurnaround 标记
       const url = await generateImage(prompt, refResult.images, keyframeAspectRatio, false, refResult.hasTurnaround, 'keyframe', shot.id);
 
-      const updatedProject = {
-        ...project,
-        shots: project.shots.map(s => {
-          if (s.id !== shot.id) return s;
-          return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, url, 'completed'));
-        })
-      };
+      // 使用函数式更新，避免闭包问题
+      updateProject((prevProject: ProjectState) => {
+        const updatedProject = {
+          ...prevProject,
+          shots: prevProject.shots.map(s => {
+            if (s.id !== shot.id) return s;
+            return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, url, 'completed'));
+          })
+        };
 
-      updateProject(updatedProject);
+        // 立即保存到云端
+        saveProjectToCloud(updatedProject).then(() => {
+          logger.debug(LogCategory.AI, `✅ 关键帧生成完成 (${type})，已保存到云端`);
+        }).catch((error) => {
+          logger.error(LogCategory.AI, '❌ 保存关键帧失败:', error);
+        });
 
-      // 立即保存到云端
-      try {
-        await saveProjectToCloud(updatedProject);
-        logger.debug(LogCategory.AI, `✅ 关键帧生成完成 (${type})，已保存到云端`);
-      } catch (error) {
-        logger.error(LogCategory.AI, '❌ 保存关键帧失败:', error);
-      }
+        return updatedProject;
+      });
     } catch (e: any) {
       logger.error(LogCategory.AI, e);
       updateProject((prevProject: ProjectState) => ({

@@ -13,13 +13,15 @@ import { saveProject as saveProjectToCloud } from '../../services/hybridStorageS
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
+  updateProjectWithoutSave?: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
+  finishAIProcessing?: () => void;
   onShowModelConfig?: () => void;
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
 type TabMode = 'story' | 'script';
 
-const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfig, onGeneratingChange }) => {
+const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWithoutSave, finishAIProcessing, onShowModelConfig, onGeneratingChange }) => {
   const { showAlert } = useAlert();
   const [activeTab, setActiveTab] = useState<TabMode>(project.scriptData ? 'script' : 'story');
   
@@ -199,7 +201,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
           streamed += delta;
           const newScript = baseScript + '\n\n' + streamed;
           setLocalScript(newScript);
-          updateProject({ rawScript: newScript });
+          updateProjectWithoutSave?.({ rawScript: newScript });
         }
       );
       if (continuedContent) {
@@ -221,6 +223,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
     } finally {
       setIsContinuing(false);
       setProcessingMessage('');
+      finishAIProcessing?.();
     }
   };
 
@@ -244,7 +247,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
     let streamed = '';
     try {
       setLocalScript('');
-      updateProject({ rawScript: '' });
+      updateProjectWithoutSave?.({ rawScript: '' });
       const rewrittenContent = await rewriteScriptStream(
         baseScript,
         localLanguage,
@@ -252,7 +255,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
         (delta) => {
           streamed += delta;
           setLocalScript(streamed);
-          updateProject({ rawScript: streamed });
+          updateProjectWithoutSave?.({ rawScript: streamed });
         }
       );
       if (rewrittenContent) {
@@ -272,6 +275,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
     } finally {
       setIsRewriting(false);
       setProcessingMessage('');
+      finishAIProcessing?.();
     }
   };
 

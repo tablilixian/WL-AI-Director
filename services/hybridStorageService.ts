@@ -88,8 +88,8 @@ export interface CloudProject {
   title: string;
   description?: string;
   status: string;
-  settings: ProjectState | null;
-  data: ProjectState | null;
+  settings: ProjectState | null;  // 保留字段，暂时不使用，用于未来扩展
+  data: ProjectState | null;      // 主要存储字段，存储完整的项目数据
   created_at: string;
   updated_at: string;
 }
@@ -190,14 +190,14 @@ class HybridStorageService {
       
       let data: CloudProject[] | null = null;
       try {
-        // 添加超时机制：10秒超时
+        // 添加超时机制：30秒超时
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('查询云端项目超时（10秒）')), 10000);
+          setTimeout(() => reject(new Error('查询云端项目超时（30秒）')), 30000);
         });
         
         const queryPromise = supabase
           .from('projects')
-          .select('id, title, data, settings, updated_at')
+          .select('id, title, data, updated_at')
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false });
         
@@ -216,7 +216,7 @@ class HybridStorageService {
         logger.debug(LogCategory.STORAGE, '开始转换云端数据...');
         // 有云端数据，转换为 ProjectState
         const cloudProjects = data
-          .filter(p => p.data !== null || p.settings !== null)
+          .filter(p => p.data !== null)
           .map(p => this.cloudToProjectState(p));
         
         logger.debug(LogCategory.STORAGE, `转换后项目数: ${cloudProjects.length}`);
@@ -306,8 +306,8 @@ class HybridStorageService {
 
       if (error) throw error;
 
-      if (data && data.settings) {
-        return data.settings as ProjectState;
+      if (data && data.data) {
+        return data.data as ProjectState;
       }
 
       return loadProjectFromDB(id);
@@ -398,14 +398,13 @@ class HybridStorageService {
               title: project.title,
               description: project.rawScript?.substring(0, 500) || null,
               data: updatedProject,
-              settings: updatedProject,
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'id'
             });
 
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Supabase 请求超时')), 30000);  // 30 秒超时
+            setTimeout(() => reject(new Error('Supabase 请求超时')), 60000);  // 60 秒超时
           });
 
           const { error } = await Promise.race([supabasePromise, timeoutPromise]) as any;
@@ -528,7 +527,7 @@ class HybridStorageService {
       logger.debug(LogCategory.STORAGE, '获取云端项目列表...');
       const { data: cloudProjects, error: cloudError } = await supabase
         .from('projects')
-        .select('id, title, version, updated_at, data, settings')
+        .select('id, title, version, updated_at, data')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
@@ -543,8 +542,8 @@ class HybridStorageService {
       const cloudMap = new Map<string, { id: string; title: string; version: number; lastModified: number; data: ProjectState }>();
 
       for (const cp of cloudProjectList) {
-        // 优先使用 data 字段，其次使用 settings 字段（向后兼容）
-        const cloudData = cp.data || cp.settings;
+        // 使用 data 字段存储项目数据
+        const cloudData = cp.data;
         if (cloudData) {
           cloudMap.set(cp.title, {
             id: cp.id,
@@ -641,12 +640,9 @@ class HybridStorageService {
    * 转换云端数据到 ProjectState
    */
   private cloudToProjectState(cloud: CloudProject): ProjectState {
-    // 优先使用 data 字段，其次使用 settings 字段（向后兼容）
+    // 使用 data 字段存储项目数据
     if (cloud.data) {
       return cloud.data;
-    }
-    if (cloud.settings) {
-      return cloud.settings;
     }
     
     return {

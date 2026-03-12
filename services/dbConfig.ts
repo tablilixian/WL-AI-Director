@@ -15,8 +15,9 @@ export const DB_NAME = 'WLDB';
  * 版本历史：
  * - 5: 初始版本（projects, assetLibrary, images）
  * - 6: 添加 projectStages store（stage 专用存储）
+ * - 7: 修复 VIDEOS store 缺失问题，自动检测并创建缺失的 store
  */
-export const DB_VERSION = 6;
+export const DB_VERSION = 7;
 
 export const STORE_NAMES = {
   PROJECTS: 'projects',

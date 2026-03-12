@@ -39,6 +39,7 @@ function App() {
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [isAIProcessing, setIsAIProcessing] = useState(false);
   
   const saveTimeoutRef = useRef<any>(null);
   const hideStatusTimeoutRef = useRef<any>(null);
@@ -233,7 +234,7 @@ function App() {
 
   // Auto-save logic
   useEffect(() => {
-    if (!project || isExiting) return;
+    if (!project || isExiting || isAIProcessing) return;
 
     // 首次加载时跳过 auto-save
     if (isFirstLoadRef.current) {
@@ -302,6 +303,22 @@ function App() {
       }
       return { ...prev, ...updates };
     });
+  };
+
+  const updateProjectWithoutSave = (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => {
+    if (!project) return;
+    setIsAIProcessing(true);
+    setProject(prev => {
+      if (!prev) return null;
+      if (typeof updates === 'function') {
+        return updates(prev);
+      }
+      return { ...prev, ...updates };
+    });
+  };
+
+  const finishAIProcessing = () => {
+    setIsAIProcessing(false);
   };
 
   // Update project state only (without triggering cloud sync)
@@ -450,6 +467,8 @@ function App() {
           <StageScript
             project={project}
             updateProject={updateProject}
+            updateProjectWithoutSave={updateProjectWithoutSave}
+            finishAIProcessing={finishAIProcessing}
             onShowModelConfig={handleShowModelConfig}
             onGeneratingChange={setIsGenerating}
           />

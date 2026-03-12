@@ -129,19 +129,28 @@ const generateVideoAsync = async (
   }
 
   if (!createResponse.ok) {
-    if (createResponse.status === 400) {
-      throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
-    }
-    if (createResponse.status === 500) {
-      throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
-    }
     let errorMessage = `创建任务失败: HTTP ${createResponse.status}`;
     try {
       const errorData = await createResponse.json();
       errorMessage = errorData.error?.message || errorMessage;
+      logger.error(LogCategory.VIDEO, `❌ API 错误详情:`, JSON.stringify(errorData, null, 2));
     } catch (e) {
       const errorText = await createResponse.text();
-      if (errorText) errorMessage = errorText;
+      if (errorText) {
+        errorMessage = errorText;
+        logger.error(LogCategory.VIDEO, `❌ API 错误文本:`, errorText);
+      }
+    }
+    
+    if (createResponse.status === 400) {
+      logger.error(LogCategory.VIDEO, `❌ 400 错误 - 提示词: "${prompt.substring(0, 100)}..."`);
+      logger.error(LogCategory.VIDEO, `❌ 400 错误 - 尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
+      logger.error(LogCategory.VIDEO, `❌ 400 错误 - 模型: ${resolvedModelName}`);
+      logger.error(LogCategory.VIDEO, `❌ 400 错误 - 参考图数量: ${references.length}`);
+      throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
+    }
+    if (createResponse.status === 500) {
+      throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
     }
     throw new Error(errorMessage);
   }
