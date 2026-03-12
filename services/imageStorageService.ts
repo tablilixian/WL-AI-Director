@@ -132,12 +132,20 @@ export const imageStorageService = {
     const fullPath = `${path}/${fileName}`;
     logger.debug(LogCategory.IMAGE, `📁 完整路径: ${fullPath}`);
 
-    const { error: uploadError, data: uploadData } = await supabase.storage
+    // 添加超时机制，防止 upload 无限挂起
+    const TIMEOUT_MS = 30000;
+    const uploadPromise = supabase.storage
       .from('projects')
       .upload(fullPath, blob, {
         upsert: true,
         contentType: 'image/png'
       });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('图片上传超时（30秒），请检查网络连接')), TIMEOUT_MS)
+    );
+
+    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
     if (uploadError) {
       logger.error(LogCategory.IMAGE, '❌ 上传失败:', uploadError);

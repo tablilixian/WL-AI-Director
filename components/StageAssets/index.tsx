@@ -462,27 +462,34 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         
         // 如果图片是本地的，先上传到云端
         if (isLocalImage(char.referenceImage) && char.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地图片到云端...');
+          console.log('[StageAssets] ☁️ 上传本地图片到云端:', char.localImageId);
           const blob = await imageStorageService.getImage(char.localImageId);
-          if (blob) {
-            const cloudUrl = await imageStorageService.uploadToCloud(
-              char.localImageId,
-              blob,
-              `${user?.id || 'anonymous'}/asset_library/character/${char.id}`
-            );
-            charToSave.referenceImage = cloudUrl;
-            charToSave.referenceImageSource = 'cloud';
-            delete charToSave.localImageId;
-            
-            // 更新项目中的角色数据
-            const newData = { ...project.scriptData! };
-            const c = newData.characters.find(c => c.id === char.id);
-            if (c) {
-              c.referenceImage = cloudUrl;
-              c.referenceImageSource = 'cloud';
-              delete c.localImageId;
+          if (!blob) {
+            console.warn('[StageAssets] ⚠️ 本地图片读取失败，将仅保存到本地');
+          } else {
+            try {
+              const cloudUrl = await imageStorageService.uploadToCloud(
+                char.localImageId,
+                blob,
+                `${user?.id || 'anonymous'}/asset_library/character/${char.id}`
+              );
+              charToSave.referenceImage = cloudUrl;
+              charToSave.referenceImageSource = 'cloud';
+              delete charToSave.localImageId;
+              
+              // 更新项目中的角色数据
+              const newData = { ...project.scriptData! };
+              const c = newData.characters.find(c => c.id === char.id);
+              if (c) {
+                c.referenceImage = cloudUrl;
+                c.referenceImageSource = 'cloud';
+                delete c.localImageId;
+              }
+              updateProject({ scriptData: newData });
+            } catch (uploadError: any) {
+              console.error('[StageAssets] ❌ 上传到云端失败，仅保存到本地:', uploadError);
+              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
             }
-            updateProject({ scriptData: newData });
           }
         }
         
@@ -491,6 +498,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
+        console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -514,27 +522,34 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         
         // 如果图片是本地的，先上传到云端
         if (isLocalImage(scene.referenceImage) && scene.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地场景图片到云端...');
+          console.log('[StageAssets] ☁️ 上传本地场景图片到云端:', scene.localImageId);
           const blob = await imageStorageService.getImage(scene.localImageId);
-          if (blob) {
-            const cloudUrl = await imageStorageService.uploadToCloud(
-              scene.localImageId,
-              blob,
-              `${user?.id || 'anonymous'}/asset_library/scene/${scene.id}`
-            );
-            sceneToSave.referenceImage = cloudUrl;
-            sceneToSave.referenceImageSource = 'cloud';
-            delete sceneToSave.localImageId;
-            
-            // 更新项目中的场景数据
-            const newData = { ...project.scriptData! };
-            const s = newData.scenes.find(s => s.id === scene.id);
-            if (s) {
-              s.referenceImage = cloudUrl;
-              s.referenceImageSource = 'cloud';
-              delete s.localImageId;
+          if (!blob) {
+            console.warn('[StageAssets] ⚠️ 本地场景图片读取失败，将仅保存到本地');
+          } else {
+            try {
+              const cloudUrl = await imageStorageService.uploadToCloud(
+                scene.localImageId,
+                blob,
+                `${user?.id || 'anonymous'}/asset_library/scene/${scene.id}`
+              );
+              sceneToSave.referenceImage = cloudUrl;
+              sceneToSave.referenceImageSource = 'cloud';
+              delete sceneToSave.localImageId;
+              
+              // 更新项目中的场景数据
+              const newData = { ...project.scriptData! };
+              const s = newData.scenes.find(s => s.id === scene.id);
+              if (s) {
+                s.referenceImage = cloudUrl;
+                s.referenceImageSource = 'cloud';
+                delete s.localImageId;
+              }
+              updateProject({ scriptData: newData });
+            } catch (uploadError: any) {
+              console.error('[StageAssets] ❌ 场景图片上传到云端失败，仅保存到本地:', uploadError);
+              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
             }
-            updateProject({ scriptData: newData });
           }
         }
         
@@ -543,6 +558,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
+        console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -932,27 +948,34 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         
         // 如果图片是本地的，先上传到云端
         if (isLocalImage(prop.referenceImage) && prop.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地道具图片到云端...');
+          console.log('[StageAssets] ☁️ 上传本地道具图片到云端:', prop.localImageId);
           const blob = await imageStorageService.getImage(prop.localImageId);
-          if (blob) {
-            const cloudUrl = await imageStorageService.uploadToCloud(
-              prop.localImageId,
-              blob,
-              `${user?.id || 'anonymous'}/asset_library/prop/${prop.id}`
-            );
-            propToSave.referenceImage = cloudUrl;
-            propToSave.referenceImageSource = 'cloud';
-            delete propToSave.localImageId;
-            
-            // 更新项目中的道具数据
-            const newData = { ...project.scriptData! };
-            const p = (newData.props || []).find(p => p.id === prop.id);
-            if (p) {
-              p.referenceImage = cloudUrl;
-              p.referenceImageSource = 'cloud';
-              delete p.localImageId;
+          if (!blob) {
+            console.warn('[StageAssets] ⚠️ 本地道具图片读取失败，将仅保存到本地');
+          } else {
+            try {
+              const cloudUrl = await imageStorageService.uploadToCloud(
+                prop.localImageId,
+                blob,
+                `${user?.id || 'anonymous'}/asset_library/prop/${prop.id}`
+              );
+              propToSave.referenceImage = cloudUrl;
+              propToSave.referenceImageSource = 'cloud';
+              delete propToSave.localImageId;
+              
+              // 更新项目中的道具数据
+              const newData = { ...project.scriptData! };
+              const p = (newData.props || []).find(p => p.id === prop.id);
+              if (p) {
+                p.referenceImage = cloudUrl;
+                p.referenceImageSource = 'cloud';
+                delete p.localImageId;
+              }
+              updateProject({ scriptData: newData });
+            } catch (uploadError: any) {
+              console.error('[StageAssets] ❌ 道具图片上传到云端失败，仅保存到本地:', uploadError);
+              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
             }
-            updateProject({ scriptData: newData });
           }
         }
         
@@ -961,6 +984,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
+        console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -1300,33 +1324,41 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         
         // 如果图片是本地存储的，需要先上传到云端
         if (char.turnaround.imageUrlSource === 'local' && char.turnaround.localImageId) {
+          console.log('[StageAssets] ☁️ 上传本地九宫格图片到云端:', char.turnaround.localImageId);
           const localBlob = await imageStorageService.getImage(char.turnaround.localImageId);
-          if (localBlob) {
-            const cloudUrl = await imageStorageService.uploadToCloud(
-              char.turnaround.localImageId,
-              localBlob,
-              `${user?.id || 'anonymous'}/asset_library/turnaround/${char.id}`
-            );
-            if (cloudUrl) {
-              charToSave.turnaround = {
-                ...charToSave.turnaround,
-                imageUrl: cloudUrl,
-                imageUrlSource: 'cloud',
-                localImageId: undefined
-              };
-              
-              // 更新项目数据
-              updateProject((prev) => {
-                if (!prev.scriptData) return prev;
-                const newData = { ...prev.scriptData };
-                const c = newData.characters.find(c => compareIds(c.id, charId));
-                if (c && c.turnaround) {
-                  c.turnaround.imageUrl = cloudUrl;
-                  c.turnaround.imageUrlSource = 'cloud';
-                  c.turnaround.localImageId = undefined;
-                }
-                return { ...prev, scriptData: newData };
-              });
+          if (!localBlob) {
+            console.warn('[StageAssets] ⚠️ 本地九宫格图片读取失败，将仅保存到本地');
+          } else {
+            try {
+              const cloudUrl = await imageStorageService.uploadToCloud(
+                char.turnaround.localImageId,
+                localBlob,
+                `${user?.id || 'anonymous'}/asset_library/turnaround/${char.id}`
+              );
+              if (cloudUrl) {
+                charToSave.turnaround = {
+                  ...charToSave.turnaround,
+                  imageUrl: cloudUrl,
+                  imageUrlSource: 'cloud',
+                  localImageId: undefined
+                };
+                
+                // 更新项目数据
+                updateProject((prev) => {
+                  if (!prev.scriptData) return prev;
+                  const newData = { ...prev.scriptData };
+                  const c = newData.characters.find(c => compareIds(c.id, charId));
+                  if (c && c.turnaround) {
+                    c.turnaround.imageUrl = cloudUrl;
+                    c.turnaround.imageUrlSource = 'cloud';
+                    c.turnaround.localImageId = undefined;
+                  }
+                  return { ...prev, scriptData: newData };
+                });
+              }
+            } catch (uploadError: any) {
+              console.error('[StageAssets] ❌ 九宫格图片上传到云端失败，仅保存到本地:', uploadError);
+              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
             }
           }
         }
@@ -1336,6 +1368,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
         refreshLibrary();
       } catch (e: any) {
+        console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
