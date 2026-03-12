@@ -150,7 +150,7 @@ export interface Shot {
   props?: string[]; // 道具ID数组，引用 ScriptData.props 中的道具
   keyframes: Keyframe[];
   interval?: VideoInterval;
-  videoModel?: 'veo' | 'sora-2' | 'veo_3_1-fast' | 'veo_3_1-fast-4K' | 'veo_3_1_t2v_fast_landscape' | 'veo_3_1_t2v_fast_portrait' | 'veo_3_1_i2v_s_fast_fl_landscape' | 'veo_3_1_i2v_s_fast_fl_portrait'; // Video generation model selection
+  videoModel?: string; // 视频模型 ID，由 modelRegistry 管理
   nineGrid?: NineGridData; // 可选的九宫格分镜预览数据（高级功能）
 }
 
@@ -239,7 +239,8 @@ export interface ProjectState {
 }
 
 // ============================================
-// 模型管理相关类型定义
+// 横竖屏与视频时长类型
+// 注意：模型配置相关类型已迁移至 types/model.ts
 // ============================================
 
 /**
@@ -254,62 +255,3 @@ export type AspectRatio = '16:9' | '9:16' | '1:1';
  * 视频时长类型（仅异步视频模型支持）
  */
 export type VideoDuration = 4 | 8 | 12;
-
-/**
- * 模型提供商配置
- */
-export interface ModelProvider {
-  id: string;
-  name: string;
-  baseUrl: string;  // API 基础 URL，如 'https://api.antsk.cn'
-  apiKey?: string;  // 可选的独立 API Key（如果不设置则使用全局 API Key）
-  isDefault?: boolean;  // 是否为默认提供商
-  isBuiltIn?: boolean;  // 是否为内置提供商（不可删除）
-}
-
-/**
- * 对话模型配置
- */
-export interface ChatModelConfig {
-  providerId: string;
-  modelName: string;  // 如 'gpt-5.1', 'gpt-41', 'gpt-5.2'
-  endpoint?: string;  // API 端点，默认为 '/v1/chat/completions'
-}
-
-/**
- * 画图模型配置
- */
-export interface ImageModelConfig {
-  providerId: string;
-  modelName: string;  // 如 'gemini-3-pro-image-preview'
-  endpoint?: string;  // API 端点，默认为 '/v1beta/models/{modelName}:generateContent'
-}
-
-/**
- * 视频模型配置
- */
-export interface VideoModelConfig {
-  providerId: string;
-  type: 'sora' | 'veo';  // sora 使用异步 API，veo 使用同步 API
-  modelName: string;  // 基础模型名，如 'sora-2', 'veo_3_1-fast'
-  endpoint?: string;  // API 端点
-}
-
-/**
- * 完整的模型配置
- */
-export interface ModelConfig {
-  chatModel: ChatModelConfig;
-  imageModel: ImageModelConfig;
-  videoModel: VideoModelConfig;
-}
-
-/**
- * 模型管理全局状态
- */
-export interface ModelManagerState {
-  providers: ModelProvider[];
-  currentConfig: ModelConfig;
-  defaultAspectRatio: AspectRatio;
-  defaultVideoDuration: VideoDuration;
-}
