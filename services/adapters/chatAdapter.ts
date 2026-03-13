@@ -54,11 +54,21 @@ const isBigModelModel = (modelId: string): boolean => {
 };
 
 /**
+ * 检查是否为 OpenRouter 模型
+ */
+const isOpenRouterModel = (modelId: string): boolean => {
+  return modelId.startsWith('or-');
+};
+
+/**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
  */
 const getDevApiBaseUrl = (modelId: string): string => {
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
+  }
+  if (isOpenRouterModel(modelId)) {
+    return '/openrouter/api/v1';
   }
   return getApiBaseUrlForModel(modelId);
 };
