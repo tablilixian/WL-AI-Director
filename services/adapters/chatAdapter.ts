@@ -54,11 +54,13 @@ const isBigModelModel = (modelId: string): boolean => {
 };
 
 /**
- * 检查是否为 OpenRouter 模型
+ * 检查是否为 OpenRouter 模型 - 已禁用
  */
+/*
 const isOpenRouterModel = (modelId: string): boolean => {
   return modelId.startsWith('or-');
 };
+*/
 
 /**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
@@ -67,9 +69,12 @@ const getDevApiBaseUrl = (modelId: string): string => {
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
   }
+  // OpenRouter 已禁用
+  /*
   if (isOpenRouterModel(modelId)) {
-    return '/openrouter/api/v1';
+    return '/openrouter/api';
   }
+  */
   return getApiBaseUrlForModel(modelId);
 };
 
@@ -215,7 +220,7 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
     
     // 根据 URL 选择合适的测试模型
     const isBigModel = url === '/bigmodel';
-    const testModel = isBigModel ? 'glm-4-flash' : 'gpt-41';
+    const testModel = isBigModel ? 'glm-4-flash' : 'gpt-5.1';
     
     const response = await fetch(`${url}${endpoint}`, {
       method: 'POST',

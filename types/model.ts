@@ -343,8 +343,9 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
   },
-  // OpenRouter Free Chat Models (2026-03)
+  // OpenRouter Free Chat Models (2026-03) - 已禁用
   // 注意：OpenRouter baseUrl 已包含 /api/v1，endpoint 只需 /chat/completions
+  /*
   {
     id: 'or-llama-3.3-70b',
     name: 'Llama 3.3 70B (免费)',
@@ -645,6 +646,7 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
   },
+  */
 ];
 
 /**
@@ -843,13 +845,16 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     isBuiltIn: true,
     isDefault: false,
   },
+  // OpenRouter provider - 已禁用
+  /*
   {
     id: 'openrouter',
     name: 'OpenRouter (openrouter.ai)',
-    baseUrl: 'https://openrouter.ai/api/v1',
+    baseUrl: 'https://openrouter.ai/api',
     isBuiltIn: true,
     isDefault: false,
   },
+  */
 ];
 
 /**

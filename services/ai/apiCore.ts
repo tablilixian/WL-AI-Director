@@ -485,6 +485,9 @@ export const chatCompletionStream = async (
 export const verifyApiKey = async (key: string): Promise<{ success: boolean; message: string }> => {
   try {
     const apiBase = getApiBase('chat');
+    const resolvedModel = getDefaultChatModelId();
+    const requestModel = resolveRequestModel('chat', resolvedModel);
+    
     const response = await fetch(`${apiBase}/v1/chat/completions`, {
       method: 'POST',
       headers: {
@@ -492,7 +495,7 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
         'Authorization': `Bearer ${key}`
       },
       body: JSON.stringify({
-        model: 'gpt-41',
+        model: requestModel,
         messages: [{ role: 'user', content: '仅返回1' }],
         temperature: 0.1,
         max_tokens: 5

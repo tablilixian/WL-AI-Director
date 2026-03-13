@@ -22,12 +22,14 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/bigmodel-files\//, ''),
           },
-          // OpenRouter API 代理 (解决 CORS)
+          // OpenRouter API 代理 (解决 CORS) - 已禁用
+          /*
           '/openrouter': {
             target: 'https://openrouter.ai',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/openrouter/, ''),
           },
+          */
           // UCloud 视频下载代理 (解决 CORS)
           '/video-proxy': {
             target: 'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',
