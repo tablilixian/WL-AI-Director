@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon, Loader2, LogOut, User } from 'lucide-react';
+import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon, Loader2, LogOut, User, PenTool } from 'lucide-react';
 import logoImg from '../logo.png';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
@@ -7,7 +7,7 @@ import { logger, LogCategory } from '../services/logger';
 
 interface SidebarProps {
   currentStage: string;
-  setStage: (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts') => void;
+  setStage: (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => void;
   onExit: () => void;
   projectName?: string;
   onShowOnboarding?: () => void;
@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
     { id: 'assets', label: '角色与场景', icon: Users, sub: 'Phase 02' },
     { id: 'director', label: '导演工作台', icon: Clapperboard, sub: 'Phase 03' },
     { id: 'export', label: '成片与导出', icon: Film, sub: 'Phase 04' },
+    { id: 'canvas', label: '创意画布', icon: PenTool, sub: 'Beta' },
     { id: 'prompts', label: '提示词管理', icon: ListTree, sub: 'Advanced' },
   ];
 

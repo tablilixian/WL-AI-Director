@@ -23,7 +23,8 @@ export enum LogCategory {
   RENDER = 'RENDER',
   MODEL = 'MODEL',
   UI = 'UI',
-  NETWORK = 'NETWORK'
+  NETWORK = 'NETWORK',
+  CANVAS = 'CANVAS'
 }
 
 interface LogEntry {

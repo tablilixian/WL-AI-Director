@@ -218,6 +218,24 @@ const callGeminiApi = async (
     };
   }
 
+  console.log('=== [ImageAdapter] Gemini 请求详情 ===');
+  console.log('[API 地址]', `${apiBase}${endpoint}`);
+  console.log('[请求体]', {
+    contents: requestBody.contents.map((c: any) => ({
+      role: c.role,
+      parts: c.parts.map((p: any) => {
+        if (p.text) {
+          return { type: 'text', 内容: p.text.substring(0, 100) + '...' };
+        }
+        if (p.inlineData) {
+          return { type: 'image', mimeType: p.inlineData.mimeType, 数据长度: p.inlineData.data.length };
+        }
+        return p;
+      })
+    })),
+    generationConfig: requestBody.generationConfig
+  });
+
   // 调用 API
   const response = await retryOperation(async () => {
     const res = await fetch(`${apiBase}${endpoint}`, {
@@ -251,6 +269,10 @@ const callGeminiApi = async (
 
     return await res.json();
   });
+
+  console.log('=== [ImageAdapter] Gemini 响应详情 ===');
+  console.log('[响应状态]', '成功');
+  console.log('[候选数量]', response.candidates?.length || 0);
 
   // 提取 base64 图片
   const candidates = response.candidates || [];
@@ -310,12 +332,21 @@ export const callImageApi = async (
   
   let apiBase = getApiBaseUrlForModel(activeModel.id);
   
+  console.log('=== [ImageAdapter] API 调用详情 ===');
+  console.log('[模型 ID]', activeModel.id);
+  console.log('[模型名称]', activeModel.name);
+  console.log('[提供商]', activeModel.providerId);
+  console.log('[API 端点]', apiBase);
+  console.log('[参考图数量]', options.referenceImages?.length || 0);
+
   // 根据提供商选择不同的 API
   if (isBigModelProvider(activeModel)) {
     // 开发环境使用代理
     apiBase = '/bigmodel';
+    console.log('[API 类型] BigModel CogView');
     return callCogViewApi(options, activeModel, apiKey, apiBase);
   } else {
+    console.log('[API 类型] Gemini');
     return callGeminiApi(options, activeModel, apiKey, apiBase);
   }
 };

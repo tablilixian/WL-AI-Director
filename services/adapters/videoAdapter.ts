@@ -278,43 +278,62 @@ const callSoraApi = async (
 
   console.log(`🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`);
 
-  // 创建任务
-  const formData = new FormData();
-  formData.append('model', resolvedModel);
-  formData.append('prompt', options.prompt);
-  formData.append('seconds', String(duration));
-  formData.append('size', size);
+  const isCogVideo = resolvedModel.toLowerCase().includes('cogvideo');
+  const isBigModel = model.providerId === 'bigmodel';
 
-  const appendReference = async (base64: string, filename: string, fieldName: string) => {
-    const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-    const resizedBase64 = await resizeImageToSize(cleanBase64, width, height);
-    const byteCharacters = atob(resizedBase64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'image/png' });
-    formData.append(fieldName, blob, filename);
+  let requestBody: BodyInit;
+  let headers: Record<string, string> = {
+    'Authorization': `Bearer ${apiKey}`,
   };
 
-  // 添加参考图片（veo_3_1-fast 支持首尾帧数组；单图时使用 input_reference）
-  if (useReferenceArray && references.length >= 2) {
-    const limited = references.slice(0, 2);
-    await appendReference(limited[0], 'reference-start.png', 'input_reference[]');
-    await appendReference(limited[1], 'reference-end.png', 'input_reference[]');
-  } else if (references.length >= 1) {
-    await appendReference(references[0], 'reference.png', 'input_reference');
+  if (isCogVideo || isBigModel) {
+    const jsonData: any = {
+      model: resolvedModel,
+      prompt: options.prompt,
+    };
+
+    if (options.startImage) {
+      const cleanBase64 = options.startImage.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+      jsonData.image_url = `data:image/png;base64,${cleanBase64}`;
+    }
+
+    requestBody = JSON.stringify(jsonData);
+    headers['Content-Type'] = 'application/json';
+  } else {
+    const formData = new FormData();
+    formData.append('model', resolvedModel);
+    formData.append('prompt', options.prompt);
+    formData.append('seconds', String(duration));
+    formData.append('size', size);
+
+    const appendReference = async (base64: string, filename: string, fieldName: string) => {
+      const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+      const resizedBase64 = await resizeImageToSize(cleanBase64, width, height);
+      const byteCharacters = atob(resizedBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+      formData.append(fieldName, blob, filename);
+    };
+
+    if (useReferenceArray && references.length >= 2) {
+      const limited = references.slice(0, 2);
+      await appendReference(limited[0], 'reference-start.png', 'input_reference[]');
+      await appendReference(limited[1], 'reference-end.png', 'input_reference[]');
+    } else if (references.length >= 1) {
+      await appendReference(references[0], 'reference.png', 'input_reference');
+    }
+
+    requestBody = formData;
   }
 
-  // 创建任务请求
-  // 使用模型配置的 endpoint
   const createResponse = await fetch(`${apiBase}${model.endpoint || '/v1/videos'}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: formData,
+    headers,
+    body: requestBody,
   });
 
   if (!createResponse.ok) {
@@ -337,13 +356,23 @@ const callSoraApi = async (
   }
 
   const createData = await createResponse.json();
-  const taskId = createData.id || createData.task_id;
+  
+  console.log('=== [VideoAdapter] 创建任务响应 ===');
+  console.log('[响应数据]', JSON.stringify(createData, null, 2));
+  
+  if (createData.error) {
+    console.error('API 返回错误:', createData.error);
+    throw new Error(`视频生成失败: ${createData.error.message || createData.error.msg || JSON.stringify(createData.error)}`);
+  }
+  
+  const taskId = createData.id || createData.task_id || createData.taskId;
   
   if (!taskId) {
+    console.error('未找到任务 ID，完整响应:', createData);
     throw new Error('创建视频任务失败：未返回任务 ID');
   }
 
-  console.log('📋 Sora-2 任务已创建，任务 ID:', taskId);
+  console.log('📋 视频任务已创建，任务 ID:', taskId);
 
   // 轮询状态
   const maxPollingTime = 1200000; // 20 分钟
