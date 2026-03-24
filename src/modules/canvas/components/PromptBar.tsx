@@ -331,6 +331,23 @@ async function resolveVideoUrl(videoUrl: string): Promise<string> {
     return videoUrl;
   }
 
+  if (videoUrl.startsWith('video:')) {
+    const localId = videoUrl.replace('video:', '');
+    console.log('[PromptBar] 解析本地视频引用:', localId);
+
+    try {
+      const { videoStorageService } = await import('../../../../services/imageStorageService');
+      const blob = await videoStorageService.getVideo(localId);
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob);
+        console.log('[PromptBar] 本地视频解析成功:', localId);
+        return objectUrl;
+      }
+    } catch (error) {
+      console.error('[PromptBar] 解析本地视频失败:', error);
+    }
+  }
+
   if (videoUrl.startsWith('local:')) {
     const localId = videoUrl.replace('local:', '');
     console.log('[PromptBar] 解析本地视频引用:', localId);

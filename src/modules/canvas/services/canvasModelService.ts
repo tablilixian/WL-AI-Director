@@ -124,9 +124,33 @@ export class CanvasModelService {
         duration: duration as any
       });
 
-      onProgress?.(100);
+      onProgress?.(60);
 
-      return videoUrl;
+      console.log('[CanvasModelService] 视频生成完成，URL:', videoUrl);
+
+      try {
+        console.log('[CanvasModelService] 尝试下载视频到本地...');
+        
+        const response = await fetch(videoUrl);
+        if (!response.ok) {
+          throw new Error(`下载失败: ${response.status}`);
+        }
+        
+        const videoBlob = await response.blob();
+        console.log('[CanvasModelService] 视频下载成功，大小:', videoBlob.size);
+        
+        const { saveVideoToLocal } = await import('../../../../utils/imageUtils');
+        const localVideoUrl = await saveVideoToLocal(URL.createObjectURL(videoBlob));
+        
+        console.log('[CanvasModelService] 视频保存到本地成功:', localVideoUrl);
+        onProgress?.(100);
+        
+        return localVideoUrl;
+      } catch (downloadError: any) {
+        console.warn('[CanvasModelService] 视频下载失败，使用外部 URL:', downloadError.message);
+        onProgress?.(100);
+        return videoUrl;
+      }
     } catch (error: any) {
       logger.error(LogCategory.CANVAS, '[CanvasModelService] Video generation failed', error);
       throw error;
@@ -192,6 +216,48 @@ export class CanvasModelService {
 
     return this.generateImage({
       prompt: stylePrompt,
+      referenceImages: [imageUrl],
+      aspectRatio: '16:9',
+      onProgress
+    });
+  }
+
+  async replaceBackground(imageUrl: string, backgroundDescription: string, onProgress?: (progress: number) => void): Promise<string> {
+    console.log('=== 背景替换请求 ===');
+    console.log('[背景描述]', backgroundDescription);
+
+    onProgress?.(10);
+
+    const prompt = `Replace the background of this image with: ${backgroundDescription}. Keep the main subject intact and naturally blend it with the new background.`;
+
+    return this.generateImage({
+      prompt,
+      referenceImages: [imageUrl],
+      aspectRatio: '16:9',
+      onProgress
+    });
+  }
+
+  async expandImage(imageUrl: string, expandDirection: string, onProgress?: (progress: number) => void): Promise<string> {
+    console.log('=== 图片扩展请求 ===');
+    console.log('[扩展方向]', expandDirection);
+
+    onProgress?.(10);
+
+    const directionPrompts: Record<string, string> = {
+      'all': 'Expand this image in all directions, naturally extending the scene.',
+      'left': 'Expand this image to the left, naturally extending the scene.',
+      'right': 'Expand this image to the right, naturally extending the scene.',
+      'top': 'Expand this image to the top, naturally extending the scene.',
+      'bottom': 'Expand this image to the bottom, naturally extending the scene.',
+      'left-right': 'Expand this image to the left and right, naturally extending the scene.',
+      'top-bottom': 'Expand this image to the top and bottom, naturally extending the scene.'
+    };
+
+    const prompt = directionPrompts[expandDirection] || directionPrompts['all'];
+
+    return this.generateImage({
+      prompt,
       referenceImages: [imageUrl],
       aspectRatio: '16:9',
       onProgress

@@ -9,6 +9,7 @@ import { InfiniteCanvas } from '../src/modules/canvas';
 import { canvasIntegrationService } from '../src/modules/canvas/services/canvasIntegrationService';
 import { useCanvasStore } from '../src/modules/canvas/hooks/useCanvasState';
 import { StyleTransferPanel } from '../src/modules/canvas/components/StyleTransferPanel';
+import { ImageEditPanel } from '../src/modules/canvas/components/ImageEditPanel';
 
 interface StageCanvasProps {
   project: ProjectState;
@@ -18,6 +19,8 @@ interface StageCanvasProps {
 const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showStyleTransfer, setShowStyleTransfer] = useState(false);
+  const [showImageEdit, setShowImageEdit] = useState(false);
+  const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
 
   const getAllKeyframes = (): Keyframe[] => {
@@ -161,6 +164,22 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
               风格迁移
             </button>
             <button
+              onClick={() => { setImageEditMode('background'); setShowImageEdit(true); }}
+              disabled={!selectedLayerId}
+              className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!selectedLayerId ? '请先选中一张图片' : '背景替换'}
+            >
+              背景替换
+            </button>
+            <button
+              onClick={() => { setImageEditMode('expand'); setShowImageEdit(true); }}
+              disabled={!selectedLayerId}
+              className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!selectedLayerId ? '请先选中一张图片' : '图片扩展'}
+            >
+              图片扩展
+            </button>
+            <button
               onClick={handleExportImages}
               className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
             >
@@ -264,6 +283,14 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         <StyleTransferPanel
           selectedLayerId={selectedLayerId}
           onClose={() => setShowStyleTransfer(false)}
+        />
+      )}
+
+      {showImageEdit && (
+        <ImageEditPanel
+          selectedLayerId={selectedLayerId}
+          editMode={imageEditMode}
+          onClose={() => setShowImageEdit(false)}
         />
       )}
     </div>

@@ -18,6 +18,8 @@ export const CanvasToolbar: React.FC = () => {
     redo, 
     clearCanvas,
     toggleLayerLock,
+    toggleLayerVisibility,
+    setLayerOpacity,
     bringToFront,
     sendToBack,
     bringForward,
@@ -160,9 +162,15 @@ export const CanvasToolbar: React.FC = () => {
           </button>
 
           <button
-            onClick={() => deleteLayer(selectedLayerId)}
+            onClick={() => {
+              if (selectedLayerIds.length > 1) {
+                selectedLayerIds.forEach(id => deleteLayer(id));
+              } else {
+                deleteLayer(selectedLayerId);
+              }
+            }}
             className="p-2 hover:bg-red-600 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Delete Layer"
+            title={selectedLayerIds.length > 1 ? `Delete ${selectedLayerIds.length} Layers` : 'Delete Layer'}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -245,6 +253,73 @@ export const CanvasToolbar: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M10 12h10M6 18h14" />
             </svg>
           </button>
+
+          <button
+            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'top')}
+            disabled={!hasMultipleSelection && !selectedLayerId}
+            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
+            title="Align Top"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h4M14 10h4M8 14h8" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'middle')}
+            disabled={!hasMultipleSelection && !selectedLayerId}
+            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
+            title="Align Middle"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h4M14 10h4M6 14h12M8 18h8" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'bottom')}
+            disabled={!hasMultipleSelection && !selectedLayerId}
+            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
+            title="Align Bottom"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h12M8 14h4M14 14h4M10 18h4" />
+            </svg>
+          </button>
+
+          <div className="w-px h-6 bg-gray-600 mx-1" />
+
+          <button
+            onClick={() => toggleLayerVisibility(selectedLayerId)}
+            className={`p-2 rounded-md transition-colors ${
+              selectedLayer?.visible === false 
+                ? 'bg-gray-600 text-gray-400 hover:bg-gray-500' 
+                : 'hover:bg-gray-700 text-gray-300 hover:text-white'
+            }`}
+            title={selectedLayer?.visible === false ? 'Show Layer' : 'Hide Layer'}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {selectedLayer?.visible === false ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              )}
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-1 px-2">
+            <span className="text-xs text-gray-400">Opacity:</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round((selectedLayer?.opacity ?? 1) * 100)}
+              onChange={(e) => setLayerOpacity(selectedLayerId, parseInt(e.target.value) / 100)}
+              className="w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              disabled={!selectedLayerId}
+            />
+            <span className="text-xs text-gray-400 w-8">{Math.round((selectedLayer?.opacity ?? 1) * 100)}%</span>
+          </div>
 
           <div className="w-px h-6 bg-gray-600 mx-1" />
         </>

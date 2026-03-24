@@ -455,9 +455,8 @@ const callSoraApi = async (
   }
 
   if (videoUrlFromStatus) {
-    const videoBase64 = await convertVideoUrlToBase64(videoUrlFromStatus);
-    console.log('✅ 视频下载完成并转换为 base64');
-    return videoBase64;
+    console.log('✅ 视频生成完成，URL:', videoUrlFromStatus);
+    return videoUrlFromStatus;
   }
 
   // 下载视频

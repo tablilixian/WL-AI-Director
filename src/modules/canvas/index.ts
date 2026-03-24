@@ -10,6 +10,7 @@ export { CanvasToolbar } from './components/CanvasToolbar';
 export { LayerPanel } from './components/LayerPanel';
 export { PromptBar } from './components/PromptBar';
 export { StyleTransferPanel } from './components/StyleTransferPanel';
+export { ImageEditPanel } from './components/ImageEditPanel';
 
 export { useCanvasStore } from './hooks/useCanvasState';
 export { useCanvasControls } from './hooks/useCanvasControls';

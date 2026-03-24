@@ -54,7 +54,7 @@ export const LayerPanel: React.FC = () => {
 
   if (isCollapsed) {
     return (
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-24 right-4 z-50">
         <button
           onClick={() => setIsCollapsed(false)}
           className="p-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 text-gray-300 hover:text-white transition-colors"
@@ -69,7 +69,7 @@ export const LayerPanel: React.FC = () => {
   }
 
   return (
-    <div className="absolute top-4 right-4 z-50 w-64 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700">
+    <div className="absolute top-24 right-4 z-50 w-64 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700">
       <div className="flex items-center justify-between p-3 border-b border-gray-700">
         <h3 className="text-sm font-medium text-white">Layers</h3>
         <button
@@ -100,12 +100,34 @@ export const LayerPanel: React.FC = () => {
                 onClick={() => selectLayer(layer.id)}
               >
                 <div
-                  className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0"
+                  className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative"
                   style={{
                     backgroundColor: layer.type === 'sticky' ? layer.color : undefined
                   }}
                 >
-                  {layer.src ? (
+                  {layer.type === 'video' ? (
+                    <>
+                      {layer.src && layer.src.startsWith('http') ? (
+                        <video
+                          src={layer.src}
+                          className="w-full h-full object-cover"
+                          muted
+                          preload="metadata"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-purple-900/50 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 right-0 bg-purple-600 rounded-tl px-0.5">
+                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </>
+                  ) : layer.src && !layer.src.startsWith('video:') && !layer.src.startsWith('local:') ? (
                     <img
                       src={layer.thumbnail || layer.src}
                       alt={layer.title}
