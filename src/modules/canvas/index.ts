@@ -7,6 +7,7 @@ export { InfiniteCanvas } from './components/InfiniteCanvas';
 export { CanvasLayer } from './components/CanvasLayer';
 export { Minimap } from './components/Minimap';
 export { CanvasToolbar } from './components/CanvasToolbar';
+export { DrawingToolbar } from './components/DrawingToolbar';
 export { LayerPanel } from './components/LayerPanel';
 export { PromptBar } from './components/PromptBar';
 export { StyleTransferPanel } from './components/StyleTransferPanel';

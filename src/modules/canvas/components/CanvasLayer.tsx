@@ -203,11 +203,19 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
           </div>
         );
       case 'drawing':
+        if (!layer.src) {
+          return (
+            <div className="w-full h-full flex items-center justify-center bg-transparent">
+              <div className="text-gray-500 text-sm">绘制中...</div>
+            </div>
+          );
+        }
         return (
-          <canvas
-            className="w-full h-full"
-            width={layer.width}
-            height={layer.height}
+          <img
+            src={layer.src}
+            alt={layer.title}
+            className="w-full h-full object-contain"
+            draggable={false}
           />
         );
       default:

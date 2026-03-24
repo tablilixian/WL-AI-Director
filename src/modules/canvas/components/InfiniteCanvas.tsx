@@ -3,7 +3,7 @@
  * 提供无限画布功能，支持平移、缩放、图层管理
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -11,9 +11,19 @@ import { Minimap } from './Minimap';
 import { CanvasToolbar } from './CanvasToolbar';
 import { LayerPanel } from './LayerPanel';
 import { PromptBar } from './PromptBar';
+import { DrawingToolbar, DrawingTool } from './DrawingToolbar';
 
 interface InfiniteCanvasProps {
   className?: string;
+}
+
+interface DrawingState {
+  isDrawing: boolean;
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  points: { x: number; y: number }[];
 }
 
 export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }) => {
@@ -31,13 +41,27 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
     pasteLayers,
     toggleLayerLock,
     toggleLayerVisibility,
+    addLayer,
     undo, 
     redo 
   } = useCanvasStore();
   const { handleMouseDown, handleWheel } = useCanvasControls();
   const containerRef = useRef<HTMLDivElement>(null);
+  const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
+  
+  const [activeTool, setActiveTool] = useState<DrawingTool>('select');
+  const [strokeColor, setStrokeColor] = useState('#ffffff');
+  const [strokeWidth, setStrokeWidth] = useState(4);
+  const [drawingState, setDrawingState] = useState<DrawingState>({
+    isDrawing: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    points: []
+  });
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -152,29 +176,251 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     if (e.target === containerRef.current || e.target === e.currentTarget) {
-      selectLayer(null);
+      if (activeTool === 'select') {
+        selectLayer(null);
+      }
     }
-  }, [selectLayer]);
+  }, [selectLayer, activeTool]);
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
       isDraggingRef.current = true;
       lastMouseRef.current = { x: e.clientX, y: e.clientY };
       e.preventDefault();
+      return;
     }
-    handleMouseDown(e);
-  }, [handleMouseDown]);
+
+    if (activeTool === 'select') {
+      handleMouseDown(e);
+    } else if (e.button === 0) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+
+      setDrawingState({
+        isDrawing: true,
+        startX: screenX,
+        startY: screenY,
+        currentX: screenX,
+        currentY: screenY,
+        points: [{ x: screenX, y: screenY }]
+      });
+    }
+  }, [activeTool, handleMouseDown]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!drawingState.isDrawing) return;
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    setDrawingState(prev => ({
+      ...prev,
+      currentX: screenX,
+      currentY: screenY,
+      points: activeTool === 'pencil' ? [...prev.points, { x: screenX, y: screenY }] : prev.points
+    }));
+
+    if (drawingCanvasRef.current) {
+      const ctx = drawingCanvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, drawingCanvasRef.current.width, drawingCanvasRef.current.height);
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (activeTool === 'pencil') {
+          ctx.beginPath();
+          drawingState.points.forEach((point, i) => {
+            if (i === 0) {
+              ctx.moveTo(point.x, point.y);
+            } else {
+              ctx.lineTo(point.x, point.y);
+            }
+          });
+          ctx.lineTo(screenX, screenY);
+          ctx.stroke();
+        } else if (activeTool === 'rectangle') {
+          const width = screenX - drawingState.startX;
+          const height = screenY - drawingState.startY;
+          ctx.strokeRect(drawingState.startX, drawingState.startY, width, height);
+        } else if (activeTool === 'arrow') {
+          ctx.beginPath();
+          ctx.moveTo(drawingState.startX, drawingState.startY);
+          ctx.lineTo(screenX, screenY);
+          ctx.stroke();
+
+          const angle = Math.atan2(screenY - drawingState.startY, screenX - drawingState.startX);
+          const arrowLength = 15;
+          ctx.beginPath();
+          ctx.moveTo(screenX, screenY);
+          ctx.lineTo(
+            screenX - arrowLength * Math.cos(angle - Math.PI / 6),
+            screenY - arrowLength * Math.sin(angle - Math.PI / 6)
+          );
+          ctx.moveTo(screenX, screenY);
+          ctx.lineTo(
+            screenX - arrowLength * Math.cos(angle + Math.PI / 6),
+            screenY - arrowLength * Math.sin(angle + Math.PI / 6)
+          );
+          ctx.stroke();
+        }
+      }
+    }
+  }, [drawingState.isDrawing, drawingState.startX, drawingState.startY, drawingState.points, activeTool, strokeColor, strokeWidth]);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    if (drawingState.isDrawing) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect && drawingCanvasRef.current) {
+        const canvas = document.createElement('canvas');
+        canvas.width = drawingCanvasRef.current.width;
+        canvas.height = drawingCanvasRef.current.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = strokeWidth;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          if (activeTool === 'pencil' && drawingState.points.length > 1) {
+            ctx.beginPath();
+            drawingState.points.forEach((point, i) => {
+              if (i === 0) {
+                ctx.moveTo(point.x, point.y);
+              } else {
+                ctx.lineTo(point.x, point.y);
+              }
+            });
+            ctx.stroke();
+          } else if (activeTool === 'rectangle') {
+            const width = drawingState.currentX - drawingState.startX;
+            const height = drawingState.currentY - drawingState.startY;
+            ctx.strokeRect(drawingState.startX, drawingState.startY, width, height);
+          } else if (activeTool === 'arrow') {
+            ctx.beginPath();
+            ctx.moveTo(drawingState.startX, drawingState.startY);
+            ctx.lineTo(drawingState.currentX, drawingState.currentY);
+            ctx.stroke();
+
+            const angle = Math.atan2(drawingState.currentY - drawingState.startY, drawingState.currentX - drawingState.startX);
+            const arrowLength = 15;
+            ctx.beginPath();
+            ctx.moveTo(drawingState.currentX, drawingState.currentY);
+            ctx.lineTo(
+              drawingState.currentX - arrowLength * Math.cos(angle - Math.PI / 6),
+              drawingState.currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.moveTo(drawingState.currentX, drawingState.currentY);
+            ctx.lineTo(
+              drawingState.currentX - arrowLength * Math.cos(angle + Math.PI / 6),
+              drawingState.currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.stroke();
+          }
+
+          const padding = strokeWidth + 2;
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+          if (activeTool === 'pencil') {
+            drawingState.points.forEach(point => {
+              minX = Math.min(minX, point.x);
+              minY = Math.min(minY, point.y);
+              maxX = Math.max(maxX, point.x);
+              maxY = Math.max(maxY, point.y);
+            });
+          } else {
+            minX = Math.min(drawingState.startX, drawingState.currentX);
+            minY = Math.min(drawingState.startY, drawingState.currentY);
+            maxX = Math.max(drawingState.startX, drawingState.currentX);
+            maxY = Math.max(drawingState.startY, drawingState.currentY);
+          }
+
+          minX = Math.max(0, minX - padding);
+          minY = Math.max(0, minY - padding);
+          maxX = Math.min(canvas.width, maxX + padding);
+          maxY = Math.min(canvas.height, maxY + padding);
+
+          const cropWidth = Math.max(maxX - minX, 20);
+          const cropHeight = Math.max(maxY - minY, 20);
+
+          const cropCanvas = document.createElement('canvas');
+          cropCanvas.width = cropWidth;
+          cropCanvas.height = cropHeight;
+          const cropCtx = cropCanvas.getContext('2d');
+          if (cropCtx) {
+            cropCtx.drawImage(canvas, -minX, -minY);
+          }
+
+          const dataUrl = cropCanvas.toDataURL('image/png');
+          const canvasX = (minX - offset.x) / scale;
+          const canvasY = (minY - offset.y) / scale;
+          const canvasWidth = cropWidth / scale;
+          const canvasHeight = cropHeight / scale;
+
+          if (cropWidth > 10 && cropHeight > 10) {
+            addLayer({
+              id: crypto.randomUUID(),
+              type: 'drawing',
+              x: canvasX,
+              y: canvasY,
+              width: canvasWidth,
+              height: canvasHeight,
+              src: dataUrl,
+              title: `${activeTool === 'pencil' ? '铅笔' : activeTool === 'rectangle' ? '矩形' : '箭头'}标注`,
+              createdAt: Date.now()
+            });
+          }
+        }
+      }
+
+      if (drawingCanvasRef.current) {
+        const ctx = drawingCanvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, drawingCanvasRef.current.width, drawingCanvasRef.current.height);
+        }
+      }
+
+      setDrawingState({
+        isDrawing: false,
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        points: []
+      });
+    }
+  }, [drawingState, activeTool, strokeColor, strokeWidth, scale, offset, addLayer]);
 
   return (
     <div className={`relative w-full h-full overflow-hidden bg-gray-900 ${className}`}>
+      <DrawingToolbar
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        strokeColor={strokeColor}
+        onStrokeColorChange={setStrokeColor}
+        strokeWidth={strokeWidth}
+        onStrokeWidthChange={setStrokeWidth}
+      />
+
       <CanvasToolbar />
 
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
         onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
         onWheel={handleWheel}
         onClick={handleCanvasClick}
+        style={{ cursor: activeTool !== 'select' ? 'crosshair' : undefined }}
       >
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           <defs>
@@ -196,6 +442,13 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
+
+        <canvas
+          ref={drawingCanvasRef}
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          width={containerRef.current?.clientWidth || 1920}
+          height={containerRef.current?.clientHeight || 1080}
+        />
 
         <div
           className="absolute origin-top-left"
