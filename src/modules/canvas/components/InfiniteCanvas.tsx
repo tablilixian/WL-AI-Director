@@ -17,7 +17,23 @@ interface InfiniteCanvasProps {
 }
 
 export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }) => {
-  const { layers, offset, scale, selectedLayerId, selectedLayerIds, selectLayer, undo, redo } = useCanvasStore();
+  const { 
+    layers, 
+    offset, 
+    scale, 
+    selectedLayerId, 
+    selectedLayerIds, 
+    selectLayer, 
+    selectAllLayers,
+    clearSelection,
+    deleteLayer,
+    copySelectedLayers,
+    pasteLayers,
+    toggleLayerLock,
+    toggleLayerVisibility,
+    undo, 
+    redo 
+  } = useCanvasStore();
   const { handleMouseDown, handleWheel } = useCanvasControls();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -41,15 +57,84 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
     };
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 检查是否在输入框中
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z' && !e.shiftKey) {
-          e.preventDefault();
-          console.log('[Keyboard] Ctrl+Z 被按下，执行撤销');
-          undo();
-        } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
-          e.preventDefault();
-          console.log('[Keyboard] Ctrl+Shift+Z 或 Ctrl+Y 被按下，执行重做');
-          redo();
+        switch (e.key.toLowerCase()) {
+          case 'z':
+            if (e.shiftKey) {
+              e.preventDefault();
+              console.log('[Keyboard] Ctrl+Shift+Z 被按下，执行重做');
+              redo();
+            } else {
+              e.preventDefault();
+              console.log('[Keyboard] Ctrl+Z 被按下，执行撤销');
+              undo();
+            }
+            break;
+          case 'y':
+            e.preventDefault();
+            console.log('[Keyboard] Ctrl+Y 被按下，执行重做');
+            redo();
+            break;
+          case 'a':
+            e.preventDefault();
+            console.log('[Keyboard] Ctrl+A 被按下，全选图层');
+            selectAllLayers();
+            break;
+          case 'c':
+            e.preventDefault();
+            console.log('[Keyboard] Ctrl+C 被按下，复制图层');
+            copySelectedLayers();
+            break;
+          case 'v':
+            e.preventDefault();
+            console.log('[Keyboard] Ctrl+V 被按下，粘贴图层');
+            pasteLayers();
+            break;
+          case 'l':
+            e.preventDefault();
+            if (selectedLayerId) {
+              console.log('[Keyboard] Ctrl+L 被按下，切换锁定');
+              if (selectedLayerIds.length > 1) {
+                selectedLayerIds.forEach(id => toggleLayerLock(id));
+              } else {
+                toggleLayerLock(selectedLayerId);
+              }
+            }
+            break;
+          case 'h':
+            e.preventDefault();
+            if (selectedLayerId) {
+              console.log('[Keyboard] Ctrl+H 被按下，切换可见性');
+              if (selectedLayerIds.length > 1) {
+                selectedLayerIds.forEach(id => toggleLayerVisibility(id));
+              } else {
+                toggleLayerVisibility(selectedLayerId);
+              }
+            }
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case 'Delete':
+          case 'Backspace':
+            e.preventDefault();
+            if (selectedLayerIds.length > 0) {
+              console.log('[Keyboard] Delete 被按下，删除选中图层');
+              selectedLayerIds.forEach(id => deleteLayer(id));
+              clearSelection();
+            }
+            break;
+          case 'Escape':
+            e.preventDefault();
+            console.log('[Keyboard] Escape 被按下，清除选择');
+            clearSelection();
+            break;
         }
       }
     };

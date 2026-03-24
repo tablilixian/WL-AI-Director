@@ -23,6 +23,7 @@ interface CanvasState {
   selectedLayerIds: string[];
   history: CanvasHistory[];
   historyIndex: number;
+  clipboard: LayerData[];
 }
 
 interface CanvasActions {
@@ -35,6 +36,7 @@ interface CanvasActions {
   setScale: (scale: number) => void;
   selectLayer: (id: string | null, multiSelect?: boolean) => void;
   selectMultipleLayers: (ids: string[]) => void;
+  selectAllLayers: () => void;
   clearSelection: () => void;
   undo: () => void;
   redo: () => void;
@@ -43,6 +45,8 @@ interface CanvasActions {
   clearCanvas: () => void;
   importLayers: (layers: LayerData[]) => void;
   exportLayers: () => LayerData[];
+  copySelectedLayers: () => void;
+  pasteLayers: () => void;
   toggleLayerLock: (id: string) => void;
   toggleLayerVisibility: (id: string) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
@@ -52,6 +56,10 @@ interface CanvasActions {
   sendBackward: (id: string) => void;
   alignLayers: (layerIds: string[], alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   distributeLayers: (layerIds: string[], direction: 'horizontal' | 'vertical') => void;
+  groupSelectedLayers: () => void;
+  ungroupLayers: (groupId: string) => void;
+  mergeSelectedLayers: () => Promise<void>;
+  searchLayers: (query: string) => LayerData[];
 }
 
 const initialState: CanvasState = {
@@ -61,7 +69,8 @@ const initialState: CanvasState = {
   selectedLayerId: null,
   selectedLayerIds: [],
   history: [],
-  historyIndex: -1
+  historyIndex: -1,
+  clipboard: []
 };
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
@@ -198,7 +207,52 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         selectedLayerId: ids.length > 0 ? ids[ids.length - 1] : null
       }),
 
+      selectAllLayers: () => {
+        const state = get();
+        const allIds = state.layers.map(l => l.id);
+        set({ 
+          selectedLayerIds: allIds,
+          selectedLayerId: allIds.length > 0 ? allIds[allIds.length - 1] : null
+        });
+      },
+
       clearSelection: () => set({ selectedLayerId: null, selectedLayerIds: [] }),
+
+      copySelectedLayers: () => {
+        const state = get();
+        const selectedLayers = state.layers.filter(l => state.selectedLayerIds.includes(l.id));
+        if (selectedLayers.length > 0) {
+          set({ clipboard: selectedLayers });
+          console.log('[Clipboard] 复制了', selectedLayers.length, '个图层');
+        }
+      },
+
+      pasteLayers: () => {
+        const state = get();
+        if (state.clipboard.length === 0) return;
+
+        const newLayers = state.clipboard.map(layer => ({
+          ...layer,
+          id: crypto.randomUUID(),
+          x: layer.x + 20,
+          y: layer.y + 20,
+          title: `${layer.title} (copy)`,
+          createdAt: Date.now()
+        }));
+
+        set({
+          layers: [...state.layers, ...newLayers],
+          selectedLayerIds: newLayers.map(l => l.id),
+          selectedLayerId: newLayers[newLayers.length - 1]?.id || null,
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        console.log('[Clipboard] 粘贴了', newLayers.length, '个图层');
+      },
 
       undo: () => {
         const state = get();
@@ -409,6 +463,151 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
             currentY += l.height + gap;
           });
         }
+      },
+
+      groupSelectedLayers: () => {
+        const state = get();
+        const selectedLayers = state.layers.filter(l => state.selectedLayerIds.includes(l.id));
+        if (selectedLayers.length < 2) {
+          alert('请选择至少两个图层进行分组');
+          return;
+        }
+
+        const minX = Math.min(...selectedLayers.map(l => l.x));
+        const minY = Math.min(...selectedLayers.map(l => l.y));
+        const maxX = Math.max(...selectedLayers.map(l => l.x + l.width));
+        const maxY = Math.max(...selectedLayers.map(l => l.y + l.height));
+
+        const groupId = crypto.randomUUID();
+        const groupLayer: LayerData = {
+          id: groupId,
+          type: 'group',
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY,
+          src: '',
+          title: `分组 (${selectedLayers.length}个图层)`,
+          color: '#6366f1',
+          createdAt: Date.now()
+        };
+
+        const updatedLayers = state.layers.map(l => {
+          if (state.selectedLayerIds.includes(l.id)) {
+            return { ...l, parentId: groupId };
+          }
+          return l;
+        });
+
+        set({
+          layers: [...updatedLayers, groupLayer],
+          selectedLayerId: groupId,
+          selectedLayerIds: [groupId],
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        console.log('[Group] 创建分组:', groupId, '包含', selectedLayers.length, '个图层');
+      },
+
+      ungroupLayers: (groupId) => {
+        const state = get();
+        const updatedLayers = state.layers.map(l => {
+          if (l.parentId === groupId) {
+            return { ...l, parentId: undefined };
+          }
+          return l;
+        }).filter(l => l.id !== groupId);
+
+        set({
+          layers: updatedLayers,
+          selectedLayerId: null,
+          selectedLayerIds: [],
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        console.log('[Group] 解散分组:', groupId);
+      },
+
+      mergeSelectedLayers: async () => {
+        const state = get();
+        const selectedLayers = state.layers.filter(l => state.selectedLayerIds.includes(l.id) && l.type === 'image');
+        
+        if (selectedLayers.length < 2) {
+          alert('请选择至少两个图片图层进行合并');
+          return;
+        }
+
+        const minX = Math.min(...selectedLayers.map(l => l.x));
+        const minY = Math.min(...selectedLayers.map(l => l.y));
+        const maxX = Math.max(...selectedLayers.map(l => l.x + l.width));
+        const maxY = Math.max(...selectedLayers.map(l => l.y + l.height));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = maxX - minX;
+        canvas.height = maxY - minY;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        for (const layer of selectedLayers) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              ctx.drawImage(img, layer.x - minX, layer.y - minY, layer.width, layer.height);
+              resolve();
+            };
+            img.onerror = () => resolve();
+            img.src = layer.src;
+          });
+        }
+
+        const mergedBase64 = canvas.toDataURL('image/png');
+        const mergedLayerId = crypto.randomUUID();
+
+        const mergedLayer: LayerData = {
+          id: mergedLayerId,
+          type: 'image',
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY,
+          src: mergedBase64,
+          title: `合并图层 (${selectedLayers.length}个)`,
+          createdAt: Date.now()
+        };
+
+        const remainingLayers = state.layers.filter(l => !state.selectedLayerIds.includes(l.id));
+
+        set({
+          layers: [...remainingLayers, mergedLayer],
+          selectedLayerId: mergedLayerId,
+          selectedLayerIds: [mergedLayerId],
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        console.log('[Merge] 合并图层:', selectedLayers.length, '个');
+      },
+
+      searchLayers: (query) => {
+        const state = get();
+        if (!query.trim()) return [];
+        const lowerQuery = query.toLowerCase();
+        return state.layers.filter(l => 
+          l.title.toLowerCase().includes(lowerQuery) ||
+          l.text?.toLowerCase().includes(lowerQuery)
+        );
       }
     }),
     {

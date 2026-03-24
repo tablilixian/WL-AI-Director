@@ -24,13 +24,20 @@ export const CanvasToolbar: React.FC = () => {
     sendToBack,
     bringForward,
     sendBackward,
-    alignLayers
+    alignLayers,
+    groupSelectedLayers,
+    ungroupLayers,
+    mergeSelectedLayers
   } = useCanvasStore();
   const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
   const scale = useCanvasStore((s) => s.scale);
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
   const hasMultipleSelection = selectedLayerIds.length > 1;
+  const hasMultipleImageSelection = selectedLayerIds.filter(id => {
+    const layer = layers.find(l => l.id === id);
+    return layer?.type === 'image';
+  }).length >= 2;
 
   const handleAddImage = () => {
     const input = document.createElement('input');
@@ -320,6 +327,42 @@ export const CanvasToolbar: React.FC = () => {
             />
             <span className="text-xs text-gray-400 w-8">{Math.round((selectedLayer?.opacity ?? 1) * 100)}%</span>
           </div>
+
+          <div className="w-px h-6 bg-gray-600 mx-1" />
+
+          <button
+            onClick={groupSelectedLayers}
+            disabled={!hasMultipleSelection}
+            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
+            title="Group Layers (Ctrl+G)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </button>
+
+          {selectedLayer?.type === 'group' && (
+            <button
+              onClick={() => ungroupLayers(selectedLayerId)}
+              className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
+              title="Ungroup Layers (Ctrl+Shift+G)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+              </svg>
+            </button>
+          )}
+
+          <button
+            onClick={mergeSelectedLayers}
+            disabled={!hasMultipleImageSelection}
+            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
+            title="Merge Layers"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
 
           <div className="w-px h-6 bg-gray-600 mx-1" />
         </>

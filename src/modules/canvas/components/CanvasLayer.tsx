@@ -15,14 +15,14 @@ interface CanvasLayerProps {
 }
 
 export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) => {
-  const { selectLayer, updateLayer } = useCanvasStore();
+  const { selectLayer, updateLayer, layers } = useCanvasStore();
   const { calculateSnap } = useSnapAlignment();
   const layerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(layer.title);
-  const dragStartRef = useRef({ x: 0, y: 0, layerX: 0, layerY: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0, layerX: 0, layerY: 0, childPositions: [] as { id: string; x: number; y: number }[] });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -32,13 +32,18 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
     selectLayer(layer.id, multiSelect);
     if (layer.locked) return;
     setIsDragging(true);
+    
+    const childLayers = layers.filter(l => l.parentId === layer.id);
+    const childPositions = childLayers.map(child => ({ id: child.id, x: child.x, y: child.y }));
+    
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
       layerX: layer.x,
-      layerY: layer.y
+      layerY: layer.y,
+      childPositions
     };
-  }, [layer.id, layer.x, layer.y, layer.locked, selectLayer]);
+  }, [layer.id, layer.x, layer.y, layer.locked, layers, selectLayer]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, corner: string) => {
     if (layer.locked) return;
@@ -85,6 +90,15 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
         const newY = dragStartRef.current.layerY + deltaY;
         const snapped = calculateSnap(layer, newX, newY);
         updateLayer(layer.id, { x: snapped.x, y: snapped.y });
+
+        if (layer.type === 'group' && dragStartRef.current.childPositions.length > 0) {
+          dragStartRef.current.childPositions.forEach(childPos => {
+            updateLayer(childPos.id, { 
+              x: childPos.x + deltaX, 
+              y: childPos.y + deltaY 
+            });
+          });
+        }
       } else if (isResizing) {
         const deltaX = e.clientX - resizeStartRef.current.x;
         const deltaY = e.clientY - resizeStartRef.current.y;
@@ -106,7 +120,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, layer, updateLayer, calculateSnap]);
+  }, [isDragging, isResizing, layer, layers, updateLayer, calculateSnap]);
 
   const renderContent = () => {
     switch (layer.type) {
