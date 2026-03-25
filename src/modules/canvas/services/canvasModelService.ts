@@ -129,9 +129,19 @@ export class CanvasModelService {
       console.log('[CanvasModelService] 视频生成完成，URL:', videoUrl);
 
       try {
-        console.log('[CanvasModelService] 尝试下载视频到本地...');
+        let downloadUrl = videoUrl;
         
-        const response = await fetch(videoUrl);
+        if (videoUrl.includes('maas-watermark-prod-new.cn-wlcb.ufileos.com')) {
+          downloadUrl = videoUrl.replace(
+            'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',
+            '/video-proxy'
+          );
+          console.log('[CanvasModelService] 使用代理下载视频:', downloadUrl);
+        } else {
+          console.log('[CanvasModelService] 尝试直接下载视频...');
+        }
+        
+        const response = await fetch(downloadUrl);
         if (!response.ok) {
           throw new Error(`下载失败: ${response.status}`);
         }
@@ -147,7 +157,7 @@ export class CanvasModelService {
         
         return localVideoUrl;
       } catch (downloadError: any) {
-        console.warn('[CanvasModelService] 视频下载失败，使用外部 URL:', downloadError.message);
+        console.log('[CanvasModelService] 使用外部视频 URL');
         onProgress?.(100);
         return videoUrl;
       }

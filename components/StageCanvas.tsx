@@ -111,6 +111,234 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     }
   };
 
+  const handleExportVideos = async () => {
+    const videoLayers = layers.filter(l => l.type === 'video' && l.src);
+    if (videoLayers.length === 0) {
+      alert('画布中没有可导出的视频');
+      return;
+    }
+
+    const confirmed = confirm(`确定要导出 ${videoLayers.length} 个视频吗？`);
+    if (confirmed) {
+      for (let i = 0; i < videoLayers.length; i++) {
+        const layer = videoLayers[i];
+        try {
+          let videoUrl = layer.src;
+          
+          if (layer.src.startsWith('video:')) {
+            const { videoStorageService } = await import('../services/imageStorageService');
+            const blob = await videoStorageService.getVideo(layer.src.replace('video:', ''));
+            if (blob) {
+              videoUrl = URL.createObjectURL(blob);
+            }
+          }
+
+          const link = document.createElement('a');
+          link.href = videoUrl;
+          link.download = `${layer.title || `video_${i + 1}`}.mp4`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          if (layer.src.startsWith('video:')) {
+            URL.revokeObjectURL(videoUrl);
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error('导出视频失败:', error);
+        }
+      }
+      alert(`已导出 ${videoLayers.length} 个视频`);
+    }
+  };
+
+  const handleExportSelected = async () => {
+    if (!selectedLayerId) {
+      alert('请先选中一个图层');
+      return;
+    }
+
+    const layer = layers.find(l => l.id === selectedLayerId);
+    if (!layer) {
+      alert('选中的图层不存在');
+      return;
+    }
+
+    if (layer.type === 'image' && layer.src) {
+      const link = document.createElement('a');
+      link.href = layer.src;
+      link.download = `${layer.title || 'image'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      alert('已导出选中的图片');
+    } else if (layer.type === 'video' && layer.src) {
+      try {
+        let videoUrl = layer.src;
+        
+        if (layer.src.startsWith('video:')) {
+          const { videoStorageService } = await import('../services/imageStorageService');
+          const blob = await videoStorageService.getVideo(layer.src.replace('video:', ''));
+          if (blob) {
+            videoUrl = URL.createObjectURL(blob);
+          }
+        }
+
+        const link = document.createElement('a');
+        link.href = videoUrl;
+        link.download = `${layer.title || 'video'}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        if (layer.src.startsWith('video:')) {
+          URL.revokeObjectURL(videoUrl);
+        }
+        
+        alert('已导出选中的视频');
+      } catch (error) {
+        console.error('导出视频失败:', error);
+        alert('导出视频失败');
+      }
+    } else {
+      alert('选中的图层不支持导出');
+    }
+  };
+
+  const handleTakeScreenshot = () => {
+    const infiniteCanvas = document.querySelector('[class*="InfiniteCanvas"]') as HTMLElement;
+    if (!infiniteCanvas) {
+      alert('找不到画布');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        alert('无法创建 Canvas');
+        return;
+      }
+
+      const rect = infiniteCanvas.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      const images = infiniteCanvas.querySelectorAll('img');
+      images.forEach((img) => {
+        const imgRect = img.getBoundingClientRect();
+        const x = imgRect.left - rect.left;
+        const y = imgRect.top - rect.top;
+        try {
+          ctx.drawImage(img, x, y, imgRect.width, imgRect.height);
+        } catch (e) {
+          console.warn('绘制图片失败:', e);
+        }
+      });
+
+      const link = document.createElement('a');
+      link.download = `canvas-screenshot-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('画布截图已保存');
+    } catch (error) {
+      console.error('截图失败:', error);
+      alert('截图失败');
+    }
+  };
+
+  const handleExportAsZip = async () => {
+    const exportableLayers = layers.filter(l => 
+      (l.type === 'image' || l.type === 'video') && l.src
+    );
+
+    if (exportableLayers.length === 0) {
+      alert('画布中没有可导出的图片或视频');
+      return;
+    }
+
+    const confirmed = confirm(`确定要将 ${exportableLayers.length} 个文件打包下载吗？`);
+    if (!confirmed) return;
+
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      for (let i = 0; i < exportableLayers.length; i++) {
+        const layer = exportableLayers[i];
+        let blob: Blob | null = null;
+        let filename = '';
+
+        try {
+          if (layer.type === 'image') {
+            if (layer.imageId) {
+              const { imageStorageService } = await import('../services/imageStorageService');
+              blob = await imageStorageService.getImage(layer.imageId);
+              filename = `${layer.title || `image_${i + 1}`}.png`;
+              console.log('从 IndexedDB 获取图片:', layer.imageId);
+            } else if (layer.src.startsWith('data:')) {
+              const response = await fetch(layer.src);
+              blob = await response.blob();
+              filename = `${layer.title || `image_${i + 1}`}.png`;
+            } else if (layer.src.startsWith('local:')) {
+              const { imageStorageService } = await import('../services/imageStorageService');
+              blob = await imageStorageService.getImage(layer.src.replace('local:', ''));
+              filename = `${layer.title || `image_${i + 1}`}.png`;
+            }
+          } else if (layer.type === 'video') {
+            if (layer.src.startsWith('video:')) {
+              const { videoStorageService } = await import('../services/imageStorageService');
+              blob = await videoStorageService.getVideo(layer.src.replace('video:', ''));
+              filename = `${layer.title || `video_${i + 1}`}.mp4`;
+            } else if (layer.src.startsWith('http')) {
+              let downloadUrl = layer.src;
+              
+              if (layer.src.includes('aigc-files.bigmodel.cn')) {
+                downloadUrl = layer.src.replace('https://aigc-files.bigmodel.cn', '/bigmodel-files');
+              } else if (layer.src.includes('maas-watermark-prod-new.cn-wlcb.ufileos.com')) {
+                downloadUrl = layer.src.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com', '/video-proxy');
+              }
+              
+              const response = await fetch(downloadUrl);
+              blob = await response.blob();
+              filename = `${layer.title || `video_${i + 1}`}.mp4`;
+            }
+          }
+
+          if (blob) {
+            zip.file(filename, blob);
+            console.log('添加到 ZIP:', filename, blob.size);
+          } else {
+            console.warn('无法获取图层数据:', layer.id, layer.type);
+          }
+        } catch (e) {
+          console.warn('处理图层失败:', layer.id, e);
+        }
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `canvas-export-${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      alert(`已打包下载 ${exportableLayers.length} 个文件`);
+    } catch (error) {
+      console.error('打包下载失败:', error);
+      alert('打包下载失败');
+    }
+  };
+
   const handleClearCanvas = () => {
     const summary = canvasIntegrationService.getCanvasSummary();
     if (summary.totalLayers === 0) {
@@ -135,6 +363,30 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       alert('画布状态已恢复');
     } else {
       alert('没有找到保存的画布状态');
+    }
+  };
+
+  const handleExportJson = () => {
+    const saved = localStorage.getItem('wl-canvas-backup');
+    if (!saved) {
+      alert('没有找到保存的画布数据，请先点击"保存画布"');
+      return;
+    }
+
+    try {
+      const data = JSON.parse(saved);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `canvas-data-${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      alert('画布数据已导出');
+    } catch (error) {
+      console.error('导出 JSON 失败:', error);
+      alert('导出失败');
     }
   };
 
@@ -186,16 +438,47 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
               导出图片
             </button>
             <button
+              onClick={handleExportVideos}
+              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+            >
+              导出视频
+            </button>
+            <button
+              onClick={handleExportSelected}
+              disabled={!selectedLayerId}
+              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              导出选中
+            </button>
+            <button
+              onClick={handleTakeScreenshot}
+              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+            >
+              画布截图
+            </button>
+            <button
               onClick={handleExportToKeyframes}
               className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
             >
               导出分镜
             </button>
             <button
+              onClick={handleExportAsZip}
+              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+            >
+              打包下载
+            </button>
+            <button
               onClick={handleSaveCanvas}
               className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
             >
               保存画布
+            </button>
+            <button
+              onClick={handleExportJson}
+              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+            >
+              导出JSON
             </button>
             <button
               onClick={handleRestoreCanvas}

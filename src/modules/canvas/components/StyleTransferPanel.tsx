@@ -43,9 +43,11 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
       let resolvedUrl = newImageUrl;
+      let imageId: string | undefined;
 
       if (newImageUrl.startsWith('local:')) {
         const localId = newImageUrl.replace('local:', '');
+        imageId = localId;
         const blob = await imageStorageService.getImage(localId);
         if (blob) {
           const reader = new FileReader();
@@ -53,6 +55,17 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
             reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
+        }
+      } else if (resolvedUrl.startsWith('data:')) {
+        try {
+          const imgId = `canvas_style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const response = await fetch(resolvedUrl);
+          const blob = await response.blob();
+          await imageStorageService.saveImage(imgId, blob);
+          imageId = imgId;
+          console.log('[StyleTransfer] 图片已保存到 IndexedDB:', imgId);
+        } catch (e) {
+          console.warn('[StyleTransfer] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -67,9 +80,12 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
         width: selectedLayer.width,
         height: selectedLayer.height,
         src: resolvedUrl,
+        imageId,
         title: `${selectedLayer.title} - ${styleName}`,
         isLoading: false,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        sourceLayerId: selectedLayer.id,
+        operationType: 'style-transfer'
       });
 
       onClose();

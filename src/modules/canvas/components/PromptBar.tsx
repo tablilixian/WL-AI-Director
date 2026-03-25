@@ -73,7 +73,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           src: '',
           title: '生成中...',
           isLoading: true,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          operationType: 'text-to-image'
         });
 
         const imageUrl = await canvasModelService.generateImage({
@@ -87,9 +88,27 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         console.log('[PromptBar] 生成图片 URL:', imageUrl?.substring(0, 50));
 
         const resolvedUrl = await resolveImageUrl(imageUrl);
+        let imageId: string | undefined;
+
+        if (resolvedUrl.startsWith('data:')) {
+          try {
+            const { imageStorageService } = await import('../../../../services/imageStorageService');
+            const imgId = `canvas_gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const response = await fetch(resolvedUrl);
+            const blob = await response.blob();
+            await imageStorageService.saveImage(imgId, blob);
+            imageId = imgId;
+            console.log('[PromptBar] 文生图已保存到 IndexedDB:', imgId);
+          } catch (e) {
+            console.warn('[PromptBar] 保存图片到 IndexedDB 失败:', e);
+          }
+        } else if (resolvedUrl.startsWith('local:')) {
+          imageId = resolvedUrl.replace('local:', '');
+        }
 
         updateLayer(placeholderId, {
           src: resolvedUrl,
+          imageId,
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100
@@ -110,6 +129,23 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         });
 
         const resolvedUrl = await resolveImageUrl(editedUrl);
+        let imageId: string | undefined;
+
+        if (resolvedUrl.startsWith('data:')) {
+          try {
+            const { imageStorageService } = await import('../../../../services/imageStorageService');
+            const imgId = `canvas_edit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const response = await fetch(resolvedUrl);
+            const blob = await response.blob();
+            await imageStorageService.saveImage(imgId, blob);
+            imageId = imgId;
+            console.log('[PromptBar] 图生图已保存到 IndexedDB:', imgId);
+          } catch (e) {
+            console.warn('[PromptBar] 保存图片到 IndexedDB 失败:', e);
+          }
+        } else if (resolvedUrl.startsWith('local:')) {
+          imageId = resolvedUrl.replace('local:', '');
+        }
 
         const newLayerId = crypto.randomUUID();
         addLayer({
@@ -120,9 +156,12 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           width: selectedLayer.width,
           height: selectedLayer.height,
           src: resolvedUrl,
+          imageId,
           title: prompt.slice(0, 30),
           isLoading: false,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          sourceLayerId: selectedLayer.id,
+          operationType: 'image-to-image'
         });
 
         updateLayer(selectedLayer.id, { isLoading: false, progress: 100 });
@@ -139,7 +178,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           src: '',
           title: '生成视频中...',
           isLoading: true,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          operationType: 'text-to-image'
         });
 
         const videoUrl = await canvasModelService.generateVideo({
@@ -174,7 +214,9 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           src: '',
           title: '生成视频中...',
           isLoading: true,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          sourceLayerId: selectedLayer.id,
+          operationType: 'image-to-video'
         });
 
         const videoUrl = await canvasModelService.generateVideo({

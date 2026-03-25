@@ -119,6 +119,21 @@ export class CanvasIntegrationService {
           continue;
         }
 
+        let imageId: string | undefined;
+        if (resolvedUrl.startsWith('data:')) {
+          try {
+            const { imageStorageService } = await import('../../../../services/imageStorageService');
+            const imgId = `canvas_img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const response = await fetch(resolvedUrl);
+            const blob = await response.blob();
+            await imageStorageService.saveImage(imgId, blob);
+            imageId = imgId;
+            logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 图片已保存到 IndexedDB: ${imageId}`);
+          } catch (e) {
+            logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存图片到 IndexedDB 失败:', e);
+          }
+        }
+
         const col = importedCount % (opts.columns || 4);
         const row = Math.floor(importedCount / (opts.columns || 4));
 
@@ -130,6 +145,7 @@ export class CanvasIntegrationService {
           width: 400,
           height: 300,
           src: resolvedUrl,
+          imageId,
           title: `镜头 ${shotIndex + 1}-${kfIndex + 1}`,
           createdAt: Date.now(),
           linkedResourceId: shot.id,
@@ -333,15 +349,60 @@ export class CanvasIntegrationService {
   async saveCanvasState(): Promise<void> {
     const { layers, offset, scale } = useCanvasStore.getState();
 
+    console.log('[CanvasIntegration] 保存画布，图层数量:', layers.length);
+    console.log('[CanvasIntegration] 图层类型分布:', {
+      image: layers.filter(l => l.type === 'image').length,
+      video: layers.filter(l => l.type === 'video').length,
+      drawing: layers.filter(l => l.type === 'drawing').length,
+      sticky: layers.filter(l => l.type === 'sticky').length,
+      text: layers.filter(l => l.type === 'text').length,
+      group: layers.filter(l => l.type === 'group').length,
+      other: layers.filter(l => !['image', 'video', 'drawing', 'sticky', 'text', 'group'].includes(l.type)).length
+    });
+
+    const layersToSave = await Promise.all(layers.map(async (layer) => {
+      const { src, thumbnail, ...rest } = layer;
+      
+      let imageId = layer.imageId;
+      
+      if (layer.type === 'drawing' && src && src.startsWith('data:')) {
+        try {
+          const { imageStorageService } = await import('../../../../services/imageStorageService');
+          const imgId = `canvas_drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const response = await fetch(src);
+          const blob = await response.blob();
+          await imageStorageService.saveImage(imgId, blob);
+          imageId = imgId;
+          console.log('[CanvasIntegration] 绘制图层已保存到 IndexedDB:', imgId);
+        } catch (e) {
+          console.warn('[CanvasIntegration] 保存绘制图层失败:', e);
+        }
+      }
+      
+      return {
+        ...rest,
+        imageId,
+        srcSaved: src ? true : false
+      };
+    }));
+
+    console.log('[CanvasIntegration] 保存的图层数量:', layersToSave.length);
+
     const state = {
-      layers,
+      layers: layersToSave,
       offset,
       scale,
       savedAt: Date.now()
     };
 
-    localStorage.setItem('wl-canvas-backup', JSON.stringify(state));
-    logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已保存');
+    try {
+      localStorage.setItem('wl-canvas-backup', JSON.stringify(state));
+      logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已保存');
+    } catch (error) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存画布状态失败，尝试清理旧数据');
+      localStorage.removeItem('wl-canvas-backup');
+      localStorage.setItem('wl-canvas-backup', JSON.stringify(state));
+    }
   }
 
   /**
@@ -356,7 +417,66 @@ export class CanvasIntegrationService {
       const { importLayers, setOffset, setScale } = useCanvasStore.getState();
 
       if (state.layers && state.layers.length > 0) {
-        importLayers(state.layers);
+        const restoredLayers = await Promise.all(state.layers.map(async (layer: any) => {
+          if (layer.type === 'image') {
+            if (layer.imageId) {
+              try {
+                const { imageStorageService } = await import('../../../../services/imageStorageService');
+                const blob = await imageStorageService.getImage(layer.imageId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复图片失败 (imageId):', e);
+              }
+            }
+            
+            if (layer.src && layer.src.startsWith('local:')) {
+              try {
+                const { imageStorageService } = await import('../../../../services/imageStorageService');
+                const localId = layer.src.replace('local:', '');
+                const blob = await imageStorageService.getImage(localId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复图片失败 (local:):', e);
+              }
+            }
+          } else if (layer.type === 'video') {
+            if (layer.src && layer.src.startsWith('video:')) {
+              try {
+                const { videoStorageService } = await import('../../../../services/imageStorageService');
+                const videoId = layer.src.replace('video:', '');
+                const blob = await videoStorageService.getVideo(videoId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复视频失败:', e);
+              }
+            }
+          } else if (layer.type === 'drawing') {
+            if (layer.imageId) {
+              try {
+                const { imageStorageService } = await import('../../../../services/imageStorageService');
+                const blob = await imageStorageService.getImage(layer.imageId);
+                if (blob) {
+                  const src = URL.createObjectURL(blob);
+                  console.log('恢复绘制图层成功:', layer.id, layer.imageId);
+                  return { ...layer, src };
+                }
+              } catch (e) {
+                console.warn('恢复绘制图层失败 (imageId):', e);
+              }
+            } else if (layer.src && layer.src.startsWith('data:')) {
+              return layer;
+            }
+          }
+          return layer;
+        }));
+
+        importLayers(restoredLayers, true);
       }
 
       if (state.offset) {

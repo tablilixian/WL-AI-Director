@@ -53,9 +53,11 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
       let resolvedUrl = newImageUrl;
+      let imageId: string | undefined;
 
       if (newImageUrl.startsWith('local:')) {
         const localId = newImageUrl.replace('local:', '');
+        imageId = localId;
         const blob = await imageStorageService.getImage(localId);
         if (blob) {
           const reader = new FileReader();
@@ -63,6 +65,17 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
             reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
+        }
+      } else if (resolvedUrl.startsWith('data:')) {
+        try {
+          const imgId = `canvas_bg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const response = await fetch(resolvedUrl);
+          const blob = await response.blob();
+          await imageStorageService.saveImage(imgId, blob);
+          imageId = imgId;
+          console.log('[ImageEdit] 背景替换图片已保存到 IndexedDB:', imgId);
+        } catch (e) {
+          console.warn('[ImageEdit] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -75,9 +88,12 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
         width: selectedLayer.width,
         height: selectedLayer.height,
         src: resolvedUrl,
+        imageId,
         title: `背景替换 - ${background}`,
         isLoading: false,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        sourceLayerId: selectedLayer.id,
+        operationType: 'background-replace'
       });
 
       onClose();
@@ -104,9 +120,11 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
       let resolvedUrl = newImageUrl;
+      let imageId: string | undefined;
 
       if (newImageUrl.startsWith('local:')) {
         const localId = newImageUrl.replace('local:', '');
+        imageId = localId;
         const blob = await imageStorageService.getImage(localId);
         if (blob) {
           const reader = new FileReader();
@@ -114,6 +132,17 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
             reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
+        }
+      } else if (resolvedUrl.startsWith('data:')) {
+        try {
+          const imgId = `canvas_expand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const response = await fetch(resolvedUrl);
+          const blob = await response.blob();
+          await imageStorageService.saveImage(imgId, blob);
+          imageId = imgId;
+          console.log('[ImageEdit] 图片扩展已保存到 IndexedDB:', imgId);
+        } catch (e) {
+          console.warn('[ImageEdit] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -127,9 +156,12 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
         width: selectedLayer.width * 1.5,
         height: selectedLayer.height * 1.5,
         src: resolvedUrl,
+        imageId,
         title: `图片扩展 - ${directionName}`,
         isLoading: false,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        sourceLayerId: selectedLayer.id,
+        operationType: 'expand'
       });
 
       onClose();

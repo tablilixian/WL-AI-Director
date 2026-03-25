@@ -43,7 +43,7 @@ interface CanvasActions {
   pushHistory: () => void;
   clearHistory: () => void;
   clearCanvas: () => void;
-  importLayers: (layers: LayerData[]) => void;
+  importLayers: (layers: LayerData[], replace?: boolean) => void;
   exportLayers: () => LayerData[];
   copySelectedLayers: () => void;
   pasteLayers: () => void;
@@ -338,10 +338,11 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         });
       },
 
-      importLayers: (layers) => {
+      importLayers: (layers, replace = false) => {
         const state = get();
+        const newLayers = replace ? layers : [...state.layers, ...layers];
         set({
-          layers: [...state.layers, ...layers],
+          layers: newLayers,
           history: [...state.history.slice(0, state.historyIndex + 1), {
             layers: state.layers,
             timestamp: Date.now()

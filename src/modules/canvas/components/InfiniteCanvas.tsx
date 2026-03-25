@@ -12,6 +12,8 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { LayerPanel } from './LayerPanel';
 import { PromptBar } from './PromptBar';
 import { DrawingToolbar, DrawingTool } from './DrawingToolbar';
+import { ConnectionLines } from './ConnectionLines';
+import { LayerDetailPanel } from './LayerDetailPanel';
 
 interface InfiniteCanvasProps {
   className?: string;
@@ -54,6 +56,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
   const [activeTool, setActiveTool] = useState<DrawingTool>('select');
   const [strokeColor, setStrokeColor] = useState('#ffffff');
   const [strokeWidth, setStrokeWidth] = useState(4);
+  const [showLayerDetail, setShowLayerDetail] = useState(false);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -450,6 +453,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
           height={containerRef.current?.clientHeight || 1080}
         />
 
+        <ConnectionLines offset={offset} scale={scale} />
+
         <div
           className="absolute origin-top-left"
           style={{
@@ -470,6 +475,22 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
       <Minimap />
       <LayerPanel />
       <PromptBar selectedLayerId={selectedLayerId} />
+
+      {selectedLayerId && (
+        <button
+          onClick={() => setShowLayerDetail(true)}
+          className="absolute top-24 left-4 z-50 p-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 text-gray-300 hover:text-white transition-colors"
+          title="图层详情"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      )}
+
+      {showLayerDetail && (
+        <LayerDetailPanel onClose={() => setShowLayerDetail(false)} />
+      )}
     </div>
   );
 };
