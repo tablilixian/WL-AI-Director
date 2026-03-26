@@ -273,6 +273,61 @@ export class CanvasModelService {
       onProgress
     });
   }
+
+  async removeBackground(imageUrl: string, onProgress?: (progress: number) => void): Promise<string> {
+    console.log('=== 智能抠图请求 ===');
+
+    onProgress?.(10);
+
+    const prompt = 'Remove the background from this image, keeping only the main subject. Output a PNG with transparent background.';
+
+    return this.generateImage({
+      prompt,
+      referenceImages: [imageUrl],
+      aspectRatio: '16:9',
+      onProgress
+    });
+  }
+
+  async generateVariants(imageUrl: string, options: {
+    count?: number;
+    strength?: number;
+  } = {}, onProgress?: (progress: number) => void): Promise<string[]> {
+    const { count = 4, strength = 0.7 } = options;
+
+    console.log('=== 图片变体请求 ===');
+    console.log('[变体数量]', count);
+    console.log('[变体强度]', strength);
+
+    onProgress?.(10);
+
+    const variants: string[] = [];
+
+    for (let i = 0; i < count; i++) {
+      try {
+        const prompt = `Generate a variant of this image with ${Math.round(strength * 100)}% variation. Keep the main composition but change some details, lighting, or style. Create variation ${i + 1} of ${count}.`;
+
+        const variant = await this.generateImage({
+          prompt,
+          referenceImages: [imageUrl],
+          aspectRatio: '16:9',
+          onProgress: (p) => {
+            const baseProgress = 10 + (i / count) * 80;
+            onProgress?.(baseProgress + (p / count));
+          }
+        });
+
+        variants.push(variant);
+        console.log(`[变体 ${i + 1}/${count}] 生成完成`);
+      } catch (error) {
+        console.error(`[变体 ${i + 1}/${count}] 生成失败:`, error);
+      }
+    }
+
+    onProgress?.(100);
+
+    return variants;
+  }
 }
 
 export const canvasModelService = new CanvasModelService();

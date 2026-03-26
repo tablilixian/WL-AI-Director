@@ -73,7 +73,7 @@ export interface LayerData {
   zIndex?: number; // 图层顺序
   // 来源追踪
   sourceLayerId?: string; // 来源图层 ID
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'import' | 'drawing'; // 操作类型
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing'; // 操作类型
   // 关联信息（用于与主项目联动）
   linkedResourceId?: string; // 关联的角色/场景 ID
   linkedResourceType?: 'character' | 'scene' | 'keyframe'; // 关联的资源类型

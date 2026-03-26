@@ -11,6 +11,7 @@ export { DrawingToolbar } from './components/DrawingToolbar';
 export { ConnectionLines } from './components/ConnectionLines';
 export { LayerPanel } from './components/LayerPanel';
 export { LayerDetailPanel } from './components/LayerDetailPanel';
+export { CanvasSettingsPanel } from './components/CanvasSettingsPanel';
 export { PromptBar } from './components/PromptBar';
 export { StyleTransferPanel } from './components/StyleTransferPanel';
 export { ImageEditPanel } from './components/ImageEditPanel';

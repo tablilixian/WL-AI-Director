@@ -14,6 +14,7 @@ import { PromptBar } from './PromptBar';
 import { DrawingToolbar, DrawingTool } from './DrawingToolbar';
 import { ConnectionLines } from './ConnectionLines';
 import { LayerDetailPanel } from './LayerDetailPanel';
+import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 
 interface InfiniteCanvasProps {
   className?: string;
@@ -57,6 +58,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
   const [strokeColor, setStrokeColor] = useState('#ffffff');
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [showLayerDetail, setShowLayerDetail] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#1f2937');
+  const [showGrid, setShowGrid] = useState(true);
+  const [gridSnap, setGridSnap] = useState(false);
+  const [gridSize, setGridSize] = useState(50);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -423,28 +429,33 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
         onMouseLeave={handleCanvasMouseUp}
         onWheel={handleWheel}
         onClick={handleCanvasClick}
-        style={{ cursor: activeTool !== 'select' ? 'crosshair' : undefined }}
+        style={{ 
+          cursor: activeTool !== 'select' ? 'crosshair' : undefined,
+          backgroundColor: backgroundColor
+        }}
       >
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          <defs>
-            <pattern
-              id="grid"
-              width={50 * scale}
-              height={50 * scale}
-              patternUnits="userSpaceOnUse"
-              x={offset.x % (50 * scale)}
-              y={offset.y % (50 * scale)}
-            >
-              <path
-                d={`M ${50 * scale} 0 L 0 0 0 ${50 * scale}`}
-                fill="none"
-                stroke="rgba(255,255,255,0.05)"
-                strokeWidth={1}
-              />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
+        {showGrid && (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            <defs>
+              <pattern
+                id="grid"
+                width={gridSize * scale}
+                height={gridSize * scale}
+                patternUnits="userSpaceOnUse"
+                x={offset.x % (gridSize * scale)}
+                y={offset.y % (gridSize * scale)}
+              >
+                <path
+                  d={`M ${gridSize * scale} 0 L 0 0 0 ${gridSize * scale}`}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.05)"
+                  strokeWidth={1}
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        )}
 
         <canvas
           ref={drawingCanvasRef}
@@ -476,10 +487,21 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
       <LayerPanel />
       <PromptBar selectedLayerId={selectedLayerId} />
 
+      <button
+        onClick={() => setShowSettings(true)}
+        className="absolute top-4 left-4 z-50 p-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 text-gray-300 hover:text-white transition-colors"
+        title="画布设置"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+
       {selectedLayerId && (
         <button
           onClick={() => setShowLayerDetail(true)}
-          className="absolute top-24 left-4 z-50 p-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 text-gray-300 hover:text-white transition-colors"
+          className="absolute top-16 left-4 z-50 p-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 text-gray-300 hover:text-white transition-colors"
           title="图层详情"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,6 +512,20 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
 
       {showLayerDetail && (
         <LayerDetailPanel onClose={() => setShowLayerDetail(false)} />
+      )}
+
+      {showSettings && (
+        <CanvasSettingsPanel
+          backgroundColor={backgroundColor}
+          onBackgroundColorChange={setBackgroundColor}
+          showGrid={showGrid}
+          onShowGridChange={setShowGrid}
+          gridSnap={gridSnap}
+          onGridSnapChange={setGridSnap}
+          gridSize={gridSize}
+          onGridSizeChange={setGridSize}
+          onClose={() => setShowSettings(false)}
+        />
       )}
     </div>
   );

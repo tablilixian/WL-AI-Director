@@ -10,6 +10,8 @@ import { canvasIntegrationService } from '../src/modules/canvas/services/canvasI
 import { useCanvasStore } from '../src/modules/canvas/hooks/useCanvasState';
 import { StyleTransferPanel } from '../src/modules/canvas/components/StyleTransferPanel';
 import { ImageEditPanel } from '../src/modules/canvas/components/ImageEditPanel';
+import { RemoveBackgroundPanel } from '../src/modules/canvas/components/RemoveBackgroundPanel';
+import { VariantPanel } from '../src/modules/canvas/components/VariantPanel';
 
 interface StageCanvasProps {
   project: ProjectState;
@@ -20,6 +22,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showStyleTransfer, setShowStyleTransfer] = useState(false);
   const [showImageEdit, setShowImageEdit] = useState(false);
+  const [showRemoveBackground, setShowRemoveBackground] = useState(false);
+  const [showVariant, setShowVariant] = useState(false);
   const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
 
@@ -432,6 +436,22 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
               图片扩展
             </button>
             <button
+              onClick={() => setShowRemoveBackground(true)}
+              disabled={!selectedLayerId}
+              className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!selectedLayerId ? '请先选中一张图片' : '智能抠图'}
+            >
+              智能抠图
+            </button>
+            <button
+              onClick={() => setShowVariant(true)}
+              disabled={!selectedLayerId}
+              className="px-3 py-1.5 bg-lime-600 text-white text-xs rounded-lg hover:bg-lime-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!selectedLayerId ? '请先选中一张图片' : '图片变体'}
+            >
+              图片变体
+            </button>
+            <button
               onClick={handleExportImages}
               className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
             >
@@ -574,6 +594,20 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
           selectedLayerId={selectedLayerId}
           editMode={imageEditMode}
           onClose={() => setShowImageEdit(false)}
+        />
+      )}
+
+      {showRemoveBackground && (
+        <RemoveBackgroundPanel
+          selectedLayerId={selectedLayerId}
+          onClose={() => setShowRemoveBackground(false)}
+        />
+      )}
+
+      {showVariant && (
+        <VariantPanel
+          selectedLayerId={selectedLayerId}
+          onClose={() => setShowVariant(false)}
         />
       )}
     </div>

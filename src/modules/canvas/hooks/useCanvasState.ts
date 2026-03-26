@@ -614,10 +614,57 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     {
       name: 'wl-canvas-state',
       partialize: (state) => ({
-        layers: state.layers,
+        layers: state.layers.map(layer => {
+          const { src, thumbnail, ...rest } = layer;
+          return { ...rest, srcSaved: src ? true : false };
+        }),
         offset: state.offset,
         scale: state.scale
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.layers.length > 0) {
+          console.log('[Canvas] 恢复图层，重新加载图片...');
+          
+          Promise.all(state.layers.map(async (layer) => {
+            if (layer.type === 'image' && layer.imageId) {
+              try {
+                const { imageStorageService } = await import('../../../../services/imageStorageService');
+                const blob = await imageStorageService.getImage(layer.imageId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复图片失败:', layer.id, e);
+              }
+            } else if (layer.type === 'video' && layer.src && layer.src.startsWith('video:')) {
+              try {
+                const { videoStorageService } = await import('../../../../services/imageStorageService');
+                const videoId = layer.src.replace('video:', '');
+                const blob = await videoStorageService.getVideo(videoId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复视频失败:', layer.id, e);
+              }
+            } else if (layer.type === 'drawing' && layer.imageId) {
+              try {
+                const { imageStorageService } = await import('../../../../services/imageStorageService');
+                const blob = await imageStorageService.getImage(layer.imageId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复绘制图层失败:', layer.id, e);
+              }
+            }
+            return layer;
+          })).then(restoredLayers => {
+            state.layers = restoredLayers;
+            console.log('[Canvas] 图片恢复完成');
+          });
+        }
+      }
     }
   )
 );

@@ -9,8 +9,13 @@ import { LayerData, SnapResult, SnapGuide } from '../types/canvas';
 
 const SNAP_THRESHOLD = 5;
 
+interface UseSnapAlignmentOptions {
+  gridSnap?: boolean;
+  gridSize?: number;
+}
+
 interface UseSnapAlignmentReturn {
-  calculateSnap: (draggedLayer: LayerData, newX: number, newY: number) => SnapResult;
+  calculateSnap: (draggedLayer: LayerData, newX: number, newY: number, options?: UseSnapAlignmentOptions) => SnapResult;
   getAlignmentGuides: (draggedLayer: LayerData, newX: number, newY: number) => SnapGuide[];
 }
 
@@ -20,11 +25,19 @@ export function useSnapAlignment(): UseSnapAlignmentReturn {
   const calculateSnap = useCallback((
     draggedLayer: LayerData,
     newX: number,
-    newY: number
+    newY: number,
+    options: UseSnapAlignmentOptions = {}
   ): SnapResult => {
+    const { gridSnap = false, gridSize = 50 } = options;
     const guides: SnapGuide[] = [];
     let snapX = newX;
     let snapY = newY;
+
+    if (gridSnap) {
+      snapX = Math.round(newX / gridSize) * gridSize;
+      snapY = Math.round(newY / gridSize) * gridSize;
+      return { x: snapX, y: snapY, guides };
+    }
 
     const draggedRight = newX + draggedLayer.width;
     const draggedBottom = newY + draggedLayer.height;

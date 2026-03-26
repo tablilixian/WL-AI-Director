@@ -15,6 +15,8 @@ const operationColors: Record<string, string> = {
   'style-transfer': '#f59e0b',
   'background-replace': '#f97316',
   'expand': '#ec4899',
+  'background-remove': '#14b8a6',
+  'variant': '#84cc16',
   'import': '#6b7280',
   'drawing': '#eab308'
 };
@@ -27,6 +29,8 @@ const operationLabels: Record<string, string> = {
   'style-transfer': '风格迁移',
   'background-replace': '背景替换',
   'expand': '图片扩展',
+  'background-remove': '智能抠图',
+  'variant': '图片变体',
   'import': '导入',
   'drawing': '绘图'
 };

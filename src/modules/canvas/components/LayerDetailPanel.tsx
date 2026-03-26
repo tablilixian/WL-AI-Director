@@ -14,6 +14,8 @@ const operationLabels: Record<string, string> = {
   'style-transfer': '风格迁移',
   'background-replace': '背景替换',
   'expand': '图片扩展',
+  'background-remove': '智能抠图',
+  'variant': '图片变体',
   'import': '导入',
   'drawing': '绘图'
 };
@@ -26,6 +28,8 @@ const operationIcons: Record<string, string> = {
   'style-transfer': '🎨',
   'background-replace': '🌅',
   'expand': '↔️',
+  'background-remove': '✂️',
+  'variant': '🔄',
   'import': '📥',
   'drawing': '✏️'
 };
