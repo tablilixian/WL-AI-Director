@@ -187,7 +187,8 @@ const callGeminiApi = async (
 
   // 添加参考图片
   if (options.referenceImages) {
-    options.referenceImages.forEach((imgUrl) => {
+    for (const imgUrl of options.referenceImages) {
+      // 处理 data: 格式
       const match = imgUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
       if (match) {
         parts.push({
@@ -196,8 +197,37 @@ const callGeminiApi = async (
             data: match[2],
           },
         });
+        continue;
       }
-    });
+      
+      // 处理 local: 格式
+      if (imgUrl.startsWith('local:')) {
+        const localId = imgUrl.replace('local:', '');
+        console.log('[ImageAdapter] 解析本地图片引用:', localId);
+        try {
+          const blob = await imageStorageService.getImage(localId);
+          if (blob) {
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            const base64Match = base64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+            if (base64Match) {
+              parts.push({
+                inlineData: {
+                  mimeType: base64Match[1],
+                  data: base64Match[2],
+                },
+              });
+            }
+          }
+        } catch (error) {
+          console.error('[ImageAdapter] 解析本地图片失败:', error);
+        }
+      }
+    }
   }
 
   // 构建请求体

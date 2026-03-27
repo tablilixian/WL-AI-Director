@@ -6,6 +6,38 @@
 import { VideoModelDefinition, VideoGenerateOptions, AspectRatio, VideoDuration } from '../../types/model';
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel } from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
+import { imageStorageService } from '../imageStorageService';
+
+/**
+ * 解析图片引用（支持 local: 格式）
+ */
+async function resolveImageRef(imageRef: string): Promise<string> {
+  if (!imageRef) return '';
+  
+  if (imageRef.startsWith('data:') || imageRef.startsWith('http://') || imageRef.startsWith('https://')) {
+    return imageRef;
+  }
+  
+  if (imageRef.startsWith('local:')) {
+    const localId = imageRef.replace('local:', '');
+    console.log('[VideoAdapter] 解析本地图片引用:', localId);
+    try {
+      const blob = await imageStorageService.getImage(localId);
+      if (blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (error) {
+      console.error('[VideoAdapter] 解析本地图片失败:', error);
+    }
+  }
+  
+  return imageRef;
+}
 
 /**
  * 检查是否为 BigModel 视频模型
@@ -266,7 +298,11 @@ const callSoraApi = async (
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   const duration = options.duration || model.params.defaultDuration;
   const apiModel = model.apiModel || model.id;
-  const references = [options.startImage, options.endImage].filter(Boolean) as string[];
+  
+  const resolvedStartImage = options.startImage ? await resolveImageRef(options.startImage) : '';
+  const resolvedEndImage = options.endImage ? await resolveImageRef(options.endImage) : '';
+  const references = [resolvedStartImage, resolvedEndImage].filter(Boolean) as string[];
+  
   const resolvedModel = apiModel || 'sora-2';
   const useReferenceArray = resolvedModel.toLowerCase().startsWith('veo_3_1-fast');
 
@@ -277,6 +313,7 @@ const callSoraApi = async (
   const { width, height, size } = getSizeFromAspectRatio(aspectRatio);
 
   console.log(`🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`);
+  console.log('[VideoAdapter] 参考图数量:', references.length);
 
   const isCogVideo = resolvedModel.toLowerCase().includes('cogvideo');
   const isBigModel = model.providerId === 'bigmodel';
@@ -292,8 +329,8 @@ const callSoraApi = async (
       prompt: options.prompt,
     };
 
-    if (options.startImage) {
-      const cleanBase64 = options.startImage.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+    if (resolvedStartImage) {
+      const cleanBase64 = resolvedStartImage.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
       jsonData.image_url = `data:image/png;base64,${cleanBase64}`;
     }
 
@@ -408,6 +445,7 @@ const callSoraApi = async (
     const isBigModel = model.providerId === 'bigmodel';
 
     console.log(`🔄 ${model.id} 任务状态:`, status, '进度:', statusData.progress);
+    console.log('[完整状态响应]', JSON.stringify(statusData, null, 2));
 
     if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
       // BigModel 返回 video_result 数组
@@ -428,7 +466,10 @@ const callSoraApi = async (
       console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
-      throw new Error(`视频生成失败: ${statusData.error || statusData.message || '未知错误'}`);
+      const errorMsg = statusData.error || statusData.message || statusData.error_message || 
+                       statusData.result?.error || JSON.stringify(statusData);
+      console.error('❌ 视频生成失败，完整响应:', statusData);
+      throw new Error(`视频生成失败: ${errorMsg}`);
     }
 
     console.log('🔄 Sora-2 任务状态:', status, '进度:', statusData.progress);
