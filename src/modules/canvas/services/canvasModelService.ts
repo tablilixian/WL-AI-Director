@@ -185,6 +185,42 @@ export class CanvasModelService {
     }
   }
 
+  async enhancePrompt(
+    prompt: string, 
+    mode: 'image-to-image' | 'style-transfer' | 'background-replace' | 'expand' | 'text-to-image',
+    referenceImageCount: number = 0
+  ): Promise<string> {
+    const modePrompts: Record<string, string> = {
+      'image-to-image': 'Optimize this image editing prompt. Focus on specific visual changes while maintaining the original composition. Be precise about what to modify.',
+      'style-transfer': 'Enhance this style transfer prompt. Include specific artistic style details, color palettes, brush techniques, or visual characteristics.',
+      'background-replace': 'Improve this background replacement prompt. Describe the new environment in detail including lighting, atmosphere, and perspective.',
+      'expand': 'Enhance this image expansion prompt. Describe what should naturally extend beyond the original boundaries.',
+      'text-to-image': 'Optimize this image generation prompt. Add vivid visual details, composition, lighting, and artistic style.'
+    };
+
+    const systemPrompt = modePrompts[mode] || modePrompts['text-to-image'];
+    const contextInfo = referenceImageCount > 0 
+      ? `\n\nNote: This prompt will be applied to ${referenceImageCount} reference image(s).` 
+      : '';
+
+    try {
+      const { chatCompletion } = await import('../../../../services/ai/apiCore');
+
+      const enhancedPrompt = await chatCompletion(
+        `${systemPrompt}\n\nOriginal prompt: ${prompt}${contextInfo}\n\nReturn ONLY the enhanced prompt, no explanations.`,
+        undefined,
+        0.7,
+        1024
+      );
+
+      console.log(`[CanvasModelService] Prompt enhanced for mode: ${mode}`);
+      return enhancedPrompt || prompt;
+    } catch (error: any) {
+      logger.warn(LogCategory.CANVAS, '[CanvasModelService] Prompt enhancement failed, using original', error);
+      return prompt;
+    }
+  }
+
   async generateTitle(prompt: string): Promise<string> {
     try {
       const { chatCompletion } = await import('../../../../services/ai/apiCore');
