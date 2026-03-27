@@ -5,7 +5,14 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { LayerData, CanvasOffset } from '../types/canvas';
+import { 
+  LayerData, 
+  CanvasOffset, 
+  PromptLayerData, 
+  PromptLayerConfig, 
+  PromptMode,
+  PROMPT_MODE_COLORS 
+} from '../types/canvas';
 import { assetStore } from '../services/assetStore';
 
 const MAX_HISTORY = 20;
@@ -60,6 +67,11 @@ interface CanvasActions {
   ungroupLayers: (groupId: string) => void;
   mergeSelectedLayers: () => Promise<void>;
   searchLayers: (query: string) => LayerData[];
+  createPromptLayer: (x: number, y: number, mode?: PromptMode) => string;
+  updatePromptConfig: (id: string, config: Partial<PromptLayerConfig>) => void;
+  linkLayerToPrompt: (promptId: string, layerId: string) => boolean;
+  unlinkLayerFromPrompt: (promptId: string, layerId: string) => void;
+  getPromptLinkedLayers: (promptId: string) => LayerData[];
 }
 
 const initialState: CanvasState = {
@@ -609,6 +621,104 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           l.title.toLowerCase().includes(lowerQuery) ||
           l.text?.toLowerCase().includes(lowerQuery)
         );
+      },
+
+      createPromptLayer: (x, y, mode = 'image-to-image') => {
+        const state = get();
+        const id = crypto.randomUUID();
+        const promptConfig: PromptLayerConfig = {
+          prompt: '',
+          isEnhanced: false,
+          mode,
+          aspectRatio: '16:9',
+          linkedLayerIds: [],
+          outputLayerIds: [],
+          nodeColor: PROMPT_MODE_COLORS[mode]
+        };
+
+        const layer: PromptLayerData = {
+          id,
+          type: 'prompt',
+          x,
+          y,
+          width: 280,
+          height: 180,
+          src: '',
+          title: `提示词 - ${mode}`,
+          createdAt: Date.now(),
+          color: PROMPT_MODE_COLORS[mode],
+          promptConfig
+        };
+
+        set({
+          layers: [...state.layers, layer],
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        return id;
+      },
+
+      updatePromptConfig: (id, config) => {
+        const state = get();
+        const layer = state.layers.find(l => l.id === id);
+        if (!layer || layer.type !== 'prompt') return;
+
+        const promptLayer = layer as PromptLayerData;
+        const newConfig = { ...promptLayer.promptConfig, ...config };
+        
+        if (config.mode) {
+          newConfig.nodeColor = PROMPT_MODE_COLORS[config.mode];
+        }
+
+        const updates: any = { 
+          promptConfig: newConfig,
+          color: newConfig.nodeColor
+        };
+        
+        if (config.prompt) {
+          updates.title = `提示词 - ${config.prompt.slice(0, 20)}`;
+        }
+
+        state.updateLayer(id, updates);
+      },
+
+      linkLayerToPrompt: (promptId, layerId) => {
+        const state = get();
+        const promptLayer = state.layers.find(l => l.id === promptId) as PromptLayerData | undefined;
+        const targetLayer = state.layers.find(l => l.id === layerId);
+
+        if (!promptLayer || promptLayer.type !== 'prompt') return false;
+        if (!targetLayer || targetLayer.type !== 'image') return false;
+        if (promptLayer.promptConfig.linkedLayerIds.length >= 5) return false;
+        if (promptLayer.promptConfig.linkedLayerIds.includes(layerId)) return false;
+
+        const newLinkedIds = [...promptLayer.promptConfig.linkedLayerIds, layerId];
+        state.updatePromptConfig(promptId, { linkedLayerIds: newLinkedIds });
+        
+        return true;
+      },
+
+      unlinkLayerFromPrompt: (promptId, layerId) => {
+        const state = get();
+        const promptLayer = state.layers.find(l => l.id === promptId) as PromptLayerData | undefined;
+        if (!promptLayer || promptLayer.type !== 'prompt') return;
+
+        const newLinkedIds = promptLayer.promptConfig.linkedLayerIds.filter(id => id !== layerId);
+        state.updatePromptConfig(promptId, { linkedLayerIds: newLinkedIds });
+      },
+
+      getPromptLinkedLayers: (promptId) => {
+        const state = get();
+        const promptLayer = state.layers.find(l => l.id === promptId) as PromptLayerData | undefined;
+        if (!promptLayer || promptLayer.type !== 'prompt') return [];
+
+        return state.layers.filter(l => 
+          promptLayer.promptConfig.linkedLayerIds.includes(l.id)
+        );
       }
     }),
     {
@@ -626,17 +736,36 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           console.log('[Canvas] 恢复图层，重新加载图片...');
           
           Promise.all(state.layers.map(async (layer) => {
-            if (layer.type === 'image' && layer.imageId) {
-              try {
-                const { imageStorageService } = await import('../../../../services/imageStorageService');
-                const blob = await imageStorageService.getImage(layer.imageId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+            // 处理 image 类型
+            if (layer.type === 'image') {
+              // 优先使用 imageId
+              if (layer.imageId) {
+                try {
+                  const { imageStorageService } = await import('../../../../services/imageStorageService');
+                  const blob = await imageStorageService.getImage(layer.imageId);
+                  if (blob) {
+                    return { ...layer, src: URL.createObjectURL(blob) };
+                  }
+                } catch (e) {
+                  console.warn('恢复图片失败 (imageId):', layer.id, e);
                 }
-              } catch (e) {
-                console.warn('恢复图片失败:', layer.id, e);
               }
-            } else if (layer.type === 'video' && layer.src && layer.src.startsWith('video:')) {
+              // 如果 src 是 local: 格式，从 src 解析
+              if (layer.src && layer.src.startsWith('local:')) {
+                const localId = layer.src.replace('local:', '');
+                try {
+                  const { imageStorageService } = await import('../../../../services/imageStorageService');
+                  const blob = await imageStorageService.getImage(localId);
+                  if (blob) {
+                    return { ...layer, src: URL.createObjectURL(blob), imageId: localId };
+                  }
+                } catch (e) {
+                  console.warn('恢复图片失败 (local:):', layer.id, e);
+                }
+              }
+            }
+            // 处理 video 类型
+            else if (layer.type === 'video' && layer.src && layer.src.startsWith('video:')) {
               try {
                 const { videoStorageService } = await import('../../../../services/imageStorageService');
                 const videoId = layer.src.replace('video:', '');
@@ -647,15 +776,32 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
               } catch (e) {
                 console.warn('恢复视频失败:', layer.id, e);
               }
-            } else if (layer.type === 'drawing' && layer.imageId) {
-              try {
-                const { imageStorageService } = await import('../../../../services/imageStorageService');
-                const blob = await imageStorageService.getImage(layer.imageId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+            }
+            // 处理 drawing 类型
+            else if (layer.type === 'drawing') {
+              if (layer.imageId) {
+                try {
+                  const { imageStorageService } = await import('../../../../services/imageStorageService');
+                  const blob = await imageStorageService.getImage(layer.imageId);
+                  if (blob) {
+                    return { ...layer, src: URL.createObjectURL(blob) };
+                  }
+                } catch (e) {
+                  console.warn('恢复绘制图层失败:', layer.id, e);
                 }
-              } catch (e) {
-                console.warn('恢复绘制图层失败:', layer.id, e);
+              }
+              // 如果 src 是 local: 格式
+              if (layer.src && layer.src.startsWith('local:')) {
+                const localId = layer.src.replace('local:', '');
+                try {
+                  const { imageStorageService } = await import('../../../../services/imageStorageService');
+                  const blob = await imageStorageService.getImage(localId);
+                  if (blob) {
+                    return { ...layer, src: URL.createObjectURL(blob), imageId: localId };
+                  }
+                } catch (e) {
+                  console.warn('恢复绘制图层失败 (local:):', layer.id, e);
+                }
               }
             }
             return layer;

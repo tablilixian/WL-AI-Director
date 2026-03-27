@@ -39,7 +39,7 @@ export type Annotation = DrawingPath | TextAnnotation | RectangleAnnotation;
 // 图层类型
 // ============================================
 
-export type LayerType = 'image' | 'video' | 'sticky' | 'text' | 'group' | 'drawing' | 'audio';
+export type LayerType = 'image' | 'video' | 'sticky' | 'text' | 'group' | 'drawing' | 'audio' | 'prompt';
 
 export interface LayerData {
   id: string;
@@ -164,3 +164,76 @@ export interface MinimapViewport {
   width: number;
   height: number;
 }
+
+// ============================================
+// Prompt Layer 类型
+// ============================================
+
+/** Prompt 生成模式 */
+export type PromptMode = 'image-to-image' | 'style-transfer' | 'background-replace' | 'expand' | 'text-to-image';
+
+/** Prompt Layer 配置 */
+export interface PromptLayerConfig {
+  /** 用户输入的原始提示词 */
+  prompt: string;
+  /** AI 增强后的提示词 */
+  enhancedPrompt?: string;
+  /** 是否已增强 */
+  isEnhanced: boolean;
+  /** 生成模式 */
+  mode: PromptMode;
+  /** 宽高比 */
+  aspectRatio: '16:9' | '9:16' | '1:1';
+  /** 关联的源图片 Layer IDs（最多 5 个） */
+  linkedLayerIds: string[];
+  /** 生成的结果 Layer IDs */
+  outputLayerIds: string[];
+  /** 节点颜色（根据模式不同） */
+  nodeColor: string;
+}
+
+/** Prompt Layer 数据（扩展 LayerData） */
+export interface PromptLayerData extends LayerData {
+  type: 'prompt';
+  /** Prompt 配置 */
+  promptConfig: PromptLayerConfig;
+}
+
+/** Prompt 执行状态 */
+export type PromptExecutionStatus = 'idle' | 'enhancing' | 'executing' | 'completed' | 'failed';
+
+/** Prompt 执行结果 */
+export interface PromptExecutionResult {
+  promptLayerId: string;
+  sourceLayerId: string;
+  outputLayerId: string;
+  status: PromptExecutionStatus;
+  error?: string;
+}
+
+/** Prompt 模式颜色映射 */
+export const PROMPT_MODE_COLORS: Record<PromptMode, string> = {
+  'image-to-image': '#3b82f6',    // blue
+  'style-transfer': '#8b5cf6',    // purple
+  'background-replace': '#10b981', // green
+  'expand': '#f59e0b',            // amber
+  'text-to-image': '#ec4899'      // pink
+};
+
+/** Prompt 模式图标映射 */
+export const PROMPT_MODE_ICONS: Record<PromptMode, string> = {
+  'image-to-image': '🎨',
+  'style-transfer': '✨',
+  'background-replace': '🖼️',
+  'expand': '📐',
+  'text-to-image': '📝'
+};
+
+/** Prompt 模式名称映射 */
+export const PROMPT_MODE_NAMES: Record<PromptMode, string> = {
+  'image-to-image': '图生图',
+  'style-transfer': '风格迁移',
+  'background-replace': '背景替换',
+  'expand': '图片扩展',
+  'text-to-image': '文生图'
+};
