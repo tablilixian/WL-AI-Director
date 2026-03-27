@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
-import { LayerData } from '../types/canvas';
+import { LayerData, PromptLayerData, PROMPT_MODE_COLORS } from '../types/canvas';
 
 interface ConnectionLinesProps {
   offset: { x: number; y: number };
@@ -56,6 +56,33 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
     return `M ${from.x} ${from.y} C ${from.x + controlOffset} ${from.y}, ${to.x - controlOffset} ${to.y}, ${to.x} ${to.y}`;
   };
 
+  const promptLayers = layers.filter(l => l.type === 'prompt') as PromptLayerData[];
+  
+  const getLayerCenter = (layer: LayerData) => ({
+    x: (layer.x + layer.width / 2) * scale + offset.x,
+    y: (layer.y + layer.height / 2) * scale + offset.y
+  });
+
+  const getLayerRight = (layer: LayerData) => ({
+    x: (layer.x + layer.width) * scale + offset.x,
+    y: (layer.y + layer.height / 2) * scale + offset.y
+  });
+
+  const getLayerLeft = (layer: LayerData) => ({
+    x: layer.x * scale + offset.x,
+    y: (layer.y + layer.height / 2) * scale + offset.y
+  });
+
+  const getLayerBottom = (layer: LayerData) => ({
+    x: (layer.x + layer.width / 2) * scale + offset.x,
+    y: (layer.y + layer.height) * scale + offset.y
+  });
+
+  const getLayerTop = (layer: LayerData) => ({
+    x: (layer.x + layer.width / 2) * scale + offset.x,
+    y: layer.y * scale + offset.y
+  });
+
   return (
     <svg 
       className="absolute inset-0 w-full h-full pointer-events-none" 
@@ -76,6 +103,28 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
             <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
           </marker>
         ))}
+        <marker
+          id="arrow-prompt"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+        </marker>
+        <marker
+          id="arrow-prompt-output"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+        </marker>
       </defs>
 
       {layersWithSource.map((layer, index) => {
@@ -124,6 +173,102 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
               </text>
             </g>
           </g>
+        );
+      })}
+
+      {promptLayers.map((promptLayer) => {
+        const isPromptSelected = selectedLayerId === promptLayer.id;
+        const linkedLayerIds = promptLayer.promptConfig.linkedLayerIds;
+        const outputLayerIds = promptLayer.promptConfig.outputLayerIds;
+        const promptColor = promptLayer.promptConfig.nodeColor;
+        
+        return (
+          <React.Fragment key={`prompt-connections-${promptLayer.id}`}>
+            {linkedLayerIds.map((linkedId, idx) => {
+              const linkedLayer = layers.find(l => l.id === linkedId);
+              if (!linkedLayer) return null;
+              
+              const from = getLayerBottom(promptLayer);
+              const to = getLayerTop(linkedLayer);
+              const midX = (from.x + to.x) / 2;
+              const midY = (from.y + to.y) / 2;
+              
+              return (
+                <g key={`prompt-link-${promptLayer.id}-${linkedId}`}>
+                  <path
+                    d={calculateCurvePath(from, to)}
+                    fill="none"
+                    stroke={promptColor}
+                    strokeWidth={isPromptSelected ? 3 : 2}
+                    strokeDasharray="6,4"
+                    opacity={isPromptSelected ? 1 : 0.6}
+                    markerEnd="url(#arrow-prompt)"
+                  />
+                  <circle
+                    cx={midX}
+                    cy={midY}
+                    r={8}
+                    fill={promptColor}
+                    opacity={0.8}
+                  />
+                  <text
+                    x={midX}
+                    y={midY + 4}
+                    fill="#ffffff"
+                    fontSize={10}
+                    textAnchor="middle"
+                    className="select-none font-medium"
+                  >
+                    {idx + 1}
+                  </text>
+                </g>
+              );
+            })}
+            
+            {outputLayerIds.map((outputId, idx) => {
+              const outputLayer = layers.find(l => l.id === outputId);
+              if (!outputLayer) return null;
+              
+              const from = getLayerRight(promptLayer);
+              const to = getLayerLeft(outputLayer);
+              const midX = (from.x + to.x) / 2;
+              const midY = (from.y + to.y) / 2;
+              
+              return (
+                <g key={`prompt-output-${promptLayer.id}-${outputId}`}>
+                  <path
+                    d={calculateCurvePath(from, to)}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth={isPromptSelected ? 3 : 2}
+                    opacity={isPromptSelected ? 1 : 0.6}
+                    markerEnd="url(#arrow-prompt-output)"
+                  />
+                  <rect
+                    x={midX - 15}
+                    y={midY - 8}
+                    width={30}
+                    height={16}
+                    fill="#065f46"
+                    stroke="#10b981"
+                    strokeWidth={1}
+                    rx={3}
+                    opacity={0.9}
+                  />
+                  <text
+                    x={midX}
+                    y={midY + 4}
+                    fill="#10b981"
+                    fontSize={9}
+                    textAnchor="middle"
+                    className="select-none"
+                  >
+                    输出
+                  </text>
+                </g>
+              );
+            })}
+          </React.Fragment>
         );
       })}
     </svg>
