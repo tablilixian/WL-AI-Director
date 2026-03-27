@@ -15,6 +15,8 @@ export { CanvasSettingsPanel } from './components/CanvasSettingsPanel';
 export { PromptBar } from './components/PromptBar';
 export { StyleTransferPanel } from './components/StyleTransferPanel';
 export { ImageEditPanel } from './components/ImageEditPanel';
+export { PromptLayer } from './components/PromptLayer';
+export { PromptLinkPanel } from './components/PromptLinkPanel';
 
 export { useCanvasStore } from './hooks/useCanvasState';
 export { useCanvasControls } from './hooks/useCanvasControls';
@@ -39,5 +41,16 @@ export type {
   GenerationTask,
   GenerationOptions,
   ExportOptions,
-  MinimapViewport
+  MinimapViewport,
+  PromptLayerData,
+  PromptLayerConfig,
+  PromptMode,
+  PromptExecutionStatus,
+  PromptExecutionResult
+} from './types/canvas';
+
+export {
+  PROMPT_MODE_COLORS,
+  PROMPT_MODE_ICONS,
+  PROMPT_MODE_NAMES
 } from './types/canvas';
