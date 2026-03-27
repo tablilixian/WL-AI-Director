@@ -6,6 +6,7 @@
 import React from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
+import { PromptMode } from '../types/canvas';
 
 export const CanvasToolbar: React.FC = () => {
   const { 
@@ -27,7 +28,8 @@ export const CanvasToolbar: React.FC = () => {
     alignLayers,
     groupSelectedLayers,
     ungroupLayers,
-    mergeSelectedLayers
+    mergeSelectedLayers,
+    createPromptLayer
   } = useCanvasStore();
   const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
   const scale = useCanvasStore((s) => s.scale);
@@ -104,6 +106,10 @@ export const CanvasToolbar: React.FC = () => {
     });
   };
 
+  const handleAddPrompt = (mode: PromptMode = 'image-to-image') => {
+    createPromptLayer(100, 100, mode);
+  };
+
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-gray-800/90 backdrop-blur-sm rounded-lg p-1.5 shadow-lg border border-gray-700">
       <button
@@ -133,6 +139,16 @@ export const CanvasToolbar: React.FC = () => {
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </button>
+
+      <button
+        onClick={() => handleAddPrompt()}
+        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
+        title="Add AI Prompt"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </button>
 

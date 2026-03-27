@@ -4,26 +4,90 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { LayerData } from '../types/canvas';
+import { LayerData, PromptLayerData } from '../types/canvas';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
+import { PromptLayer } from './PromptLayer';
+import { imageStorageService } from '../../../../services/imageStorageService';
 
 interface CanvasLayerProps {
   layer: LayerData;
   isSelected: boolean;
+  onPromptLinkRequest?: (layerId: string, x: number, y: number) => void;
+  onContextMenuRequest?: (layerId: string, x: number, y: number) => void;
 }
 
-export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) => {
+async function resolveImageSrc(src: string): Promise<string> {
+  if (!src) return '';
+  
+  if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:')) {
+    return src;
+  }
+  
+  if (src.startsWith('local:')) {
+    const localId = src.replace('local:', '');
+    try {
+      const blob = await imageStorageService.getImage(localId);
+      if (blob) {
+        return URL.createObjectURL(blob);
+      }
+    } catch (error) {
+      console.error('解析本地图片失败:', localId, error);
+    }
+  }
+  
+  return '';
+}
+
+export const CanvasLayer: React.FC<CanvasLayerProps> = ({ 
+  layer, 
+  isSelected, 
+  onPromptLinkRequest, 
+  onContextMenuRequest 
+}) => {
   const { selectLayer, updateLayer, layers } = useCanvasStore();
   const { calculateSnap } = useSnapAlignment();
   const layerRef = useRef<HTMLDivElement>(null);
+  
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(layer.title);
-  const dragStartRef = useRef({ x: 0, y: 0, layerX: 0, layerY: 0, childPositions: [] as { id: string; x: number; y: number }[] });
+  const [resolvedSrc, setResolvedSrc] = useState<string>('');
+  
+  const dragStartRef = useRef({ 
+    x: 0, 
+    y: 0, 
+    layerX: 0, 
+    layerY: 0, 
+    childPositions: [] as { id: string; x: number; y: number }[] 
+  });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    
+    const resolve = async () => {
+      if (layer.type === 'image' || layer.type === 'drawing') {
+        const resolved = await resolveImageSrc(layer.src);
+        setResolvedSrc(resolved);
+        if (resolved.startsWith('blob:') && resolved !== layer.src) {
+          objectUrl = resolved;
+        }
+      } else {
+        setResolvedSrc(layer.src);
+      }
+    };
+    
+    resolve();
+    
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [layer.src, layer.type]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0 || e.shiftKey) return;
@@ -62,6 +126,15 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
     setIsRenaming(true);
     setNewTitle(layer.title);
   }, [layer.title]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    selectLayer(layer.id);
+    if (onContextMenuRequest) {
+      onContextMenuRequest(layer.id, e.clientX, e.clientY);
+    }
+  }, [layer.id, selectLayer, onContextMenuRequest]);
 
   const handleRenameSubmit = useCallback(() => {
     if (newTitle.trim()) {
@@ -125,16 +198,18 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
   const renderContent = () => {
     switch (layer.type) {
       case 'image':
-        if (!layer.src) {
+        if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
-              <div className="text-gray-500 text-sm">等待图片...</div>
+              <div className="text-gray-500 text-sm">
+                {layer.src ? '加载中...' : '等待图片...'}
+              </div>
             </div>
           );
         }
         return (
           <img
-            src={layer.src}
+            src={resolvedSrc}
             alt={layer.title}
             className="w-full h-full object-contain"
             draggable={false}
@@ -152,7 +227,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
           />
         );
       case 'video':
-        if (!layer.src) {
+        if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
               <div className="text-gray-500 text-sm">等待视频...</div>
@@ -161,7 +236,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
         }
         return (
           <video
-            src={layer.src}
+            src={resolvedSrc}
             className="w-full h-full object-contain"
             controls={isSelected}
             loop
@@ -203,19 +278,28 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
           </div>
         );
       case 'drawing':
-        if (!layer.src) {
+        if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-transparent">
-              <div className="text-gray-500 text-sm">绘制中...</div>
+              <div className="text-gray-500 text-sm">
+                {layer.src ? '加载中...' : '绘制中...'}
+              </div>
             </div>
           );
         }
         return (
           <img
-            src={layer.src}
+            src={resolvedSrc}
             alt={layer.title}
             className="w-full h-full object-contain"
             draggable={false}
+          />
+        );
+      case 'prompt':
+        return (
+          <PromptLayer
+            layer={layer as PromptLayerData}
+            isSelected={isSelected}
           />
         );
       default:
@@ -239,6 +323,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({ layer, isSelected }) =
         display: layer.visible === false ? 'none' : 'block'
       }}
       onMouseDown={handleMouseDown}
+      onContextMenu={handleContextMenu}
     >
       {layer.isLoading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">

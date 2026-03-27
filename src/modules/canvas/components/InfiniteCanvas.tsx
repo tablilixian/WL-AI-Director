@@ -15,6 +15,7 @@ import { DrawingToolbar, DrawingTool } from './DrawingToolbar';
 import { ConnectionLines } from './ConnectionLines';
 import { LayerDetailPanel } from './LayerDetailPanel';
 import { CanvasSettingsPanel } from './CanvasSettingsPanel';
+import { PromptLinkPanel } from './PromptLinkPanel';
 
 interface InfiniteCanvasProps {
   className?: string;
@@ -45,6 +46,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
     toggleLayerLock,
     toggleLayerVisibility,
     addLayer,
+    duplicateLayer,
     undo, 
     redo 
   } = useCanvasStore();
@@ -63,6 +65,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
   const [showGrid, setShowGrid] = useState(true);
   const [gridSnap, setGridSnap] = useState(false);
   const [gridSize, setGridSize] = useState(50);
+  const [promptLinkLayerId, setPromptLinkLayerId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -71,6 +75,22 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
     currentY: 0,
     points: []
   });
+
+  const handlePromptLinkRequest = useCallback((layerId: string) => {
+    setPromptLinkLayerId(layerId);
+  }, []);
+
+  const handleContextMenuRequest = useCallback((layerId: string, x: number, y: number) => {
+    setContextMenu({ layerId, x, y });
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [contextMenu]);
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -478,6 +498,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
               key={layer.id}
               layer={layer}
               isSelected={selectedLayerIds.includes(layer.id)}
+              onPromptLinkRequest={handlePromptLinkRequest}
+              onContextMenuRequest={handleContextMenuRequest}
             />
           ))}
         </div>
@@ -526,6 +548,53 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
           onGridSizeChange={setGridSize}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {promptLinkLayerId && (
+        <PromptLinkPanel
+          sourceLayerId={promptLinkLayerId}
+          onClose={() => setPromptLinkLayerId(null)}
+        />
+      )}
+
+      {contextMenu && (
+        <div 
+          className="fixed z-[200] bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 min-w-[160px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setContextMenu(null);
+              setPromptLinkLayerId(contextMenu.layerId);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+          >
+            <span>⚡</span>
+            <span>关联到提示词</span>
+          </button>
+          <button
+            onClick={() => {
+              setContextMenu(null);
+              duplicateLayer(contextMenu.layerId);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+          >
+            <span>📋</span>
+            <span>复制图层</span>
+          </button>
+          <div className="border-t border-gray-700 my-1" />
+          <button
+            onClick={() => {
+              setContextMenu(null);
+              deleteLayer(contextMenu.layerId);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-600/20 hover:text-red-300 flex items-center gap-2"
+          >
+            <span>🗑️</span>
+            <span>删除图层</span>
+          </button>
+        </div>
       )}
     </div>
   );
