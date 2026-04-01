@@ -8,7 +8,7 @@ const generateId = (prefix: string): string => {
 const cloneCharacterVariation = (variation: Character['variations'][number]): Character['variations'][number] => ({
   ...variation,
   id: generateId('var'),
-  status: variation.referenceImage ? 'completed' : 'pending'
+  status: variation.imageUrl ? 'completed' : 'pending'
 });
 
 export const createLibraryItemFromTurnaround = (
@@ -27,11 +27,7 @@ export const createLibraryItemFromTurnaround = (
     visualPrompt: character.visualPrompt,
     negativePrompt: character.negativePrompt,
     coreFeatures: character.coreFeatures,
-    // 使用九宫格图片作为参考图
-    referenceImage: character.turnaround?.imageUrl,
-    referenceImageSource: character.turnaround?.imageUrlSource,
-    localImageId: character.turnaround?.localImageId,
-    // 保存九宫格数据
+    imageUrl: character.turnaround?.imageUrl,
     turnaround: character.turnaround,
     variations: [],
     status: 'completed'
@@ -91,7 +87,7 @@ export const cloneCharacterForProject = (character: Character): Character => {
     ...character,
     id: generateId('char'),
     variations: (character.variations || []).map(cloneCharacterVariation),
-    status: character.referenceImage ? 'completed' : 'pending'
+    status: character.imageUrl ? 'completed' : 'pending'
   };
 };
 
@@ -99,7 +95,7 @@ export const cloneSceneForProject = (scene: Scene): Scene => {
   return {
     ...scene,
     id: generateId('scene'),
-    status: scene.referenceImage ? 'completed' : 'pending'
+    status: scene.imageUrl ? 'completed' : 'pending'
   };
 };
 
@@ -124,7 +120,7 @@ export const clonePropForProject = (prop: Prop): Prop => {
   return {
     ...prop,
     id: generateId('prop'),
-    status: prop.referenceImage ? 'completed' : 'pending'
+    status: prop.imageUrl ? 'completed' : 'pending'
   };
 };
 

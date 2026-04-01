@@ -71,7 +71,7 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
 }) => {
   const [newVarName, setNewVarName] = useState('');
   const [newVarPrompt, setNewVarPrompt] = useState('');
-  const { src: characterImageSrc } = useImageLoader(character.referenceImage);
+  const { src: characterImageSrc } = useImageLoader(character.imageUrl);
 
   const handleAddVariation = () => {
     if (newVarName && newVarPrompt) {
@@ -145,7 +145,7 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
                   >
                     <div className="w-20 h-24 bg-[var(--bg-elevated)] rounded-lg flex-shrink-0 overflow-hidden relative border border-[var(--border-primary)]">
                       <VariationImage 
-                        imageUrl={variation.referenceImage} 
+                        imageUrl={variation.imageUrl} 
                         name={variation.name} 
                         status={variation.status}
                         onImageClick={onImageClick}
@@ -173,7 +173,7 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
                           }`}
                         >
                           <RefreshCw className={`w-3 h-3 ${variation.status === 'generating' ? 'animate-spin' : ''}`} />
-                          {variation.status === 'failed' ? '重试' : variation.referenceImage ? 'Regenerate' : 'Generate Look'}
+                          {variation.status === 'failed' ? '重试' : variation.imageUrl ? 'Regenerate' : 'Generate Look'}
                         </button>
                         <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--success-text)] hover:text-[var(--text-primary)] flex items-center gap-1 transition-colors cursor-pointer">
                           <Upload className="w-3 h-3" />

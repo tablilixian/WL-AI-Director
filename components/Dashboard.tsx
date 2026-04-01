@@ -718,8 +718,8 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                 {filteredLibraryItems.map((item) => {
                   const preview =
                     item.type === 'character' || item.type === 'turnaround'
-                      ? (item.data as Character).referenceImage
-                      : (item.data as Scene).referenceImage;
+                      ? (item.data as Character).imageUrl
+                      : (item.data as Scene).imageUrl;
                   return (
                     <div
                       key={item.id}

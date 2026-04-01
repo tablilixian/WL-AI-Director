@@ -1,6 +1,7 @@
 import { ProjectState, AssetLibraryItem } from '../types';
 import { DB_NAME, DB_VERSION, STORE_NAMES, storageConfig } from './dbConfig';
 import { logger, LogCategory } from './logger';
+import { migrateProject, needsMigration } from '../utils/dataMigration';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -184,14 +185,17 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
     request.onsuccess = () => {
       if (request.result) {
         const project = request.result;
+        
         // Migration: ensure renderLogs exists for old projects
         if (!project.renderLogs) {
           project.renderLogs = [];
         }
+        
         // Migration: ensure scriptData.props exists for old projects
         if (project.scriptData && !project.scriptData.props) {
           project.scriptData.props = [];
         }
+        
         // Migration: veo-r2v 模型已下线，迁移为 veo
         let migrated = false;
         if (project.shots) {
@@ -202,12 +206,21 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
             }
           });
         }
+        
+        // Migration: 图片字段统一 (referenceImage -> imageUrl)
+        if (needsMigration(project)) {
+          const migratedProject = migrateProject(project);
+          Object.assign(project, migratedProject);
+          migrated = true;
+          logger.debug(LogCategory.STORAGE, `🔄 项目 "${project.title}" 已迁移图片字段格式`);
+        }
+        
         // 如果发生了迁移，异步回写 IndexedDB，避免每次加载都重复执行
         if (migrated) {
           openDB().then(writeDb => {
             const writeTx = writeDb.transaction(STORE_NAMES.PROJECTS, 'readwrite');
             writeTx.objectStore(STORE_NAMES.PROJECTS).put(project);
-            logger.debug(LogCategory.STORAGE, `🔄 项目 "${project.title}" 已迁移废弃的视频模型`);
+            logger.debug(LogCategory.STORAGE, `🔄 项目 "${project.title}" 已迁移旧数据格式`);
           }).catch(() => { /* 回写失败不影响运行 */ });
         }
         resolve(project);
@@ -335,14 +348,13 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
         };
         
         if (project.scriptData) {
-          resourceCount.characters = project.scriptData.characters.filter(c => c.referenceImage).length;
-          resourceCount.scenes = project.scriptData.scenes.filter(s => s.referenceImage).length;
-          resourceCount.props = (project.scriptData.props || []).filter(p => p.referenceImage).length;
+          resourceCount.characters = project.scriptData.characters.filter(c => c.imageUrl).length;
+          resourceCount.scenes = project.scriptData.scenes.filter(s => s.imageUrl).length;
+          resourceCount.props = (project.scriptData.props || []).filter(p => p.imageUrl).length;
           
-          // 统计角色变体
           project.scriptData.characters.forEach(c => {
             if (c.variations) {
-              resourceCount.characterVariations += c.variations.filter(v => v.referenceImage).length;
+              resourceCount.characterVariations += c.variations.filter(v => v.imageUrl).length;
             }
           });
         }

@@ -26,8 +26,8 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
   
   // 1. 场景参考图（环境/氛围） - 优先级最高
   const scene = scriptData.scenes.find(s => String(s.id) === String(shot.sceneId));
-  if (scene?.referenceImage) {
-    referenceImages.push(scene.referenceImage);
+  if (scene?.imageUrl) {
+    referenceImages.push(scene.imageUrl);
   }
 
   // 2. 角色参考图（外观）
@@ -40,15 +40,14 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
       const varId = shot.characterVariations?.[charId];
       if (varId) {
         const variation = char.variations?.find(v => v.id === varId);
-        if (variation?.referenceImage) {
-          referenceImages.push(variation.referenceImage);
-          return; // 使用变体图片而不是基础图片
+        if (variation?.imageUrl) {
+          referenceImages.push(variation.imageUrl);
+          return;
         }
       }
 
-      // 基础参考图
-      if (char.referenceImage) {
-        referenceImages.push(char.referenceImage);
+      if (char.imageUrl) {
+        referenceImages.push(char.imageUrl);
       }
 
       // 如果角色有已完成的九宫格造型图，追加为额外参考
@@ -63,8 +62,8 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
   if (shot.props && scriptData.props) {
     shot.props.forEach(propId => {
       const prop = scriptData.props.find(p => String(p.id) === String(propId));
-      if (prop?.referenceImage) {
-        referenceImages.push(prop.referenceImage);
+      if (prop?.imageUrl) {
+        referenceImages.push(prop.imageUrl);
       }
     });
   }
@@ -82,7 +81,7 @@ export const getPropsInfoForShot = (shot: Shot, scriptData: ProjectState['script
   return shot.props
     .map(propId => scriptData.props.find(p => String(p.id) === String(propId)))
     .filter((p): p is NonNullable<typeof p> => !!p)
-    .map(p => ({ name: p.name, description: p.description || p.visualPrompt || '', hasImage: !!p.referenceImage }));
+    .map(p => ({ name: p.name, description: p.description || p.visualPrompt || '', hasImage: !!p.imageUrl }));
 };
 
 /**

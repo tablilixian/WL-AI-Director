@@ -34,7 +34,7 @@ const PropCard: React.FC<PropCardProps> = ({
   const [editName, setEditName] = useState(prop.name);
   const [editDescription, setEditDescription] = useState(prop.description);
 
-  const { src: imageSrc, loading: imageLoading } = useImageLoader(prop.referenceImage);
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(prop.imageUrl);
 
   const handleSaveName = () => {
     if (editName.trim()) {
@@ -177,7 +177,7 @@ const PropCard: React.FC<PropCardProps> = ({
         </div>
 
         {/* Regenerate and Upload Buttons */}
-        {prop.referenceImage && (
+        {prop.imageUrl && (
           <div className="mt-3 pt-3 border-t border-[var(--border-primary)]">
             <ImageUploadButton
               variant="separate"

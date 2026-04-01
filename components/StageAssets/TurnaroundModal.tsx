@@ -29,7 +29,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
 }) => {
   const turnaround = character.turnaround;
   const { src: turnaroundImageSrc, loading: turnaroundImageLoading } = useImageLoader(turnaround?.imageUrl);
-  const { src: characterImageSrc, loading: characterImageLoading } = useImageLoader(character.referenceImage);
+  const { src: characterImageSrc, loading: characterImageLoading } = useImageLoader(character.imageUrl);
   const [editingPanel, setEditingPanel] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{ viewAngle: string; shotSize: string; description: string }>({
     viewAngle: '', shotSize: '', description: ''
@@ -159,7 +159,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
               </p>
               <button
                 onClick={() => onGeneratePanels(character.id)}
-                disabled={!character.referenceImage && !character.visualPrompt}
+                disabled={!character.imageUrl && !character.visualPrompt}
                 className="px-6 py-3 bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-[var(--btn-primary-text)] rounded-lg text-sm font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-[var(--btn-primary-shadow)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Wand2 className="w-4 h-4" />

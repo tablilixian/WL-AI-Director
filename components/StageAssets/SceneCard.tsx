@@ -11,7 +11,7 @@ interface SceneCardProps {
     time: string;
     atmosphere: string;
     visualPrompt?: string;
-    referenceImage?: string;
+    imageUrl?: string;
     status?: 'pending' | 'generating' | 'completed' | 'failed';
   };
   isGenerating: boolean;
@@ -42,7 +42,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
   const [editTime, setEditTime] = useState(scene.time);
   const [editAtmosphere, setEditAtmosphere] = useState(scene.atmosphere);
 
-  const { src: imageSrc, loading: imageLoading } = useImageLoader(scene.referenceImage);
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(scene.imageUrl);
 
   const handleSaveLocation = () => {
     if (editLocation.trim()) {
@@ -205,7 +205,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
         </div>
 
         {/* Regenerate and Upload Buttons */}
-        {scene.referenceImage && (
+        {scene.imageUrl && (
           <div className="mt-3 pt-3 border-t border-[var(--border-primary)]">
             <ImageUploadButton
               variant="separate"

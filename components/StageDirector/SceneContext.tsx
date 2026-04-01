@@ -39,20 +39,20 @@ const SceneContext: React.FC<SceneContextProps> = ({
   const [propImageUrls, setPropImageUrls] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
-    if (scene?.referenceImage) {
-      getImageUrl(scene.referenceImage).then(url => setSceneImageUrl(url));
+    if (scene?.imageUrl) {
+      getImageUrl(scene.imageUrl).then(url => setSceneImageUrl(url));
     } else {
       setSceneImageUrl(null);
     }
-  }, [scene?.referenceImage]);
+  }, [scene?.imageUrl]);
 
   useEffect(() => {
     const loadCharacterImages = async () => {
       const urls: Record<string, string | null> = {};
       for (const char of characters) {
-        if (char.referenceImage) {
+        if (char.imageUrl) {
           try {
-            const url = await getImageUrl(char.referenceImage);
+            const url = await getImageUrl(char.imageUrl);
             urls[char.id] = url;
           } catch (err) {
             console.error(`[SceneContext] 加载角色图片失败: ${char.id}`, err);
@@ -71,9 +71,9 @@ const SceneContext: React.FC<SceneContextProps> = ({
     const loadPropImages = async () => {
       const urls: Record<string, string | null> = {};
       for (const prop of props) {
-        if (prop.referenceImage) {
+        if (prop.imageUrl) {
           try {
-            const url = await getImageUrl(prop.referenceImage);
+            const url = await getImageUrl(prop.imageUrl);
             urls[prop.id] = url;
           } catch (err) {
             console.error(`[SceneContext] 加载道具图片失败: ${prop.id}`, err);

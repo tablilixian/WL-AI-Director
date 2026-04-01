@@ -153,18 +153,17 @@ export async function downloadSourceAssets(
     // 1. 角色参考图
     if (project.scriptData?.characters) {
       for (const char of project.scriptData.characters) {
-        if (char.referenceImage) {
+        if (char.imageUrl) {
           assets.push({
-            url: char.referenceImage,
+            url: char.imageUrl,
             path: `characters/${char.name.replace(/[\/\\?%*:|"<>]/g, '_')}_base.jpg`
           });
         }
-        // 角色变体图
         if (char.variations) {
           for (const variation of char.variations) {
-            if (variation.referenceImage) {
+            if (variation.imageUrl) {
               assets.push({
-                url: variation.referenceImage,
+                url: variation.imageUrl,
                 path: `characters/${char.name.replace(/[\/\\?%*:|"<>]/g, '_')}_${variation.name.replace(/[\/\\?%*:|"<>]/g, '_')}.jpg`
               });
             }
@@ -176,9 +175,9 @@ export async function downloadSourceAssets(
     // 2. 场景参考图
     if (project.scriptData?.scenes) {
       for (const scene of project.scriptData.scenes) {
-        if (scene.referenceImage) {
+        if (scene.imageUrl) {
           assets.push({
-            url: scene.referenceImage,
+            url: scene.imageUrl,
             path: `scenes/${scene.location.replace(/[\/\\?%*:|"<>]/g, '_')}.jpg`
           });
         }

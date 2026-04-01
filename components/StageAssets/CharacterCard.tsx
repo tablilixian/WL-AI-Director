@@ -41,7 +41,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const [editGender, setEditGender] = useState(character.gender);
   const [editAge, setEditAge] = useState(character.age);
   
-  const { src: imageSrc, loading: imageLoading } = useImageLoader(character.referenceImage);
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(character.imageUrl);
 
   const handleSaveName = () => {
     if (editName.trim()) {
@@ -71,7 +71,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         <div className="w-48 flex-shrink-0">
           <div 
             className="aspect-video bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer"
-            onClick={() => character.referenceImage && onImageClick(character.referenceImage)}
+            onClick={() => character.imageUrl && onImageClick(character.imageUrl)}
           >
             {imageSrc ? (
               <>
@@ -227,7 +227,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             </button>
 
             {/* Upload Button */}
-            {character.referenceImage && (
+            {character.imageUrl && (
               <div className="w-full">
                 <ImageUploadButton
                   variant="separate"

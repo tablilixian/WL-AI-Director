@@ -60,8 +60,8 @@ export const formatDuration = (duration: number): string => {
  */
 export const hasDownloadableAssets = (project: ProjectState): boolean => {
   return (
-    (project.scriptData?.characters.some(c => c.referenceImage || c.variations?.some(v => v.referenceImage))) ||
-    (project.scriptData?.scenes.some(s => s.referenceImage)) ||
+    (project.scriptData?.characters.some(c => c.imageUrl || c.variations?.some(v => v.imageUrl))) ||
+    (project.scriptData?.scenes.some(s => s.imageUrl)) ||
     (project.shots.some(s => s.keyframes?.some(k => k.imageUrl) || s.interval?.videoUrl))
   );
 };

@@ -109,46 +109,41 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     if (!project.scriptData) return;
 
     const hasStuckCharacters = project.scriptData.characters.some(char => {
-      // 检查角色本身是否卡住
-      const isCharStuck = char.status === 'generating' && !char.referenceImage;
-      // 检查角色变体是否卡住
-      const hasStuckVariations = char.variations?.some(v => v.status === 'generating' && !v.referenceImage);
+      const isCharStuck = char.status === 'generating' && !char.imageUrl;
+      const hasStuckVariations = char.variations?.some(v => v.status === 'generating' && !v.imageUrl);
       return isCharStuck || hasStuckVariations;
     });
 
     const hasStuckScenes = project.scriptData.scenes.some(scene => 
-      scene.status === 'generating' && !scene.referenceImage
+      scene.status === 'generating' && !scene.imageUrl
     );
 
     const hasStuckProps = (project.scriptData.props || []).some(prop =>
-      prop.status === 'generating' && !prop.referenceImage
+      prop.status === 'generating' && !prop.imageUrl
     );
 
     if (hasStuckCharacters || hasStuckScenes || hasStuckProps) {
       console.log('🔧 检测到卡住的生成状态，正在重置...');
       const newData = { ...project.scriptData };
       
-      // 重置角色状态
       newData.characters = newData.characters.map(char => ({
         ...char,
-        status: char.status === 'generating' && !char.referenceImage ? 'failed' as const : char.status,
+        status: char.status === 'generating' && !char.imageUrl ? 'failed' as const : char.status,
         variations: char.variations?.map(v => ({
           ...v,
-          status: v.status === 'generating' && !v.referenceImage ? 'failed' as const : v.status
+          status: v.status === 'generating' && !v.imageUrl ? 'failed' as const : v.status
         }))
       }));
       
-      // 重置场景状态
       newData.scenes = newData.scenes.map(scene => ({
         ...scene,
-        status: scene.status === 'generating' && !scene.referenceImage ? 'failed' as const : scene.status
+        status: scene.status === 'generating' && !scene.imageUrl ? 'failed' as const : scene.status
       }));
 
-      // 重置道具状态
       if (newData.props) {
         newData.props = newData.props.map(prop => ({
           ...prop,
-          status: prop.status === 'generating' && !prop.referenceImage ? 'failed' as const : prop.status
+          status: prop.status === 'generating' && !prop.imageUrl ? 'failed' as const : prop.status
         }));
       }
       
@@ -161,9 +156,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     if (!project.scriptData) return;
     
     const checkStuckGeneration = () => {
-      const stuckChars = project.scriptData!.characters.filter(c => c.status === 'generating' && !c.referenceImage);
-      const stuckScenes = project.scriptData!.scenes.filter(s => s.status === 'generating' && !s.referenceImage);
-      const stuckProps = (project.scriptData!.props || []).filter(p => p.status === 'generating' && !p.referenceImage);
+      const stuckChars = project.scriptData!.characters.filter(c => c.status === 'generating' && !c.imageUrl);
+      const stuckScenes = project.scriptData!.scenes.filter(s => s.status === 'generating' && !s.imageUrl);
+      const stuckProps = (project.scriptData!.props || []).filter(p => p.status === 'generating' && !p.imageUrl);
       
       if (stuckChars.length > 0 || stuckScenes.length > 0 || stuckProps.length > 0) {
         console.log('🔧 检测到卡住的生成状态，自动重置...');
@@ -171,22 +166,22 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         
         newData.characters = newData.characters.map(char => ({
           ...char,
-          status: char.status === 'generating' && !char.referenceImage ? 'failed' as const : char.status,
+          status: char.status === 'generating' && !char.imageUrl ? 'failed' as const : char.status,
           variations: char.variations?.map(v => ({
             ...v,
-            status: v.status === 'generating' && !v.referenceImage ? 'failed' as const : v.status
+            status: v.status === 'generating' && !v.imageUrl ? 'failed' as const : v.status
           }))
         }));
         
         newData.scenes = newData.scenes.map(scene => ({
           ...scene,
-          status: scene.status === 'generating' && !scene.referenceImage ? 'failed' as const : scene.status
+          status: scene.status === 'generating' && !scene.imageUrl ? 'failed' as const : scene.status
         }));
         
         if (newData.props) {
           newData.props = newData.props.map(prop => ({
             ...prop,
-            status: prop.status === 'generating' && !prop.referenceImage ? 'failed' as const : prop.status
+            status: prop.status === 'generating' && !prop.imageUrl ? 'failed' as const : prop.status
           }));
         }
         
@@ -324,23 +319,18 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
       const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio, false, false, type, id);
 
-      // 更新状态
       if (project.scriptData) {
         const newData = { ...project.scriptData };
         if (type === 'character') {
           const c = newData.characters.find(c => compareIds(c.id, id));
           if (c) {
-            c.referenceImage = imageUrl;
-            c.referenceImageSource = 'local';
-            c.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
+            c.imageUrl = imageUrl;
             c.status = 'completed';
           }
         } else {
           const s = newData.scenes.find(s => compareIds(s.id, id));
           if (s) {
-            s.referenceImage = imageUrl;
-            s.referenceImageSource = 'local';
-            s.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
+            s.imageUrl = imageUrl;
             s.status = 'completed';
           }
         }
@@ -377,7 +367,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     
     if (!items) return;
 
-    const itemsToGen = items.filter(i => !i.referenceImage);
+    const itemsToGen = items.filter(i => !i.imageUrl);
     const isRegenerate = itemsToGen.length === 0;
 
     if (isRegenerate) {
@@ -412,16 +402,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleUploadCharacterImage = async (charId: string, file: File) => {
     try {
-      const localImageId = await handleImageUpload(file);
+      const imageUrl = await handleImageUpload(file);
 
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
         const char = newData.characters.find(c => compareIds(c.id, charId));
         if (char) {
-          char.referenceImage = localImageId;
-          char.referenceImageSource = 'local';
-          char.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
+          char.imageUrl = imageUrl;
           char.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -431,21 +419,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     }
   };
 
-  /**
-   * 上传场景图片
-   */
   const handleUploadSceneImage = async (sceneId: string, file: File) => {
     try {
-      const localImageId = await handleImageUpload(file);
+      const imageUrl = await handleImageUpload(file);
 
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
         const scene = newData.scenes.find(s => compareIds(s.id, sceneId));
         if (scene) {
-          scene.referenceImage = localImageId;
-          scene.referenceImageSource = 'local';
-          scene.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
+          scene.imageUrl = imageUrl;
           scene.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -460,30 +443,24 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       try {
         let charToSave = { ...char };
         
-        // 如果图片是本地的，先上传到云端
-        if (isLocalImage(char.referenceImage) && char.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地图片到云端:', char.localImageId);
-          const blob = await imageStorageService.getImage(char.localImageId);
+        if (char.imageUrl?.startsWith('local:')) {
+          console.log('[StageAssets] ☁️ 上传本地图片到云端:', char.imageUrl);
+          const blob = await imageStorageService.getImage(char.imageUrl.substring(6));
           if (!blob) {
             console.warn('[StageAssets] ⚠️ 本地图片读取失败，将仅保存到本地');
           } else {
             try {
               const cloudUrl = await imageStorageService.uploadToCloud(
-                char.localImageId,
+                char.imageUrl.substring(6),
                 blob,
                 `${user?.id || 'anonymous'}/asset_library/character/${char.id}`
               );
-              charToSave.referenceImage = cloudUrl;
-              charToSave.referenceImageSource = 'cloud';
-              delete charToSave.localImageId;
+              charToSave.imageUrl = cloudUrl;
               
-              // 更新项目中的角色数据
               const newData = { ...project.scriptData! };
               const c = newData.characters.find(c => c.id === char.id);
               if (c) {
-                c.referenceImage = cloudUrl;
-                c.referenceImageSource = 'cloud';
-                delete c.localImageId;
+                c.imageUrl = cloudUrl;
               }
               updateProject({ scriptData: newData });
             } catch (uploadError: any) {
@@ -503,7 +480,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       }
     };
 
-    if (!char.referenceImage) {
+    if (!char.imageUrl) {
       showAlert('该角色暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
@@ -520,30 +497,24 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       try {
         let sceneToSave = { ...scene };
         
-        // 如果图片是本地的，先上传到云端
-        if (isLocalImage(scene.referenceImage) && scene.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地场景图片到云端:', scene.localImageId);
-          const blob = await imageStorageService.getImage(scene.localImageId);
+        if (scene.imageUrl?.startsWith('local:')) {
+          console.log('[StageAssets] ☁️ 上传本地场景图片到云端:', scene.imageUrl);
+          const blob = await imageStorageService.getImage(scene.imageUrl.substring(6));
           if (!blob) {
             console.warn('[StageAssets] ⚠️ 本地场景图片读取失败，将仅保存到本地');
           } else {
             try {
               const cloudUrl = await imageStorageService.uploadToCloud(
-                scene.localImageId,
+                scene.imageUrl.substring(6),
                 blob,
                 `${user?.id || 'anonymous'}/asset_library/scene/${scene.id}`
               );
-              sceneToSave.referenceImage = cloudUrl;
-              sceneToSave.referenceImageSource = 'cloud';
-              delete sceneToSave.localImageId;
+              sceneToSave.imageUrl = cloudUrl;
               
-              // 更新项目中的场景数据
               const newData = { ...project.scriptData! };
               const s = newData.scenes.find(s => s.id === scene.id);
               if (s) {
-                s.referenceImage = cloudUrl;
-                s.referenceImageSource = 'cloud';
-                delete s.localImageId;
+                s.imageUrl = cloudUrl;
               }
               updateProject({ scriptData: newData });
             } catch (uploadError: any) {
@@ -563,7 +534,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       }
     };
 
-    if (!scene.referenceImage) {
+    if (!scene.imageUrl) {
       showAlert('该场景暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
@@ -868,9 +839,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const updatedData = { ...project.scriptData };
       const updated = (updatedData.props || []).find(p => compareIds(p.id, propId));
       if (updated) {
-        updated.referenceImage = imageUrl;
-        updated.referenceImageSource = 'local';
-        updated.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
+        updated.imageUrl = imageUrl;
         updated.status = 'completed';
         if (!updated.visualPrompt) {
           updated.visualPrompt = prompt;
@@ -898,9 +867,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const newData = { ...prev.scriptData };
         const prop = (newData.props || []).find(p => compareIds(p.id, propId));
         if (prop) {
-          prop.referenceImage = localImageId;
-          prop.referenceImageSource = 'local';
-          prop.localImageId = localImageId.startsWith('local:') ? localImageId.substring(6) : undefined;
+          prop.imageUrl = localImageId;
           prop.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -946,30 +913,24 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       try {
         let propToSave = { ...prop };
         
-        // 如果图片是本地的，先上传到云端
-        if (isLocalImage(prop.referenceImage) && prop.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地道具图片到云端:', prop.localImageId);
-          const blob = await imageStorageService.getImage(prop.localImageId);
+        if (prop.imageUrl?.startsWith('local:')) {
+          console.log('[StageAssets] ☁️ 上传本地道具图片到云端:', prop.imageUrl);
+          const blob = await imageStorageService.getImage(prop.imageUrl.substring(6));
           if (!blob) {
             console.warn('[StageAssets] ⚠️ 本地道具图片读取失败，将仅保存到本地');
           } else {
             try {
               const cloudUrl = await imageStorageService.uploadToCloud(
-                prop.localImageId,
+                prop.imageUrl.substring(6),
                 blob,
                 `${user?.id || 'anonymous'}/asset_library/prop/${prop.id}`
               );
-              propToSave.referenceImage = cloudUrl;
-              propToSave.referenceImageSource = 'cloud';
-              delete propToSave.localImageId;
+              propToSave.imageUrl = cloudUrl;
               
-              // 更新项目中的道具数据
               const newData = { ...project.scriptData! };
               const p = (newData.props || []).find(p => p.id === prop.id);
               if (p) {
-                p.referenceImage = cloudUrl;
-                p.referenceImageSource = 'cloud';
-                delete p.localImageId;
+                p.imageUrl = cloudUrl;
               }
               updateProject({ scriptData: newData });
             } catch (uploadError: any) {
@@ -989,7 +950,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       }
     };
 
-    if (!prop.referenceImage) {
+    if (!prop.imageUrl) {
       showAlert('该道具暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
@@ -1008,7 +969,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const items = project.scriptData?.props || [];
     if (!items.length) return;
 
-    const itemsToGen = items.filter(p => !p.referenceImage);
+    const itemsToGen = items.filter(p => !p.imageUrl);
     const isRegenerate = itemsToGen.length === 0;
 
     if (isRegenerate) {
@@ -1050,7 +1011,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       id: generateId('var'),
       name: name || "New Outfit",
       visualPrompt: prompt || char.visualPrompt || "",
-      referenceImage: undefined
+      imageUrl: undefined
     };
 
     if (!char.variations) char.variations = [];
@@ -1089,7 +1050,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject({ scriptData: newData });
     }
     try {
-      const refImages = char.referenceImage ? [char.referenceImage] : [];
+      const refImages = char.imageUrl ? [char.imageUrl] : [];
       const regionalPrefix = getRegionalPrefix(language, 'character');
       // 构建变体专用提示词：强调服装变化
       const enhancedPrompt = `${regionalPrefix}Character "${char.name}" wearing NEW OUTFIT: ${variation.visualPrompt}. This is a costume/outfit change - the character's face and identity must remain identical to the reference, but they should be wearing the described new outfit.`;
@@ -1101,9 +1062,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const c = newData.characters.find(c => compareIds(c.id, charId));
       const v = c?.variations?.find(v => compareIds(v.id, varId));
       if (v) {
-        v.referenceImage = imageUrl;
-        v.referenceImageSource = 'local';
-        v.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
+        v.imageUrl = imageUrl;
         v.status = 'completed';
       }
 
@@ -1138,7 +1097,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const char = newData.characters.find(c => compareIds(c.id, charId));
         const variation = char?.variations?.find(v => compareIds(v.id, varId));
         if (variation) {
-          variation.referenceImage = base64;
+          variation.imageUrl = base64;
           variation.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -1252,8 +1211,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const c = newData.characters.find(c => compareIds(c.id, charId));
         if (c && c.turnaround) {
           c.turnaround.imageUrl = imageUrl;
-          c.turnaround.imageUrlSource = 'local';
-          c.turnaround.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
           c.turnaround.status = 'completed';
         }
         return { ...prev, scriptData: newData };
@@ -1322,36 +1279,30 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       try {
         const charToSave = { ...char };
         
-        // 如果图片是本地存储的，需要先上传到云端
-        if (char.turnaround.imageUrlSource === 'local' && char.turnaround.localImageId) {
-          console.log('[StageAssets] ☁️ 上传本地九宫格图片到云端:', char.turnaround.localImageId);
-          const localBlob = await imageStorageService.getImage(char.turnaround.localImageId);
+        if (char.turnaround.imageUrl?.startsWith('local:')) {
+          console.log('[StageAssets] ☁️ 上传本地九宫格图片到云端:', char.turnaround.imageUrl);
+          const localBlob = await imageStorageService.getImage(char.turnaround.imageUrl.substring(6));
           if (!localBlob) {
             console.warn('[StageAssets] ⚠️ 本地九宫格图片读取失败，将仅保存到本地');
           } else {
             try {
               const cloudUrl = await imageStorageService.uploadToCloud(
-                char.turnaround.localImageId,
+                char.turnaround.imageUrl.substring(6),
                 localBlob,
                 `${user?.id || 'anonymous'}/asset_library/turnaround/${char.id}`
               );
               if (cloudUrl) {
                 charToSave.turnaround = {
                   ...charToSave.turnaround,
-                  imageUrl: cloudUrl,
-                  imageUrlSource: 'cloud',
-                  localImageId: undefined
+                  imageUrl: cloudUrl
                 };
                 
-                // 更新项目数据
                 updateProject((prev) => {
                   if (!prev.scriptData) return prev;
                   const newData = { ...prev.scriptData };
                   const c = newData.characters.find(c => compareIds(c.id, charId));
                   if (c && c.turnaround) {
                     c.turnaround.imageUrl = cloudUrl;
-                    c.turnaround.imageUrlSource = 'cloud';
-                    c.turnaround.localImageId = undefined;
                   }
                   return { ...prev, scriptData: newData };
                 });
@@ -1385,9 +1336,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     );
   }
   
-  const allCharactersReady = project.scriptData.characters.every(c => c.referenceImage);
-  const allScenesReady = project.scriptData.scenes.every(s => s.referenceImage);
-  const allPropsReady = (project.scriptData.props || []).length > 0 && (project.scriptData.props || []).every(p => p.referenceImage);
+  const allCharactersReady = project.scriptData.characters.every(c => c.imageUrl);
+  const allScenesReady = project.scriptData.scenes.every(s => s.imageUrl);
+  const allPropsReady = (project.scriptData.props || []).length > 0 && (project.scriptData.props || []).every(p => p.imageUrl);
   const selectedChar = project.scriptData.characters.find(c => compareIds(c.id, selectedCharId));
   const projectNameOptions = Array.from(
     new Set(
@@ -1545,10 +1496,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                   {filteredLibraryItems.map((item) => {
                     const preview =
                       item.type === 'character' || item.type === 'turnaround'
-                        ? (item.data as Character).referenceImage
+                        ? (item.data as Character).imageUrl
                         : item.type === 'scene'
-                        ? (item.data as Scene).referenceImage
-                        : (item.data as Prop).referenceImage;
+                        ? (item.data as Scene).imageUrl
+                        : (item.data as Prop).imageUrl;
                     return (
                       <div
                         key={item.id}

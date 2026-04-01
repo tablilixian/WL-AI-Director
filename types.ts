@@ -1,12 +1,10 @@
 export interface CharacterVariation {
   id: string;
-  name: string; // e.g., "Casual", "Tactical Gear", "Injured"
+  name: string;
   visualPrompt: string;
-  negativePrompt?: string; // 负面提示词，用于排除不想要的元素
-  referenceImage?: string; // 角色变体参考图，存储为Supabase Storage URL或base64格式
-  referenceImageSource?: 'local' | 'cloud'; // 图片来源：local=本地IndexedDB, cloud=云端Supabase
-  localImageId?: string; // 本地图片在IndexedDB中的ID（当source='local'时使用）
-  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
+  negativePrompt?: string;
+  imageUrl?: string;
+  status?: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 /**
@@ -25,15 +23,10 @@ export interface CharacterTurnaroundPanel {
  * 提供角色的多视角参考图，用于在分镜生成时按镜头角度匹配最佳参考
  */
 export interface CharacterTurnaroundData {
-  panels: CharacterTurnaroundPanel[];  // 9个格子的描述数据
-  imageUrl?: string;                    // 生成的九宫格整图 (base64)，直接作为多视角参考图使用
-  imageUrlSource?: 'local' | 'cloud';  // 图片来源：本地或云端
-  localImageId?: string;                 // 本地图片在 IndexedDB 中的 ID
-  prompt?: string;                      // 生成时使用的完整提示词
+  panels: CharacterTurnaroundPanel[];
+  imageUrl?: string;
+  prompt?: string;
   status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
-  // generating_panels: AI正在生成9个视角描述
-  // panels_ready: 视角描述已生成，等待用户确认/编辑后再生成图片
-  // generating_image: 用户已确认，正在生成九宫格图片
 }
 
 export interface Character {
@@ -43,14 +36,12 @@ export interface Character {
   age: string;
   personality: string;
   visualPrompt?: string;
-  negativePrompt?: string; // 负面提示词，用于排除不想要的元素
-  coreFeatures?: string; // 核心固定特征，用于保持角色一致性
-  referenceImage?: string; // 角色基础参考图，存储为Supabase Storage URL或base64格式
-  referenceImageSource?: 'local' | 'cloud'; // 图片来源：local=本地IndexedDB, cloud=云端Supabase
-  localImageId?: string; // 本地图片在IndexedDB中的ID（当source='local'时使用）
-  turnaround?: CharacterTurnaroundData; // 角色九宫格造型设计，多视角参考图
-  variations: CharacterVariation[]; // Added: List of alternative looks
-  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
+  negativePrompt?: string;
+  coreFeatures?: string;
+  imageUrl?: string;
+  turnaround?: CharacterTurnaroundData;
+  variations: CharacterVariation[];
+  status?: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 export interface Scene {
@@ -59,11 +50,9 @@ export interface Scene {
   time: string;
   atmosphere: string;
   visualPrompt?: string;
-  negativePrompt?: string; // 负面提示词，用于排除不想要的元素
-  referenceImage?: string; // 场景参考图，存储为Supabase Storage URL或base64格式
-  referenceImageSource?: 'local' | 'cloud'; // 图片来源：local=本地IndexedDB, cloud=云端Supabase
-  localImageId?: string; // 本地图片在IndexedDB中的ID（当source='local'时使用）
-  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
+  negativePrompt?: string;
+  imageUrl?: string;
+  status?: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 /**
@@ -72,15 +61,13 @@ export interface Scene {
  */
 export interface Prop {
   id: string;
-  name: string;           // 道具名称，如"星图"、"古剑"
-  category: string;       // 分类：武器、文件/书信、食物/饮品、交通工具、装饰品、科技设备、其他
-  description: string;    // 道具描述
-  visualPrompt?: string;  // 视觉提示词
-  negativePrompt?: string; // 负面提示词，用于排除不想要的元素
-  referenceImage?: string; // 道具参考图，存储为Supabase Storage URL或base64格式
-  referenceImageSource?: 'local' | 'cloud'; // 图片来源：local=本地IndexedDB, cloud=云端Supabase
-  localImageId?: string; // 本地图片在IndexedDB中的ID（当source='local'时使用）
-  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
+  name: string;
+  category: string;
+  description: string;
+  visualPrompt?: string;
+  negativePrompt?: string;
+  imageUrl?: string;
+  status?: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 export type AssetLibraryItemType = 'character' | 'scene' | 'prop' | 'turnaround';
