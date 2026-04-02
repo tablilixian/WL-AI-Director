@@ -18,6 +18,26 @@ async function resolveImageRef(imageRef: string): Promise<string> {
     return imageRef;
   }
   
+  if (imageRef.startsWith('blob:')) {
+    console.log('[VideoAdapter] 检测到 blob URL，转换为 Base64:', imageRef);
+    try {
+      const response = await fetch(imageRef);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          console.log('[VideoAdapter] blob 转换为 Base64 成功');
+          resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('[VideoAdapter] blob 转换失败:', error);
+      return '';
+    }
+  }
+  
   if (imageRef.startsWith('local:')) {
     const localId = imageRef.replace('local:', '');
     console.log('[VideoAdapter] 解析本地图片引用:', localId);
@@ -43,7 +63,7 @@ async function resolveImageRef(imageRef: string): Promise<string> {
  * 检查是否为 BigModel 视频模型
  */
 const isBigModelVideoModel = (modelId: string): boolean => {
-  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox');
 };
 
 /**
@@ -181,6 +201,7 @@ const callVeoApi = async (
   // 清理图片数据
   const cleanStart = options.startImage?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
   const cleanEnd = options.endImage?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
+
 
   // 构建消息
   const messages: any[] = [{ role: 'user', content: options.prompt }];
@@ -327,12 +348,17 @@ const callSoraApi = async (
     const jsonData: any = {
       model: resolvedModel,
       prompt: options.prompt,
+      duration: duration,
+      size: size,
+      movement_amplitude: 'auto'
     };
 
     if (resolvedStartImage) {
       const cleanBase64 = resolvedStartImage.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
       jsonData.image_url = `data:image/png;base64,${cleanBase64}`;
     }
+
+    console.log('[VideoAdapter] JSON 请求体:', JSON.stringify(jsonData, null, 2));
 
     requestBody = JSON.stringify(jsonData);
     headers['Content-Type'] = 'application/json';

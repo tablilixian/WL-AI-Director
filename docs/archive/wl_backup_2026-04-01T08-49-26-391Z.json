@@ -1,0 +1,2622 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": 1775033366389,
+  "scope": "all",
+  "dbName": "WLDB",
+  "dbVersion": 7,
+  "stores": {
+    "projects": [
+      {
+        "id": "4e5c9b34-e9dd-4158-b035-dfaa3a2cda92",
+        "title": "田忌赛马",
+        "createdAt": 1773282937853,
+        "lastModified": 1773295645554,
+        "version": 9,
+        "stage": "export",
+        "targetDuration": "60s",
+        "language": "中文",
+        "visualStyle": "live-action",
+        "shotGenerationModel": "gpt-5.1",
+        "rawScript": "**标题：田忌赛马**\n\n**人物：**  \n- 田忌：齐国大将，性格耿直但屡屡受挫  \n- 齐威王：齐国君主，自信自负，喜欢以赛马彰显权威  \n- 孙膑：军师，智慧超群，善于观察与策略  \n- 侍从、骑士、观众等  \n\n---\n\n### **第一场：赛马失利**  \n**场景：** 齐国赛马场，尘土飞扬，人声鼎沸。阳光刺眼，看台上贵族们高谈阔论。  \n\n（田忌的骏马与齐威王的马匹并排站立，骑士们勒紧缰绳，气氛紧张。鼓声响起，第一场比赛开始。田忌的上等马与齐威王的上等马并驾齐驱，但最终齐威王的马以半个马身优势胜出。观众欢呼，齐威王得意扬扬地挥手。）  \n\n**齐威王**（大笑）：  \n“田将军，你的马还是差了点火候啊！”  \n\n（第二局，田忌的中等马与齐威王的中等马对决。同样，齐威王的马略胜一筹。田忌紧握拳头，额角渗汗。第三局，田忌的下等马惨败。齐威王起身，举杯示意。）  \n\n**齐威王：**  \n“将军，今日又为寡人添了不少库银啊！”  \n\n（田忌面色铁青，默默下台，骑士们牵着他的马匹，垂头丧气地离开赛马场。）  \n\n---\n\n### **第二场：密室之谈**  \n**场景：** 田忌府邸，书房内。田忌烦躁地踱步，将酒杯重重砸在桌上。  \n\n**田忌**（怒气冲冲）：  \n“气死我了！每次都是这样，我的马明明不差，为何总是输？”  \n\n（孙膑坐在一旁，悠闲地品茶，目光深邃。）  \n\n**孙膑**（微笑）：  \n“将军，您的马并非输在速度，而是输在阵法。”  \n\n**田忌**（一愣）：  \n“阵法？赛马还有阵法可言？”  \n\n**孙膑**（放下茶杯，起身踱步）：  \n“您总是用上等马对上等马，中等对中等，下等对下等。大王的马力虽与您相近，但每一局他都稳操胜券。您是否想过，用您的下等马去消耗他的上等马，再用您的上等马去压制他的中等马？”  \n\n（田忌眼睛一亮，但随即犹豫。）  \n\n**田忌：**  \n“可第一局岂不是必输无疑？”  \n\n**孙膑**（自信一笑）：  \n“将军，胜负不在一局，而在全局。只要您能赢下后两局，便是最终的赢家。况且……”（压低声音）“您可敢下一场重注？”  \n\n**田忌**（眼神坚定）：  \n“好！我倒要看看，这场赛马，究竟谁才是真正的赢家！”  \n\n---\n\n### **第三场：再战赛马场**  \n**场景：** 赛马场，气氛比往日更加热烈。齐威王高坐看台，嘴角挂着轻蔑的笑意。  \n\n**齐威王**（对侍从）：  \n“田将军又来送银子了，传令下去，今日务必让他输得心服口服！”  \n\n（田忌与孙膑并排而坐，孙膑低声耳语。田忌频频点头，神情镇定。）  \n\n**第一局：**  \n田忌的下等马与齐威王的上等马对决。齐威王的马如离弦之箭，轻松获胜。齐威王大笑，贵族们起哄。  \n\n**齐威王：**  \n“田将军，你这马是要献给寡人吗？”  \n\n**田忌**（面不改色）：  \n“大王稍安勿躁，好戏还在后头。”  \n\n**第二局：**  \n田忌的上等马与齐威王的中等马对决。鼓声响起，田忌的骏马如闪电般超越，观众惊呼。齐威王脸色微变。  \n\n**第三局：**  \n田忌的中等马与齐威王的下等马对决。田忌的马稳稳获胜。三局结束，田忌以两胜一负逆袭成功。  \n\n（全场寂静，随即爆发出震天的掌声。齐威王愣在原地，难以置信。）  \n\n**齐威王**（沉声）：  \n“田将军……好手段！”  \n\n**田忌**（拱手，目光如炬）：  \n“大王，赛马如战阵，不在匹夫之勇，而在运筹帷幄。”  \n\n（孙膑在角落微笑，眼中闪过智慧的光芒。田忌赢得的不仅是赌注，更是尊严与胜利。）  \n\n---\n\n**（剧终）**",
+        "scriptData": {
+          "title": "田忌赛马",
+          "genre": "历史剧",
+          "logline": "",
+          "language": "中文",
+          "artDirection": {
+            "colorPalette": {
+              "primary": "深赭石色与青铜色为主，带有温暖的棕褐色调，体现古代中国的庄重与历史感",
+              "secondary": "青瓷绿与靛蓝色，增添清新感与层次，用于背景和次要元素",
+              "accent": "朱红色与金色，用于重要细节和强调，象征权力与胜利",
+              "skinTones": "温暖的象牙色到浅棕色，带有柔和的桃色底色，体现东方人物特征",
+              "saturation": "中等饱和度，略带柔和感，营造历史剧的沉稳氛围",
+              "temperature": "温暖色调为主，辅以冷色调平衡，增强场景的戏剧性对比"
+            },
+            "characterDesignRules": {
+              "proportions": "7.5头身比例，写实中带有适度夸张，面部表情丰富，体现角色性格特征",
+              "eyeStyle": "大而富有表现力的眼睛，带有细致的虹膜反射和眼神光，传达角色内心情感",
+              "lineWeight": "清晰流畅的线条，约2px粗细，关键轮廓线略粗，细节线条较细",
+              "detailLevel": "高细节处理面部和手部，中等细节处理服装纹理，背景采用风格化处理"
+            },
+            "lightingStyle": "三点式电影照明，主光源从45度角照射，温暖色调，辅以冷色调填充光，增强角色立体感",
+            "textureStyle": "平滑的卡通渲染风格，带有微妙渐变阴影，服装纹理细腻，背景采用水彩质感",
+            "moodKeywords": [
+              "历史感",
+              "戏剧性",
+              "东方美学",
+              "情感丰富",
+              "策略智慧"
+            ],
+            "consistencyAnchors": "高质量2D动画风格，迪士尼/皮克斯级别的手绘质感，线条流畅一致，重量均匀。采用水彩质感背景，柔和渐变阴影，温暖色调为主。角色设计遵循挤压与拉伸原则，表情丰富生动。色彩和谐统一，历史剧风格，东方美学元素。光影处理细腻，增强角色情感表达。整体画面既有历史厚重感，又不失动画的生动活泼。"
+          },
+          "characters": [
+            {
+              "id": "1",
+              "name": "田忌",
+              "gender": "男",
+              "age": "成年",
+              "personality": "性格耿直但屡屡受挫，后来变得坚定有策略",
+              "variations": [],
+              "visualPrompt": "一位中年男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且略向下倾斜，体现其耿直性格。眼睛大而富有表现力，虹膜呈深褐色，带有微妙的高光，眼神中透露出坚定与智慧。嘴唇线条分明，嘴角微微上扬，展现自信微笑。头发乌黑，束成发髻，几缕发丝自然垂落，增添动感。身形挺拔，肩膀宽阔，穿着深赭石色锦袍，绣有青铜色云纹，腰间系朱红色腰带，配以玉饰。左手轻抚胡须，右手自然下垂，站立姿势稳健有力。背景采用水彩质感，青瓷绿色渐变，柔和光影从左上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于夸张的表情和动作，避免过于鲜艳或不协调的色彩，避免现代服装元素，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773285561503_omefhsr",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773285561503_omefhsr",
+              "imageUrl": "local:img_1773285561503_omefhsr"
+            },
+            {
+              "id": "2",
+              "name": "齐威王",
+              "gender": "男",
+              "age": "成年",
+              "personality": "自信自负，喜欢以赛马彰显权威，最终被田忌的策略所折服",
+              "variations": [],
+              "visualPrompt": "一位威严的中年男性角色，7.5头身比例，面部轮廓圆润，眉毛高挑且微微上扬，体现其自信自负的性格。眼睛大而明亮，虹膜呈深棕色，带有明亮的高光，眼神中透露出权威与傲慢。嘴唇线条厚实，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠，增添威严感。身形挺拔，肩膀宽阔，穿着深赭石色龙纹锦袍，镶有金色边饰，腰间系朱红色玉带，手持玉笏。站立姿势挺拔，双手背后，头部微微昂起，展现王者风范。背景采用水彩质感，靛蓝色渐变，柔和光影从右上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于谦卑或温和的表情，避免过于朴素或暗淡的服装，避免不合适的头饰或配饰，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773285969272_80lv1ja",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773285969272_80lv1ja",
+              "imageUrl": "local:img_1773285969272_80lv1ja"
+            },
+            {
+              "id": "3",
+              "name": "孙膑",
+              "gender": "男",
+              "age": "成年",
+              "personality": "智慧超群，善于观察与策略，沉着冷静",
+              "variations": [],
+              "visualPrompt": "一位智慧的中年男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且平直，体现其深思熟虑的性格。眼睛大而深邃，虹膜呈浅棕色，带有微妙的高光，眼神中透露出智慧与冷静。嘴唇线条柔和，嘴角常带一丝若有所思的微笑。头发灰白，束成简单的发髻，几缕发丝自然垂落，增添学者气质。身形清瘦，肩膀适中，穿着靛蓝色长袍，镶有青铜色边饰，腰间系深棕色腰带，手持竹简。站立姿势端正，双手自然下垂，头部微微低垂，展现思考状态。背景采用水彩质感，青瓷绿色渐变，柔和光影从正面照射，在角色面部形成均匀的光照，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于夸张或轻浮的表情，避免过于华丽或鲜艳的服装，避免不合适的配饰或道具，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286064861_wco1mwo",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286064861_wco1mwo",
+              "imageUrl": "local:img_1773286064861_wco1mwo"
+            },
+            {
+              "id": "4",
+              "name": "侍从",
+              "gender": "未知",
+              "age": "未知",
+              "personality": "忠诚执行命令",
+              "variations": [],
+              "visualPrompt": "一位年轻的男性角色，7.5头身比例，面部轮廓圆润，眉毛细长且平直，体现其忠诚的性格。眼睛中等大小，虹膜呈深褐色，带有微妙的高光，眼神中透露出恭敬与专注。嘴唇线条薄而平，嘴角常带一丝恭敬的微笑。头发乌黑，束成简单的发髻，佩戴简单的发饰。身形适中，肩膀略窄，穿着青瓷绿色长袍，镶有深赭石色边饰，腰间系深棕色腰带，手持托盘。站立姿势端正，双手托举托盘，头部微微低垂，展现恭敬姿态。背景采用水彩质感，青铜色渐变，柔和光影从左上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于夸张或傲慢的表情，避免过于华丽或不合身份的服装，避免不合适的配饰或道具，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286089677_jfjtlj2",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286089677_jfjtlj2",
+              "imageUrl": "local:img_1773286089677_jfjtlj2"
+            },
+            {
+              "id": "5",
+              "name": "骑士",
+              "gender": "未知",
+              "age": "成年",
+              "personality": "服从指挥，在失败时垂头丧气",
+              "variations": [],
+              "visualPrompt": "一位成年的男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且略向下倾斜，体现其服从的性格。眼睛中等大小，虹膜呈深褐色，带有微妙的高光，眼神中透露出专注与一丝失落。嘴唇线条厚实，嘴角常带一丝严肃的表情。头发乌黑，束成简单的发髻，佩戴简单的头盔。身形健壮，肩膀宽阔，穿着靛蓝色铠甲，镶有青铜色边饰，腰间系朱红色腰带，手持长矛。站立姿势挺拔，双手握持长矛，头部微微昂起，展现骑士风范。背景采用水彩质感，深赭石色渐变，柔和光影从右上方照射，在角色面部形成温暖的高光，铠甲纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于夸张或轻浮的表情，避免过于朴素或不合身份的服装，避免不合适的配饰或道具，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286108328_zvvsi37",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286108328_zvvsi37",
+              "imageUrl": "local:img_1773286108328_zvvsi37"
+            },
+            {
+              "id": "6",
+              "name": "观众",
+              "gender": "混合",
+              "age": "混合",
+              "personality": "热衷于赛马比赛，情绪随比赛结果起伏",
+              "variations": [],
+              "visualPrompt": "一组不同年龄和性别的角色，7.5头身比例，面部轮廓各异，眉毛和表情丰富多样，体现其情绪起伏的性格。眼睛大而富有表现力，虹膜颜色各异，带有明亮的高光，眼神中透露出热情与期待。嘴唇线条各异，表情从兴奋到失望不等。发型多样，有束发的，有披散的，色彩以深褐色和黑色为主。身形各异，穿着青瓷绿色和靛蓝色的平民服装，镶有简单的边饰，姿态各异，有的站立，有的坐着，有的挥手，有的鼓掌。背景采用水彩质感，朱红色渐变，柔和光影从上方照射，在角色面部形成均匀的光照，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+              "negativePrompt": "避免过于单一或呆板的表情，避免过于华丽或不合身份的服装，避免不合适的配饰或道具，避免过于复杂的背景细节，避免过于写实或过于卡通化的风格，避免冷色调为主，避免模糊不清的线条和阴影。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286126814_dogi6jw",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286126814_dogi6jw",
+              "imageUrl": "local:img_1773286126814_dogi6jw"
+            }
+          ],
+          "scenes": [
+            {
+              "id": "scene1",
+              "location": "齐国赛马场",
+              "time": "白天",
+              "atmosphere": "尘土飞扬，人声鼎沸，阳光刺眼，紧张激烈",
+              "visualPrompt": "齐国赛马场，白天，尘土飞扬，人声鼎沸。背景是连绵的青山和古朴的看台，深赭石色的木质结构点缀着朱红色的装饰。中景是宽阔的赛道，青瓷绿色的草皮被马蹄踏起阵阵尘土，形成动态的漩涡。前景是几匹骏马疾驰而过，马身呈现青铜色的光泽，肌肉线条流畅，鬃毛飞扬。骑手身着靛蓝色战袍，腰带束紧，表情专注而紧张。阳光从45度角照射，在马匹和骑手身上形成温暖的渐变阴影，冷色调的填充光增强了立体感。看台上观众身着暖棕褐色服饰，有的挥舞金色旗帜，有的激动地指向赛道，表情生动。天空是柔和的水彩质感，青瓷绿与靛蓝色的渐变营造出层次感。整体构图采用动态对角线，突出赛马的激烈氛围。角色设计遵循7.5头身比例，大眼睛带有虹膜反射和眼神光，传达内心的紧张与期待。线条流畅一致，关键轮廓线略粗，细节线条细腻。色彩以深赭石色和青铜色为主，朱红色和金色点缀其中，温暖色调中带有戏剧性对比。",
+              "negativePrompt": "避免现代元素，如塑料、金属光泽或电子设备。避免过于卡通化的夸张比例，保持历史剧的庄重感。避免冷色调主导，确保温暖色调为主。避免模糊或低细节的画面，确保线条清晰，纹理细腻。避免静态构图，突出赛马的动态感和紧张氛围。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286186269_yyniqe4",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286186269_yyniqe4",
+              "imageUrl": "local:img_1773286186269_yyniqe4"
+            },
+            {
+              "id": "scene2",
+              "location": "田忌府邸书房",
+              "time": "白天",
+              "atmosphere": "烦躁不安，沉重，充满质疑，后转为思考与希望",
+              "visualPrompt": "田忌府邸书房内，白天时分，阳光透过雕花木窗斜射入室，形成温暖的光束。书房陈设古朴典雅，深赭石色的书架上摆满竹简与古籍，青铜烛台与青瓷花瓶点缀其间。田忌身着深棕色绸缎长袍，坐于案前，眉头微蹙，手指轻敲桌面，眼神中透露出烦躁与质疑。背景墙上悬挂着一幅战略地图，靛蓝色的山脉线条清晰可见。随着场景发展，田忌逐渐放松，目光转向窗外，窗外青瓷绿的竹林随风摇曳，光影斑驳。画面构图采用三分法，田忌位于左侧三分线处，形成视觉平衡。整体色调以深赭石色与青铜色为主，朱红色印章点缀于竹简上，增添历史感。三点式照明使角色面部立体，暖光主光源与冷光填充光形成对比，增强戏剧性。水彩质感的背景与平滑的角色渲染形成层次，体现东方美学与策略智慧的融合。",
+              "negativePrompt": "避免使用现代元素、夸张变形、过于鲜艳的色彩或卡通化的光影效果。不要出现透视错误、比例失调或细节模糊的情况。背景应保持风格化处理，避免过于写实或杂乱。角色表情应自然生动，避免僵硬或过度夸张。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286212124_azvfghs",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286212124_azvfghs",
+              "imageUrl": "local:img_1773286212124_azvfghs"
+            },
+            {
+              "id": "scene3",
+              "location": "齐国赛马场",
+              "time": "白天",
+              "atmosphere": "热烈紧张，充满期待与轻蔑，最终转为震惊与敬佩",
+              "visualPrompt": "齐国赛马场，白天，热烈紧张的氛围。背景是连绵的青山和飘扬的旗帜，中景是宽阔的赛道和看台，前景是几匹骏马和骑手。主光源从45度角照射，温暖的赭石色光线洒在赛道上，辅以冷色调的填充光增强立体感。骑手们身着深赭石色和青铜色的战袍，朱红色的腰带点缀其间，表情紧张而专注。观众席上，贵族们身着青瓷绿和靛蓝色的长袍，脸上带着轻蔑与期待。赛马扬起尘土，背景的水彩质感渐变营造出层次感。画面中央，一匹黑马突然加速，骑手身体前倾，眼神坚定，周围的尘土飞扬形成动态模糊效果。整体色彩温暖和谐，线条流畅，表情生动，体现历史剧的厚重与策略智慧。",
+              "negativePrompt": "避免使用现代元素，如电子设备或现代服装。避免过于鲜艳或刺眼的颜色，保持中等饱和度。避免过于写实的阴影，保持柔和渐变。避免角色表情呆板或夸张过度，保持自然生动。避免背景过于复杂或混乱，保持风格化处理。",
+              "status": "completed",
+              "referenceImage": "local:img_1773286232081_qde2hof",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773286232081_qde2hof",
+              "imageUrl": "local:img_1773286232081_qde2hof"
+            }
+          ],
+          "props": [],
+          "storyParagraphs": [
+            {
+              "id": 1,
+              "text": "田忌的骏马与齐威王的马匹并排站立，骑士们勒紧缰绳，气氛紧张。鼓声响起，第一场比赛开始。田忌的上等马与齐威王的上等马并驾齐驱，但最终齐威王的马以半个马身优势胜出。观众欢呼，齐威王得意扬扬地挥手。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 2,
+              "text": "齐威王\"（大笑）：",
+              "田将军，你的马还是差了点火候啊！": "",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 3,
+              "text": "（第二局，田忌的中等马与齐威王的中等马对决。同样，齐威王的马略胜一筹。田忌紧握拳头，额角渗汗。第三局，田忌的下等马惨败。齐威王起身，举杯示意。）",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 4,
+              "text": "齐威王：",
+              "将军，今日又为寡人添了不少库银啊！": "",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 5,
+              "text": "（田忌面色铁青，默默下台，骑士们牵着他的马匹，垂头丧气地离开赛马场。）",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 6,
+              "text": "（田忌府邸，书房内。田忌烦躁地踱步，将酒杯重重砸在桌上。）",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 7,
+              "text": "田忌\"（怒气冲冲）：",
+              "气死我了！每次都是这样，我的马明明不差，为何总是输？": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 8,
+              "text": "（孙膑坐在一旁，悠闲地品茶，目光深邃。）",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 9,
+              "text": "孙膑\"（微笑）：",
+              "将军，您的马并非输在速度，而是输在阵法。": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 10,
+              "text": "田忌\"（一愣）：",
+              "阵法？赛马还有阵法可言？": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 11,
+              "text": "孙膑\"（放下茶杯，起身踱步）：",
+              "您总是用上等马对上等马，中等对中等，下等对下等。大王的马力虽与您相近，但每一局他都稳操胜券。您是否想过，用您的下等马去消耗他的上等马，再用您的上等马去压制他的中等马？": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 12,
+              "text": "（田忌眼睛一亮，但随即犹豫。）",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 13,
+              "text": "田忌：",
+              "可第一局岂不是必输无疑？": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 14,
+              "text": "孙膑\"（自信一笑）：",
+              "将军，胜负不在一局，而在全局。只要您能赢下后两局，便是最终的赢家。况且……\"（压低声音）\"您可敢下一场重注？": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 15,
+              "text": "田忌\"（眼神坚定）：",
+              "好！我倒要看看，这场赛马，究竟谁才是真正的赢家！": "",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 16,
+              "text": "（赛马场，气氛比往日更加热烈。齐威王高坐看台，嘴角挂着轻蔑的笑意。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 17,
+              "text": "齐威王\"（对侍从）：",
+              "田将军又来送银子了，传令下去，今日务必让他输得心服口服！": "",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 18,
+              "text": "（田忌与孙膑并排而坐，孙膑低声耳语。田忌频频点头，神情镇定。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 19,
+              "text": "（第一局：田忌的下等马与齐威王的上等马对决。齐威王的马如离弦之箭，轻松获胜。齐威王大笑，贵族们起哄。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 20,
+              "text": "齐威王：",
+              "田将军，你这马是要献给寡人吗？": "",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 21,
+              "text": "田忌\"（面不改色）：",
+              "大王稍安勿躁，好戏还在后头。": "",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 22,
+              "text": "（第二局：田忌的上等马与齐威王的中等马对决。鼓声响起，田忌的骏马如闪电般超越，观众惊呼。齐威王脸色微变。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 23,
+              "text": "（第三局：田忌的中等马与齐威王的下等马对决。田忌的马稳稳获胜。三局结束，田忌以两胜一负逆袭成功。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 24,
+              "text": "（全场寂静，随即爆发出震天的掌声。齐威王愣在原地，难以置信。）",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 25,
+              "text": "齐威王\"（沉声）：",
+              "田将军……好手段！": "",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 26,
+              "text": "田忌\"（拱手，目光如炬）：",
+              "大王，赛马如战阵，不在匹夫之勇，而在运筹帷幄。": "",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 27,
+              "text": "（孙膑在角落微笑，眼中闪过智慧的光芒。田忌赢得的不仅是赌注，更是尊严与胜利。）",
+              "sceneRefId": "scene3"
+            }
+          ],
+          "targetDuration": "120s",
+          "visualStyle": "2d-animation",
+          "shotGenerationModel": "glm-4-plus"
+        },
+        "shots": [
+          {
+            "id": "shot-1",
+            "sceneId": "scene1",
+            "actionSummary": "田忌的骏马与齐威王的马匹并排站立，骑士们勒紧缰绳，气氛紧张。鼓声响起，第一场比赛开始。",
+            "dialogue": "",
+            "cameraMovement": "Horizontal Right Shot",
+            "shotSize": "Wide Shot",
+            "characters": [
+              "田忌",
+              "齐威王",
+              "骑士"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-1-start",
+                "type": "start",
+                "visualPrompt": "赛马场全景，深赭石色与青铜色为主色调，水彩质感背景，青瓷绿色渐变。田忌与齐威王并排骑马，紧张对峙，阳光从45度角照射，形成温暖光影。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nHorizontal Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject positioned on the left side of frame, with space on the right for movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287469529_otc64yb",
+                "status": "completed"
+              },
+              {
+                "id": "kf-1-end",
+                "type": "end",
+                "visualPrompt": "镜头右移，展示赛马场全景，观众欢呼，尘土飞扬，鼓声响起，马匹准备起跑，三点式照明增强紧张氛围。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nHorizontal Right Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Subject moved to right side of frame, showing the journey from left to right.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773288612207_9a7s29a",
+                "status": "completed"
+              }
+            ],
+            "videoModel": "cogvideox-flash",
+            "interval": {
+              "id": "int-shot-1-1773287733855",
+              "startKeyframeId": "kf-1-start",
+              "endKeyframeId": "kf-1-end",
+              "duration": 5,
+              "motionStrength": 5,
+              "videoPrompt": "田忌的骏马与齐威王的马匹并排站立，骑士们勒紧缰绳，气氛紧张。鼓声响起，第一场比赛开始。\n\n镜头运动：Horizontal Right Shot\n配音语言：使用中文配音",
+              "status": "completed",
+              "videoUrl": "video:vid_1773288693620_8cc5wrs"
+            }
+          },
+          {
+            "id": "shot-2",
+            "sceneId": "scene1",
+            "actionSummary": "田忌的上等马与齐威王的上等马并驾齐驱，但最终齐威王的马以半个马身优势胜出。观众欢呼，齐威王得意扬扬地挥手。",
+            "dialogue": "",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "田忌",
+              "齐威王"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-2-start",
+                "type": "start",
+                "visualPrompt": "中景镜头，跟踪两匹马并驾齐驱，田忌表情专注，齐威王自信微笑，朱红色与金色点缀细节，温暖色调为主。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject in frame with forward/lateral space for tracking movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287497200_tzz3d89",
+                "status": "completed"
+              },
+              {
+                "id": "kf-2-end",
+                "type": "end",
+                "visualPrompt": "齐威王的马略微领先，齐威王得意挥手，田忌眉头微皱，观众欢呼，三点式照明突出角色表情，挤压与拉伸动画效果。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Subject tracked through space, maintaining visual relationship.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773290460358_0mu5v7r",
+                "status": "completed"
+              }
+            ],
+            "videoModel": "cogvideox-flash",
+            "interval": {
+              "id": "int-shot-2-1773287742171",
+              "startKeyframeId": "kf-2-start",
+              "endKeyframeId": "kf-2-end",
+              "duration": 5,
+              "motionStrength": 5,
+              "videoPrompt": "田忌的上等马与齐威王的上等马并驾齐驱，但最终齐威王的马以半个马身优势胜出。观众欢呼，齐威王得意扬扬地挥手。\n\n镜头运动：Tracking Shot\n配音语言：使用中文配音",
+              "status": "completed",
+              "videoUrl": "video:vid_1773290746977_6hy38l3"
+            }
+          },
+          {
+            "id": "shot-3",
+            "sceneId": "scene1",
+            "actionSummary": "第二局，田忌的中等马与齐威王的中等马对决。同样，齐威王的马略胜一筹。田忌紧握拳头，额角渗汗。",
+            "dialogue": "",
+            "cameraMovement": "Zoom In Shot",
+            "shotSize": "Close-up",
+            "characters": [
+              "田忌"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-3-start",
+                "type": "start",
+                "visualPrompt": "田忌面部特写，中等马与齐威王的中等马在背景中模糊，田忌表情专注，额角渗汗，线条清晰流畅。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287516054_0trwnca",
+                "status": "completed"
+              },
+              {
+                "id": "kf-3-end",
+                "type": "end",
+                "visualPrompt": "田忌紧握拳头，眉头紧锁，眼神中透露出挫败感，朱红色腰带与深赭石色锦袍形成对比，三点式照明增强情感表达。",
+                "status": "pending"
+              }
+            ],
+            "videoModel": "cogvideox-flash",
+            "interval": {
+              "id": "int-shot-3-1773287749655",
+              "startKeyframeId": "kf-3-start",
+              "endKeyframeId": "kf-3-end",
+              "duration": 5,
+              "motionStrength": 5,
+              "videoPrompt": "第二局，田忌的中等马与齐威王的中等马对决。同样，齐威王的马略胜一筹。田忌紧握拳头，额角渗汗。\n\n镜头运动：Zoom In Shot\n配音语言：使用中文配音",
+              "status": "failed"
+            }
+          },
+          {
+            "id": "shot-4",
+            "sceneId": "scene1",
+            "actionSummary": "第三局，田忌的下等马惨败。齐威王起身，举杯示意。田忌面色铁青，默默下台，骑士们牵着他的马匹，垂头丧气地离开赛马场。",
+            "dialogue": "",
+            "cameraMovement": "Pan Right Shot",
+            "shotSize": "Medium Long Shot",
+            "characters": [
+              "田忌",
+              "齐威王",
+              "骑士"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-4-start",
+                "type": "start",
+                "visualPrompt": "齐威王起身举杯，得意微笑，田忌面色铁青，下等马惨败，背景中观众欢呼，水彩质感背景，温暖色调。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nPan Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame focused on left portion of scene, anticipating rightward pan.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287533741_3pccmhl",
+                "status": "completed"
+              },
+              {
+                "id": "kf-4-end",
+                "type": "end",
+                "visualPrompt": "镜头右移，田忌垂头丧气下台，骑士们牵马跟随，背影渐远，三点式照明营造戏剧性对比，东方美学元素。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-5",
+            "sceneId": "scene2",
+            "actionSummary": "田忌烦躁地踱步，将酒杯重重砸在桌上",
+            "dialogue": "田忌：（怒气冲冲）",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "田忌"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-5-start",
+                "type": "start",
+                "visualPrompt": "田忌在书房中烦躁踱步，深赭石色锦袍随动作摆动，背景为水彩质感的青瓷绿色渐变，三点式照明从左上方照射，面部表情愤怒，线条流畅，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nStatic Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Fixed camera position, stable framing throughout.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287551380_lydbfmh",
+                "status": "completed"
+              },
+              {
+                "id": "kf-5-end",
+                "type": "end",
+                "visualPrompt": "田忌将酒杯重重砸在桌上，酒液飞溅，采用挤压与拉伸原则表现动作力度，背景温暖色调，朱红色酒杯与青铜色桌面形成对比，东方美学元素",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-6",
+            "sceneId": "scene2",
+            "actionSummary": "孙膑悠闲地品茶，目光深邃",
+            "dialogue": "孙膑：（微笑）",
+            "cameraMovement": "Pan Right Shot",
+            "shotSize": "Medium Close-up",
+            "characters": [
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-6-start",
+                "type": "start",
+                "visualPrompt": "孙膑坐在一旁，靛蓝色长袍与青铜色边饰，手持茶杯，水彩背景青瓷绿色渐变，三点式照明从正面照射，面部表情平静，线条流畅\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nPan Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame focused on left portion of scene, anticipating rightward pan.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287565862_3863p5s",
+                "status": "completed"
+              },
+              {
+                "id": "kf-6-end",
+                "type": "end",
+                "visualPrompt": "孙膑微笑品茶，眼神深邃，灰白发丝随动作微动，柔和渐变阴影，温暖色调，历史剧风格，东方美学元素",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-7",
+            "sceneId": "scene2",
+            "actionSummary": "田忌一愣，随后孙膑放下茶杯起身踱步",
+            "dialogue": "田忌：（一愣）\n孙膑：（放下茶杯，起身踱步）",
+            "cameraMovement": "Over the Shoulder Shot",
+            "shotSize": "Two Shot",
+            "characters": [
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-7-start",
+                "type": "start",
+                "visualPrompt": "田忌惊讶表情，从孙膑后方视角拍摄，深赭石色与靛蓝色对比，水彩背景青铜色渐变，三点式照明，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nOver the Shoulder Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame includes foreground character's shoulder, looking at subject.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287586192_v5g8atj",
+                "status": "completed"
+              },
+              {
+                "id": "kf-7-end",
+                "type": "end",
+                "visualPrompt": "孙膑放下茶杯起身，动作流畅，采用挤压与拉伸原则，背景温暖色调，东方美学元素，线条清晰",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-8",
+            "sceneId": "scene2",
+            "actionSummary": "田忌眼睛一亮，但随即犹豫，孙膑自信一笑",
+            "dialogue": "田忌：\n孙膑：（自信一笑）",
+            "cameraMovement": "Zoom In Shot",
+            "shotSize": "Close-up",
+            "characters": [
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-8-start",
+                "type": "start",
+                "visualPrompt": "田忌眼睛一亮，面部特写，深褐色虹膜带有高光，背景模糊，水彩质感，温暖色调，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287607129_qfl9hjc",
+                "status": "completed"
+              },
+              {
+                "id": "kf-8-end",
+                "type": "end",
+                "visualPrompt": "孙膑自信微笑，面部特写，灰白发丝与靛蓝色长袍，柔和渐变阴影，朱红色点缀，东方美学元素，线条流畅",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-9",
+            "sceneId": "scene3",
+            "actionSummary": "赛马场全景，齐威王高坐看台，嘴角挂着轻蔑的笑意。田忌与孙膑并排而坐，孙膑低声耳语，田忌频频点头。",
+            "dialogue": "",
+            "cameraMovement": "Wide Shot",
+            "shotSize": "全景",
+            "characters": [
+              "齐威王",
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-9-start",
+                "type": "start",
+                "visualPrompt": "全景展示齐国赛马场，水彩背景，深赭石色与青铜色调为主。齐威王高坐看台，面带轻蔑笑容，田忌与孙膑并排而坐，孙膑低声耳语，田忌点头回应。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Initial frame composition suited for the camera movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287626345_sf8dz5q",
+                "status": "completed"
+              },
+              {
+                "id": "kf-9-end",
+                "type": "end",
+                "visualPrompt": "镜头缓慢拉远，展现赛马场全貌，观众席上人群熙攘，气氛热烈。齐威王轻蔑表情更明显，田忌与孙膑交流后，田忌眼神坚定。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-10",
+            "sceneId": "scene3",
+            "actionSummary": "第一局：田忌的下等马与齐威王的上等马对决。齐威王的马如离弦之箭，轻松获胜。齐威王大笑，贵族们起哄。",
+            "dialogue": "",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "中景",
+            "characters": [
+              "齐威王",
+              "田忌",
+              "骑士"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-10-start",
+                "type": "start",
+                "visualPrompt": "中景展示赛马场，田忌的下等马与齐威王的上等马并排站立，马匹肌肉线条流畅，水彩背景，青瓷绿色与靛蓝色渐变。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject in frame with forward/lateral space for tracking movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287644824_7tzekru",
+                "status": "completed"
+              },
+              {
+                "id": "kf-10-end",
+                "type": "end",
+                "visualPrompt": "齐威王的马如离弦之箭般冲出，轻松获胜。齐威王大笑，贵族们起哄，田忌面不改色。朱红色与金色点缀胜利场景。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-11",
+            "sceneId": "scene3",
+            "actionSummary": "第二局：田忌的上等马与齐威王的中等马对决。鼓声响起，田忌的骏马如闪电般超越，观众惊呼。齐威王脸色微变。",
+            "dialogue": "",
+            "cameraMovement": "Zoom In Shot",
+            "shotSize": "特写",
+            "characters": [
+              "齐威王",
+              "田忌"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-11-start",
+                "type": "start",
+                "visualPrompt": "特写齐威王与田忌的面部表情，齐威王自信满满，田忌镇定自若。背景虚化，水彩质感，柔和光影从45度角照射。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773287662953_558p6cx",
+                "status": "completed"
+              },
+              {
+                "id": "kf-11-end",
+                "type": "end",
+                "visualPrompt": "田忌的骏马超越齐威王的马，观众惊呼。齐威王脸色微变，难以置信。田忌嘴角微微上扬，眼中闪过智慧光芒。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-12",
+            "sceneId": "scene3",
+            "actionSummary": "第三局结束，田忌以两胜一负逆袭成功。全场寂静，随即爆发出震天的掌声。齐威王愣在原地，难以置信。田忌拱手，目光如炬。",
+            "dialogue": "",
+            "cameraMovement": "Circular Shot",
+            "shotSize": "中景",
+            "characters": [
+              "齐威王",
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-12-start",
+                "type": "start",
+                "visualPrompt": "中景展示赛马场，田忌的马稳稳获胜。全场寂静，齐威王愣在原地，难以置信。田忌拱手，目光如炬。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nCircular Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject centered, camera at initial angle of circular path.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773286560485_5pgypcg",
+                "status": "completed"
+              },
+              {
+                "id": "kf-12-end",
+                "type": "end",
+                "visualPrompt": "镜头环绕田忌一周，全场爆发出震天的掌声。孙膑在角落微笑，眼中闪过智慧的光芒。田忌赢得的不仅是赌注，更是尊严与胜利。",
+                "status": "pending"
+              }
+            ]
+          }
+        ],
+        "isParsingScript": false,
+        "renderLogs": [
+          {
+            "type": "script-parsing",
+            "resourceId": "rewrite-script",
+            "resourceName": "AI改写剧本（流式）",
+            "status": "success",
+            "model": "glm-4-plus",
+            "duration": 48774,
+            "prompt": "标题：田忌赛马\n        田忌常同齐威王进行跑马比赛。他们在比赛前各下赌注，每次比赛共设三局，胜两次以上的为赢家。然而，每次比赛，田忌总是输给齐威王。这天，田忌赛马时又输给了齐威王。回家后，田忌十分郁闷，他把赛马失败引起的不快告诉了孙膑。\n        孙膑说：“将军与大王的赛马我看了。其实，将军的三等马匹与大王的都差那么一点儿。您第一局派出的是上等马与大王的上等马赛，第二局派中等马与大王...",
+            "id": "log-1773283086810-wkd9xovk3",
+            "timestamp": 1773283086810
+          },
+          {
+            "type": "script-parsing",
+            "resourceId": "rewrite-script",
+            "resourceName": "AI改写剧本（流式）",
+            "status": "success",
+            "model": "glm-4-plus",
+            "duration": 21922,
+            "prompt": "标题：田忌赛马\n        田忌常同齐威王进行跑马比赛。他们在比赛前各下赌注，每次比赛共设三局，胜两次以上的为赢家。然而，每次比赛，田忌总是输给齐威王。这天，田忌赛马时又输给了齐威王。回家后，田忌十分郁闷，他把赛马失败引起的不快告诉了孙膑。\n        孙膑说：“将军与大王的赛马我看了。其实，将军的三等马匹与大王的都差那么一点儿。您第一局派出的是上等马与大王的上等马赛，第二局派中等马与大王...",
+            "id": "log-1773283902395-2uojv532u",
+            "timestamp": 1773283902395
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773285523392",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-4",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位中年男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且略向下倾斜，体现其耿直性格。眼睛大而富有表现力，虹膜呈深褐色，带有微妙的高光，眼神中透露出坚定与智慧。嘴唇线条分明，嘴角微微上扬，展现自信微笑。头发乌黑，束成发髻，几缕发丝自然垂落，增添动感。身形挺拔，肩膀宽阔，穿着深赭石色锦袍，绣有青铜色云纹，腰间系朱红色腰带，配以玉饰。左手轻抚胡须，右手自然下垂，站立姿势稳健有力。背景采用水彩质感，青瓷绿色渐变，柔和光影从左上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "error": "余额不足或无可用资源包,请充值。",
+            "duration": 6622,
+            "id": "log-1773285523392-kxnqc4wpz",
+            "timestamp": 1773285523392
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773285561504",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位中年男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且略向下倾斜，体现其耿直性格。眼睛大而富有表现力，虹膜呈深褐色，带有微妙的高光，眼神中透露出坚定与智慧。嘴唇线条分明，嘴角微微上扬，展现自信微笑。头发乌黑，束成发髻，几缕发丝自然垂落，增添动感。身形挺拔，肩膀宽阔，穿着深赭石色锦袍，绣有青铜色云纹，腰间系朱红色腰带，配以玉饰。左手轻抚胡须，右手自然下垂，站立姿势稳健有力。背景采用水彩质感，青瓷绿色渐变，柔和光影从左上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 15866,
+            "id": "log-1773285561504-t9v6ecov7",
+            "timestamp": 1773285561504
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773285969274",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位威严的中年男性角色，7.5头身比例，面部轮廓圆润，眉毛高挑且微微上扬，体现其自信自负的性格。眼睛大而明亮，虹膜呈深棕色，带有明亮的高光，眼神中透露出权威与傲慢。嘴唇线条厚实，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠，增添威严感。身形挺拔，肩膀宽阔，穿着深赭石色龙纹锦袍，镶有金色边饰，腰间系朱红色玉带，手持玉笏。站立姿势挺拔，双手背后，头部微微昂起，展现王者风范。背景采用水彩质感，靛蓝色渐变，柔和光影从右上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 14531,
+            "id": "log-1773285969274-wapdvu56v",
+            "timestamp": 1773285969274
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286064862",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位智慧的中年男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且平直，体现其深思熟虑的性格。眼睛大而深邃，虹膜呈浅棕色，带有微妙的高光，眼神中透露出智慧与冷静。嘴唇线条柔和，嘴角常带一丝若有所思的微笑。头发灰白，束成简单的发髻，几缕发丝自然垂落，增添学者气质。身形清瘦，肩膀适中，穿着靛蓝色长袍，镶有青铜色边饰，腰间系深棕色腰带，手持竹简。站立姿势端正，双手自然下垂，头部微微低垂，展现思考状态。背景采用水彩质感，青瓷绿色渐变，柔和光影从正面照射，在角色面部形成均匀的光照，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 11569,
+            "id": "log-1773286064862-7lv2an1pa",
+            "timestamp": 1773286064862
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286089678",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位年轻的男性角色，7.5头身比例，面部轮廓圆润，眉毛细长且平直，体现其忠诚的性格。眼睛中等大小，虹膜呈深褐色，带有微妙的高光，眼神中透露出恭敬与专注。嘴唇线条薄而平，嘴角常带一丝恭敬的微笑。头发乌黑，束成简单的发髻，佩戴简单的发饰。身形适中，肩膀略窄，穿着青瓷绿色长袍，镶有深赭石色边饰，腰间系深棕色腰带，手持托盘。站立姿势端正，双手托举托盘，头部微微低垂，展现恭敬姿态。背景采用水彩质感，青铜色渐变，柔和光影从左上方照射，在角色面部形成温暖的高光，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 21812,
+            "id": "log-1773286089678-u0m0nteyp",
+            "timestamp": 1773286089678
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286108332",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位成年的男性角色，7.5头身比例，面部轮廓方正，眉毛浓密且略向下倾斜，体现其服从的性格。眼睛中等大小，虹膜呈深褐色，带有微妙的高光，眼神中透露出专注与一丝失落。嘴唇线条厚实，嘴角常带一丝严肃的表情。头发乌黑，束成简单的发髻，佩戴简单的头盔。身形健壮，肩膀宽阔，穿着靛蓝色铠甲，镶有青铜色边饰，腰间系朱红色腰带，手持长矛。站立姿势挺拔，双手握持长矛，头部微微昂起，展现骑士风范。背景采用水彩质感，深赭石色渐变，柔和光影从右上方照射，在角色面部形成温暖的高光，铠甲纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 15652,
+            "id": "log-1773286108332-wj1odjzzw",
+            "timestamp": 1773286108332
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286126817",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一组不同年龄和性别的角色，7.5头身比例，面部轮廓各异，眉毛和表情丰富多样，体现其情绪起伏的性格。眼睛大而富有表现力，虹膜颜色各异，带有明亮的高光，眼神中透露出热情与期待。嘴唇线条各异，表情从兴奋到失望不等。发型多样，有束发的，有披散的，色彩以深褐色和黑色为主。身形各异，穿着青瓷绿色和靛蓝色的平民服装，镶有简单的边饰，姿态各异，有的站立，有的坐着，有的挥手，有的鼓掌。背景采用水彩质感，朱红色渐变，柔和光影从上方照射，在角色面部形成均匀的光照，服装纹理细腻，整体色彩和谐统一，既有历史厚重感，又不失动画的生动活泼。",
+            "duration": 15484,
+            "id": "log-1773286126817-l1e8j1jgm",
+            "timestamp": 1773286126817
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286186272",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 齐国赛马场，白天，尘土飞扬，人声鼎沸。背景是连绵的青山和古朴的看台，深赭石色的木质结构点缀着朱红色的装饰。中景是宽阔的赛道，青瓷绿色的草皮被马蹄踏起阵阵尘土，形成动态的漩涡。前景是几匹骏马疾驰而过，马身呈现青铜色的光泽，肌肉线条流畅，鬃毛飞扬。骑手身着靛蓝色战袍，腰带束紧，表情专注而紧张。阳光从45度角照射，在马匹和骑手身上形成温暖的渐变阴影，冷色调的填充光增强了立体感。看台上观众身着暖棕褐色服饰，有的挥舞金色旗帜，有的激动地指向赛道，表情生动。天空是柔和的水彩质感，青瓷绿与靛蓝色的渐变营造出层次感。整体构图采用动态对角线，突出赛马的激烈氛围。角色设计遵循7.5头身比例，大眼睛带有虹膜反射和眼神光，传达内心的紧张与期待。线条流畅一致，关键轮廓线略粗，细节线条细腻。色彩以深赭石色和青铜色为主，朱红色和金色点缀其中，温暖色调中带有戏剧性对比。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 17611,
+            "id": "log-1773286186272-tuzd6kpwj",
+            "timestamp": 1773286186272
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286212126",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 田忌府邸书房内，白天时分，阳光透过雕花木窗斜射入室，形成温暖的光束。书房陈设古朴典雅，深赭石色的书架上摆满竹简与古籍，青铜烛台与青瓷花瓶点缀其间。田忌身着深棕色绸缎长袍，坐于案前，眉头微蹙，手指轻敲桌面，眼神中透露出烦躁与质疑。背景墙上悬挂着一幅战略地图，靛蓝色的山脉线条清晰可见。随着场景发展，田忌逐渐放松，目光转向窗外，窗外青瓷绿的竹林随风摇曳，光影斑驳。画面构图采用三分法，田忌位于左侧三分线处，形成视觉平衡。整体色调以深赭石色与青铜色为主，朱红色印章点缀于竹简上，增添历史感。三点式照明使角色面部立体，暖光主光源与冷光填充光形成对比，增强戏剧性。水彩质感的背景与平滑的角色渲染形成层次，体现东方美学与策略智慧的融合。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 22852,
+            "id": "log-1773286212126-lvxf04blo",
+            "timestamp": 1773286212126
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773286232083",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 齐国赛马场，白天，热烈紧张的氛围。背景是连绵的青山和飘扬的旗帜，中景是宽阔的赛道和看台，前景是几匹骏马和骑手。主光源从45度角照射，温暖的赭石色光线洒在赛道上，辅以冷色调的填充光增强立体感。骑手们身着深赭石色和青铜色的战袍，朱红色的腰带点缀其间，表情紧张而专注。观众席上，贵族们身着青瓷绿和靛蓝色的长袍，脸上带着轻蔑与期待。赛马扬起尘土，背景的水彩质感渐变营造出层次感。画面中央，一匹黑马突然加速，骑手身体前倾，眼神坚定，周围的尘土飞扬形成动态模糊效果。整体色彩温暖和谐，线条流畅，表情生动，体现历史剧的厚重与策略智慧。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 16955,
+            "id": "log-1773286232083-z6h7bjl5m",
+            "timestamp": 1773286232083
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287469530",
+            "resourceName": "赛马场全景，深赭石色与青铜色为主色调，水彩质感背景，青瓷绿色渐变。田忌与齐威王并排骑马，紧张对峙，阳...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "赛马场全景，深赭石色与青铜色为主色调，水彩质感背景，青瓷绿色渐变。田忌与齐威王并排骑马，紧张对峙，阳光从45度角照射，形成温暖光影。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nHorizontal Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject positioned on the left side of frame, with space on the right for movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 17224,
+            "id": "log-1773287469531-316nbmi2n",
+            "timestamp": 1773287469531
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287497203",
+            "resourceName": "中景镜头，跟踪两匹马并驾齐驱，田忌表情专注，齐威王自信微笑，朱红色与金色点缀细节，温暖色调为主。\n\n...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "中景镜头，跟踪两匹马并驾齐驱，田忌表情专注，齐威王自信微笑，朱红色与金色点缀细节，温暖色调为主。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject in frame with forward/lateral space for tracking movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 24671,
+            "id": "log-1773287497203-hawivldjx",
+            "timestamp": 1773287497203
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287516056",
+            "resourceName": "田忌面部特写，中等马与齐威王的中等马在背景中模糊，田忌表情专注，额角渗汗，线条清晰流畅。\n\n━━━━...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "田忌面部特写，中等马与齐威王的中等马在背景中模糊，田忌表情专注，额角渗汗，线条清晰流畅。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 15851,
+            "id": "log-1773287516056-ircu6cpbf",
+            "timestamp": 1773287516056
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287533743",
+            "resourceName": "齐威王起身举杯，得意微笑，田忌面色铁青，下等马惨败，背景中观众欢呼，水彩质感背景，温暖色调。\n\n━━...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "齐威王起身举杯，得意微笑，田忌面色铁青，下等马惨败，背景中观众欢呼，水彩质感背景，温暖色调。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nPan Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame focused on left portion of scene, anticipating rightward pan.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 14685,
+            "id": "log-1773287533743-tpu2r9xla",
+            "timestamp": 1773287533743
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287551381",
+            "resourceName": "田忌在书房中烦躁踱步，深赭石色锦袍随动作摆动，背景为水彩质感的青瓷绿色渐变，三点式照明从左上方照射，...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "田忌在书房中烦躁踱步，深赭石色锦袍随动作摆动，背景为水彩质感的青瓷绿色渐变，三点式照明从左上方照射，面部表情愤怒，线条流畅，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nStatic Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Fixed camera position, stable framing throughout.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 14636,
+            "id": "log-1773287551381-7qsk98a66",
+            "timestamp": 1773287551381
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287565864",
+            "resourceName": "孙膑坐在一旁，靛蓝色长袍与青铜色边饰，手持茶杯，水彩背景青瓷绿色渐变，三点式照明从正面照射，面部表情...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "孙膑坐在一旁，靛蓝色长袍与青铜色边饰，手持茶杯，水彩背景青瓷绿色渐变，三点式照明从正面照射，面部表情平静，线条流畅\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nPan Right Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame focused on left portion of scene, anticipating rightward pan.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 11481,
+            "id": "log-1773287565864-qe5pxtvag",
+            "timestamp": 1773287565864
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287586194",
+            "resourceName": "田忌惊讶表情，从孙膑后方视角拍摄，深赭石色与靛蓝色对比，水彩背景青铜色渐变，三点式照明，历史剧风格\n...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "田忌惊讶表情，从孙膑后方视角拍摄，深赭石色与靛蓝色对比，水彩背景青铜色渐变，三点式照明，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nOver the Shoulder Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Frame includes foreground character's shoulder, looking at subject.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 17329,
+            "id": "log-1773287586194-zykk30wxs",
+            "timestamp": 1773287586194
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287607131",
+            "resourceName": "田忌眼睛一亮，面部特写，深褐色虹膜带有高光，背景模糊，水彩质感，温暖色调，历史剧风格\n\n━━━━━━...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "田忌眼睛一亮，面部特写，深褐色虹膜带有高光，背景模糊，水彩质感，温暖色调，历史剧风格\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 17935,
+            "id": "log-1773287607131-tw5uh4d83",
+            "timestamp": 1773287607131
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287626347",
+            "resourceName": "全景展示齐国赛马场，水彩背景，深赭石色与青铜色调为主。齐威王高坐看台，面带轻蔑笑容，田忌与孙膑并排而...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "全景展示齐国赛马场，水彩背景，深赭石色与青铜色调为主。齐威王高坐看台，面带轻蔑笑容，田忌与孙膑并排而坐，孙膑低声耳语，田忌点头回应。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Initial frame composition suited for the camera movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 16215,
+            "id": "log-1773287626347-z52d6asl0",
+            "timestamp": 1773287626347
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287644827",
+            "resourceName": "中景展示赛马场，田忌的下等马与齐威王的上等马并排站立，马匹肌肉线条流畅，水彩背景，青瓷绿色与靛蓝色渐...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "中景展示赛马场，田忌的下等马与齐威王的上等马并排站立，马匹肌肉线条流畅，水彩背景，青瓷绿色与靛蓝色渐变。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Subject in frame with forward/lateral space for tracking movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 15478,
+            "id": "log-1773287644827-ehyqjuwbn",
+            "timestamp": 1773287644827
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773287662955",
+            "resourceName": "特写齐威王与田忌的面部表情，齐威王自信满满，田忌镇定自若。背景虚化，水彩质感，柔和光影从45度角照射...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "特写齐威王与田忌的面部表情，齐威王自信满满，田忌镇定自若。背景虚化，水彩质感，柔和光影从45度角照射。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nZoom In Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Wide establishing shot showing full scene context, subject smaller in frame.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 15125,
+            "id": "log-1773287662955-uzdj0ab93",
+            "timestamp": 1773287662955
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773288612210",
+            "resourceName": "镜头右移，展示赛马场全景，观众欢呼，尘土飞扬，鼓声响起，马匹准备起跑，三点式照明增强紧张氛围。\n\n━...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "镜头右移，展示赛马场全景，观众欢呼，尘土飞扬，鼓声响起，马匹准备起跑，三点式照明增强紧张氛围。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nHorizontal Right Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Subject moved to right side of frame, showing the journey from left to right.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 14320,
+            "id": "log-1773288612210-ss376cn6w",
+            "timestamp": 1773288612210
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773290460360",
+            "resourceName": "齐威王的马略微领先，齐威王得意挥手，田忌眉头微皱，观众欢呼，三点式照明突出角色表情，挤压与拉伸动画效...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "齐威王的马略微领先，齐威王得意挥手，田忌眉头微皱，观众欢呼，三点式照明突出角色表情，挤压与拉伸动画效果。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nTracking Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Subject tracked through space, maintaining visual relationship.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 9541,
+            "id": "log-1773290460360-0i312w3lg",
+            "timestamp": 1773290460360
+          }
+        ]
+      },
+      {
+        "id": "da15ee86-ae64-4360-af03-2374d8e084a7",
+        "title": "雨夜追缉",
+        "createdAt": 1774926072673,
+        "lastModified": 1774928178179,
+        "version": 2,
+        "stage": "assets",
+        "targetDuration": "60s",
+        "language": "中文",
+        "visualStyle": "live-action",
+        "shotGenerationModel": "gpt-5.1",
+        "rawScript": "**改写后的剧本：**\n\n**标题：雨夜追缉**\n\n**场景 1**  \n外景。夜晚街道 - 暴雨倾盆  \n\n霓虹灯在湿漉漉的柏油路上投下扭曲的光影，雨水冲刷着城市的喧嚣，只剩下空旷的街道和刺耳的雨声。  \n\n侦探（30岁，风衣被雨水浸透，头发紧贴额头）倚在街角的电话亭旁，从口袋里摸出一盒皱巴巴的香烟。火柴划亮的瞬间，微弱的火光映照出他疲惫却锐利的眼睛。  \n\n侦探  \n（自言自语，声音低沉）  \n这鬼雨……下得人心都发霉了。  \n\n他深吸一口烟，烟雾在雨中迅速消散，像极了那些抓不住的线索。他抬头望向远处，雨幕中隐约可见一辆疾驰而过的警车，红蓝警灯在雨水中晕染开一片迷离的光。  \n\n**场景 2**  \n内景。侦探事务所 - 凌晨  \n\n雨水顺着窗玻璃蜿蜒而下，模糊了窗外的城市轮廓。侦探坐在办公桌前，桌上散落着案件资料、空咖啡杯和半瓶威士忌。他揉了揉太阳穴，指节因长时间翻阅文件而泛白。  \n\n侦探  \n（对着录音笔，语气疲惫）  \n死者张明，42岁，广告公司创意总监……死因是头部重击，现场无搏斗痕迹，像是熟人作案。  \n\n他忽然停下，拿起桌上的一张照片——死者与一名陌生男子的合影，背景是某慈善晚宴。侦探的眉头紧锁。  \n\n侦探  \n（低声）  \n李默……你的赌债，到底是谁帮你还的？  \n\n电话铃声突然响起，侦探皱了皱眉，接起电话。  \n\n电话那头（急促）  \n陈队，发现了新线索！死者的银行账户在死前有三笔不明转账，每笔五万，收款人……是李默。  \n\n侦探  \n（沉默片刻，声音冷冽）  \n盯紧他。别让他像之前的证人一样，消失得无声无息。  \n\n挂断电话，侦探点燃第二支烟。烟灰缸里已经积了七八个烟头，像一座座微缩的墓碑。  \n\n**场景 3**  \n外景。废弃码头 - 黄昏  \n\n雨水终于停了，但空气中弥漫着潮湿的腥味。侦探穿着风衣，独自走在码头的阴影里。远处，一个瘦高的男人（李默，40岁，西装革履却眼神慌乱）正焦急地踱步。  \n\n李默  \n（看到侦探，声音发颤）  \n你……你怎么找到我的？  \n\n侦探  \n（缓缓走近，雨水从风衣下滴落）  \n你的债主，不喜欢赖账的人。  \n\n李默  \n（突然激动）  \n我不是凶手！我只是帮他还了钱，他……他欠我的！  \n\n侦探  \n（逼近一步，声音压低）  \n那晚的慈善晚宴，你们在讨论什么？  \n\n李默  \n（眼神闪烁）  \n没什么……就是……一些工作上的事。  \n\n侦探  \n（冷笑）  \n工作？张明死前三天，他的公司刚失去一个价值千万的合同。而你，刚好是那家竞标公司的法律顾问。  \n\n李默的脸色瞬间煞白，后退一步，脚下一滑，差点跌入浑浊的海水中。  \n\n李默  \n（声音嘶哑）  \n你什么意思？你是说……他是我杀的？  \n\n侦探  \n（从口袋里拿出一张照片，扔在李默面前）  \n监控拍到了你案发当晚离开张明公寓的画面。解释一下。  \n\n李默跪倒在泥泞中，双手抱头。  \n\n李默  \n（崩溃）  \n我只是去拿他欠我的钱！他……他突然从背后袭击我，我们扭打起来……我不是故意的！  \n\n侦探蹲下，目光如刀。  \n\n侦探  \n（一字一句）  \n所以，那三笔转账，是你试图掩盖真相的“封口费”？  \n\n李默猛地抬头，雨水和泪水混在一起。  \n\n李默  \n（绝望）  \n你不会懂的……他毁了我的一切……我只是……想拿回属于我的东西！  \n\n侦探站起身，风衣在夜风中猎猎作响。他看着李默蜷缩在码头边的身影，第一次感到案件背后的真相比想象中更加沉重。  \n\n侦探  \n（轻声）  \n有些东西，一旦沾上血，就再也洗不干净了。  \n\n他转身离开，背影消失在黑暗中。远处，警笛声由远及近，像一场迟来的审判。  \n\n**场景 4**  \n内景。警局审讯室 - 深夜  \n\n审讯室的灯光惨白，照在李默苍白的脸上。侦探坐在对面，手中转动着一支未点燃的香烟。  \n\n侦探  \n（语气平淡）  \n你的DNA在死者公寓的沙发上检测到了。还有目击者，说你那天晚上情绪失控。  \n\n李默  \n（低着头）  \n我承认我们打了一架……但他没死！我真的没想杀他！  \n\n侦探  \n（忽然将一份文件推过去）  \n这是张明死前一个月的心理评估报告。他长期服用抗抑郁药物，有自杀倾向。  \n\n李默愣住，抬起头。  \n\n侦探  \n（继续）  \n也许，那天晚上，你们扭打之后，他选择了结束自己的生命。而你，只是……恰好在场。  \n\n李默的眼泪终于决堤。  \n\n李默  \n（哽咽）  \n为什么……为什么他要这么做？  \n\n侦探  \n（沉默片刻）  \n也许，他欠你的，不只是钱。  \n\n审讯室的门打开，陈队走进来。  \n\n陈队  \n（对侦探）  \n法医确认了，死者确实有自杀倾向，但扭打可能加速了他的死亡。检方可能会以过失致死起诉。  \n\n侦探站起身，走到窗边。窗外，雨又开始下了，敲打着玻璃，像一场永不停歇的追问。  \n\n侦探  \n（轻声）  \n有些真相，比谎言更伤人。  \n\n他点燃最后一支烟，烟雾在审讯室的灯光中缓缓升腾，最终消散。  \n\n**（剧终）**",
+        "scriptData": {
+          "title": "雨夜追缉",
+          "genre": "悬疑",
+          "logline": "",
+          "language": "中文",
+          "artDirection": {
+            "colorPalette": {
+              "primary": "深蓝灰色调，带有微妙的紫色和深蓝色调，表现雨夜的压抑氛围",
+              "secondary": "暖橙色和琥珀色，用于霓虹灯和室内光源，与冷色调形成对比",
+              "accent": "鲜红色，用于关键细节和警示元素，增强戏剧性和紧张感",
+              "skinTones": "暖象牙色到浅棕色，带有柔和的桃色和橄榄色调，适合亚洲角色",
+              "saturation": "中等饱和度，略微降低以增强电影感和忧郁氛围",
+              "temperature": "整体偏冷色调，辅以温暖的光源对比，创造情感冲突"
+            },
+            "characterDesignRules": {
+              "proportions": "7.5头身比例，写实但略带风格化，角色身材修长但肌肉线条清晰，面部表情丰富",
+              "eyeStyle": "大而富有表现力的眼睛，带有细腻的虹膜反射和高光，传达角色内心情感",
+              "lineWeight": "干净清晰的线条，2-3px粗细，关键轮廓线加粗，细节线条较细",
+              "detailLevel": "高细节处理面部和手部，服装纹理中等细节，背景风格化处理"
+            },
+            "lightingStyle": "三点式电影照明，强烈的轮廓光，45度角的暖色主光源，冷色填充光，雨夜场景中光线通过雨水散射，创造朦胧效果",
+            "textureStyle": "平滑的卡通渲染风格，带有微妙的渐变阴影，服装和道具采用半写实纹理，背景采用水彩质感",
+            "moodKeywords": [
+              "悬疑",
+              "压抑",
+              "紧张",
+              "忧郁",
+              "戏剧性"
+            ],
+            "consistencyAnchors": "高质量2D动画风格，迪士尼/皮克斯级别的手绘质感，线条干净流畅且粗细一致。角色设计遵循挤压和拉伸原则，表情丰富生动。背景采用水彩质感，柔和渐变阴影。整体色调以冷色为主，辅以温暖的霓虹灯光源，营造雨夜的压抑氛围。画面构图注重光影对比，强调情绪表达。所有角色保持统一的艺术风格，同时通过面部特征和服装设计区分个性。雨天场景中，光线通过雨水散射，创造朦胧梦幻的效果。"
+          },
+          "characters": [
+            {
+              "id": "detective",
+              "name": "侦探",
+              "gender": "男",
+              "age": "30",
+              "personality": "疲惫却锐利，执着，冷静，有正义感但内心复杂",
+              "variations": [],
+              "visualPrompt": "一位30岁的男性侦探，疲惫却锐利的目光，深邃的眼眸中透露出执着与冷静。他有着7.5头身的修长比例，肌肉线条清晰可见。面部轮廓分明，高挺的鼻梁，紧抿的嘴唇，浓密的眉毛微微皱起，显示出内心的复杂与正义感。头发为深灰色，略带凌乱，有几缕垂落在额前，增添了几分沧桑感。他身着一件深灰色的风衣，衣领竖起，内搭深蓝色高领毛衣，袖口微微露出。风衣材质厚重，在雨夜中略显潮湿，反射着微弱的霓虹灯光。他的手指修长，关节分明，正握着一个笔记本，眼神专注而警惕。背景是雨夜的街道，水彩质感的背景中，深蓝灰色的建筑轮廓在暖橙色霓虹灯的映照下若隐若现，雨水在灯光下散射出朦胧的光晕，营造出压抑而悬疑的氛围。",
+              "negativePrompt": "避免卡通化、过于夸张的表情和动作，避免明亮鲜艳的色彩，避免过于整洁的服装，避免阳光明媚的场景，避免过于简单的线条和细节缺失，避免过于写实或过于风格化的极端，避免角色表情过于轻松或愉快，避免服装过于时尚或现代感过强。",
+              "status": "completed",
+              "referenceImage": "local:img_1774928055155_3wlmyhi",
+              "referenceImageSource": "local",
+              "localImageId": "img_1774928055155_3wlmyhi"
+            },
+            {
+              "id": "victim",
+              "name": "张明",
+              "gender": "男",
+              "age": "42",
+              "personality": "广告公司创意总监，有自杀倾向，欠下赌债",
+              "variations": [],
+              "visualPrompt": "42岁的男性广告公司创意总监，面容憔悴，眼袋明显，眼神中透露出疲惫与绝望。他的面部线条略显松弛，嘴角下垂，显示出内心的挣扎与自杀倾向。头发为深棕色，略显凌乱，有几缕白发掺杂其中，增添了几分沧桑感。他身材中等偏瘦，肩膀略微下垂，显示出长期的压力与焦虑。他身着一件深紫色的西装，略显陈旧，领带松散地挂在脖子上，衬衫领口微开，露出脖颈。西装材质略显粗糙，在雨夜中吸收了周围的光线，显得更加沉重。他的手指微微颤抖，手中握着一个酒杯，杯中琥珀色的酒液在霓虹灯下闪烁。背景是雨夜的办公室，水彩质感的背景中，深蓝灰色的办公桌和文件在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出压抑而忧郁的氛围。",
+              "negativePrompt": "避免过于健康或精神饱满的外表，避免明亮鲜艳的色彩，避免整洁的服装和发型，避免阳光明媚的场景，避免过于简单的线条和细节缺失，避免过于写实或过于风格化的极端，避免角色表情过于平静或愉快，避免服装过于时尚或现代感过强，避免过于年轻的形象。",
+              "status": "failed"
+            },
+            {
+              "id": "suspect",
+              "name": "李默",
+              "gender": "男",
+              "age": "40",
+              "personality": "法律顾问，焦虑，慌乱，情绪化，认为自己被冤枉",
+              "variations": [],
+              "visualPrompt": "40岁的男性法律顾问，面容焦虑，眉头紧锁，眼神中透露出慌乱与不安。他的面部肌肉紧绷，嘴唇微微颤抖，显示出情绪化的状态。头发为黑色，略显凌乱，有几缕垂落在额前，增添了几分紧张感。他身材中等，肩膀略微耸起，显示出内心的恐惧与不安。他身着一件深蓝色的西装，略显皱褶，领带紧贴颈部，显示出拘谨与紧张。西装材质略显光滑，在雨夜中反射着周围的光线，显得更加刺眼。他的手指紧握，指甲略显苍白，手中握着一份文件，纸张在霓虹灯下泛着微光。背景是雨夜的律师事务所，水彩质感的背景中，深蓝灰色的书架和文件柜在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出紧张而戏剧性的氛围。",
+              "negativePrompt": "避免过于平静或自信的外表，避免明亮鲜艳的色彩，避免整洁的服装和发型，避免阳光明媚的场景，避免过于简单的线条和细节缺失，避免过于写实或过于风格化的极端，避免角色表情过于镇定或愉快，避免服装过于时尚或现代感过强，避免过于冷静的形象。",
+              "status": "failed"
+            },
+            {
+              "id": "captain",
+              "name": "陈队",
+              "gender": "男",
+              "age": "未知",
+              "personality": "干练，果断，提供案件支持",
+              "variations": [],
+              "visualPrompt": "年龄未知的男性队长，面容干练，眼神坚定，透露出果断与权威。他的面部轮廓分明，高挺的鼻梁，紧抿的嘴唇，浓密的眉毛平直，显示出内心的坚定与决心。头发为黑色，梳理整齐，增添了几分严肃感。他身材高大健壮，肩膀宽阔，显示出领导力与力量感。他身着一件深灰色的制服，肩章醒目，纽扣整齐，显示出职业与专业。制服材质厚重，在雨夜中吸收了周围的光线，显得更加庄重。他的手指修长，关节分明，正握着一个对讲机，眼神专注而警惕。背景是雨夜的警局，水彩质感的背景中，深蓝灰色的办公设备和文件在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出紧张而悬疑的氛围。",
+              "negativePrompt": "避免过于年轻或老迈的外表，避免明亮鲜艳的色彩，避免凌乱的服装和发型，避免阳光明媚的场景，避免过于简单的线条和细节缺失，避免过于写实或过于风格化的极端，避免角色表情犹豫或轻松，避免服装过于休闲或时尚感过强，避免过于温和的形象。",
+              "status": "failed"
+            }
+          ],
+          "scenes": [
+            {
+              "id": "scene1",
+              "location": "夜晚街道",
+              "time": "夜晚",
+              "atmosphere": "暴雨倾盆，空旷，压抑，霓虹灯扭曲，雨声刺耳",
+              "visualPrompt": "夜晚街道，暴雨倾盆，空旷压抑。深蓝灰色调的背景中，扭曲的霓虹灯光（暖橙色和琥珀色）在雨水中散射，形成朦胧梦幻的效果。前景中，一个孤独的角色（7.5头身比例，修长身材，暖象牙色皮肤）撑着黑色雨伞，雨水顺着伞面滑落，溅起水花。角色表情忧郁，大而富有表现力的眼睛中带有虹膜反射和高光，传达内心的紧张。中景是湿漉漉的柏油路面，反射着周围的光线，远处建筑轮廓模糊，灯光透过雨幕形成光晕。三点式电影照明：45度角的暖色主光源（霓虹灯）照亮角色一侧，冷色填充光增强阴影，强烈的轮廓光勾勒角色边缘。线条干净流畅（2-3px粗细），关键轮廓线加粗，背景采用水彩质感，柔和渐变阴影。整体色调偏冷，暖色光源形成对比，营造悬疑和戏剧性氛围。",
+              "negativePrompt": "避免明亮温暖的色调，避免清晰的阳光或晴天效果，避免卡通化或过于夸张的表情，避免杂乱或拥挤的场景，避免写实或照片般的质感，避免模糊不清的线条或混乱的构图。",
+              "status": "failed"
+            },
+            {
+              "id": "scene2",
+              "location": "侦探事务所",
+              "time": "凌晨",
+              "atmosphere": "阴郁，疲惫，混乱，雨水模糊了窗外",
+              "visualPrompt": "侦探事务所内部，凌晨时分，阴郁疲惫的氛围笼罩整个空间。窗外大雨滂沱，雨水模糊了霓虹灯光的倒影，形成朦胧梦幻的效果。室内，一盏暖橙色台灯照亮凌乱的办公桌，文件散落，咖啡杯残留着冷掉的液体。侦探背对镜头，坐在老旧的皮椅上，肩膀微微下垂，疲惫的姿态透露出沉重的压力。三点式照明勾勒出他的轮廓，暖色主光源来自台灯，冷色填充光来自窗外，雨夜的光线通过雨水散射，创造出柔和的渐变阴影。背景是水彩质感的城市夜景，深蓝灰色的建筑轮廓与暖橙色的霓虹灯形成对比。前景是一张放大的黑白照片，边缘被雨水打湿，暗示案件的关键线索。中景是堆满书籍和档案的书架，灯光在书脊上投下斑驳的影子。整体构图采用低角度镜头，强调角色的孤独与压抑，雨滴在玻璃上滑落，模糊了外界的喧嚣，突显室内的混乱与沉思。",
+              "negativePrompt": "避免明亮的色彩和欢快的氛围，不要出现卡通化的夸张表情或动作，避免过于写实的细节破坏手绘质感，不要使用鲜艳的饱和色调，避免清晰的轮廓线破坏朦胧的雨夜效果，不要出现现代科技元素或过于整洁的环境。",
+              "status": "failed"
+            },
+            {
+              "id": "scene3",
+              "location": "废弃码头",
+              "time": "黄昏",
+              "atmosphere": "潮湿，腥味，阴影，紧张，黑暗笼罩",
+              "visualPrompt": "黄昏时分，废弃码头笼罩在潮湿的阴影中，深蓝灰色的海面倒映着远处模糊的霓虹灯光。背景是斑驳的混凝土码头和生锈的铁链，中景是一艘半沉的破旧渔船，船身被雨水冲刷得发亮。前景是湿漉漉的木板地面，积水反射着暖橙色的路灯，形成朦胧的光晕。一位穿着深色风衣的角色站在码头边缘，背对镜头，凝视着黑暗的海面，雨水从帽檐滴落。角色身材修长，7.5头身比例，面部轮廓清晰，大眼睛中透露出紧张与忧郁。三点式照明勾勒出角色的轮廓光，暖色主光源从右侧45度角照射，冷色填充光增强阴影的深度。背景采用水彩质感，柔和的渐变阴影与雨水的散射光线交织，整体色调偏冷，但暖橙色霓虹灯和鲜红色的警示牌形成强烈对比，营造悬疑压抑的氛围。",
+              "negativePrompt": "避免明亮、欢快的色调，禁止使用鲜艳的色彩和卡通化的夸张表情。不要出现现代科技元素或过于整洁的场景。避免平面的光影效果，禁止使用写实照片风格。角色比例不准或面部表情呆板需要避免。背景不能过于复杂或混乱，保持风格化的水彩质感。",
+              "status": "failed"
+            },
+            {
+              "id": "scene4",
+              "location": "警局审讯室",
+              "time": "深夜",
+              "atmosphere": "惨白，压抑，真相揭露，道德困境",
+              "visualPrompt": "深夜的警局审讯室，惨白的顶灯投下冰冷的光线，照亮了房间中央的金属审讯桌。墙壁是深灰色的，带有细微的纹理，角落里堆积着杂乱的文件和档案柜。窗外是雨夜，雨水拍打着玻璃，形成朦胧的水痕，霓虹灯的暖橙色光芒透过雨水散射进来，在地板上形成斑驳的光斑。一名疲惫的警探坐在桌子一侧，身体前倾，双手交叉放在桌上，眼神锐利而忧郁。他对面是一名嫌疑人，穿着简单的灰色T恤，双手被铐在桌上，表情复杂，眼神中透露出挣扎和恐惧。审讯桌的木质纹理清晰可见，金属手铐反射着冷光。背景中，一扇半开的门透出走廊的微弱光线，增加了场景的深度和神秘感。整体色调以深蓝灰为主，辅以暖橙色的霓虹灯光，鲜红色的警示灯在角落闪烁，增强了戏剧性和紧张感。角色设计遵循7.5头身比例，线条干净流畅，面部表情丰富，眼神中透露出内心的道德困境。",
+              "negativePrompt": "避免使用过于明亮的色调，避免卡通化或过于夸张的画风，避免模糊不清的线条，避免过于复杂的背景细节，避免角色表情过于僵硬或夸张，避免使用不协调的色彩搭配，避免忽略雨夜的光影效果。",
+              "status": "completed",
+              "referenceImage": "local:img_1774928177010_u96qtfe",
+              "referenceImageSource": "local",
+              "localImageId": "img_1774928177010_u96qtfe"
+            }
+          ],
+          "props": [],
+          "storyParagraphs": [
+            {
+              "id": 1,
+              "text": "霓虹灯在湿漉漉的柏油路上投下扭曲的光影，雨水冲刷着城市的喧嚣，只剩下空旷的街道和刺耳的雨声。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 2,
+              "text": "侦探倚在街角的电话亭旁，从口袋里摸出一盒皱巴巴的香烟。火柴划亮的瞬间，微弱的火光映照出他疲惫却锐利的眼睛。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 3,
+              "text": "侦探：'这鬼雨……下得人心都发霉了。'他深吸一口烟，烟雾在雨中迅速消散，像极了那些抓不住的线索。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 4,
+              "text": "侦探抬头望向远处，雨幕中隐约可见一辆疾驰而过的警车，红蓝警灯在雨水中晕染开一片迷离的光。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 5,
+              "text": "雨水顺着窗玻璃蜿蜒而下，模糊了窗外的城市轮廓。侦探坐在办公桌前，桌上散落着案件资料、空咖啡杯和半瓶威士忌。",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 6,
+              "text": "侦探：'死者张明，42岁，广告公司创意总监……死因是头部重击，现场无搏斗痕迹，像是熟人作案。'",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 7,
+              "text": "侦探忽然停下，拿起桌上的一张照片——死者与一名陌生男子的合影，背景是某慈善晚宴。侦探的眉头紧锁。",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 8,
+              "text": "侦探：'李默……你的赌债，到底是谁帮你还的？'",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 9,
+              "text": "电话铃声突然响起，侦探皱了皱眉，接起电话。电话那头：'陈队，发现了新线索！死者的银行账户在死前有三笔不明转账，每笔五万，收款人……是李默。'",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 10,
+              "text": "侦探：'盯紧他。别让他像之前的证人一样，消失得无声无息。'挂断电话，侦探点燃第二支烟。",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 11,
+              "text": "雨水终于停了，但空气中弥漫着潮湿的腥味。侦探穿着风衣，独自走在码头的阴影里。",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 12,
+              "text": "远处，一个瘦高的男人（李默）正焦急地踱步。李默：'你……你怎么找到我的？'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 13,
+              "text": "侦探：'你的债主，不喜欢赖账的人。'李默：'我不是凶手！我只是帮他还了钱，他……他欠我的！'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 14,
+              "text": "侦探：'那晚的慈善晚宴，你们在讨论什么？'李默：'没什么……就是……一些工作上的事。'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 15,
+              "text": "侦探：'工作？张明死前三天，他的公司刚失去一个价值千万的合同。而你，刚好是那家竞标公司的法律顾问。'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 16,
+              "text": "李默的脸色瞬间煞白，后退一步，脚下一滑，差点跌入浑浊的海水中。李默：'你什么意思？你是说……他是我杀的？'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 17,
+              "text": "侦探：'监控拍到了你案发当晚离开张明公寓的画面。解释一下。'李默跪倒在泥泞中，双手抱头。",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 18,
+              "text": "李默：'我只是去拿他欠我的钱！他……他突然从背后袭击我，我们扭打起来……我不是故意的！'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 19,
+              "text": "侦探：'所以，那三笔转账，是你试图掩盖真相的\"封口费\"？'李默：'你不会懂的……他毁了我的一切……我只是……想拿回属于我的东西！'",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 20,
+              "text": "侦探：'有些东西，一旦沾上血，就再也洗不干净了。'他转身离开，背影消失在黑暗中。远处，警笛声由远及近。",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 21,
+              "text": "审讯室的灯光惨白，照在李默苍白的脸上。侦探坐在对面，手中转动着一支未点燃的香烟。",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 22,
+              "text": "侦探：'你的DNA在死者公寓的沙发上检测到了。还有目击者，说你那天晚上情绪失控。'李默：'我承认我们打了一架……但他没死！我真的没想杀他！'",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 23,
+              "text": "侦探忽然将一份文件推过去：'这是张明死前一个月的心理评估报告。他长期服用抗抑郁药物，有自杀倾向。'",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 24,
+              "text": "侦探：'也许，那天晚上，你们扭打之后，他选择了结束自己的生命。而你，只是……恰好在场。'李默的眼泪终于决堤。",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 25,
+              "text": "陈队走进来：'法医确认了，死者确实有自杀倾向，但扭打可能加速了他的死亡。检方可能会以过失致死起诉。'",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 26,
+              "text": "侦探走到窗边：'有些真相，比谎言更伤人。'他点燃最后一支烟，烟雾在审讯室的灯光中缓缓升腾，最终消散。",
+              "sceneRefId": "scene4"
+            }
+          ],
+          "targetDuration": "30s",
+          "visualStyle": "2d-animation",
+          "shotGenerationModel": "glm-4"
+        },
+        "shots": [
+          {
+            "id": "shot-1",
+            "sceneId": "scene1",
+            "actionSummary": "霓虹灯在湿漉漉的柏油路上投下扭曲的光影，雨水冲刷着城市的喧嚣，侦探倚在街角的电话亭旁，从口袋里摸出一盒皱巴巴的香烟。",
+            "dialogue": "这鬼雨……下得人心都发霉了。",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "detective"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-1-start",
+                "type": "start",
+                "visualPrompt": "雨夜街道，深蓝灰色调，霓虹灯在湿漉漉的柏油路上投下扭曲光影，水彩质感背景，柔和渐变阴影，侦探倚在电话亭旁，表情疲惫但锐利，7.5头身比例，线条干净流畅",
+                "status": "pending"
+              },
+              {
+                "id": "kf-1-end",
+                "type": "end",
+                "visualPrompt": "侦探从口袋摸出皱巴巴的香烟，火柴划亮的瞬间，微弱火光映照出他疲惫却锐利的眼睛，雨丝在灯光下散射，冷色调与暖光形成对比，压抑氛围",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-2",
+            "sceneId": "scene2",
+            "actionSummary": "侦探坐在办公桌前，桌上散落着案件资料、空咖啡杯和半瓶威士忌。侦探拿起桌上的一张照片——死者与一名陌生男子的合影，眉头紧锁。电话铃声突然响起，侦探皱了皱眉，接起电话。",
+            "dialogue": "侦探：'死者张明，42岁，广告公司创意总监……死因是头部重击，现场无搏斗痕迹，像是熟人作案。'侦探忽然停下，拿起桌上的一张照片——死者与一名陌生男子的合影，背景是某慈善晚宴。侦探的眉头紧锁。侦探：'李默……你的赌债，到底是谁帮你还的？'电话铃声突然响起，侦探皱了皱眉，接起电话。电话那头：'陈队，发现了新线索！死者的银行账户在死前有三笔不明转账，每笔五万，收款人……是李默。'侦探：'盯紧他。别让他像之前的证人一样，消失得无声无息。'挂断电话，侦探点燃第二支烟。",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "detective"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-2-start",
+                "type": "start",
+                "visualPrompt": "侦探疲惫地坐在办公桌前，桌上散落着案件资料、空咖啡杯和半瓶威士忌。雨水模糊了窗外的城市轮廓，深蓝灰色的雨夜背景中，暖橙色霓虹灯光散射出朦胧光晕。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-2-end",
+                "type": "end",
+                "visualPrompt": "侦探眉头紧锁，手持照片，电话铃声打破寂静。他接起电话，眼神中透露出坚定与警觉。雨滴在窗户上蜿蜒，水彩质感的背景中，冷色调与暖色光源形成对比。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-3",
+            "sceneId": "scene3",
+            "actionSummary": "侦探与李默在废弃码头对峙，李默情绪激动，侦探冷静揭露真相，李默跪倒在泥泞中",
+            "dialogue": "李默：'你什么意思？你是说……他是我杀的？' 侦探：'监控拍到了你案发当晚离开张明公寓的画面。解释一下。' 李默：'我只是去拿他欠我的钱！他……他突然从背后袭击我，我们扭打起来……我不是故意的！'",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "detective",
+              "suspect"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-3-start",
+                "type": "start",
+                "visualPrompt": "雨夜废弃码头，深蓝灰色调背景，暖橙色霓虹灯光源散射，侦探与李默对峙，线条干净流畅，角色表情生动，水彩质感背景，光影对比强烈",
+                "status": "pending"
+              },
+              {
+                "id": "kf-3-end",
+                "type": "end",
+                "visualPrompt": "李默跪倒在泥泞中，侦探站立，背景黑暗笼罩，雨滴在霓虹灯下散射，角色挤压和拉伸表现情绪，冷色调与暖光源对比，悬疑氛围浓厚",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-4",
+            "sceneId": "scene4",
+            "actionSummary": "侦探将文件推给李默，揭露真相。李默情绪崩溃，眼泪决堤。陈队走进来宣布法医结果。侦探走到窗边点燃香烟，烟雾在灯光中升腾消散。",
+            "dialogue": "侦探：'这是张明死前一个月的心理评估报告。他长期服用抗抑郁药物，有自杀倾向。'李默：'我承认我们打了一架……但他没死！我真的没想杀他！'陈队：'法医确认了，死者确实有自杀倾向，但扭打可能加速了他的死亡。检方可能会以过失致死起诉。'侦探：'有些真相，比谎言更伤人。'",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "detective",
+              "suspect",
+              "captain"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-4-start",
+                "type": "start",
+                "visualPrompt": "2d动画风格，迪士尼/皮克斯级别手绘质感，线条流畅。惨白灯光下的审讯室，深蓝灰色调背景，暖橙色霓虹灯光源。侦探将文件推给李默，李默面容憔悴，眼泪在眼眶中打转。水彩质感背景，柔和渐变阴影，雨夜氛围。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-4-end",
+                "type": "end",
+                "visualPrompt": "2d动画风格，迪士尼/皮克斯级别手绘质感，线条流畅。侦探站在窗边点燃香烟，烟雾在灯光中缓缓升腾。李默低头哭泣，陈队站在一旁。深蓝灰色调背景，暖橙色霓虹灯光源，雨夜氛围。水彩质感背景，柔和渐变阴影，戏剧性构图。",
+                "status": "pending"
+              }
+            ]
+          }
+        ],
+        "isParsingScript": false,
+        "renderLogs": [
+          {
+            "type": "script-parsing",
+            "resourceId": "rewrite-script",
+            "resourceName": "AI改写剧本（流式）",
+            "status": "success",
+            "model": "glm-4-plus",
+            "duration": 22084,
+            "prompt": "标题：示例剧本\n\n场景 1\n外景。夜晚街道 - 雨夜\n霓虹灯在水坑中反射出破碎的光芒。\n侦探（30岁,穿着风衣）站在街角,点燃了一支烟。\n\n侦探\n这雨什么时候才会停？...",
+            "id": "log-1774926132542-xmmety3nj",
+            "timestamp": 1774926132542
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926448709",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-4",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位30岁的男性侦探，疲惫但锐利的神情，深邃的靛蓝色眼睛带有细微的紫色调，虹膜上有柔和的反光，透露出洞察一切的智慧。浓密的黑色眉毛略微下垂，显示出思考的深度。短而整齐的黑色头发，额前有几缕不听话的发丝。身材修长，7.5头身比例，肩宽背直，略显瘦削但肌肉线条明显。穿着深灰色风衣，衣领竖起，内搭深蓝色高领毛衣，领口处露出一点白色衬衫。风衣材质厚重，在雨夜中微微反光。腰间系着棕色皮质腰带，挂着一个小型手电筒和笔记本。双手插在风衣口袋中，微微前倾的身体姿势显示出警觉性。背景是雨夜的城市街道，水彩风格的深蓝色和灰色调，远处有暖橙色的霓虹灯光在湿漉漉的地面上形成扭曲的反射。三点式照明勾勒出侦探的轮廓，45度角的暖色主光源照亮他的侧脸，冷色填充光增强神秘感。",
+            "error": "余额不足或无可用资源包,请充值。",
+            "duration": 6333,
+            "id": "log-1774926448710-afkvknm9o",
+            "timestamp": 1774926448710
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926489210",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位30岁的男性侦探，疲惫但锐利的神情，深邃的靛蓝色眼睛带有细微的紫色调，虹膜上有柔和的反光，透露出洞察一切的智慧。浓密的黑色眉毛略微下垂，显示出思考的深度。短而整齐的黑色头发，额前有几缕不听话的发丝。身材修长，7.5头身比例，肩宽背直，略显瘦削但肌肉线条明显。穿着深灰色风衣，衣领竖起，内搭深蓝色高领毛衣，领口处露出一点白色衬衫。风衣材质厚重，在雨夜中微微反光。腰间系着棕色皮质腰带，挂着一个小型手电筒和笔记本。双手插在风衣口袋中，微微前倾的身体姿势显示出警觉性。背景是雨夜的城市街道，水彩风格的深蓝色和灰色调，远处有暖橙色的霓虹灯光在湿漉漉的地面上形成扭曲的反射。三点式照明勾勒出侦探的轮廓，45度角的暖色主光源照亮他的侧脸，冷色填充光增强神秘感。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4514,
+            "id": "log-1774926489210-h255zv4k2",
+            "timestamp": 1774926489210
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926496071",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 42岁的男性广告公司创意总监，面容憔悴，深靛蓝色的眼睛周围有明显的黑眼圈，眼神中透露出疲惫和绝望。灰褐色的头发略显凌乱，有几缕头发垂落在额前，显示出心不在焉的状态。中等身材，7.5头身比例，肩膀略微下垂，整体姿态显得疲惫不堪。穿着一套深橄榄绿色的西装，但西装略显皱褶，领带松散地挂在脖子上，显示出不修边幅。西装口袋中露出半截白色手帕。双手紧握，指甲修剪整齐但指节发白，显示出内心的紧张。站在雨夜的办公室窗前，窗外是灰褐色调的城市夜景，远处有暖橙色的霓虹灯光。三点式照明中，轮廓光勾勒出他的侧影，45度角的暖色主光源照亮他半边脸，冷色填充光增强压抑感。水彩背景中，雨滴在窗户上形成模糊的痕迹，霓虹灯光在湿漉漉的表面上产生扭曲的反射。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3859,
+            "id": "log-1774926496071-subellddc",
+            "timestamp": 1774926496071
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926503634",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 40岁的男性法律顾问，暖象牙色的皮肤略显苍白，眼睛中透露出慌乱和焦虑，虹膜上有细微的反光，眼神游移不定。浅金色的头发整齐地向后梳，但有几缕头发不听话地垂落在额前。浓密的眉毛微微上扬，显示出情绪激动。身材中等，7.5头身比例，站姿略显紧张，身体微微前倾。穿着一套深灰色的西装，西装剪裁合体但略显紧绷，白色衬衫的领口系得过于紧，显示出拘谨。手中紧握着一个深棕色的公文包，指节因用力而发白。站在雨夜的律师事务所门口，背景是深靛蓝色和灰褐色调的城市街道，远处有暖橙色的霓虹灯光。三点式照明中，强烈的轮廓光勾勒出他的紧张姿态，45度角的暖色主光源照亮他的上半身，冷色填充光增强神秘感。水彩背景中，雨滴在地面形成小水洼，霓虹灯光在水面上产生扭曲的反射，雨夜的氛围压抑而神秘。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4560,
+            "id": "log-1774926503634-qz0r94etv",
+            "timestamp": 1774926503634
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926510775",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位年龄不明的警官，专业干练的气质，深靛蓝色的眼睛锐利而专注，虹膜上有细微的反光，透露出坚定的意志。黑色的头发整齐地向后梳，露出光洁的额头。浓密的眉毛平直，显示出严肃的性格。身材高大健壮，7.5头身比例，站姿挺拔，肩宽背直，显示出军人的气质。穿着深蓝色的警服，警徽在胸前闪闪发光，肩章上显示着他的警衔。腰间系着黑色皮带，挂着对讲机和手枪套。双手自然下垂，但手指微微弯曲，显示出随时准备行动的状态。站在雨夜的犯罪现场，背景是深靛蓝色和灰褐色调的城市街道，远处有暖橙色的霓虹灯光。三点式照明中，强烈的轮廓光勾勒出他的专业形象，45度角的暖色主光源照亮他的侧脸，冷色填充光增强神秘感。水彩背景中，雨滴在地面形成小水洼，霓虹灯光在水面上产生扭曲的反射，雨夜的氛围压抑而神秘。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4140,
+            "id": "log-1774926510775-2ukkt1h1r",
+            "timestamp": 1774926510775
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926544299",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位30岁的男性侦探，疲惫但锐利的神情，深邃的靛蓝色眼睛带有细微的紫色调，虹膜上有柔和的反光，透露出洞察一切的智慧。浓密的黑色眉毛略微下垂，显示出思考的深度。短而整齐的黑色头发，额前有几缕不听话的发丝。身材修长，7.5头身比例，肩宽背直，略显瘦削但肌肉线条明显。穿着深灰色风衣，衣领竖起，内搭深蓝色高领毛衣，领口处露出一点白色衬衫。风衣材质厚重，在雨夜中微微反光。腰间系着棕色皮质腰带，挂着一个小型手电筒和笔记本。双手插在风衣口袋中，微微前倾的身体姿势显示出警觉性。背景是雨夜的城市街道，水彩风格的深蓝色和灰色调，远处有暖橙色的霓虹灯光在湿漉漉的地面上形成扭曲的反射。三点式照明勾勒出侦探的轮廓，45度角的暖色主光源照亮他的侧脸，冷色填充光增强神秘感。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4570,
+            "id": "log-1774926544299-cgf32j1rr",
+            "timestamp": 1774926544299
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774926563535",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位30岁的男性侦探，疲惫但锐利的神情，深邃的靛蓝色眼睛带有细微的紫色调，虹膜上有柔和的反光，透露出洞察一切的智慧。浓密的黑色眉毛略微下垂，显示出思考的深度。短而整齐的黑色头发，额前有几缕不听话的发丝。身材修长，7.5头身比例，肩宽背直，略显瘦削但肌肉线条明显。穿着深灰色风衣，衣领竖起，内搭深蓝色高领毛衣，领口处露出一点白色衬衫。风衣材质厚重，在雨夜中微微反光。腰间系着棕色皮质腰带，挂着一个小型手电筒和笔记本。双手插在风衣口袋中，微微前倾的身体姿势显示出警觉性。背景是雨夜的城市街道，水彩风格的深蓝色和灰色调，远处有暖橙色的霓虹灯光在湿漉漉的地面上形成扭曲的反射。三点式照明勾勒出侦探的轮廓，45度角的暖色主光源照亮他的侧脸，冷色填充光增强神秘感。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4491,
+            "id": "log-1774926563535-4ezi691e0",
+            "timestamp": 1774926563535
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928055159",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 一位30岁的男性侦探，疲惫却锐利的目光，深邃的眼眸中透露出执着与冷静。他有着7.5头身的修长比例，肌肉线条清晰可见。面部轮廓分明，高挺的鼻梁，紧抿的嘴唇，浓密的眉毛微微皱起，显示出内心的复杂与正义感。头发为深灰色，略带凌乱，有几缕垂落在额前，增添了几分沧桑感。他身着一件深灰色的风衣，衣领竖起，内搭深蓝色高领毛衣，袖口微微露出。风衣材质厚重，在雨夜中略显潮湿，反射着微弱的霓虹灯光。他的手指修长，关节分明，正握着一个笔记本，眼神专注而警惕。背景是雨夜的街道，水彩质感的背景中，深蓝灰色的建筑轮廓在暖橙色霓虹灯的映照下若隐若现，雨水在灯光下散射出朦胧的光晕，营造出压抑而悬疑的氛围。",
+            "duration": 10201,
+            "id": "log-1774928055159-p0if4zpxp",
+            "timestamp": 1774928055159
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928061775",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 42岁的男性广告公司创意总监，面容憔悴，眼袋明显，眼神中透露出疲惫与绝望。他的面部线条略显松弛，嘴角下垂，显示出内心的挣扎与自杀倾向。头发为深棕色，略显凌乱，有几缕白发掺杂其中，增添了几分沧桑感。他身材中等偏瘦，肩膀略微下垂，显示出长期的压力与焦虑。他身着一件深紫色的西装，略显陈旧，领带松散地挂在脖子上，衬衫领口微开，露出脖颈。西装材质略显粗糙，在雨夜中吸收了周围的光线，显得更加沉重。他的手指微微颤抖，手中握着一个酒杯，杯中琥珀色的酒液在霓虹灯下闪烁。背景是雨夜的办公室，水彩质感的背景中，深蓝灰色的办公桌和文件在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出压抑而忧郁的氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3613,
+            "id": "log-1774928061775-bkix5gcn7",
+            "timestamp": 1774928061775
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928079205",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 40岁的男性法律顾问，面容焦虑，眉头紧锁，眼神中透露出慌乱与不安。他的面部肌肉紧绷，嘴唇微微颤抖，显示出情绪化的状态。头发为黑色，略显凌乱，有几缕垂落在额前，增添了几分紧张感。他身材中等，肩膀略微耸起，显示出内心的恐惧与不安。他身着一件深蓝色的西装，略显皱褶，领带紧贴颈部，显示出拘谨与紧张。西装材质略显光滑，在雨夜中反射着周围的光线，显得更加刺眼。他的手指紧握，指甲略显苍白，手中握着一份文件，纸张在霓虹灯下泛着微光。背景是雨夜的律师事务所，水彩质感的背景中，深蓝灰色的书架和文件柜在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出紧张而戏剧性的氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 14426,
+            "id": "log-1774928079205-n96cdcjk8",
+            "timestamp": 1774928079205
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928096293",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 年龄未知的男性队长，面容干练，眼神坚定，透露出果断与权威。他的面部轮廓分明，高挺的鼻梁，紧抿的嘴唇，浓密的眉毛平直，显示出内心的坚定与决心。头发为黑色，梳理整齐，增添了几分严肃感。他身材高大健壮，肩膀宽阔，显示出领导力与力量感。他身着一件深灰色的制服，肩章醒目，纽扣整齐，显示出职业与专业。制服材质厚重，在雨夜中吸收了周围的光线，显得更加庄重。他的手指修长，关节分明，正握着一个对讲机，眼神专注而警惕。背景是雨夜的警局，水彩质感的背景中，深蓝灰色的办公设备和文件在暖橙色台灯的映照下若隐若现，雨水在窗户上滑落，营造出紧张而悬疑的氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 14086,
+            "id": "log-1774928096293-4j1mtsdpz",
+            "timestamp": 1774928096293
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928148683",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 夜晚街道，暴雨倾盆，空旷压抑。深蓝灰色调的背景中，扭曲的霓虹灯光（暖橙色和琥珀色）在雨水中散射，形成朦胧梦幻的效果。前景中，一个孤独的角色（7.5头身比例，修长身材，暖象牙色皮肤）撑着黑色雨伞，雨水顺着伞面滑落，溅起水花。角色表情忧郁，大而富有表现力的眼睛中带有虹膜反射和高光，传达内心的紧张。中景是湿漉漉的柏油路面，反射着周围的光线，远处建筑轮廓模糊，灯光透过雨幕形成光晕。三点式电影照明：45度角的暖色主光源（霓虹灯）照亮角色一侧，冷色填充光增强阴影，强烈的轮廓光勾勒角色边缘。线条干净流畅（2-3px粗细），关键轮廓线加粗，背景采用水彩质感，柔和渐变阴影。整体色调偏冷，暖色光源形成对比，营造悬疑和戏剧性氛围。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3024,
+            "id": "log-1774928148683-83tw86iux",
+            "timestamp": 1774928148683
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928154984",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 侦探事务所内部，凌晨时分，阴郁疲惫的氛围笼罩整个空间。窗外大雨滂沱，雨水模糊了霓虹灯光的倒影，形成朦胧梦幻的效果。室内，一盏暖橙色台灯照亮凌乱的办公桌，文件散落，咖啡杯残留着冷掉的液体。侦探背对镜头，坐在老旧的皮椅上，肩膀微微下垂，疲惫的姿态透露出沉重的压力。三点式照明勾勒出他的轮廓，暖色主光源来自台灯，冷色填充光来自窗外，雨夜的光线通过雨水散射，创造出柔和的渐变阴影。背景是水彩质感的城市夜景，深蓝灰色的建筑轮廓与暖橙色的霓虹灯形成对比。前景是一张放大的黑白照片，边缘被雨水打湿，暗示案件的关键线索。中景是堆满书籍和档案的书架，灯光在书脊上投下斑驳的影子。整体构图采用低角度镜头，强调角色的孤独与压抑，雨滴在玻璃上滑落，模糊了外界的喧嚣，突显室内的混乱与沉思。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3299,
+            "id": "log-1774928154984-ifooqyn5w",
+            "timestamp": 1774928154984
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928160732",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 黄昏时分，废弃码头笼罩在潮湿的阴影中，深蓝灰色的海面倒映着远处模糊的霓虹灯光。背景是斑驳的混凝土码头和生锈的铁链，中景是一艘半沉的破旧渔船，船身被雨水冲刷得发亮。前景是湿漉漉的木板地面，积水反射着暖橙色的路灯，形成朦胧的光晕。一位穿着深色风衣的角色站在码头边缘，背对镜头，凝视着黑暗的海面，雨水从帽檐滴落。角色身材修长，7.5头身比例，面部轮廓清晰，大眼睛中透露出紧张与忧郁。三点式照明勾勒出角色的轮廓光，暖色主光源从右侧45度角照射，冷色填充光增强阴影的深度。背景采用水彩质感，柔和的渐变阴影与雨水的散射光线交织，整体色调偏冷，但暖橙色霓虹灯和鲜红色的警示牌形成强烈对比，营造悬疑压抑的氛围。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 2744,
+            "id": "log-1774928160732-wkhr55b5e",
+            "timestamp": 1774928160732
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1774928177015",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 深夜的警局审讯室，惨白的顶灯投下冰冷的光线，照亮了房间中央的金属审讯桌。墙壁是深灰色的，带有细微的纹理，角落里堆积着杂乱的文件和档案柜。窗外是雨夜，雨水拍打着玻璃，形成朦胧的水痕，霓虹灯的暖橙色光芒透过雨水散射进来，在地板上形成斑驳的光斑。一名疲惫的警探坐在桌子一侧，身体前倾，双手交叉放在桌上，眼神锐利而忧郁。他对面是一名嫌疑人，穿着简单的灰色T恤，双手被铐在桌上，表情复杂，眼神中透露出挣扎和恐惧。审讯桌的木质纹理清晰可见，金属手铐反射着冷光。背景中，一扇半开的门透出走廊的微弱光线，增加了场景的深度和神秘感。整体色调以深蓝灰为主，辅以暖橙色的霓虹灯光，鲜红色的警示灯在角落闪烁，增强了戏剧性和紧张感。角色设计遵循7.5头身比例，线条干净流畅，面部表情丰富，眼神中透露出内心的道德困境。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 13282,
+            "id": "log-1774928177015-1msirleps",
+            "timestamp": 1774928177015
+          }
+        ]
+      },
+      {
+        "id": "e83bc53b-f050-4f85-93a8-e083961ec8dd",
+        "title": "田忌赛马2",
+        "createdAt": 1773295904387,
+        "lastModified": 1775033348796,
+        "version": 8,
+        "stage": "assets",
+        "targetDuration": "60s",
+        "language": "中文",
+        "visualStyle": "live-action",
+        "shotGenerationModel": "gpt-5.1",
+        "rawScript": "**标题：田忌赛马**\n\n**人物：**  \n田忌 - 齐国大将，豪爽但屡遭挫败  \n齐威王 - 齐国君主，自负且好胜  \n孙膑 - 军师，睿智沉稳  \n侍从、骑士若干  \n\n---\n\n### **第一场**  \n**场景：齐王宫赛马场 - 日**  \n\n*（阳光炙烤着赛道，看台上人声鼎沸。齐威王身着华服，端坐主位，田忌垂手立于下首，面色凝重。三场赛马已毕，齐威王的三匹骏马遥遥领先，全场欢呼。）*  \n\n**齐威王**  \n（举杯轻笑）  \n田将军，今日又是寡人赢了。你这赌注，又该归国库了。  \n\n**田忌**  \n（强作镇定，拱手）  \n大王神骏，臣甘拜下风。只是……（低头攥紧拳）臣屡战屡败，颜面尽失。  \n\n*（田忌拂袖离去，背影在夕阳下拉得很长。齐威王的笑声刺耳回荡。）*  \n\n---\n\n### **第二场**  \n**场景：田忌府邸 - 夜**  \n\n*（烛火摇曳，田忌将酒杯重重砸在案上，酒液溅湿了地图。）*  \n\n**田忌**  \n（怒吼）  \n同样的马匹，同样的赛道，为何我永远赢不了他！  \n\n*（门扉轻启，孙膑缓步而入，衣袂无声。）*  \n\n**孙忌**  \n（拾起地图，指尖划过赛道）  \n将军的挫败，臣看在眼里。问题不在马，而在将军的“战法”。  \n\n**田忌**  \n（猛然抬头）  \n战法？我已倾尽全力，何错之有？  \n\n**孙膑**  \n（平静剖析）  \n今日第一局，将军以上等马对大王上等马，看似公平，实则以卵击石。第二局，中等马对中等马，平分秋色。第三局，下等马对下等马……（摇头）将军的短板，永远在王的强项上碰撞。  \n\n*（田忌怔住，眼中怒火渐转为困惑。）*  \n\n**田忌**  \n那依先生之见……  \n\n**孙膑**  \n（眼中闪过锐光）  \n以己之长，攻彼之短。将军可愿赌一把？  \n\n---\n\n### **第三场**  \n**场景：齐王宫赛马场 - 日**  \n\n*（三日后的赛场，气氛比上次更紧绷。齐威王斜倚玉座，嘴角挂着讥诮。）*  \n\n**齐威王**  \n（对侍从低语）  \n田忌又来送银子了。上次输的还不够？  \n\n*（田忌深吸一口气，走向孙膑。孙膑低声耳语，田忌眼中逐渐燃起希望。）*  \n\n**齐威王**  \n（高声）  \n田将军，今日可要下重注啊！  \n\n**田忌**  \n（拱手，声音沉稳）  \n臣愿以全部家产，再赌一局。  \n\n*（全场哗然。齐威王大笑，浑不在意。）*  \n\n---\n\n### **第四场**  \n**场景：赛马场赛道 - 日**  \n\n**第一局：**  \n*（田忌的下等马与齐威王的上等马并列起跑。哨声响起，下等马瞬间落后，观众席发出叹息。）*  \n\n**齐威王**  \n（拍掌大笑）  \n果真是来送银子的！  \n\n**田忌**  \n（紧握栏杆，指节发白）  \n\n**第二局：**  \n*（田忌的上等马对阵齐威王的中等马。上等马如离弦之箭，反超瞬间，全场惊呼！）*  \n\n**齐威王**  \n（笑容僵住）  \n\n**第三局：**  \n*（田忌的中等马对阵齐威王的下等马。两马交错，田忌的马以半个马颈优势冲线！）*  \n\n*（死寂般的沉默后，看台爆发出震天动地的呐喊。田忌转身，直视目瞪口呆的齐威王。）*  \n\n**田忌**  \n（朗声）  \n大王，今日胜负如何？  \n\n*（齐威王脸色铁青，拂袖离去。田忌望着孙膑，两人相视一笑，阳光刺眼却温暖。）*  \n\n**（幕落）**  \n\n---\n\n**改写说明：**  \n1. **强化戏剧冲突**：通过齐威王的多次挑衅和田忌的隐忍对比，突出人物矛盾。  \n2. **深化情感层次**：田忌的挫败、孙膑的智慧、齐威王的傲慢，均通过动作和台词立体呈现。  \n3. **优化节奏**：四场戏层层递进，从挫败到顿悟，再到逆转，高潮集中且富有张力。  \n4. **细节丰富**：增加环境描写（如夕阳、烛火）和肢体语言，增强画面感。  \n5. **台词个性化**：齐威王的台词尽显帝王傲慢，田忌的台词从暴躁到沉稳，体现成长。",
+        "scriptData": {
+          "title": "田忌赛马2",
+          "genre": "历史剧",
+          "logline": "齐国大将田忌在军师孙膑的计谋下，通过改变赛马策略，成功击败骄横的齐威王，赢得尊重与胜利。",
+          "language": "中文",
+          "artDirection": {
+            "colorPalette": {
+              "primary": "深蓝色调，带有轻微的紫色底色，象征齐国的庄重与历史感",
+              "secondary": "温暖的土黄色和柔和的赭石色，代表古代建筑与服饰",
+              "accent": "鲜亮的朱红色，用于重要元素和情感高潮场景",
+              "skinTones": "温暖的象牙色到金棕色，带有柔和的桃色底色，适合中国古典人物形象",
+              "saturation": "中等饱和度，略带柔和感，营造历史剧的典雅氛围",
+              "temperature": "温暖基调，带有金色阳光感，符合赛马场景的活力"
+            },
+            "characterDesignRules": {
+              "proportions": "7.5头身比例，健壮但不夸张的体型，符合中国古典美学",
+              "eyeStyle": "大而富有表现力的眼睛，带有细腻的虹膜反射，传达情感变化",
+              "lineWeight": "清晰流畅的轮廓线，2px均匀重量，关键部位略粗",
+              "detailLevel": "面部和手部高细节，服装中等细节，背景风格化处理"
+            },
+            "lightingStyle": "三点式电影照明，强烈的轮廓光，45度角暖色主光源，柔和的冷色填充光",
+            "textureStyle": "平滑的卡通渲染，带有微妙的渐变阴影，丝绸和金属质感细腻处理",
+            "moodKeywords": [
+              "典雅",
+              "历史感",
+              "戏剧性",
+              "情感丰富",
+              "东方美学"
+            ],
+            "consistencyAnchors": "迪士尼/皮克斯质量的手绘2D动画风格，线条清晰流畅且重量一致，角色具有弹性变形原则。背景采用水彩画风格，柔和的渐变阴影，温暖的色调。所有角色保持圆润友好的比例设计，面部表情丰富，能清晰传达情感变化。整体画面具有电影感的光照效果，色彩和谐统一，既有历史剧的庄重感又不失动画的活力。所有场景和角色必须遵循这一视觉语言，确保整个项目的视觉一致性。"
+          },
+          "characters": [
+            {
+              "id": "char1",
+              "name": "田忌",
+              "gender": "男",
+              "age": "中年",
+              "personality": "豪爽但屡遭挫败，从愤怒到沉稳，善于接受建议",
+              "variations": [],
+              "visualPrompt": "中年男子，7.5头身比例，健壮但不夸张的体型，符合中国古典美学。面部轮廓方正，浓眉大眼，眼神中透露出豪爽与挫败感，瞳孔带有细腻的虹膜反射，能清晰传达情感变化。头发乌黑浓密，束成高髻，几缕发丝自然垂落。身着深蓝色调的华丽战袍，带有紫色底色，象征齐国的庄重与历史感，衣襟处点缀着朱红色刺绣，彰显身份。腰间佩戴玉带，手持马鞭，站立时微微前倾，表现出急于证明自己的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+              "negativePrompt": "避免过于夸张的肌肉线条，避免现代服装元素，避免过于卡通化的表情，避免过于明亮的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+              "status": "completed",
+              "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char1/img_1773305784319_jywr1hd.png",
+              "referenceImageSource": "cloud",
+              "imageUrl": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char1/img_1773305784319_jywr1hd.png"
+            },
+            {
+              "id": "char2",
+              "name": "齐威王",
+              "gender": "男",
+              "age": "中年",
+              "personality": "自负且好胜，骄傲自大，轻视对手",
+              "variations": [],
+              "visualPrompt": "中年男子，7.5头身比例，体型健壮挺拔，彰显王者风范。面部轮廓圆润，眉毛浓密上扬，眼神中透露出自负与骄傲，瞳孔带有细腻的虹膜反射，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠。身着赭石色与土黄色相间的华丽龙袍，衣襟处点缀着鲜亮的朱红色龙纹，象征至高无上的权力。腰间镶嵌宝石的玉带，手持玉笏，站立时昂首挺胸，表现出骄傲自大的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+              "negativePrompt": "避免过于谦卑的表情，避免简朴的服装，避免过于柔和的线条，避免过于暗淡的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+              "status": "completed",
+              "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char2/img_1773305805169_lsqzp78.png",
+              "referenceImageSource": "cloud",
+              "imageUrl": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char2/img_1773305805169_lsqzp78.png"
+            },
+            {
+              "id": "char3",
+              "name": "孙膑",
+              "gender": "男",
+              "age": "中年",
+              "personality": "睿智沉稳，善于分析，足智多谋",
+              "variations": [],
+              "visualPrompt": "中年男子，7.5头身比例，体型匀称挺拔，体现智者风范。面部轮廓方正，眉毛浓密且微微下垂，眼神中透露出睿智与沉稳，瞳孔带有细腻的虹膜反射，嘴角常带若有所思的微笑。头发花白，束成简洁的高髻，几缕发丝自然垂落。身着深蓝色调的儒士长袍，带有紫色底色，衣襟处点缀着朱红色刺绣，彰显身份。腰间佩戴玉带，手持竹简，站立时微微前倾，表现出思考的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+              "negativePrompt": "避免过于夸张的表情，避免过于华丽的服装，避免过于明亮的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+              "status": "completed",
+              "referenceImage": "local:img_1773305828452_qlixmd9",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773305828452_qlixmd9",
+              "imageUrl": "local:img_1773305828452_qlixmd9"
+            },
+            {
+              "id": "char4",
+              "name": "侍从",
+              "gender": "男",
+              "age": "青年",
+              "personality": "忠诚，服从",
+              "variations": [],
+              "visualPrompt": "青年男子，7.5头身比例，体型匀称，体现忠诚与服从。面部轮廓圆润，眉毛细长，眼神中透露出忠诚与恭敬，瞳孔带有细腻的虹膜反射，嘴角常带恭敬的微笑。头发乌黑，束成简单的发髻。身着土黄色与赭石色相间的侍从服装，衣襟处点缀着少量朱红色刺绣，体现身份。腰间佩戴简单的腰带，手持托盘，站立时微微躬身，表现出恭敬的姿态。服装采用棉麻质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+              "negativePrompt": "避免过于夸张的表情，避免过于华丽的服装，避免过于明亮的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于傲慢的姿势",
+              "status": "completed",
+              "referenceImage": "local:img_1773305845677_01ciyvo",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773305845677_01ciyvo",
+              "imageUrl": "local:img_1773305845677_01ciyvo"
+            },
+            {
+              "id": "char5",
+              "name": "骑士",
+              "gender": "男",
+              "age": "青年",
+              "personality": "勇敢，忠诚",
+              "variations": [],
+              "visualPrompt": "青年男子，7.5头身比例，体型健壮，体现勇敢与忠诚。面部轮廓方正，眉毛浓密，眼神中透露出勇敢与坚定，瞳孔带有细腻的虹膜反射，嘴角常带坚毅的微笑。头发乌黑，束成简单的发髻，佩戴简单的头盔。身着深蓝色调的骑士铠甲，带有紫色底色，肩甲处点缀着朱红色纹章，体现身份。腰间佩戴剑鞘，手持长矛，站立时挺直腰板，表现出勇敢的姿态。铠甲采用金属质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+              "negativePrompt": "避免过于夸张的表情，避免过于简朴的服装，避免过于明亮的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于懦弱的姿势",
+              "status": "failed",
+              "referenceImage": "local:img_1773305864476_bqjf57r",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773305864476_bqjf57r",
+              "imageUrl": "local:img_1773305864476_bqjf57r"
+            }
+          ],
+          "scenes": [
+            {
+              "id": "scene1",
+              "location": "齐王宫赛马场",
+              "time": "日",
+              "atmosphere": "阳光炙烤，人声鼎沸，充满竞争与嘲讽",
+              "visualPrompt": "齐王宫赛马场，阳光炙烤下的古老赛道，深蓝色调的建筑背景带有紫色底色，温暖的土黄色立柱和赭石色屋顶。前景是身着华丽服饰的贵族观众，7.5头身比例，圆润友好的体型，大而富有表现力的眼睛带有细腻虹膜反射。赛道中央，两匹骏马并驾齐驱，骑手表情紧张而专注，朱红色的缰绳和马鞍成为视觉焦点。中景是喧闹的人群，手势夸张，表情丰富，展现竞争与嘲讽的氛围。背景采用水彩画风格，柔和的渐变阴影，三点式电影照明：45度角暖色主光源照亮人物轮廓，冷色填充光提供层次感。丝绸服饰和金属马具质感细腻，整体色彩温暖和谐，既有历史剧的庄重感又不失动画的活力。",
+              "negativePrompt": "避免现代元素、夸张变形、过于写实或卡通化风格，避免冷色调主导，避免模糊不清的线条和阴影，避免人物表情呆板或比例失调，避免背景过于复杂或细节过多，避免光照不自然或缺乏层次感。",
+              "status": "completed",
+              "referenceImage": "local:img_1773305990461_1v1tr03",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773305990461_1v1tr03",
+              "imageUrl": "local:img_1773305990461_1v1tr03"
+            },
+            {
+              "id": "scene2",
+              "location": "田忌府邸",
+              "time": "夜",
+              "atmosphere": "烛火摇曳，压抑愤怒，充满困惑与希望",
+              "visualPrompt": "田忌府邸内夜，烛火摇曳，深蓝色调为主调，带有轻微紫色底色，营造压抑而神秘的氛围。前景为田忌紧锁眉头的特写，他身着温暖的土黄色锦袍，衣褶流畅，朱红色腰带点缀，双手紧握茶杯，指节因愤怒而发白。中景为书房陈设，古朴的木质书架堆满竹简，一盏青铜烛台投射出柔和的暖光，照亮空气中飘浮的微尘。背景为雕花窗棂，窗外隐约可见月色与庭院轮廓，三点式照明强调角色轮廓光，45度角暖光从左侧照射，冷色填充光平衡画面。角色采用7.5头身比例，大眼睛虹膜反射烛光，面部肌肉紧绷，传达困惑与希望交织的复杂情绪。水彩背景渐变处理，丝绸质感细腻，金属烛台反光柔和，整体色彩和谐统一，兼具历史剧庄重与动画活力。",
+              "negativePrompt": "避免现代元素、夸张透视、高饱和度色彩、僵硬线条、卡通化比例失调、过度写实纹理、杂乱背景、冷色调主导、缺乏情感表现力的面部",
+              "status": "completed",
+              "referenceImage": "local:img_1773306009055_t9m237t",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773306009055_t9m237t",
+              "imageUrl": "local:img_1773306009055_t9m237t"
+            },
+            {
+              "id": "scene3",
+              "location": "齐王宫赛马场",
+              "time": "日",
+              "atmosphere": "紧张氛围，充满期待与质疑",
+              "visualPrompt": "齐王宫赛马场，日间，紧张氛围充满期待与质疑。前景是木质围栏，纹理细腻，带有岁月痕迹；中景是宽阔的赛道，土黄色沙地延伸至远方，两侧排列着温暖的赭石色看台，观众席上人头攒动，表情各异；背景是深蓝色调的齐王宫建筑群，带有轻微紫色底色，屋檐飞翘，朱红色柱廊点缀其间。三点式电影照明：45度角暖金色阳光洒在赛道上，形成强烈轮廓光，柔和的冷色填充光从左侧补充，照亮观众席。主角是一位身着华服的贵族青年，7.5头身比例，健壮体型，大眼睛闪烁着虹膜反射，一手紧握缰绳，一手扬起，马匹肌肉线条流畅，丝绸马鞍质感细腻。画面构图采用动态对角线，马匹冲刺的动感与观众静态形成对比，色彩和谐统一，既有历史剧的庄重感又不失动画活力。",
+              "negativePrompt": "避免现代元素、卡通化过度、色彩饱和度过高、线条不流畅、光影混乱、人物比例失调、背景细节过多破坏氛围。",
+              "status": "completed",
+              "referenceImage": "local:img_1773306028191_jk9iczw",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773306028191_jk9iczw",
+              "imageUrl": "local:img_1773306028191_jk9iczw"
+            },
+            {
+              "id": "scene4",
+              "location": "赛马场赛道",
+              "time": "日",
+              "atmosphere": "紧张激烈，充满戏剧性转折，最终胜利的喜悦",
+              "visualPrompt": "赛马场赛道上，阳光洒落，营造出紧张激烈的氛围。背景是古色古香的看台，采用温暖的土黄色和柔和的赭石色调，点缀着深蓝色的装饰元素。赛道中央，一匹骏马正全力冲刺，骑手身着朱红色的战袍，身体前倾，展现出强烈的动感。前景是飞扬的尘土，采用柔和的渐变阴影，营造出速度感。中景是其他骑手和马匹，表情专注，动作各异，形成戏剧性的对比。天空呈现深蓝色调，带有轻微的紫色底色，阳光透过云层，形成强烈的轮廓光，照亮整个场景。角色采用7.5头身比例，健壮而不夸张，大而富有表现力的眼睛闪烁着坚定的光芒，细腻的虹膜反射传达出胜利的喜悦。服装和马鞍采用丝绸质感，金属配件细腻处理，整体画面充满电影感的光照效果，色彩和谐统一，既有历史剧的庄重感又不失动画的活力。",
+              "negativePrompt": "避免使用现代元素、夸张的变形、过于复杂的背景、不协调的色彩、模糊的线条、生硬的阴影、缺乏情感表达的角色。确保所有元素符合迪士尼/皮克斯风格，保持圆润友好的比例设计，避免写实或过于抽象的表现。",
+              "status": "completed",
+              "referenceImage": "local:img_1773306049184_xd6lhzs",
+              "referenceImageSource": "local",
+              "localImageId": "img_1773306049184_xd6lhzs",
+              "imageUrl": "local:img_1773306049184_xd6lhzs"
+            }
+          ],
+          "props": [],
+          "storyParagraphs": [
+            {
+              "id": 1,
+              "text": "阳光炙烤着赛道，看台上人声鼎沸。齐威王身着华服，端坐主位，田忌垂手立于下首，面色凝重。三场赛马已毕，齐威王的三匹骏马遥遥领先，全场欢呼。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 2,
+              "text": "齐威王举杯轻笑，田将军，今日又是寡人赢了。你这赌注，又该归国库了。田忌强作镇定，拱手，大王神骏，臣甘拜下风。只是……低头攥紧拳臣屡战屡败，颜面尽失。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 3,
+              "text": "田忌拂袖离去，背影在夕阳下拉得很长。齐威王的笑声刺耳回荡。",
+              "sceneRefId": "scene1"
+            },
+            {
+              "id": 4,
+              "text": "烛火摇曳，田忌将酒杯重重砸在案上，酒液溅湿了地图。同样的马匹，同样的赛道，为何我永远赢不了他！",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 5,
+              "text": "门扉轻启，孙膑缓步而入，衣袂无声。孙膑拾起地图，指尖划过赛道，将军的挫败，臣看在眼里。问题不在马，而在将军的'战法'。",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 6,
+              "text": "田忌猛然抬头，战法？我已倾尽全力，何错之有？孙膑平静剖析，今日第一局，将军以上等马对大王上等马，看似公平，实则以卵击石。第二局，中等马对中等马，平分秋色。第三局，下等马对下等马……摇头将军的短板，永远在王的强项上碰撞。",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 7,
+              "text": "田忌怔住，眼中怒火渐转为困惑。那依先生之见……孙膑眼中闪过锐光，以己之长，攻彼之短。将军可愿赌一把？",
+              "sceneRefId": "scene2"
+            },
+            {
+              "id": 8,
+              "text": "三日后的赛场，气氛比上次更紧绷。齐威王斜倚玉座，嘴角挂着讥诮。田忌深吸一口气，走向孙膑。孙膑低声耳语，田忌眼中逐渐燃起希望。",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 9,
+              "text": "齐威王高声，田将军，今日可要下重注啊！田忌拱手，声音沉稳，臣愿以全部家产，再赌一局。全场哗然。齐威王大笑，浑不在意。",
+              "sceneRefId": "scene3"
+            },
+            {
+              "id": 10,
+              "text": "田忌的下等马与齐威王的上等马并列起跑。哨声响起，下等马瞬间落后，观众席发出叹息。齐威王拍掌大笑，果真是来送银子的！田忌紧握栏杆，指节发白。",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 11,
+              "text": "田忌的上等马对阵齐威王的中等马。上等马如离弦之箭，反超瞬间，全场惊呼！齐威王笑容僵住。",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 12,
+              "text": "田忌的中等马对阵齐威王的下等马。两马交错，田忌的马以半个马颈优势冲线！死寂般的沉默后，看台爆发出震天动地的呐喊。",
+              "sceneRefId": "scene4"
+            },
+            {
+              "id": 13,
+              "text": "田忌转身，直视目瞪口呆的齐威王。田忌朗声，大王，今日胜负如何？齐威王脸色铁青，拂袖离去。田忌望着孙膑，两人相视一笑，阳光刺眼却温暖。",
+              "sceneRefId": "scene4"
+            }
+          ],
+          "targetDuration": "120s",
+          "visualStyle": "2d-animation",
+          "shotGenerationModel": "glm-4-plus"
+        },
+        "shots": [
+          {
+            "id": "shot-1",
+            "sceneId": "scene1",
+            "actionSummary": "阳光炙烤着赛道，看台上人声鼎沸。齐威王身着华服，端坐主位，田忌垂手立于下首，面色凝重。三场赛马已毕，齐威王的三匹骏马遥遥领先，全场欢呼。",
+            "dialogue": "",
+            "cameraMovement": "Wide Shot",
+            "shotSize": "全景",
+            "characters": [
+              "char1",
+              "char2"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-1-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位，田忌垂手立于下首，人声鼎沸的赛马场场景\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Initial frame composition suited for the camera movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773306362387_ztjleph",
+                "status": "completed"
+              },
+              {
+                "id": "kf-1-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位，田忌垂手立于下首，人声鼎沸的赛马场场景\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Final frame composition showing the result of camera movement.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773306475753_hdzw3u9",
+                "status": "completed"
+              }
+            ],
+            "videoModel": "cogvideox-flash",
+            "interval": {
+              "id": "int-shot-1-1773306493598",
+              "startKeyframeId": "kf-1-start",
+              "endKeyframeId": "kf-1-end",
+              "duration": 5,
+              "motionStrength": 5,
+              "videoPrompt": "阳光炙烤着赛道，看台上人声鼎沸。齐威王身着华服，端坐主位，田忌垂手立于下首，面色凝重。三场赛马已毕，齐威王的三匹骏马遥遥领先，全场欢呼。\n\n镜头运动：Wide Shot\n配音语言：使用中文配音",
+              "status": "completed",
+              "videoUrl": "video:vid_1773306557973_xomp2pa"
+            }
+          },
+          {
+            "id": "shot-2",
+            "sceneId": "scene1",
+            "actionSummary": "齐威王举杯轻笑，田将军，今日又是寡人赢了。你这赌注，又该归国库了。田忌强作镇定，拱手，大王神骏，臣甘拜下风。只是……低头攥紧拳臣屡战屡败，颜面尽失。",
+            "dialogue": "齐威王：田将军，今日又是寡人赢了。你这赌注，又该归国库了。\n田忌：大王神骏，臣甘拜下风。只是……臣屡战屡败，颜面尽失。",
+            "cameraMovement": "Medium Shot",
+            "shotSize": "中景",
+            "characters": [
+              "char1",
+              "char2"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-2-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位，田忌垂手立于下首，人声鼎沸的赛马场场景\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Final frame composition showing the result of camera movement.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+                "imageUrl": "local:img_1773306475753_hdzw3u9",
+                "status": "completed"
+              },
+              {
+                "id": "kf-2-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，田忌低头攥紧拳头，面部表情丰富，展现挫败感，三点式电影照明，齐威王轻笑，背景虚化",
+                "status": "pending"
+              }
+            ],
+            "nineGrid": {
+              "panels": [
+                {
+                  "index": 0,
+                  "shotSize": "远景",
+                  "cameraAngle": "俯拍",
+                  "description": "Establishing aerial shot showing the bustling racecourse of the Qi King's palace with the Qi King raising his cup and smiling, Tian Jun's constrained demeanor amidst the cheering crowd."
+                },
+                {
+                  "index": 1,
+                  "shotSize": "中景",
+                  "cameraAngle": "平视",
+                  "description": "Medium shot capturing the interaction between the Qi King and Tian Jun, with the Qi King toasting and Tian Jun bowing, the racecourse's lively atmosphere in the background."
+                },
+                {
+                  "index": 2,
+                  "shotSize": "近景",
+                  "cameraAngle": "平视",
+                  "description": "Close-up on the Qi King's face, capturing his confident smile and the pride in his eyes as he boasts about winning the bet."
+                },
+                {
+                  "index": 3,
+                  "shotSize": "特写",
+                  "cameraAngle": "平视",
+                  "description": "Extreme close-up on Tian Jun's face, showing his forced composure and the subtle shift in his expression as he acknowledges his defeat."
+                },
+                {
+                  "index": 4,
+                  "shotSize": "全景",
+                  "cameraAngle": "仰拍",
+                  "description": "Wide shot looking up at the Qi King, who stands tall and proud, his silhouette against the bright sun."
+                },
+                {
+                  "index": 5,
+                  "shotSize": "中景",
+                  "cameraAngle": "仰拍",
+                  "description": "Medium shot from above, showing Tian Jun's bowed figure in the foreground, emphasizing his humility in defeat."
+                },
+                {
+                  "index": 6,
+                  "shotSize": "近景",
+                  "cameraAngle": "俯拍",
+                  "description": "Low angle close-up on Tian Jun's clenched fist, symbolizing his internal struggle and the loss of face he feels."
+                },
+                {
+                  "index": 7,
+                  "shotSize": "特写",
+                  "cameraAngle": "平视",
+                  "description": "Extreme close-up on Tian Jun's face, capturing the sorrow and defeat in his eyes as he looks down, his expression conveying his inner turmoil."
+                },
+                {
+                  "index": 8,
+                  "shotSize": "全景",
+                  "cameraAngle": "平视",
+                  "description": "Wide shot showing the entire racecourse, with the Qi King and Tian Jun in the center, the crowd's reactions and the racing horses in the background, capturing the competitive and sarcastic atmosphere."
+                }
+              ],
+              "imageUrl": "local:img_1773308502891_sl2ox9r",
+              "prompt": "Nine Grid Storyboard - 齐威王举杯轻笑，田将军，今日又是寡人赢了。你这赌注，又该归国库了。田忌强作镇定，拱手，大王神骏，臣甘拜下风。只是……低头攥紧拳臣屡战屡败，颜面尽失。",
+              "status": "completed"
+            }
+          },
+          {
+            "id": "shot-3",
+            "sceneId": "scene1",
+            "actionSummary": "田忌拂袖离去，背影在夕阳下拉得很长。齐威王的笑声刺耳回荡。",
+            "dialogue": "",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "远景",
+            "characters": [
+              "char1",
+              "char2"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-3-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，田忌拂袖离去，深蓝色战袍，夕阳下的背影，三点式电影照明，齐威王在背景中",
+                "status": "pending"
+              },
+              {
+                "id": "kf-3-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画风格，田忌背影在夕阳下拉得很长，温暖的土黄色和柔和的赭石色调，三点式电影照明，齐威王的笑声刺耳回荡",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-4",
+            "sceneId": "scene2",
+            "actionSummary": "烛火摇曳，田忌将酒杯重重砸在案上，酒液溅湿了地图。同样的马匹，同样的赛道，为何我永远赢不了他！",
+            "dialogue": "同样的马匹，同样的赛道，为何我永远赢不了他！",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "田忌"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-4-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，烛火摇曳，田忌愤怒地将酒杯砸在案上，酒液溅湿地图，面部表情扭曲，展现挫败感",
+                "status": "pending"
+              },
+              {
+                "id": "kf-4-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，烛火摇曳，田忌愤怒地盯着地图，酒液蔓延，面部表情扭曲，展现挫败感",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-5",
+            "sceneId": "scene2",
+            "actionSummary": "门扉轻启，孙膑缓步而入，衣袂无声。孙膑拾起地图，指尖划过赛道，将军的挫败，臣看在眼里。问题不在马，而在将军的'战法'。",
+            "dialogue": "问题不在马，而在将军的'战法'。",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "Wide Shot",
+            "characters": [
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-5-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，门扉轻启，孙膑缓步而入，衣袂无声，田忌背对镜头，展现压抑氛围",
+                "status": "pending"
+              },
+              {
+                "id": "kf-5-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，孙膑俯身拾起地图，指尖划过赛道，田忌转身注视，两人形成对比构图",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-6",
+            "sceneId": "scene2",
+            "actionSummary": "田忌猛然抬头，战法？我已倾尽全力，何错之有？孙膑平静剖析，今日第一局，将军以上等马对大王上等马，看似公平，实则以卵击石。",
+            "dialogue": "将军可愿赌一把？",
+            "cameraMovement": "Zoom In Shot",
+            "shotSize": "Close-up",
+            "characters": [
+              "田忌",
+              "孙膑"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-6-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，田忌猛然抬头，眼神从愤怒转为困惑，孙膑平静剖析，面部表情睿智",
+                "status": "pending"
+              },
+              {
+                "id": "kf-6-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，孙膑眼中闪过锐光，田忌眼神充满希望，两人表情形成对比，构图紧凑",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-7",
+            "sceneId": "scene3",
+            "actionSummary": "齐王宫赛马场，气氛紧张。齐威王斜倚玉座，嘴角带着讥诮的笑容，目光扫视全场。",
+            "dialogue": "三日后的赛场，气氛比上次更紧绷。齐威王斜倚玉座，嘴角挂着讥诮。",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Wide Shot",
+            "characters": [
+              "char2",
+              "char1",
+              "char3",
+              "char4",
+              "char5"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-7-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，深蓝色调背景，温暖的土黄色和赭石色调。齐威王斜倚玉座，嘴角讥诮，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-7-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，深蓝色调背景，温暖的土黄色和赭石色调。齐威王斜倚玉座，嘴角讥诮，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-8",
+            "sceneId": "scene3",
+            "actionSummary": "田忌深吸一口气，走向孙膑。孙膑低声耳语，田忌眼中逐渐燃起希望。",
+            "dialogue": "田忌深吸一口气，走向孙膑。孙膑低声耳语，田忌眼中逐渐燃起希望。",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "char1",
+              "char3"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-8-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，田忌深吸气，表情凝重，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-8-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，田忌眼中燃起希望，孙膑低语，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-9",
+            "sceneId": "scene3",
+            "actionSummary": "齐威王高声嘲讽，田忌拱手回应，声音沉稳，愿以全部家产再赌一局。全场哗然。",
+            "dialogue": "齐威王高声，田将军，今日可要下重注啊！田忌拱手，声音沉稳，臣愿以全部家产，再赌一局。全场哗然。",
+            "cameraMovement": "Pan Right Shot",
+            "shotSize": "Medium Long Shot",
+            "characters": [
+              "char2",
+              "char1",
+              "char4",
+              "char5"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-9-start",
+                "type": "start",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，齐威王高声嘲讽，表情轻蔑，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-9-end",
+                "type": "end",
+                "visualPrompt": "迪士尼/皮克斯质量的手绘2D动画，田忌拱手回应，全场哗然，朱红色强调，三点式照明，柔和渐变阴影。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-10",
+            "sceneId": "scene4",
+            "actionSummary": "田忌的下等马与齐威王的上等马并列起跑。哨声响起，下等马瞬间落后，观众席发出叹息。齐威王拍掌大笑，果真是来送银子的！田忌紧握栏杆，指节发白。",
+            "dialogue": "",
+            "cameraMovement": "Static Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "char1",
+              "char2"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-10-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，温暖阳光照射。田忌紧握栏杆，指节发白，表情凝重。齐威王拍掌大笑，得意洋洋。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-10-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，深蓝色调背景，温暖阳光照射。田忌紧握栏杆，指节发白，表情凝重。齐威王拍掌大笑，得意洋洋。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-11",
+            "sceneId": "scene4",
+            "actionSummary": "田忌的上等马对阵齐威王的中等马。上等马如离弦之箭，反超瞬间，全场惊呼！齐威王笑容僵住。",
+            "dialogue": "",
+            "cameraMovement": "Tracking Shot",
+            "shotSize": "Wide Shot",
+            "characters": [
+              "char1",
+              "char2"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-11-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，赛马场全景，深蓝色调背景。田忌上等马如离弦之箭，反超瞬间。齐威王笑容僵住，表情震惊。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-11-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，赛马场全景，深蓝色调背景。田忌上等马领先，齐威王表情震惊，笑容消失。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "shot-12",
+            "sceneId": "scene4",
+            "actionSummary": "田忌的中等马对阵齐威王的下等马。两马交错，田忌的马以半个马颈优势冲线！死寂般的沉默后，看台爆发出震天动地的呐喊。田忌转身，直视目瞪口呆的齐威王。田忌朗声，大王，今日胜负如何？齐威王脸色铁青，拂袖离去。田忌望着孙膑，两人相视一笑，阳光刺眼却温暖。",
+            "dialogue": "大王，今日胜负如何？",
+            "cameraMovement": "Pan Right Shot",
+            "shotSize": "Medium Shot",
+            "characters": [
+              "char1",
+              "char2",
+              "char3"
+            ],
+            "keyframes": [
+              {
+                "id": "kf-12-start",
+                "type": "start",
+                "visualPrompt": "迪士尼风格2D动画，赛马场全景，深蓝色调背景。田忌中等马冲线，齐威王目瞪口呆。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              },
+              {
+                "id": "kf-12-end",
+                "type": "end",
+                "visualPrompt": "迪士尼风格2D动画，特写镜头，田忌与孙膑相视一笑，阳光温暖。齐威王脸色铁青，拂袖离去。水彩风格背景，柔和渐变阴影，三点式照明。",
+                "status": "pending"
+              }
+            ]
+          }
+        ],
+        "isParsingScript": false,
+        "renderLogs": [
+          {
+            "type": "script-parsing",
+            "resourceId": "rewrite-script",
+            "resourceName": "AI改写剧本（流式）",
+            "status": "success",
+            "model": "glm-4-plus",
+            "duration": 69201,
+            "prompt": "标题：田忌赛马\n        田忌常同齐威王进行跑马比赛。他们在比赛前各下赌注，每次比赛共设三局，胜两次以上的为赢家。然而，每次比赛，田忌总是输给齐威王。这天，田忌赛马时又输给了齐威王。回家后，田忌十分郁闷，他把赛马失败引起的不快告诉了孙膑。\n        孙膑说：“将军与大王的赛马我看了。其实，将军的三等马匹与大王的都差那么一点儿。您第一局派出的是上等马与大王的上等马赛，第二局派中等马与大王...",
+            "id": "log-1773296310109-hkh2f3dw2",
+            "timestamp": 1773296310109
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305784328",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 中年男子，7.5头身比例，健壮但不夸张的体型，符合中国古典美学。面部轮廓方正，浓眉大眼，眼神中透露出豪爽与挫败感，瞳孔带有细腻的虹膜反射，能清晰传达情感变化。头发乌黑浓密，束成高髻，几缕发丝自然垂落。身着深蓝色调的华丽战袍，带有紫色底色，象征齐国的庄重与历史感，衣襟处点缀着朱红色刺绣，彰显身份。腰间佩戴玉带，手持马鞭，站立时微微前倾，表现出急于证明自己的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "duration": 21240,
+            "id": "log-1773305784328-scjxfoi9l",
+            "timestamp": 1773305784328
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305805171",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 中年男子，7.5头身比例，体型健壮挺拔，彰显王者风范。面部轮廓圆润，眉毛浓密上扬，眼神中透露出自负与骄傲，瞳孔带有细腻的虹膜反射，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠。身着赭石色与土黄色相间的华丽龙袍，衣襟处点缀着鲜亮的朱红色龙纹，象征至高无上的权力。腰间镶嵌宝石的玉带，手持玉笏，站立时昂首挺胸，表现出骄傲自大的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "duration": 17842,
+            "id": "log-1773305805171-qy2wact00",
+            "timestamp": 1773305805171
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305828455",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 中年男子，7.5头身比例，体型匀称挺拔，体现智者风范。面部轮廓方正，眉毛浓密且微微下垂，眼神中透露出睿智与沉稳，瞳孔带有细腻的虹膜反射，嘴角常带若有所思的微笑。头发花白，束成简洁的高髻，几缕发丝自然垂落。身着深蓝色调的儒士长袍，带有紫色底色，衣襟处点缀着朱红色刺绣，彰显身份。腰间佩戴玉带，手持竹简，站立时微微前倾，表现出思考的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "duration": 20283,
+            "id": "log-1773305828455-rhoke8bei",
+            "timestamp": 1773305828455
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305845679",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 青年男子，7.5头身比例，体型匀称，体现忠诚与服从。面部轮廓圆润，眉毛细长，眼神中透露出忠诚与恭敬，瞳孔带有细腻的虹膜反射，嘴角常带恭敬的微笑。头发乌黑，束成简单的发髻。身着土黄色与赭石色相间的侍从服装，衣襟处点缀着少量朱红色刺绣，体现身份。腰间佩戴简单的腰带，手持托盘，站立时微微躬身，表现出恭敬的姿态。服装采用棉麻质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "duration": 14222,
+            "id": "log-1773305845679-ur8lrbxwz",
+            "timestamp": 1773305845679
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305864478",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 青年男子，7.5头身比例，体型健壮，体现勇敢与忠诚。面部轮廓方正，眉毛浓密，眼神中透露出勇敢与坚定，瞳孔带有细腻的虹膜反射，嘴角常带坚毅的微笑。头发乌黑，束成简单的发髻，佩戴简单的头盔。身着深蓝色调的骑士铠甲，带有紫色底色，肩甲处点缀着朱红色纹章，体现身份。腰间佩戴剑鞘，手持长矛，站立时挺直腰板，表现出勇敢的姿态。铠甲采用金属质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "duration": 15798,
+            "id": "log-1773305864478-84ln5jvm2",
+            "timestamp": 1773305864478
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773305990464",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 齐王宫赛马场，阳光炙烤下的古老赛道，深蓝色调的建筑背景带有紫色底色，温暖的土黄色立柱和赭石色屋顶。前景是身着华丽服饰的贵族观众，7.5头身比例，圆润友好的体型，大而富有表现力的眼睛带有细腻虹膜反射。赛道中央，两匹骏马并驾齐驱，骑手表情紧张而专注，朱红色的缰绳和马鞍成为视觉焦点。中景是喧闹的人群，手势夸张，表情丰富，展现竞争与嘲讽的氛围。背景采用水彩画风格，柔和的渐变阴影，三点式电影照明：45度角暖色主光源照亮人物轮廓，冷色填充光提供层次感。丝绸服饰和金属马具质感细腻，整体色彩温暖和谐，既有历史剧的庄重感又不失动画的活力。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 23708,
+            "id": "log-1773305990464-bm6j7809h",
+            "timestamp": 1773305990464
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773306009057",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 田忌府邸内夜，烛火摇曳，深蓝色调为主调，带有轻微紫色底色，营造压抑而神秘的氛围。前景为田忌紧锁眉头的特写，他身着温暖的土黄色锦袍，衣褶流畅，朱红色腰带点缀，双手紧握茶杯，指节因愤怒而发白。中景为书房陈设，古朴的木质书架堆满竹简，一盏青铜烛台投射出柔和的暖光，照亮空气中飘浮的微尘。背景为雕花窗棂，窗外隐约可见月色与庭院轮廓，三点式照明强调角色轮廓光，45度角暖光从左侧照射，冷色填充光平衡画面。角色采用7.5头身比例，大眼睛虹膜反射烛光，面部肌肉紧绷，传达困惑与希望交织的复杂情绪。水彩背景渐变处理，丝绸质感细腻，金属烛台反光柔和，整体色彩和谐统一，兼具历史剧庄重与动画活力。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 15592,
+            "id": "log-1773306009057-tk0avr53o",
+            "timestamp": 1773306009057
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773306028192",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 齐王宫赛马场，日间，紧张氛围充满期待与质疑。前景是木质围栏，纹理细腻，带有岁月痕迹；中景是宽阔的赛道，土黄色沙地延伸至远方，两侧排列着温暖的赭石色看台，观众席上人头攒动，表情各异；背景是深蓝色调的齐王宫建筑群，带有轻微紫色底色，屋檐飞翘，朱红色柱廊点缀其间。三点式电影照明：45度角暖金色阳光洒在赛道上，形成强烈轮廓光，柔和的冷色填充光从左侧补充，照亮观众席。主角是一位身着华服的贵族青年，7.5头身比例，健壮体型，大眼睛闪烁着虹膜反射，一手紧握缰绳，一手扬起，马匹肌肉线条流畅，丝绸马鞍质感细腻。画面构图采用动态对角线，马匹冲刺的动感与观众静态形成对比，色彩和谐统一，既有历史剧的庄重感又不失动画活力。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 16133,
+            "id": "log-1773306028192-2g8pjz4o4",
+            "timestamp": 1773306028192
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773306049186",
+            "resourceName": "Chinese setting, East Asian architecture and aesth...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese setting, East Asian architecture and aesthetics, 赛马场赛道上，阳光洒落，营造出紧张激烈的氛围。背景是古色古香的看台，采用温暖的土黄色和柔和的赭石色调，点缀着深蓝色的装饰元素。赛道中央，一匹骏马正全力冲刺，骑手身着朱红色的战袍，身体前倾，展现出强烈的动感。前景是飞扬的尘土，采用柔和的渐变阴影，营造出速度感。中景是其他骑手和马匹，表情专注，动作各异，形成戏剧性的对比。天空呈现深蓝色调，带有轻微的紫色底色，阳光透过云层，形成强烈的轮廓光，照亮整个场景。角色采用7.5头身比例，健壮而不夸张，大而富有表现力的眼睛闪烁着坚定的光芒，细腻的虹膜反射传达出胜利的喜悦。服装和马鞍采用丝绸质感，金属配件细腻处理，整体画面充满电影感的光照效果，色彩和谐统一，既有历史剧的庄重感又不失动画的活力。. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.",
+            "duration": 17991,
+            "id": "log-1773306049186-s8zskevun",
+            "timestamp": 1773306049186
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773306362389",
+            "resourceName": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位，田忌垂手立于下首，人声鼎沸的赛马场场景\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Initial frame composition suited for the camera movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 16528,
+            "id": "log-1773306362389-xyvuo3pf6",
+            "timestamp": 1773306362389
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773306475755",
+            "resourceName": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "迪士尼/皮克斯质量的手绘2D动画风格，深蓝色调背景，温暖的土黄色看台，三点式电影照明，齐威王端坐主位，田忌垂手立于下首，人声鼎沸的赛马场场景\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nWide Shot (Final Frame 结束帧)\n\n【构图指导】Composition Guide\nComposition: Final frame composition showing the result of camera movement.\n\n【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "duration": 12925,
+            "id": "log-1773306475755-mqh4o9253",
+            "timestamp": 1773306475755
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1773308502893",
+            "resourceName": "Generate a SINGLE image composed as a cinematic st...",
+            "status": "success",
+            "model": "cogview-3-flash",
+            "prompt": "Generate a SINGLE image composed as a cinematic storyboard with a 3x3 grid layout (9 equal panels).\nThe image shows the SAME scene from 9 DIFFERENT camera angles and shot sizes.\nEach panel is separated by thin white borders.\n\nVisual Style: photorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution, shallow depth of field, film grain texture, color graded, anamorphic lens flare, three-point lighting setup\n\nGrid Layout (left to right, top to bottom):\nPanel 1 (Top-Left): [远景 / 俯拍] - Establishing aerial shot showing the bustling racecourse of the Qi King's palace with the Qi King raising his cup and smiling, Tian Jun's constrained demeanor amidst the cheering crowd.\nPanel 2 (Top-Center): [中景 / 平视] - Medium shot capturing the interaction between the Qi King and Tian Jun, with the Qi King toasting and Tian Jun bowing, the racecourse's lively atmosphere in the background.\nPanel 3 (Top-Right): [近景 / 平视] - Close-up on the Qi King's face, capturing his confident smile and the pride in his eyes as he boasts about winning the bet.\nPanel 4 (Middle-Left): [特写 / 平视] - Extreme close-up on Tian Jun's face, showing his forced composure and the subtle shift in his expression as he acknowledges his defeat.\nPanel 5 (Center): [全景 / 仰拍] - Wide shot looking up at the Qi King, who stands tall and proud, his silhouette against the bright sun.\nPanel 6 (Middle-Right): [中景 / 仰拍] - Medium shot from above, showing Tian Jun's bowed figure in the foreground, emphasizing his humility in defeat.\nPanel 7 (Bottom-Left): [近景 / 俯拍] - Low angle close-up on Tian Jun's clenched fist, symbolizing his internal struggle and the loss of face he feels.\nPanel 8 (Bottom-Center): [特写 / 平视] - Extreme close-up on Tian Jun's face, capturing the sorrow and defeat in his eyes as he looks down, his expression conveying his inner turmoil.\nPanel 9 (Bottom-Right): [全景 / 平视] - Wide shot showing the entire racecourse, with the Qi King and Tian Jun in the center, the crowd's reactions and the racing horses in the background, capturing the competitive and sarcastic atmosphere.\n\nCRITICAL REQUIREMENTS:\n- The output MUST be a SINGLE image divided into exactly 9 equal rectangular panels in a 3x3 grid layout\n- Each panel MUST have a thin white border/separator (2-3px) between panels\n- All 9 panels show the SAME scene from DIFFERENT camera angles and shot sizes\n- Maintain STRICT character consistency across ALL panels (same face, hair, clothing, body proportions)\n- Maintain consistent lighting, color palette, and atmosphere across all panels\n- Each panel should be a complete, well-composed frame suitable for use as a keyframe\n- The overall image should read as a professional cinematographer's shot planning board",
+            "duration": 25759,
+            "id": "log-1773308502893-x8hha1ch1",
+            "timestamp": 1773308502893
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1775033238593",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 青年男子，7.5头身比例，体型健壮，体现勇敢与忠诚。面部轮廓方正，眉毛浓密，眼神中透露出勇敢与坚定，瞳孔带有细腻的虹膜反射，嘴角常带坚毅的微笑。头发乌黑，束成简单的发髻，佩戴简单的头盔。身着深蓝色调的骑士铠甲，带有紫色底色，肩甲处点缀着朱红色纹章，体现身份。腰间佩戴剑鞘，手持长矛，站立时挺直腰板，表现出勇敢的姿态。铠甲采用金属质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4254,
+            "id": "log-1775033238593-guseb38uj",
+            "timestamp": 1775033238593
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1775033252186",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 青年男子，7.5头身比例，体型健壮，体现勇敢与忠诚。面部轮廓方正，眉毛浓密，眼神中透露出勇敢与坚定，瞳孔带有细腻的虹膜反射，嘴角常带坚毅的微笑。头发乌黑，束成简单的发髻，佩戴简单的头盔。身着深蓝色调的骑士铠甲，带有紫色底色，肩甲处点缀着朱红色纹章，体现身份。腰间佩戴剑鞘，手持长矛，站立时挺直腰板，表现出勇敢的姿态。铠甲采用金属质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3864,
+            "id": "log-1775033252186-crejegsb7",
+            "timestamp": 1775033252186
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1775033266729",
+            "resourceName": "Chinese person, East Asian facial features, Chines...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "Chinese person, East Asian facial features, Chinese ethnicity, 青年男子，7.5头身比例，体型健壮，体现勇敢与忠诚。面部轮廓方正，眉毛浓密，眼神中透露出勇敢与坚定，瞳孔带有细腻的虹膜反射，嘴角常带坚毅的微笑。头发乌黑，束成简单的发髻，佩戴简单的头盔。身着深蓝色调的骑士铠甲，带有紫色底色，肩甲处点缀着朱红色纹章，体现身份。腰间佩戴剑鞘，手持长矛，站立时挺直腰板，表现出勇敢的姿态。铠甲采用金属质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 4041,
+            "id": "log-1775033266729-vgatq5z4g",
+            "timestamp": 1775033266729
+          },
+          {
+            "type": "keyframe",
+            "resourceId": "image-1775033287744",
+            "resourceName": "迪士尼/皮克斯质量的手绘2D动画风格，齐威王举杯轻笑，深蓝色龙袍，朱红色刺绣，三点式电影照明，田忌拱...",
+            "status": "failed",
+            "model": "cogview-3-flash",
+            "prompt": "迪士尼/皮克斯质量的手绘2D动画风格，齐威王举杯轻笑，深蓝色龙袍，朱红色刺绣，三点式电影照明，田忌拱手，深蓝色战袍，表情凝重\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【视觉风格】Visual Style\nphotorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【镜头运动】Camera Movement\nMedium Shot (Initial Frame 起始帧)\n\n【构图指导】Composition Guide\nComposition: Initial frame composition suited for the camera movement.\n\n【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL\n⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:\n• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致\n• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致\n• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配\n• 体型特征: 身材比例、身高体型必须保持一致\n⚠️ 这是最高优先级要求,不可妥协!",
+            "error": "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。",
+            "duration": 3705,
+            "id": "log-1775033287744-rzv3j900s",
+            "timestamp": 1775033287744
+          }
+        ]
+      }
+    ],
+    "assetLibrary": [
+      {
+        "id": "09967d9d-c28f-467e-9233-ab98a03f8831",
+        "type": "character",
+        "name": "田忌",
+        "projectId": "e83bc53b-f050-4f85-93a8-e083961ec8dd",
+        "projectName": "田忌赛马2",
+        "createdAt": 1773308363516,
+        "updatedAt": 1773308363516,
+        "data": {
+          "id": "char1",
+          "age": "中年",
+          "name": "田忌",
+          "gender": "男",
+          "status": "completed",
+          "variations": [],
+          "personality": "豪爽但屡遭挫败，从愤怒到沉稳，善于接受建议",
+          "visualPrompt": "中年男子，7.5头身比例，健壮但不夸张的体型，符合中国古典美学。面部轮廓方正，浓眉大眼，眼神中透露出豪爽与挫败感，瞳孔带有细腻的虹膜反射，能清晰传达情感变化。头发乌黑浓密，束成高髻，几缕发丝自然垂落。身着深蓝色调的华丽战袍，带有紫色底色，象征齐国的庄重与历史感，衣襟处点缀着朱红色刺绣，彰显身份。腰间佩戴玉带，手持马鞭，站立时微微前倾，表现出急于证明自己的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+          "negativePrompt": "避免过于夸张的肌肉线条，避免现代服装元素，避免过于卡通化的表情，避免过于明亮的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+          "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char1/img_1773305784319_jywr1hd.png",
+          "referenceImageSource": "cloud"
+        }
+      },
+      {
+        "id": "a56b04bb-5831-47be-8210-8fc89b312d87",
+        "type": "character",
+        "name": "齐威王",
+        "projectId": "e83bc53b-f050-4f85-93a8-e083961ec8dd",
+        "projectName": "田忌赛马2",
+        "createdAt": 1773308390593,
+        "updatedAt": 1773308390593,
+        "data": {
+          "id": "char2",
+          "age": "中年",
+          "name": "齐威王",
+          "gender": "男",
+          "status": "completed",
+          "variations": [],
+          "personality": "自负且好胜，骄傲自大，轻视对手",
+          "visualPrompt": "中年男子，7.5头身比例，体型健壮挺拔，彰显王者风范。面部轮廓圆润，眉毛浓密上扬，眼神中透露出自负与骄傲，瞳孔带有细腻的虹膜反射，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠。身着赭石色与土黄色相间的华丽龙袍，衣襟处点缀着鲜亮的朱红色龙纹，象征至高无上的权力。腰间镶嵌宝石的玉带，手持玉笏，站立时昂首挺胸，表现出骄傲自大的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+          "negativePrompt": "避免过于谦卑的表情，避免简朴的服装，避免过于柔和的线条，避免过于暗淡的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+          "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char2/img_1773305805169_lsqzp78.png",
+          "referenceImageSource": "cloud"
+        }
+      },
+      {
+        "id": "asset-mmna12zs-lfte",
+        "type": "character",
+        "name": "齐威王",
+        "projectId": "e83bc53b-f050-4f85-93a8-e083961ec8dd",
+        "projectName": "田忌赛马2",
+        "createdAt": 1773308390248,
+        "updatedAt": 1773308390248,
+        "data": {
+          "id": "char2",
+          "name": "齐威王",
+          "gender": "男",
+          "age": "中年",
+          "personality": "自负且好胜，骄傲自大，轻视对手",
+          "variations": [],
+          "visualPrompt": "中年男子，7.5头身比例，体型健壮挺拔，彰显王者风范。面部轮廓圆润，眉毛浓密上扬，眼神中透露出自负与骄傲，瞳孔带有细腻的虹膜反射，嘴角常带一丝轻蔑的微笑。头发乌黑，梳成整齐的发髻，佩戴金色头冠。身着赭石色与土黄色相间的华丽龙袍，衣襟处点缀着鲜亮的朱红色龙纹，象征至高无上的权力。腰间镶嵌宝石的玉带，手持玉笏，站立时昂首挺胸，表现出骄傲自大的姿态。服装采用丝绸质感，在三点式电影照明下呈现出柔和的渐变阴影，45度角暖色主光源照亮面部轮廓，柔和的冷色填充光增强立体感。背景为水彩画风格，温暖的土黄色和柔和的赭石色调，营造出历史剧的典雅氛围。",
+          "negativePrompt": "避免过于谦卑的表情，避免简朴的服装，避免过于柔和的线条，避免过于暗淡的色彩，避免过于复杂的背景细节，避免过于写实的人物比例，避免冷色调为主，避免过于静态的姿势",
+          "status": "completed",
+          "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/char2/img_1773305805169_lsqzp78.png",
+          "referenceImageSource": "cloud"
+        }
+      },
+      {
+        "id": "asset-mmol1621-8ii6",
+        "type": "character",
+        "name": "侦探",
+        "projectId": "b064ca76-4660-464f-9159-aeeb4ad1c77f",
+        "projectName": "雨夜残影",
+        "createdAt": 1773387336169,
+        "updatedAt": 1773387336169,
+        "data": {
+          "id": "detective",
+          "name": "侦探",
+          "gender": "男",
+          "age": "30",
+          "personality": "警觉、执着、内心有未解的情感创伤",
+          "variations": [],
+          "visualPrompt": "一位30岁的男性侦探，面容坚毅，眼神锐利而深邃，透露出警觉和执着。他的眼角有细微的皱纹，显示着岁月的痕迹和内心的挣扎。眉毛浓密而整齐，微微蹙起，显示出思考的深度。鼻梁高挺，嘴唇紧抿，透露出决断力。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前，暗示着雨夜的潮湿。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。穿着深灰色防水风衣，肩部有雨水浸湿的痕迹，内搭黑色高领毛衣，领口微微露出。风衣口袋中露出半截笔记本，手指修长，戴着黑色皮质手套。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，面部轮廓鲜明，雨水反光增强了神秘感。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出，形成强烈对比。",
+          "negativePrompt": "避免卡通化或过于完美的面部特征，避免明亮的色彩和过度饱和，避免平滑无纹理的皮肤，避免清晰锐利的轮廓线，避免过于干净整洁的服装，避免阳光明媚的背景，避免人物表情轻松或微笑，避免过于对称的构图，避免塑料质感或CGI效果，避免过于明亮的照明，避免没有雨水的环境。",
+          "status": "completed",
+          "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/detective/img_1773384614735_4y7sb37.png",
+          "referenceImageSource": "cloud",
+          "turnaround": {
+            "panels": [
+              {
+                "index": 0,
+                "viewAngle": "正面",
+                "shotSize": "全身",
+                "description": "一位30岁的男性侦探站在雨夜的街道上，全身展示。他穿着深灰色防水风衣，肩部有雨水浸湿的痕迹，内搭黑色高领毛衣。风衣微微敞开，露出黑色手套的手指，口袋中露出半截笔记本。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出，形成强烈对比。"
+              },
+              {
+                "index": 1,
+                "viewAngle": "正面",
+                "shotSize": "半身特写",
+                "description": "侦探的半身特写，从胸部到头部。面容坚毅，眼神锐利而深邃，透露出警觉和执着。他的眼角有细微的皱纹，显示着岁月的痕迹和内心的挣扎。眉毛浓密而整齐，微微蹙起，显示出思考的深度。鼻梁高挺，嘴唇紧抿，透露出决断力。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前。风衣领口微微敞开，露出黑色高领毛衣。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水反光增强了神秘感。背景虚化，突出人物主体。"
+              },
+              {
+                "index": 2,
+                "viewAngle": "正面",
+                "shotSize": "面部特写",
+                "description": "侦探的面部特写，仅展示面部，可能包括颈部和肩部。面部细节丰富，眼角有细微的皱纹，眉毛浓密而整齐微微蹙起，鼻梁高挺，嘴唇紧抿。眼神锐利而深邃，透露出警觉和执着，以及内心的挣扎。深棕色头发略带凌乱，有几缕湿漉漉地贴在额前。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景完全虚化，突出面部表情和质感。"
+              },
+              {
+                "index": 3,
+                "viewAngle": "左侧面",
+                "shotSize": "全身",
+                "description": "侦探的全身左侧面视图。从左侧角度展示整个身体，保持与正面视图相同的人物特征和比例。深灰色防水风衣在左侧视角下呈现出不同的轮廓，肩部雨水浸湿的痕迹清晰可见。内搭黑色高领毛衣，风衣口袋中露出半截笔记本。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，面部轮廓鲜明。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出。"
+              },
+              {
+                "index": 4,
+                "viewAngle": "左侧面",
+                "shotSize": "半身特写",
+                "description": "侦探的半身左侧面特写，从胸部到头部。左侧视角下，面部轮廓更加分明，鼻梁的高挺和嘴唇的紧抿清晰可见。眼角的皱纹和浓密而微微蹙起的眉毛显示出思考的深度。眼神锐利而深邃，透露出警觉和执着。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前。风衣领口微微敞开，露出黑色高领毛衣。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景虚化，突出人物主体。"
+              },
+              {
+                "index": 5,
+                "viewAngle": "左侧面",
+                "shotSize": "面部特写",
+                "description": "侦探的面部左侧面特写，仅展示面部左侧，可能包括颈部和肩部。左侧视角下，面部轮廓更加分明，鼻梁的高挺和嘴唇的紧抿清晰可见。眼角的皱纹和浓密而微微蹙起的眉毛显示出思考的深度。眼神锐利而深邃，透露出警觉和执着。深棕色头发略带凌乱，有几缕湿漉漉地贴在额前。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景完全虚化，突出面部表情和质感。"
+              },
+              {
+                "index": 6,
+                "viewAngle": "背面",
+                "shotSize": "全身",
+                "description": "侦探的全身背面视图。从背后展示整个身体，深灰色防水风衣的背部轮廓清晰可见，肩部雨水浸湿的痕迹在背部形成深色区域。风衣微微敞开，露出黑色高领毛衣的背部。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，风衣边缘的反光增强了神秘感。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但风衣边缘和雨水的细节在暖色光源下突出。"
+              },
+              {
+                "index": 7,
+                "viewAngle": "背面",
+                "shotSize": "半身特写",
+                "description": "侦探的半身背面特写，从背部到头部。风衣的背部轮廓清晰可见，肩部雨水浸湿的痕迹在背部形成深色区域。黑色高领毛衣的领口微微露出。头发的后部可见深棕色，略带凌乱，有几缕湿漉漉地贴在颈后。三点式布光系统下，主光源从45度角上方照射，形成侧光效果，风衣边缘的反光增强了神秘感。背景虚化，突出人物主体。从背面视角，可以感受到人物的警觉和坚毅，即使看不到面部表情。"
+              },
+              {
+                "index": 8,
+                "viewAngle": "背面",
+                "shotSize": "面部特写",
+                "description": "侦探的面部背面特写，仅展示面部后部，包括颈部和部分肩部。深棕色头发的后部可见，略带凌乱，有几缕湿漉漉地贴在颈后。风衣的领口微微敞开，露出黑色高领毛衣的后部。三点式布光系统下，主光源从45度角上方照射，形成侧光效果，风衣边缘和头发的反光增强了神秘感。背景完全虚化，突出人物轮廓和质感。从背面视角，可以感受到人物的警觉和坚毅，即使看不到面部表情，也能通过头发的状态和服装的细节感受到雨夜的压抑氛围。"
+              }
+            ],
+            "status": "completed",
+            "imageUrl": "local:img_1773386819874_d2stjyg",
+            "imageUrlSource": "local",
+            "localImageId": "img_1773386819874_d2stjyg"
+          }
+        }
+      },
+      {
+        "id": "f9b6ba5e-9491-452f-848a-0f7b477b65d3",
+        "type": "character",
+        "name": "侦探",
+        "projectId": null,
+        "projectName": "雨夜残影",
+        "createdAt": 1773387336841,
+        "updatedAt": 1774926022928,
+        "data": {
+          "id": "detective",
+          "age": "30",
+          "name": "侦探",
+          "gender": "男",
+          "status": "completed",
+          "turnaround": {
+            "panels": [
+              {
+                "index": 0,
+                "shotSize": "全身",
+                "viewAngle": "正面",
+                "description": "一位30岁的男性侦探站在雨夜的街道上，全身展示。他穿着深灰色防水风衣，肩部有雨水浸湿的痕迹，内搭黑色高领毛衣。风衣微微敞开，露出黑色手套的手指，口袋中露出半截笔记本。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出，形成强烈对比。"
+              },
+              {
+                "index": 1,
+                "shotSize": "半身特写",
+                "viewAngle": "正面",
+                "description": "侦探的半身特写，从胸部到头部。面容坚毅，眼神锐利而深邃，透露出警觉和执着。他的眼角有细微的皱纹，显示着岁月的痕迹和内心的挣扎。眉毛浓密而整齐，微微蹙起，显示出思考的深度。鼻梁高挺，嘴唇紧抿，透露出决断力。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前。风衣领口微微敞开，露出黑色高领毛衣。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水反光增强了神秘感。背景虚化，突出人物主体。"
+              },
+              {
+                "index": 2,
+                "shotSize": "面部特写",
+                "viewAngle": "正面",
+                "description": "侦探的面部特写，仅展示面部，可能包括颈部和肩部。面部细节丰富，眼角有细微的皱纹，眉毛浓密而整齐微微蹙起，鼻梁高挺，嘴唇紧抿。眼神锐利而深邃，透露出警觉和执着，以及内心的挣扎。深棕色头发略带凌乱，有几缕湿漉漉地贴在额前。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景完全虚化，突出面部表情和质感。"
+              },
+              {
+                "index": 3,
+                "shotSize": "全身",
+                "viewAngle": "左侧面",
+                "description": "侦探的全身左侧面视图。从左侧角度展示整个身体，保持与正面视图相同的人物特征和比例。深灰色防水风衣在左侧视角下呈现出不同的轮廓，肩部雨水浸湿的痕迹清晰可见。内搭黑色高领毛衣，风衣口袋中露出半截笔记本。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，面部轮廓鲜明。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出。"
+              },
+              {
+                "index": 4,
+                "shotSize": "半身特写",
+                "viewAngle": "左侧面",
+                "description": "侦探的半身左侧面特写，从胸部到头部。左侧视角下，面部轮廓更加分明，鼻梁的高挺和嘴唇的紧抿清晰可见。眼角的皱纹和浓密而微微蹙起的眉毛显示出思考的深度。眼神锐利而深邃，透露出警觉和执着。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前。风衣领口微微敞开，露出黑色高领毛衣。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景虚化，突出人物主体。"
+              },
+              {
+                "index": 5,
+                "shotSize": "面部特写",
+                "viewAngle": "左侧面",
+                "description": "侦探的面部左侧面特写，仅展示面部左侧，可能包括颈部和肩部。左侧视角下，面部轮廓更加分明，鼻梁的高挺和嘴唇的紧抿清晰可见。眼角的皱纹和浓密而微微蹙起的眉毛显示出思考的深度。眼神锐利而深邃，透露出警觉和执着。深棕色头发略带凌乱，有几缕湿漉漉地贴在额前。三点式布光系统下，主光源从45度角上方照射，形成强烈的侧光效果，雨水在面部形成反光，增强神秘感。背景完全虚化，突出面部表情和质感。"
+              },
+              {
+                "index": 6,
+                "shotSize": "全身",
+                "viewAngle": "背面",
+                "description": "侦探的全身背面视图。从背后展示整个身体，深灰色防水风衣的背部轮廓清晰可见，肩部雨水浸湿的痕迹在背部形成深色区域。风衣微微敞开，露出黑色高领毛衣的背部。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，风衣边缘的反光增强了神秘感。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但风衣边缘和雨水的细节在暖色光源下突出。"
+              },
+              {
+                "index": 7,
+                "shotSize": "半身特写",
+                "viewAngle": "背面",
+                "description": "侦探的半身背面特写，从背部到头部。风衣的背部轮廓清晰可见，肩部雨水浸湿的痕迹在背部形成深色区域。黑色高领毛衣的领口微微露出。头发的后部可见深棕色，略带凌乱，有几缕湿漉漉地贴在颈后。三点式布光系统下，主光源从45度角上方照射，形成侧光效果，风衣边缘的反光增强了神秘感。背景虚化，突出人物主体。从背面视角，可以感受到人物的警觉和坚毅，即使看不到面部表情。"
+              },
+              {
+                "index": 8,
+                "shotSize": "面部特写",
+                "viewAngle": "背面",
+                "description": "侦探的面部背面特写，仅展示面部后部，包括颈部和部分肩部。深棕色头发的后部可见，略带凌乱，有几缕湿漉漉地贴在颈后。风衣的领口微微敞开，露出黑色高领毛衣的后部。三点式布光系统下，主光源从45度角上方照射，形成侧光效果，风衣边缘和头发的反光增强了神秘感。背景完全虚化，突出人物轮廓和质感。从背面视角，可以感受到人物的警觉和坚毅，即使看不到面部表情，也能通过头发的状态和服装的细节感受到雨夜的压抑氛围。"
+              }
+            ],
+            "status": "completed",
+            "imageUrl": "local:img_1773386819874_d2stjyg",
+            "localImageId": "img_1773386819874_d2stjyg",
+            "imageUrlSource": "local"
+          },
+          "variations": [],
+          "personality": "警觉、执着、内心有未解的情感创伤",
+          "visualPrompt": "一位30岁的男性侦探，面容坚毅，眼神锐利而深邃，透露出警觉和执着。他的眼角有细微的皱纹，显示着岁月的痕迹和内心的挣扎。眉毛浓密而整齐，微微蹙起，显示出思考的深度。鼻梁高挺，嘴唇紧抿，透露出决断力。头发为深棕色，略带凌乱，有几缕湿漉漉地贴在额前，暗示着雨夜的潮湿。身材修长，7.5头身比例，略显瘦削但肌肉线条分明。穿着深灰色防水风衣，肩部有雨水浸湿的痕迹，内搭黑色高领毛衣，领口微微露出。风衣口袋中露出半截笔记本，手指修长，戴着黑色皮质手套。雨滴从他的帽檐滑落，在45度角的主光源照射下形成侧光效果，面部轮廓鲜明，雨水反光增强了神秘感。背景是模糊的城市雨夜，霓虹灯的暗红色和琥珀色光晕在湿漉漉的街道上反射，营造出压抑而悬疑的氛围。整体色调偏冷，但他的眼睛和手中物品的细节在暖色光源下突出，形成强烈对比。",
+          "negativePrompt": "避免卡通化或过于完美的面部特征，避免明亮的色彩和过度饱和，避免平滑无纹理的皮肤，避免清晰锐利的轮廓线，避免过于干净整洁的服装，避免阳光明媚的背景，避免人物表情轻松或微笑，避免过于对称的构图，避免塑料质感或CGI效果，避免过于明亮的照明，避免没有雨水的环境。",
+          "referenceImage": "https://wgmnizpejtuwvcaqsbvy.supabase.co/storage/v1/object/public/projects/23dba8dc-6efb-42d2-af64-7dda7bc5ceac/asset_library/character/detective/img_1773384614735_4y7sb37.png",
+          "referenceImageSource": "cloud"
+        }
+      }
+    ]
+  }
+}

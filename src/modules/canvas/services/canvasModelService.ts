@@ -137,6 +137,12 @@ export class CanvasModelService {
             '/video-proxy'
           );
           console.log('[CanvasModelService] 使用代理下载视频:', downloadUrl);
+        } else if (videoUrl.includes('aigc-files.bigmodel.cn')) {
+          downloadUrl = videoUrl.replace(
+            'https://aigc-files.bigmodel.cn',
+            '/bigmodel-files'
+          );
+          console.log('[CanvasModelService] 使用代理下载 bigmodel 视频:', downloadUrl);
         } else {
           console.log('[CanvasModelService] 尝试直接下载视频...');
         }

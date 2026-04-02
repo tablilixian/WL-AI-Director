@@ -31,7 +31,7 @@ const isBigModelModel = (modelId: string): boolean => {
  * 检查是否为 BigModel 视频模型
  */
 const isBigModelVideoModel = (modelId: string): boolean => {
-  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox');
 };
 
 /**
