@@ -6,57 +6,15 @@
 import { VideoModelDefinition, VideoGenerateOptions, AspectRatio, VideoDuration } from '../../types/model';
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel } from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
-import { imageStorageService } from '../imageStorageService';
+import { unifiedImageService } from '../unifiedImageService';
 
 /**
- * 解析图片引用（支持 local: 格式）
+ * 解析图片引用为 Base64 格式
+ * 
+ * @deprecated 使用 unifiedImageService.resolveForApi() 代替
  */
 async function resolveImageRef(imageRef: string): Promise<string> {
-  if (!imageRef) return '';
-  
-  if (imageRef.startsWith('data:') || imageRef.startsWith('http://') || imageRef.startsWith('https://')) {
-    return imageRef;
-  }
-  
-  if (imageRef.startsWith('blob:')) {
-    console.log('[VideoAdapter] 检测到 blob URL，转换为 Base64:', imageRef);
-    try {
-      const response = await fetch(imageRef);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          console.log('[VideoAdapter] blob 转换为 Base64 成功');
-          resolve(reader.result as string);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('[VideoAdapter] blob 转换失败:', error);
-      return '';
-    }
-  }
-  
-  if (imageRef.startsWith('local:')) {
-    const localId = imageRef.replace('local:', '');
-    console.log('[VideoAdapter] 解析本地图片引用:', localId);
-    try {
-      const blob = await imageStorageService.getImage(localId);
-      if (blob) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      }
-    } catch (error) {
-      console.error('[VideoAdapter] 解析本地图片失败:', error);
-    }
-  }
-  
-  return imageRef;
+  return await unifiedImageService.resolveForApi(imageRef);
 }
 
 /**

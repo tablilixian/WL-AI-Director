@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { getImageUrl, revokeObjectUrl, parseImageUrl } from '../utils/imageUtils';
+import { unifiedImageService } from '../services/unifiedImageService';
 
+/**
+ * 图片加载 Hook
+ * 
+ * 统一处理各种来源的图片加载：
+ * - 云端图片 (http/https)
+ * - Base64 内联图片
+ * - 本地存储图片 (local:xxx)
+ * 
+ * @param imageUrl - 图片 URL
+ * @returns 加载状态 { src, loading, error }
+ */
 export const useImageLoader = (imageUrl: string | undefined) => {
   const [src, setSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -9,30 +20,26 @@ export const useImageLoader = (imageUrl: string | undefined) => {
 
   useEffect(() => {
     const loadImage = async () => {
-      const source = parseImageUrl(imageUrl);
+      const source = unifiedImageService.parseUrl(imageUrl);
       
       if (source.type === 'cloud' && source.url) {
-        // 云端图片直接使用
         setSrc(source.url);
         return;
       }
 
       if (source.type === 'base64' && source.url) {
-        // Base64 图片直接使用
         setSrc(source.url);
         return;
       }
 
       if (source.type === 'local') {
-        // 本地图片需要从 IndexedDB 加载
         setLoading(true);
         setError(false);
         
         try {
-          const url = await getImageUrl(imageUrl);
+          const url = await unifiedImageService.resolveForDisplay(imageUrl);
           setSrc(url);
           
-          // 保存 object URL 以便后续清理
           if (url && url.startsWith('blob:')) {
             objectUrlRef.current = url;
           }
@@ -47,10 +54,9 @@ export const useImageLoader = (imageUrl: string | undefined) => {
 
     loadImage();
 
-    // 清理函数：释放 object URL
     return () => {
       if (objectUrlRef.current) {
-        revokeObjectUrl(objectUrlRef.current);
+        unifiedImageService.revokeObjectUrl(objectUrlRef.current);
         objectUrlRef.current = null;
       }
     };

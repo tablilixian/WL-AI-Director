@@ -7,7 +7,7 @@ import { ProjectState, Shot, Keyframe } from '../../../../types';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { LayerData } from '../types/canvas';
 import { logger, LogCategory } from '../../../../services/logger';
-import { imageStorageService } from '../../../../services/imageStorageService';
+import { unifiedImageService } from '../../../../services/unifiedImageService';
 
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
@@ -34,56 +34,6 @@ const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   sortByPosition: true,
   includeAnnotations: false
 };
-
-/**
- * 解析图片 URL
- * 支持 base64、HTTP URL、本地引用 (local:img_xxx)
- */
-async function resolveImageUrl(imageUrl: string): Promise<string> {
-  if (!imageUrl) return '';
-
-  // 如果是 base64 或 HTTP URL，直接返回
-  if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
-  }
-
-  // 如果是本地引用 (local:img_xxx)，从 IndexedDB 获取
-  if (imageUrl.startsWith('local:')) {
-    const localId = imageUrl.replace('local:', '');
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 解析本地图片引用: ${localId}`);
-
-    try {
-      const blob = await imageStorageService.getImage(localId);
-      if (blob) {
-        // 将 Blob 转换为 base64
-        const base64 = await blobToBase64(blob);
-        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 本地图片解析成功: ${localId}`);
-        return base64;
-      } else {
-        logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 本地图片不存在: ${localId}`);
-        return '';
-      }
-    } catch (error) {
-      logger.error(LogCategory.CANVAS, `[CanvasIntegration] 解析本地图片失败: ${localId}`, error);
-      return '';
-    }
-  }
-
-  // 其他格式，尝试直接返回
-  return imageUrl;
-}
-
-/**
- * Blob 转 Base64
- */
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 
 export class CanvasIntegrationService {
   /**
@@ -113,7 +63,7 @@ export class CanvasIntegrationService {
         }
 
         // 解析图片 URL（处理本地引用）
-        const resolvedUrl = await resolveImageUrl(keyframe.imageUrl);
+        const resolvedUrl = await unifiedImageService.resolveForApi(keyframe.imageUrl);
         if (!resolvedUrl) {
           logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 跳过无法解析的关键帧: ${shotIndex}-${kfIndex}`);
           continue;
@@ -122,11 +72,10 @@ export class CanvasIntegrationService {
         let imageId: string | undefined;
         if (resolvedUrl.startsWith('data:')) {
           try {
-            const { imageStorageService } = await import('../../../../services/imageStorageService');
-            const imgId = `canvas_img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const imgId = unifiedImageService.generateImageId();
             const response = await fetch(resolvedUrl);
             const blob = await response.blob();
-            await imageStorageService.saveImage(imgId, blob);
+            await unifiedImageService.saveImage(imgId, blob);
             imageId = imgId;
             logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 图片已保存到 IndexedDB: ${imageId}`);
           } catch (e) {
@@ -137,13 +86,23 @@ export class CanvasIntegrationService {
         const col = importedCount % (opts.columns || 4);
         const row = Math.floor(importedCount / (opts.columns || 4));
 
+        let width = 400;
+        let height = 300;
+        try {
+          const dims = await unifiedImageService.getDimensions(resolvedUrl);
+          width = dims.width + 10;
+          height = dims.height + 10;
+        } catch (e) {
+          logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取图片尺寸失败，使用默认尺寸:', e);
+        }
+
         const layer: LayerData = {
           id: crypto.randomUUID(),
           type: 'image',
-          x: (opts.startX || 100) + col * (400 + (opts.spacing || 20)),
-          y: (opts.startY || 100) + row * (300 + (opts.spacing || 20)),
-          width: 400,
-          height: 300,
+          x: (opts.startX || 100) + col * (width + (opts.spacing || 20)),
+          y: (opts.startY || 100) + row * (height + (opts.spacing || 20)),
+          width,
+          height,
           src: resolvedUrl,
           imageId,
           title: `镜头 ${shotIndex + 1}-${kfIndex + 1}`,
@@ -165,57 +124,7 @@ export class CanvasIntegrationService {
     return importedCount;
   }
 
-  /**
-   * 将关键帧导入画布
-   */
-  async importKeyframesToCanvas(
-    keyframes: Keyframe[],
-    options: ImportOptions = {}
-  ): Promise<number> {
-    const opts = { ...DEFAULT_IMPORT_OPTIONS, ...options };
-    const { addLayer } = useCanvasStore.getState();
-
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入 ${keyframes.length} 个关键帧到画布`);
-
-    let importedCount = 0;
-
-    for (let index = 0; index < keyframes.length; index++) {
-      const keyframe = keyframes[index];
-      if (!keyframe.imageUrl) {
-        continue;
-      }
-
-      // 解析图片 URL（处理本地引用）
-      const resolvedUrl = await resolveImageUrl(keyframe.imageUrl);
-      if (!resolvedUrl) {
-        logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 跳过无法解析的关键帧: ${index}`);
-        continue;
-      }
-
-      const col = importedCount % (opts.columns || 4);
-      const row = Math.floor(importedCount / (opts.columns || 4));
-
-      const layer: LayerData = {
-        id: crypto.randomUUID(),
-        type: 'image',
-        x: (opts.startX || 100) + col * (400 + (opts.spacing || 20)),
-        y: (opts.startY || 100) + row * (300 + (opts.spacing || 20)),
-        width: 400,
-        height: 300,
-        src: resolvedUrl,
-        title: `关键帧 ${index + 1}`,
-        createdAt: Date.now(),
-        linkedResourceId: keyframe.id,
-        linkedResourceType: 'keyframe'
-      };
-
-      addLayer(layer);
-      importedCount++;
-    }
-
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 成功导入 ${importedCount} 个图层`);
-    return importedCount;
-  }
+ 
 
   /**
    * 将角色导入画布
@@ -229,16 +138,47 @@ export class CanvasIntegrationService {
   ): Promise<string> {
     const { addLayer } = useCanvasStore.getState();
 
+    const resolvedUrl = await unifiedImageService.resolveForApi(imageUrl);
+    if (!resolvedUrl) {
+      logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 无法解析角色图片: ${characterName}`);
+      return '';
+    }
+
+    let width = 400;
+    let height = 400;
+    try {
+      const dims = await unifiedImageService.getDimensions(resolvedUrl);
+      width = dims.width + 10;
+      height = dims.height + 10;
+    } catch (e) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取角色图片尺寸失败:', e);
+    }
+
     const layerId = crypto.randomUUID();
+    
+    // 保存图片到 IndexedDB，获取 imageId
+    let imageId: string | undefined;
+    if (resolvedUrl.startsWith('data:')) {
+      try {
+        imageId = unifiedImageService.generateImageId();
+        const response = await fetch(resolvedUrl);
+        const blob = await response.blob();
+        await unifiedImageService.saveImage(imageId, blob);
+        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 角色图片已保存: ${imageId}`);
+      } catch (e) {
+        logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存角色图片失败:', e);
+      }
+    }
 
     const layer: LayerData = {
       id: layerId,
       type: 'image',
       x,
       y,
-      width: 400,
-      height: 400,
-      src: imageUrl,
+      width,
+      height,
+      src: resolvedUrl,
+      imageId,
       title: characterName,
       createdAt: Date.now(),
       linkedResourceId: characterId,
@@ -247,7 +187,7 @@ export class CanvasIntegrationService {
 
     addLayer(layer);
 
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入角色: ${characterName}`);
+    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入角色: ${characterName}, 尺寸: ${width}x${height}, imageId: ${imageId}`);
     return layerId;
   }
 
@@ -263,16 +203,47 @@ export class CanvasIntegrationService {
   ): Promise<string> {
     const { addLayer } = useCanvasStore.getState();
 
+    const resolvedUrl = await unifiedImageService.resolveForApi(imageUrl);
+    if (!resolvedUrl) {
+      logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 无法解析场景图片: ${sceneName}`);
+      return '';
+    }
+
+    let width = 640;
+    let height = 360;
+    try {
+      const dims = await unifiedImageService.getDimensions(resolvedUrl);
+      width = dims.width + 10;
+      height = dims.height + 10;
+    } catch (e) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取场景图片尺寸失败:', e);
+    }
+
     const layerId = crypto.randomUUID();
+    
+    // 保存图片到 IndexedDB，获取 imageId
+    let imageId: string | undefined;
+    if (resolvedUrl.startsWith('data:')) {
+      try {
+        imageId = unifiedImageService.generateImageId();
+        const response = await fetch(resolvedUrl);
+        const blob = await response.blob();
+        await unifiedImageService.saveImage(imageId, blob);
+        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 场景图片已保存: ${imageId}`);
+      } catch (e) {
+        logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存场景图片失败:', e);
+      }
+    }
 
     const layer: LayerData = {
       id: layerId,
       type: 'image',
       x,
       y,
-      width: 640,
-      height: 360,
-      src: imageUrl,
+      width,
+      height,
+      src: resolvedUrl,
+      imageId,
       title: sceneName,
       createdAt: Date.now(),
       linkedResourceId: sceneId,
@@ -281,7 +252,7 @@ export class CanvasIntegrationService {
 
     addLayer(layer);
 
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入场景: ${sceneName}`);
+    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入场景: ${sceneName}, 尺寸: ${width}x${height}, imageId: ${imageId}`);
     return layerId;
   }
 
@@ -367,11 +338,10 @@ export class CanvasIntegrationService {
       
       if (layer.type === 'drawing' && src && src.startsWith('data:')) {
         try {
-          const { imageStorageService } = await import('../../../../services/imageStorageService');
-          const imgId = `canvas_drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const imgId = unifiedImageService.generateImageId();
           const response = await fetch(src);
           const blob = await response.blob();
-          await imageStorageService.saveImage(imgId, blob);
+          await unifiedImageService.saveImage(imgId, blob);
           imageId = imgId;
           console.log('[CanvasIntegration] 绘制图层已保存到 IndexedDB:', imgId);
         } catch (e) {
@@ -421,8 +391,7 @@ export class CanvasIntegrationService {
           if (layer.type === 'image') {
             if (layer.imageId) {
               try {
-                const { imageStorageService } = await import('../../../../services/imageStorageService');
-                const blob = await imageStorageService.getImage(layer.imageId);
+                const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
@@ -433,9 +402,8 @@ export class CanvasIntegrationService {
             
             if (layer.src && layer.src.startsWith('local:')) {
               try {
-                const { imageStorageService } = await import('../../../../services/imageStorageService');
                 const localId = layer.src.replace('local:', '');
-                const blob = await imageStorageService.getImage(localId);
+                const blob = await unifiedImageService.getImage(localId);
                 if (blob) {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
@@ -444,11 +412,23 @@ export class CanvasIntegrationService {
               }
             }
           } else if (layer.type === 'video') {
+            // 优先使用 imageId（新版存储方式）
+            if (layer.imageId) {
+              try {
+                const blob = await unifiedImageService.getVideo(layer.imageId);
+                if (blob) {
+                  console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复视频失败 (imageId):', e);
+              }
+            }
+            // 兼容旧的 src 存储方式
             if (layer.src && layer.src.startsWith('video:')) {
               try {
-                const { videoStorageService } = await import('../../../../services/imageStorageService');
                 const videoId = layer.src.replace('video:', '');
-                const blob = await videoStorageService.getVideo(videoId);
+                const blob = await unifiedImageService.getVideo(videoId);
                 if (blob) {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
@@ -459,8 +439,7 @@ export class CanvasIntegrationService {
           } else if (layer.type === 'drawing') {
             if (layer.imageId) {
               try {
-                const { imageStorageService } = await import('../../../../services/imageStorageService');
-                const blob = await imageStorageService.getImage(layer.imageId);
+                const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
                   const src = URL.createObjectURL(blob);
                   console.log('恢复绘制图层成功:', layer.id, layer.imageId);

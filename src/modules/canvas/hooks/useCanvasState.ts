@@ -765,16 +765,32 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
               }
             }
             // 处理 video 类型
-            else if (layer.type === 'video' && layer.src && layer.src.startsWith('video:')) {
-              try {
-                const { videoStorageService } = await import('../../../../services/imageStorageService');
-                const videoId = layer.src.replace('video:', '');
-                const blob = await videoStorageService.getVideo(videoId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+            else if (layer.type === 'video') {
+              // 优先使用 imageId（新版存储方式）
+              if (layer.imageId) {
+                try {
+                  const { videoStorageService } = await import('../../../../services/imageStorageService');
+                  const blob = await videoStorageService.getVideo(layer.imageId);
+                  if (blob) {
+                    console.log('[Canvas] 恢复视频成功 (imageId):', layer.imageId);
+                    return { ...layer, src: URL.createObjectURL(blob) };
+                  }
+                } catch (e) {
+                  console.warn('恢复视频失败 (imageId):', layer.id, e);
                 }
-              } catch (e) {
-                console.warn('恢复视频失败:', layer.id, e);
+              }
+              // 兼容旧的 src 存储方式
+              if (layer.src && layer.src.startsWith('video:')) {
+                try {
+                  const { videoStorageService } = await import('../../../../services/imageStorageService');
+                  const videoId = layer.src.replace('video:', '');
+                  const blob = await videoStorageService.getVideo(videoId);
+                  if (blob) {
+                    return { ...layer, src: URL.createObjectURL(blob) };
+                  }
+                } catch (e) {
+                  console.warn('恢复视频失败:', layer.id, e);
+                }
               }
             }
             // 处理 drawing 类型

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { assetStore } from '../services/assetStore';
-import { imageStorageService } from '../../../../services/imageStorageService';
+import { unifiedImageService } from '../../../../services/unifiedImageService';
 
 interface PromptBarProps {
   selectedLayerId: string | null;
@@ -10,39 +10,22 @@ interface PromptBarProps {
 
 type Mode = 'generate' | 'edit' | 'video' | 'video-edit';
 
+/**
+ * 解析图片 URL 为 Base64 格式
+ * 
+ * @deprecated 使用 unifiedImageService.resolveForApi() 代替
+ */
 async function resolveImageUrl(imageUrl: string): Promise<string> {
-  if (!imageUrl) return '';
-
-  if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
-  }
-
-  if (imageUrl.startsWith('local:')) {
-    const localId = imageUrl.replace('local:', '');
-    console.log('[PromptBar] 解析本地图片引用:', localId);
-
-    try {
-      const blob = await imageStorageService.getImage(localId);
-      if (blob) {
-        const base64 = await blobToBase64(blob);
-        console.log('[PromptBar] 本地图片解析成功:', localId);
-        return base64;
-      }
-    } catch (error) {
-      console.error('[PromptBar] 解析本地图片失败:', error);
-    }
-  }
-
-  return imageUrl;
+  return await unifiedImageService.resolveForApi(imageUrl);
 }
 
+/**
+ * Blob 转 Base64
+ * 
+ * @deprecated 使用 unifiedImageService.blobToBase64() 代替
+ */
 function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  return unifiedImageService.blobToBase64(blob);
 }
 
 export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
@@ -92,11 +75,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
 
         if (resolvedUrl.startsWith('data:')) {
           try {
-            const { imageStorageService } = await import('../../../../services/imageStorageService');
-            const imgId = `canvas_gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const imgId = unifiedImageService.generateImageId();
             const response = await fetch(resolvedUrl);
             const blob = await response.blob();
-            await imageStorageService.saveImage(imgId, blob);
+            await unifiedImageService.saveImage(imgId, blob);
             imageId = imgId;
             console.log('[PromptBar] 文生图已保存到 IndexedDB:', imgId);
           } catch (e) {
@@ -133,11 +115,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
 
         if (resolvedUrl.startsWith('data:')) {
           try {
-            const { imageStorageService } = await import('../../../../services/imageStorageService');
-            const imgId = `canvas_edit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const imgId = unifiedImageService.generateImageId();
             const response = await fetch(resolvedUrl);
             const blob = await response.blob();
-            await imageStorageService.saveImage(imgId, blob);
+            await unifiedImageService.saveImage(imgId, blob);
             imageId = imgId;
             console.log('[PromptBar] 图生图已保存到 IndexedDB:', imgId);
           } catch (e) {
@@ -194,9 +175,17 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         console.log('[PromptBar] 生成视频 URL:', videoUrl?.substring(0, 50));
 
         const resolvedUrl = await resolveVideoUrl(videoUrl);
+        
+        // 提取 videoId 并保存到图层
+        let videoId: string | undefined;
+        if (videoUrl.startsWith('video:')) {
+          videoId = videoUrl.replace('video:', '');
+          console.log('[PromptBar] 视频已保存到本地:', videoId);
+        }
 
         updateLayer(placeholderId, {
           src: resolvedUrl,
+          imageId: videoId,
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100
@@ -230,9 +219,17 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         });
 
         const resolvedUrl = await resolveVideoUrl(videoUrl);
+        
+        // 提取 videoId 并保存到图层
+        let videoId: string | undefined;
+        if (videoUrl.startsWith('video:')) {
+          videoId = videoUrl.replace('video:', '');
+          console.log('[PromptBar] 视频已保存到本地:', videoId);
+        }
 
         updateLayer(placeholderId, {
           src: resolvedUrl,
+          imageId: videoId,
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100
@@ -395,7 +392,7 @@ async function resolveVideoUrl(videoUrl: string): Promise<string> {
     console.log('[PromptBar] 解析本地视频引用:', localId);
 
     try {
-      const blob = await imageStorageService.getImage(localId);
+      const blob = await unifiedImageService.getImage(localId);
       if (blob) {
         const base64 = await blobToBase64(blob);
         console.log('[PromptBar] 本地视频解析成功:', localId);

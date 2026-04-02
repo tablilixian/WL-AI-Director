@@ -66,17 +66,148 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     setShowImportDialog(false);
   };
 
-  const handleImportKeyframes = async () => {
-    const keyframes = getAllKeyframes();
-    if (keyframes.length === 0) {
-      alert('项目中没有关键帧数据');
+
+
+  const handleImportCharacters = async () => {
+    if (!project.scriptData?.characters || project.scriptData.characters.length === 0) {
+      alert('项目中没有角色数据');
       return;
     }
 
-    const count = await canvasIntegrationService.importKeyframesToCanvas(keyframes);
-    alert(`成功导入 ${count} 个关键帧到画布`);
+    const charactersWithImage = project.scriptData.characters.filter(c => c.imageUrl);
+    if (charactersWithImage.length === 0) {
+      alert(`项目有 ${project.scriptData.characters.length} 个角色，但没有生成定妆照。\n\n请先在「资产库」生成角色图片后再导入。`);
+      return;
+    }
+
+    let importedCount = 0;
+    const columns = 3;
+    const spacing = 50;
+    const startX = 100;
+    const startY = 100;
+
+    for (let i = 0; i < charactersWithImage.length; i++) {
+      const character = charactersWithImage[i];
+      const resolvedUrl = await resolveImageUrl(character.imageUrl!);
+      if (!resolvedUrl) continue;
+
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+
+      await canvasIntegrationService.importCharacterToCanvas(
+        character.id,
+        character.name,
+        resolvedUrl,
+        startX + col * (400 + spacing),
+        startY + row * (400 + spacing)
+      );
+      importedCount++;
+    }
+
+    alert(`成功导入 ${importedCount} 个角色到画布`);
     setShowImportDialog(false);
   };
+
+  const handleImportScenes = async () => {
+    if (!project.scriptData?.scenes || project.scriptData.scenes.length === 0) {
+      alert('项目中没有场景数据');
+      return;
+    }
+
+    const scenesWithImage = project.scriptData.scenes.filter(s => s.imageUrl);
+    if (scenesWithImage.length === 0) {
+      alert(`项目有 ${project.scriptData.scenes.length} 个场景，但没有生成概念图。\n\n请先在「资产库」生成场景图片后再导入。`);
+      return;
+    }
+
+    let importedCount = 0;
+    const columns = 3;
+    const spacing = 50;
+    const startX = 100;
+    const startY = 100;
+
+    for (let i = 0; i < scenesWithImage.length; i++) {
+      const scene = scenesWithImage[i];
+      const resolvedUrl = await resolveImageUrl(scene.imageUrl!);
+      if (!resolvedUrl) continue;
+
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+
+      await canvasIntegrationService.importSceneToCanvas(
+        scene.id,
+        `${scene.location} - ${scene.time}`,
+        resolvedUrl,
+        startX + col * (640 + spacing),
+        startY + row * (360 + spacing)
+      );
+      importedCount++;
+    }
+
+    alert(`成功导入 ${importedCount} 个场景到画布`);
+    setShowImportDialog(false);
+  };
+
+  const handleImportProps = async () => {
+    if (!project.scriptData?.props || project.scriptData.props.length === 0) {
+      alert('项目中没有物品数据');
+      return;
+    }
+
+    const propsWithImage = project.scriptData.props.filter(p => p.imageUrl);
+    if (propsWithImage.length === 0) {
+      alert(`项目有 ${project.scriptData.props.length} 个物品，但没有生成物品图。\n\n请先在「资产库」生成物品图片后再导入。`);
+      return;
+    }
+
+    let importedCount = 0;
+    const columns = 4;
+    const spacing = 30;
+    const startX = 100;
+    const startY = 100;
+
+    for (let i = 0; i < propsWithImage.length; i++) {
+      const prop = propsWithImage[i];
+      const resolvedUrl = await resolveImageUrl(prop.imageUrl!);
+      if (!resolvedUrl) continue;
+
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+
+      await canvasIntegrationService.importSceneToCanvas(
+        prop.id,
+        prop.name,
+        resolvedUrl,
+        startX + col * (300 + spacing),
+        startY + row * (300 + spacing)
+      );
+      importedCount++;
+    }
+
+    alert(`成功导入 ${importedCount} 个物品到画布`);
+    setShowImportDialog(false);
+  };
+
+  async function resolveImageUrl(imageUrl: string): Promise<string> {
+    if (!imageUrl) return '';
+    if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    if (imageUrl.startsWith('local:')) {
+      const localId = imageUrl.replace('local:', '');
+      const { imageStorageService } = await import('../services/imageStorageService');
+      const blob = await imageStorageService.getImage(localId);
+      if (blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+    }
+    return imageUrl;
+  }
 
   const handleExportToKeyframes = () => {
     const keyframes = canvasIntegrationService.exportCanvasToKeyframes();
@@ -552,20 +683,58 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
 
               <div className="p-4 bg-[var(--bg-hover)] rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-[var(--text-primary)]">关键帧导入</span>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">角色定妆照</span>
                   <span className="text-xs text-[var(--text-muted)]">
-                    {getAllKeyframes().length} 个关键帧
+                    {project.scriptData?.characters?.filter(c => c.imageUrl).length || 0} / {project.scriptData?.characters?.length || 0} 个角色
                   </span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
-                  将所有关键帧图片导入画布，按网格排列
+                  将所有角色定妆照导入画布，按网格排列
                 </p>
                 <button
-                  onClick={handleImportKeyframes}
-                  disabled={getAllKeyframes().length === 0}
+                  onClick={handleImportCharacters}
+                  disabled={!project.scriptData?.characters || project.scriptData.characters.length === 0}
                   className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  导入关键帧
+                  导入角色
+                </button>
+              </div>
+
+              <div className="p-4 bg-[var(--bg-hover)] rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">场景概念图</span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {project.scriptData?.scenes?.filter(s => s.imageUrl).length || 0} / {project.scriptData?.scenes?.length || 0} 个场景
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mb-3">
+                  将所有场景概念图导入画布，按网格排列
+                </p>
+                <button
+                  onClick={handleImportScenes}
+                  disabled={!project.scriptData?.scenes || project.scriptData.scenes.length === 0}
+                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  导入场景
+                </button>
+              </div>
+
+              <div className="p-4 bg-[var(--bg-hover)] rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">物品图</span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {project.scriptData?.props?.filter(p => p.imageUrl).length || 0} / {project.scriptData?.props?.length || 0} 个物品
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mb-3">
+                  将所有物品图导入画布，按网格排列
+                </p>
+                <button
+                  onClick={handleImportProps}
+                  disabled={!project.scriptData?.props || project.scriptData.props.length === 0}
+                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  导入物品
                 </button>
               </div>
             </div>

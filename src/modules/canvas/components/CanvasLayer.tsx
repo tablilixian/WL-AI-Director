@@ -9,7 +9,7 @@ import { useCanvasStore } from '../hooks/useCanvasState';
 import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
-import { imageStorageService } from '../../../../services/imageStorageService';
+import { unifiedImageService } from '../../../../services/unifiedImageService';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -18,26 +18,13 @@ interface CanvasLayerProps {
   onContextMenuRequest?: (layerId: string, x: number, y: number) => void;
 }
 
+/**
+ * 解析图片 URL 为显示用 URL（blob: 或 data:）
+ * 
+ * @deprecated 使用 unifiedImageService.resolveForDisplay() 代替
+ */
 async function resolveImageSrc(src: string): Promise<string> {
-  if (!src) return '';
-  
-  if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:')) {
-    return src;
-  }
-  
-  if (src.startsWith('local:')) {
-    const localId = src.replace('local:', '');
-    try {
-      const blob = await imageStorageService.getImage(localId);
-      if (blob) {
-        return URL.createObjectURL(blob);
-      }
-    } catch (error) {
-      console.error('解析本地图片失败:', localId, error);
-    }
-  }
-  
-  return '';
+  return await unifiedImageService.resolveForDisplay(src);
 }
 
 export const CanvasLayer: React.FC<CanvasLayerProps> = ({ 

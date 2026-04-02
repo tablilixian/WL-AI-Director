@@ -133,15 +133,37 @@ export const convertImageUrlToBase64 = async (imageUrl: string | undefined): Pro
   return undefined;
 };
 
-export const saveVideoToLocal = async (videoBase64: string): Promise<string> => {
-  const cleanBase64 = videoBase64.replace(/^data:video\/[^;]+;base64,/, '');
-  const byteCharacters = atob(cleanBase64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+export const saveVideoToLocal = async (videoUrl: string): Promise<string> => {
+  // 如果已经是 video: 格式，直接返回
+  if (videoUrl.startsWith('video:')) {
+    return videoUrl;
   }
-  const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: 'video/mp4' });
+  
+  let blob: Blob;
+  
+  if (videoUrl.startsWith('blob:')) {
+    // blob: URL - 直接获取 blob
+    try {
+      const response = await fetch(videoUrl);
+      blob = await response.blob();
+    } catch (error) {
+      console.error('[ImageUtils] 从 blob URL 获取数据失败:', error);
+      throw error;
+    }
+  } else if (videoUrl.startsWith('data:video')) {
+    // data: video base64 - 解码
+    const cleanBase64 = videoUrl.replace(/^data:video\/[^;]+;base64,/, '');
+    const byteCharacters = atob(cleanBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    blob = new Blob([byteArray], { type: 'video/mp4' });
+  } else {
+    // 其他格式（可能是 http URL），直接抛出
+    throw new Error(`不支持的视频 URL 格式: ${videoUrl.substring(0, 50)}`);
+  }
   
   const videoId = `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   await videoStorageService.saveVideo(videoId, blob);

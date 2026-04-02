@@ -21,7 +21,7 @@ import {
   buildPromptFromNineGridPanel,
   cropPanelFromNineGrid
 } from './utils';
-import { getImageUrl, convertImageUrlToBase64, saveVideoToLocal } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 import { DEFAULTS } from './constants';
 import EditModal from './EditModal';
 import ShotCard from './ShotCard';
@@ -364,8 +364,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     }));
     
     try {
-      const startImageBase64 = await convertImageUrlToBase64(sKf?.imageUrl);
-      const endImageBase64 = await convertImageUrlToBase64(eKf?.imageUrl);
+      const startImageBase64 = await unifiedImageService.resolveForApi(sKf?.imageUrl);
+      const endImageBase64 = await unifiedImageService.resolveForApi(eKf?.imageUrl);
       
       const videoBase64 = await generateVideo(
         videoPrompt, 
@@ -376,7 +376,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         duration
       );
 
-      const videoUrl = await saveVideoToLocal(videoBase64);
+      const videoUrl = await unifiedImageService.saveVideoToLocal(videoBase64);
 
       const updatedProject = {
         ...project,
@@ -1016,7 +1016,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     
     try {
       // 2. 获取九宫格图片的实际 URL（处理本地图片）
-      const nineGridImageUrl = await getImageUrl(activeShot.nineGrid.imageUrl);
+      const nineGridImageUrl = await unifiedImageService.resolveForDisplay(activeShot.nineGrid.imageUrl);
       if (!nineGridImageUrl) {
         showAlert('无法加载九宫格图片', { type: 'error' });
         return;
@@ -1050,7 +1050,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     if (!activeShot || !activeShot.nineGrid?.imageUrl) return;
     
     // 获取九宫格图片的实际 URL（处理本地图片）
-    const nineGridImageUrl = await getImageUrl(activeShot.nineGrid.imageUrl);
+    const nineGridImageUrl = await unifiedImageService.resolveForDisplay(activeShot.nineGrid.imageUrl);
     if (!nineGridImageUrl) {
       showAlert('无法加载九宫格图片', { type: 'error' });
       return;

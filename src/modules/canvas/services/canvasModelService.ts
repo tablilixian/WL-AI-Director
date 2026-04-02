@@ -155,14 +155,15 @@ export class CanvasModelService {
         const videoBlob = await response.blob();
         console.log('[CanvasModelService] 视频下载成功，大小:', videoBlob.size);
         
-        const { saveVideoToLocal } = await import('../../../../utils/imageUtils');
-        const localVideoUrl = await saveVideoToLocal(URL.createObjectURL(videoBlob));
+        const { unifiedImageService } = await import('../../../../services/unifiedImageService');
+        const localVideoUrl = await unifiedImageService.saveVideoToLocal(URL.createObjectURL(videoBlob));
         
         console.log('[CanvasModelService] 视频保存到本地成功:', localVideoUrl);
         onProgress?.(100);
         
         return localVideoUrl;
       } catch (downloadError: any) {
+        console.error('[CanvasModelService] 视频下载失败:', downloadError);
         console.log('[CanvasModelService] 使用外部视频 URL');
         onProgress?.(100);
         return videoUrl;
