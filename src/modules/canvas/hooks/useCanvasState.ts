@@ -14,6 +14,7 @@ import {
   PROMPT_MODE_COLORS 
 } from '../types/canvas';
 import { assetStore } from '../services/assetStore';
+import { canvasIntegrationService } from '../services/canvasIntegrationService';
 
 const MAX_HISTORY = 20;
 
@@ -101,6 +102,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }].slice(-MAX_HISTORY),
           historyIndex: state.historyIndex + 1
         });
+        
+        if (layer.type === 'drawing' && layer.src && !layer.imageId) {
+          canvasIntegrationService.triggerAutoSave();
+        }
+        
+        if (layer.type === 'image' && layer.src) {
+          canvasIntegrationService.triggerAutoSave();
+        }
       },
 
       updateLayer: (id, updates) => {
@@ -116,6 +125,20 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }].slice(-MAX_HISTORY),
           historyIndex: state.historyIndex + 1
         });
+        
+        const updatedLayer = newLayers.find(l => l.id === id);
+        
+        // 触发 transform 类型的保存（位置、大小等变化）
+        const transformKeys = ['x', 'y', 'width', 'height', 'rotation', 'opacity'];
+        const hasTransformChange = transformKeys.some(key => key in updates);
+        if (hasTransformChange) {
+          canvasIntegrationService.triggerAutoSave('transform');
+        }
+        
+        // 触发 drawing 类型的保存（图片内容变化）
+        if ((updatedLayer?.type === 'drawing' || updatedLayer?.type === 'image') && updates.src) {
+          canvasIntegrationService.triggerAutoSave('drawing');
+        }
       },
 
       deleteLayer: (id) => {
@@ -187,9 +210,15 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         });
       },
 
-      setOffset: (offset) => set({ offset }),
+      setOffset: (offset) => {
+        set({ offset });
+        canvasIntegrationService.triggerAutoSave('transform');
+      },
 
-      setScale: (scale) => set({ scale: Math.min(Math.max(scale, 0.1), 5) }),
+      setScale: (scale) => {
+        set({ scale: Math.min(Math.max(scale, 0.1), 5) });
+        canvasIntegrationService.triggerAutoSave('transform');
+      },
 
       selectLayer: (id, multiSelect = false) => {
         const state = get();

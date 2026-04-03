@@ -27,6 +27,26 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
 
+  // 自动恢复画布状态
+  React.useEffect(() => {
+    const saved = localStorage.getItem('wl-canvas-backup');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.layers && state.layers.length > 0) {
+          console.log('[StageCanvas] 检测到保存的画布状态，自动恢复...');
+          canvasIntegrationService.restoreCanvasState().then(restored => {
+            if (restored) {
+              console.log('[StageCanvas] 画布状态自动恢复成功');
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[StageCanvas] 解析保存的画布状态失败:', e);
+      }
+    }
+  }, []);
+
   const getAllKeyframes = (): Keyframe[] => {
     if (!project.shots) return [];
     return project.shots.flatMap(shot => shot.keyframes || []);

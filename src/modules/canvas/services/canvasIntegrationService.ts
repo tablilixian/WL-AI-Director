@@ -30,12 +30,156 @@ const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   startY: 100
 };
 
+let autoSaveTimer: NodeJS.Timeout | null = null;
+const AUTO_SAVE_DELAY = 2000;
+const MIN_SAVE_INTERVAL = 5000;
+const FALLBACK_SAVE_INTERVAL = 60000;
+
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): T {
+  let timer: NodeJS.Timeout | null = null;
+  return ((...args: Parameters<T>) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  }) as T;
+}
+
+function computeLayersHash(layers: LayerData[]): string {
+  const str = layers.map(l => 
+    `${l.id}|${l.type}|${l.x}|${l.y}|${l.width}|${l.height}|${l.imageId || ''}|${l.src ? '1' : '0'}`
+  ).join('|||');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
 const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   sortByPosition: true,
   includeAnnotations: false
 };
 
 export class CanvasIntegrationService {
+  private debouncedAutoSave: () => void;
+  private lastSaveTime: number = 0;
+  private lastSavedHash: string = '';
+  private hasUnsavedChanges: boolean = false;
+  private fallbackTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.debouncedAutoSave = debounce(() => {
+      this.autoSaveCanvasState();
+    }, AUTO_SAVE_DELAY);
+    
+    this.startFallbackSaveTimer();
+  }
+
+  /**
+   * 快速检查层：检查是否有变化
+   * 仅计算 hash，不执行序列化
+   */
+  checkForChanges(): boolean {
+    const { layers } = useCanvasStore.getState();
+    if (layers.length === 0) return false;
+
+    const currentHash = computeLayersHash(layers);
+    if (currentHash !== this.lastSavedHash) {
+      this.hasUnsavedChanges = true;
+      this.lastSavedHash = currentHash;
+      console.log('[CanvasIntegration] 检测到画布变化，标记需要保存');
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 手动触发即时保存（用于事件触发，如服务器响应后）
+   * 立即执行，无延迟
+   * @param force 强制保存，忽略变化检测和时间间隔限制
+   */
+  saveImmediately(force: boolean = false): void {
+    this.performSave(false, force);
+  }
+
+  /**
+   * 触发自动保存（用于用户操作后）
+   * 带延迟，等待数据稳定
+   * 
+   * @param operationType 操作类型：
+   *   - 'drawing': 绘制/导入图片，延迟 2s（数据生成需要时间）
+   *   - 'transform': 拖拽/缩放/调整大小，延迟 1s（操作更快完成）
+   *   - 默认: 使用 AUTO_SAVE_DELAY (2s)
+   */
+  triggerAutoSave(operationType: 'drawing' | 'transform' = 'drawing'): void {
+    // 根据操作类型选择延迟时间
+    const delay = operationType === 'transform' ? 1000 : AUTO_SAVE_DELAY;
+    
+    this.checkForChanges();
+    
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+    autoSaveTimer = setTimeout(() => {
+      this.debouncedAutoSave();
+    }, delay);
+  }
+
+  /**
+   * 兜底层：定时检查未保存的更改
+   * 60 秒执行一次
+   */
+  private startFallbackSaveTimer(): void {
+    if (this.fallbackTimer) {
+      clearInterval(this.fallbackTimer);
+    }
+    this.fallbackTimer = setInterval(() => {
+      if (this.hasUnsavedChanges) {
+        const now = Date.now();
+        if (now - this.lastSaveTime >= FALLBACK_SAVE_INTERVAL) {
+          console.log('[CanvasIntegration] 兜底保存触发');
+          this.performSave(false);
+        }
+      }
+    }, FALLBACK_SAVE_INTERVAL);
+  }
+
+  /**
+   * 执行实际保存
+   * @param isAutoSave 是否是自动保存（自动保存带变化检测）
+   * @param force 强制保存，忽略变化检测和时间间隔限制
+   */
+  private async performSave(isAutoSave: boolean = true, force: boolean = false): Promise<void> {
+    const now = Date.now();
+    
+    // 强制保存时跳过变化检测和时间间隔检查
+    if (!force) {
+      if (isAutoSave && !this.hasUnsavedChanges) {
+        console.log('[CanvasIntegration] 跳过保存：无变化');
+        return;
+      }
+      
+      if (now - this.lastSaveTime < MIN_SAVE_INTERVAL) {
+        console.log('[CanvasIntegration] 跳过保存：距离上次保存不足 5 秒');
+        return;
+      }
+    }
+
+    try {
+      await this.saveCanvasState();
+      this.lastSaveTime = now;
+      this.hasUnsavedChanges = false;
+      console.log('[CanvasIntegration] 保存画布成功');
+    } catch (e) {
+      console.warn('[CanvasIntegration] 保存画布失败:', e);
+    }
+  }
+
+  private async autoSaveCanvasState(): Promise<void> {
+    await this.performSave(true);
+  }
+
   /**
    * 将分镜导入画布
    */
@@ -437,19 +581,24 @@ export class CanvasIntegrationService {
               }
             }
           } else if (layer.type === 'drawing') {
+            console.log('[CanvasIntegration] 恢复 drawing 图层:', layer.id, 'imageId:', layer.imageId, 'src:', layer.src?.substring(0, 50));
             if (layer.imageId) {
               try {
                 const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
                   const src = URL.createObjectURL(blob);
-                  console.log('恢复绘制图层成功:', layer.id, layer.imageId);
+                  console.log('[CanvasIntegration] 恢复 drawing 图层成功:', layer.id, 'blob size:', blob.size);
                   return { ...layer, src };
+                } else {
+                  console.warn('[CanvasIntegration] 恢复 drawing 图层失败: blob 为空', layer.id, layer.imageId);
                 }
               } catch (e) {
-                console.warn('恢复绘制图层失败 (imageId):', e);
+                console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
               }
             } else if (layer.src && layer.src.startsWith('data:')) {
               return layer;
+            } else {
+              console.warn('[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:', layer.id);
             }
           }
           return layer;

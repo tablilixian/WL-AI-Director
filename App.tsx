@@ -6,6 +6,7 @@ import StageDirector from './components/StageDirector';
 import StageExport from './components/StageExport';
 import StagePrompts from './components/StagePrompts';
 import StageCanvas from './components/StageCanvas';
+import { canvasIntegrationService } from './src/modules/canvas/services/canvasIntegrationService';
 import Dashboard from './components/Dashboard';
 import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/Onboarding';
 import ModelConfigModal from './components/ModelConfig';
@@ -333,6 +334,9 @@ function App() {
 
   // Set stage
   const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => {
+    // 切换页签时强制触发一次保存（force=true 忽略变化检测和时间间隔限制）
+    canvasIntegrationService.saveImmediately(true);
+    
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），切换页面会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要离开当前页面吗？', {
         title: '生成任务进行中',

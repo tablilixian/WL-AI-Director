@@ -10,6 +10,7 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { canvasIntegrationService } from '../services/canvasIntegrationService';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -57,7 +58,18 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     
     const resolve = async () => {
       if (layer.type === 'image' || layer.type === 'drawing') {
-        const resolved = await resolveImageSrc(layer.src);
+        console.log('[CanvasLayer] 解析图片/drawing:', layer.id, 'type:', layer.type, 'src:', layer.src?.substring(0, 30), 'imageId:', layer.imageId);
+        
+        let srcToResolve = layer.src;
+        
+        // 对于 drawing 类型，如果 src 为空但有 imageId，则使用 imageId
+        if (layer.type === 'drawing' && !srcToResolve && layer.imageId) {
+          srcToResolve = `local:${layer.imageId}`;
+          console.log('[CanvasLayer] drawing 类型使用 imageId 构造 URL:', srcToResolve);
+        }
+        
+        const resolved = await resolveImageSrc(srcToResolve);
+        console.log('[CanvasLayer] 解析结果:', layer.id, 'resolved:', resolved?.substring(0, 50));
         setResolvedSrc(resolved);
         if (resolved.startsWith('blob:') && resolved !== layer.src) {
           objectUrl = resolved;
@@ -74,7 +86,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [layer.src, layer.type]);
+  }, [layer.src, layer.type, layer.imageId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0 || e.shiftKey) return;
@@ -171,6 +183,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsResizing(false);
+      
+      // 拖拽/调整大小结束后触发自动保存（带 1s 延迟，等待操作完全结束）
+      canvasIntegrationService.triggerAutoSave('transform');
     };
 
     window.addEventListener('mousemove', handleMouseMove);
