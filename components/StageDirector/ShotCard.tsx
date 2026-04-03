@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon, Video, Trash2 } from 'lucide-react';
 import { Shot } from '../../types';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface ShotCardProps {
   shot: Shot;
@@ -19,7 +19,7 @@ const ShotCard: React.FC<ShotCardProps> = ({ shot, index, isActive, onClick, onD
 
   useEffect(() => {
     if (sKf?.imageUrl) {
-      getImageUrl(sKf.imageUrl).then(url => setImageUrl(url));
+      unifiedImageService.resolveForDisplay(sKf.imageUrl).then(url => setImageUrl(url));
     } else {
       setImageUrl(null);
     }

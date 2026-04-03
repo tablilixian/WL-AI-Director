@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Play, Pause, SkipForward, SkipBack, X, Loader2 } from 'lucide-react';
 import { Shot, ProjectState } from '../../types';
 import { STYLES } from './constants';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 import { logger, LogCategory } from '../../services/logger';
 
 interface Props {
@@ -40,7 +40,7 @@ const VideoPlayerModal: React.FC<Props> = ({
       if (currentShot?.interval?.videoUrl) {
         setLoading(true);
         try {
-          const url = await getImageUrl(currentShot.interval.videoUrl);
+          const url = await unifiedImageService.resolveForDisplay(currentShot.interval.videoUrl);
           setVideoUrl(url);
         } catch (err) {
           logger.error(LogCategory.VIDEO, '[VideoPlayerModal] 加载视频失败:', err);

@@ -534,6 +534,7 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
 export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
   // 处理 BigModel 视频 URL 代理
   let proxyUrl = url;
+  
   if (url.includes('aigc-files.bigmodel.cn')) {
     const videoPath = url.replace('https://aigc-files.bigmodel.cn/', '');
     proxyUrl = `/bigmodel-files/${videoPath}`;
@@ -542,18 +543,51 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
     const videoPath = url.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
     proxyUrl = `/video-proxy/${videoPath}`;
     logger.debug(LogCategory.VIDEO, `[Video] 使用 UCloud 代理: ${proxyUrl}`);
+  } else {
+    // 其他 URL 直接使用
+    proxyUrl = url;
   }
 
   try {
+    // 使用代理下载
     const response = await fetch(proxyUrl);
+    
+    // 检查响应状态
+    const contentType = response.headers.get('content-type') || '';
+    logger.debug(LogCategory.VIDEO, `[Video] 代理响应状态: ${response.status}, 类型: ${contentType}`);
+    
+    // 如果返回的不是视频类型（包括 HTML 错误页面）
+    const isVideoType = contentType.startsWith('video/') || 
+                        contentType.includes('octet-stream') || 
+                        contentType.includes('application/octet-stream');
+    
+    if (!isVideoType) {
+      // 尝试读取响应内容看看是什么
+      const text = await response.text();
+      logger.error(LogCategory.VIDEO, `[Video] 代理返回非视频类型，内容前500字符: ${text.substring(0, 500)}`);
+      
+      // 如果内容是 HTML，说明代理有问题
+      if (text.trim().startsWith('<') || text.includes('<!DOCTYPE')) {
+        throw new Error(`视频下载失败: 代理返回 HTML 错误页面，可能是代理配置问题或服务器错误`);
+      }
+      
+      // 如果不是 HTML，可能是其他错误
+      throw new Error(`视频下载失败: 代理返回非视频类型内容 (${contentType})`);
+    }
+    
     if (!response.ok) {
       throw new Error(`下载视频失败: HTTP ${response.status}`);
     }
+    
+    // 获取 Blob 并转换
     const blob = await response.blob();
+    logger.debug(LogCategory.VIDEO, `[Video] 获取到视频 Blob, 大小: ${blob.size}, 类型: ${blob.type}`);
+    
     return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
+        logger.debug(LogCategory.VIDEO, `[Video] 视频转换为 base64 成功, 长度: ${base64String.length}`);
         resolve(base64String);
       };
       reader.onerror = () => {
@@ -563,6 +597,11 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
     });
   } catch (error: any) {
     logger.error(LogCategory.VIDEO, '视频URL转base64失败:', error);
+    
+    // 如果是 CORS 错误，给出更明确的提示
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('CORS')) {
+      throw new Error(`视频下载失败: 存在 CORS 跨域问题，请确保视频服务器允许跨域访问`);
+    }
     throw new Error(`视频转换失败: ${error.message}`);
   }
 };

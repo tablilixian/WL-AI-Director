@@ -1,6 +1,6 @@
 import { ProjectState } from '../types';
 import { videoStorageService } from './imageStorageService';
-import { getImageUrl, parseImageUrl } from '../utils/imageUtils';
+import { unifiedImageService } from './unifiedImageService';
 import { logger, LogCategory } from './logger';
 
 /**
@@ -8,7 +8,7 @@ import { logger, LogCategory } from './logger';
  * 支持URL、base64和本地存储三种格式
  */
 async function downloadFile(urlOrBase64: string): Promise<Blob> {
-  const source = parseImageUrl(urlOrBase64);
+  const source = unifiedImageService.parseUrl(urlOrBase64);
 
   // 处理本地视频存储 (video: 前缀)
   if (source.type === 'video') {
@@ -21,7 +21,7 @@ async function downloadFile(urlOrBase64: string): Promise<Blob> {
 
   // 处理本地图片存储 (local: 前缀)
   if (source.type === 'local') {
-    const imageUrl = await getImageUrl(urlOrBase64);
+    const imageUrl = await unifiedImageService.resolveForDisplay(urlOrBase64);
     if (!imageUrl) {
       throw new Error(`本地图片不存在: ${source.localImageId}`);
     }

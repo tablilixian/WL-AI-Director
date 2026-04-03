@@ -4,7 +4,7 @@ import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration,
 import SceneContext from './SceneContext';
 import KeyframeEditor from './KeyframeEditor';
 import VideoGenerator from './VideoGenerator';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface ShotWorkbenchProps {
   shot: Shot;
@@ -103,7 +103,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
 
   useEffect(() => {
     if (nineGrid?.imageUrl) {
-      getImageUrl(nineGrid.imageUrl).then(url => {
+      unifiedImageService.resolveForDisplay(nineGrid.imageUrl).then(url => {
         setNineGridImageUrl(url);
       });
     } else {

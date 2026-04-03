@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, RefreshCw, Check, Grid3x3, AlertCircle, Image as ImageIcon, Crop, Edit2, Save, ArrowRight, Wand2, ImagePlus } from 'lucide-react';
 import { NineGridData, NineGridPanel, AspectRatio } from '../../types';
 import { NINE_GRID } from './constants';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface NineGridPreviewProps {
   isOpen: boolean;
@@ -53,7 +53,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   // 处理九宫格图片 URL
   useEffect(() => {
     if (nineGrid?.imageUrl) {
-      getImageUrl(nineGrid.imageUrl).then(url => {
+      unifiedImageService.resolveForDisplay(nineGrid.imageUrl).then(url => {
         setNineGridImageUrl(url);
       });
     } else {

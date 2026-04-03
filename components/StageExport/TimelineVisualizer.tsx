@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Film } from 'lucide-react';
 import { Shot } from '../../types';
 import { STYLES } from './constants';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface Props {
   shots: Shot[];
@@ -18,7 +18,7 @@ const TimelineVisualizer: React.FC<Props> = ({ shots }) => {
 
       for (const shot of shots) {
         if (shot.interval?.videoUrl) {
-          const videoUrl = await getImageUrl(shot.interval.videoUrl);
+          const videoUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
           if (videoUrl) {
             newThumbnails.set(shot.id, videoUrl);
           }

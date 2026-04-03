@@ -9,7 +9,7 @@ import {
   generateCharacterTurnaroundImage 
 } from '../../services/aiService';
 import { imageStorageService } from '../../services/imageStorageService';
-import { isLocalImage, getLocalImageId } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 import { 
   getRegionalPrefix, 
   handleImageUpload, 

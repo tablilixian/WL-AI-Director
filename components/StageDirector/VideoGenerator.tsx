@@ -9,7 +9,7 @@ import {
   getActiveVideoModel,
 } from '../../services/modelRegistry';
 import { VideoModelDefinition } from '../../types/model';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface VideoGeneratorProps {
   shot: Shot;
@@ -86,7 +86,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   useEffect(() => {
     const loadVideoUrl = async () => {
       if (shot.interval?.videoUrl) {
-        const url = await getImageUrl(shot.interval.videoUrl);
+        const url = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
         setVideoUrl(url);
       } else {
         setVideoUrl(null);

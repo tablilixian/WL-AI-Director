@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
 import { Keyframe } from '../../types';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface KeyframeEditorProps {
   startKeyframe?: Keyframe;
@@ -45,7 +45,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
 
   useEffect(() => {
     if (startKeyframe?.imageUrl) {
-      getImageUrl(startKeyframe.imageUrl).then(url => setStartImageUrl(url));
+      unifiedImageService.resolveForDisplay(startKeyframe.imageUrl).then(url => setStartImageUrl(url));
     } else {
       setStartImageUrl(null);
     }
@@ -53,7 +53,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
 
   useEffect(() => {
     if (endKeyframe?.imageUrl) {
-      getImageUrl(endKeyframe.imageUrl).then(url => setEndImageUrl(url));
+      unifiedImageService.resolveForDisplay(endKeyframe.imageUrl).then(url => setEndImageUrl(url));
     } else {
       setEndImageUrl(null);
     }

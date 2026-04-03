@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, User, Clock, X, Shirt, Edit2, Package } from 'lucide-react';
 import { Shot, Character, Scene, Prop } from '../../types';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface SceneContextProps {
   shot: Shot;
@@ -40,7 +40,7 @@ const SceneContext: React.FC<SceneContextProps> = ({
 
   useEffect(() => {
     if (scene?.imageUrl) {
-      getImageUrl(scene.imageUrl).then(url => setSceneImageUrl(url));
+      unifiedImageService.resolveForDisplay(scene.imageUrl).then(url => setSceneImageUrl(url));
     } else {
       setSceneImageUrl(null);
     }
@@ -52,7 +52,7 @@ const SceneContext: React.FC<SceneContextProps> = ({
       for (const char of characters) {
         if (char.imageUrl) {
           try {
-            const url = await getImageUrl(char.imageUrl);
+            const url = await unifiedImageService.resolveForDisplay(char.imageUrl);
             urls[char.id] = url;
           } catch (err) {
             console.error(`[SceneContext] 加载角色图片失败: ${char.id}`, err);
@@ -73,7 +73,7 @@ const SceneContext: React.FC<SceneContextProps> = ({
       for (const prop of props) {
         if (prop.imageUrl) {
           try {
-            const url = await getImageUrl(prop.imageUrl);
+            const url = await unifiedImageService.resolveForDisplay(prop.imageUrl);
             urls[prop.id] = url;
           } catch (err) {
             console.error(`[SceneContext] 加载道具图片失败: ${prop.id}`, err);

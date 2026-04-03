@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { getImageUrl } from '../../utils/imageUtils';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface ImagePreviewModalProps {
   imageUrl: string | null;
@@ -22,7 +22,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, title, 
 
       setLoading(true);
       try {
-        const url = await getImageUrl(imageUrl);
+        const url = await unifiedImageService.resolveForDisplay(imageUrl);
         setSrc(url);
       } catch (err) {
         console.error('[ImagePreviewModal] 加载图片失败:', err);

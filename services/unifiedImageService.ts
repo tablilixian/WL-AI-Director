@@ -132,10 +132,20 @@ export const unifiedImageService = {
       return source.url || '';
     }
 
-    // 视频类型返回空（视频需要特殊处理）
-    if (source.type === 'video') {
-      logger.warn(LogCategory.IMAGE, '[UnifiedImageService] 视频类型需要使用 resolveForApi');
-      return '';
+    // 视频类型：从 videoStorageService 读取
+    if (source.type === 'video' && source.localVideoId) {
+      try {
+        const blob = await videoStorageService.getVideo(source.localVideoId);
+        if (blob) {
+          return URL.createObjectURL(blob);
+        } else {
+          logger.warn(LogCategory.IMAGE, `[UnifiedImageService] 本地视频不存在: ${source.localVideoId}`);
+          return '';
+        }
+      } catch (error) {
+        logger.error(LogCategory.IMAGE, `[UnifiedImageService] 读取本地视频失败: ${source.localVideoId}`, error);
+        return '';
+      }
     }
 
     // local 类型：从 IndexedDB 读取

@@ -1,5 +1,5 @@
 import { ProjectState } from '../types';
-import { getImageUrl } from '../utils/imageUtils';
+import { unifiedImageService } from './unifiedImageService';
 import { logger, LogCategory } from './logger';
 
 export interface MergeProgress {
@@ -71,7 +71,7 @@ class VideoMergeService {
         if (videoUrl.startsWith('data:video')) {
           url = videoUrl;
         } else {
-          url = await getImageUrl(videoUrl);
+          url = await unifiedImageService.resolveForDisplay(videoUrl);
           if (!url) {
             throw new Error(`无法获取视频 URL: ${videoUrl}`);
           }
