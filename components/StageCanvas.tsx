@@ -29,23 +29,25 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
 
   // 自动恢复画布状态
   React.useEffect(() => {
-    const saved = localStorage.getItem('wl-canvas-backup');
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        if (state.layers && state.layers.length > 0) {
-          console.log('[StageCanvas] 检测到保存的画布状态，自动恢复...');
-          canvasIntegrationService.restoreCanvasState().then(restored => {
-            if (restored) {
-              console.log('[StageCanvas] 画布状态自动恢复成功');
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('[StageCanvas] 解析保存的画布状态失败:', e);
+    const { importLayers, setOffset, setScale } = useCanvasStore.getState();
+    
+    // 先清空当前画布状态（避免显示上一个项目的数据）
+    importLayers([], true);
+    setOffset({ x: 0, y: 0 });
+    setScale(1);
+    
+    // 设置项目ID（用于关联画布数据）
+    canvasIntegrationService.setProjectId(project.id);
+    
+    // 恢复画布状态（优先从 IndexedDB 加载）
+    canvasIntegrationService.restoreCanvasState().then(restored => {
+      if (restored) {
+        console.log('[StageCanvas] 画布状态恢复成功，项目:', project.id);
+      } else {
+        console.log('[StageCanvas] 未找到画布数据，项目:', project.id);
       }
-    }
-  }, []);
+    });
+  }, [project.id]);
 
   const getAllKeyframes = (): Keyframe[] => {
     if (!project.shots) return [];
@@ -522,7 +524,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   };
 
   const handleExportJson = () => {
-    const saved = localStorage.getItem('wl-canvas-backup');
+    const backupKey = `wl-canvas-backup-${project.id}`;
+    const saved = localStorage.getItem(backupKey);
     if (!saved) {
       alert('没有找到保存的画布数据，请先点击"保存画布"');
       return;
@@ -533,7 +536,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `canvas-data-${Date.now()}.json`;
+      link.download = `canvas-data-${project.id}-${Date.now()}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

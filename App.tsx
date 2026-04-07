@@ -334,7 +334,10 @@ function App() {
 
   // Set stage
   const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => {
-    // 切换页签时强制触发一次保存（force=true 忽略变化检测和时间间隔限制）
+    if (project) {
+      canvasIntegrationService.setProjectId(project.id);
+    }
+    
     canvasIntegrationService.saveImmediately(true);
     
     if (isGenerating) {
@@ -370,6 +373,9 @@ function App() {
       logger.debug(LogCategory.APP, '正在从本地加载项目:', proj);
       const fullProject = await loadProjectFromDB(proj);
       if (fullProject) {
+        // 立即设置项目ID（确保画布保存时使用正确的ID）
+        canvasIntegrationService.setProjectId(fullProject.id);
+        
         // 从单独存储中恢复 stage
         const currentStage = await getCurrentStage(proj);
         logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
@@ -383,6 +389,9 @@ function App() {
       }
     } else {
       // 如果传入的是完整项目对象，直接使用
+      // 立即设置项目ID（确保画布保存时使用正确的ID）
+      canvasIntegrationService.setProjectId(proj.id);
+      
       // 从单独存储中恢复 stage
       const currentStage = await getCurrentStage(proj.id);
       logger.debug(LogCategory.APP, '恢复 stage:', currentStage);

@@ -2,6 +2,7 @@ import { supabase } from '../src/api/supabase';
 import { useAuthStore } from '../src/stores/authStore';
 import { DB_NAME, DB_VERSION, STORE_NAMES } from './dbConfig';
 import { logger, LogCategory } from './logger';
+import { openDB as openDBFromStorageService } from './storageService';
 
 export interface LocalImage {
   id: string;
@@ -19,40 +20,7 @@ export interface LocalVideo {
   size: number;
 }
 
-const openDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      
-      // 检查必要的 store 是否存在
-      const requiredStores = [STORE_NAMES.IMAGES, STORE_NAMES.VIDEOS];
-      const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
-      
-      if (missingStores.length > 0) {
-        logger.warn(LogCategory.IMAGE, `⚠️ 检测到缺失的 store: ${missingStores.join(', ')}`);
-        logger.warn(LogCategory.IMAGE, `💡 提示: 请在浏览器开发者工具中清理 IndexedDB 后刷新页面`);
-      }
-      
-      resolve(db);
-    };
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      
-      if (!db.objectStoreNames.contains(STORE_NAMES.IMAGES)) {
-        const store = db.createObjectStore(STORE_NAMES.IMAGES, { keyPath: 'id' });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        logger.debug(LogCategory.IMAGE, `✅ 创建 store: ${STORE_NAMES.IMAGES}`);
-      }
-      if (!db.objectStoreNames.contains(STORE_NAMES.VIDEOS)) {
-        const store = db.createObjectStore(STORE_NAMES.VIDEOS, { keyPath: 'id' });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        logger.debug(LogCategory.IMAGE, `✅ 创建 store: ${STORE_NAMES.VIDEOS}`);
-      }
-    };
-  });
-};
+const openDB = openDBFromStorageService;
 
 export const imageStorageService = {
   async saveImage(id: string, blob: Blob): Promise<void> {

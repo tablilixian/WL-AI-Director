@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Loader2, Database, X, FileArchive, FileJson, Trash2, AlertTriangle } from 'lucide-react';
+import { openDB } from '../services/storageService';
 
 interface DebugExportModalProps {
   isOpen: boolean;
@@ -470,13 +471,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
   );
 };
 
-const openWLDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('WLDB', 6);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
+const openWLDB = openDB;
 
 const getAllFromStore = async (db: IDBDatabase, storeName: string): Promise<any[]> => {
   return new Promise((resolve, reject) => {

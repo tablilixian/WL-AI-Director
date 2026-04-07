@@ -17,7 +17,7 @@ export interface IndexedDBExportPayload {
   };
 }
 
-const openDB = (): Promise<IDBDatabase> => {
+export const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
@@ -30,14 +30,22 @@ const openDB = (): Promise<IDBDatabase> => {
       if (!db.objectStoreNames.contains(STORE_NAMES.ASSET_LIBRARY)) {
         db.createObjectStore(STORE_NAMES.ASSET_LIBRARY, { keyPath: 'id' });
       }
-      // 兼容性：确保 images store 存在（由 imageStorageService 使用）
       if (!db.objectStoreNames.contains(STORE_NAMES.IMAGES)) {
         const store = db.createObjectStore(STORE_NAMES.IMAGES, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
-      // Stage 专用存储（避免频繁云端同步）
+      if (!db.objectStoreNames.contains(STORE_NAMES.VIDEOS)) {
+        const store = db.createObjectStore(STORE_NAMES.VIDEOS, { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
       if (!db.objectStoreNames.contains(STORE_NAMES.PROJECT_STAGES)) {
         db.createObjectStore(STORE_NAMES.PROJECT_STAGES, { keyPath: 'projectId' });
+      }
+      if (!db.objectStoreNames.contains(STORE_NAMES.CANVAS_DATA)) {
+        const store = db.createObjectStore(STORE_NAMES.CANVAS_DATA, { keyPath: 'projectId' });
+        store.createIndex('savedAt', 'savedAt', { unique: false });
+        store.createIndex('version', 'version', { unique: false });
+        store.createIndex('syncStatus', 'syncStatus', { unique: false });
       }
     };
   });
