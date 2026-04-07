@@ -9,7 +9,8 @@
 import { supabase } from '../src/api/supabase';
 import { useAuthStore } from '../src/stores/authStore';
 import { assetLibraryApi } from '../src/api/assetLibrary';
-import type { ProjectState, AssetLibraryItem } from '../types';
+import { storageApi } from '../src/api/storage';
+import type { ProjectState, AssetLibraryItem, Character, Scene, Prop } from '../types';
 import { logger, LogCategory } from './logger';
 
 // 复用现有的 IndexedDB 操作
@@ -734,15 +735,18 @@ class HybridStorageService {
     }
   }
 
-  /**
-   * 删除素材库项目（云端 + 本地 IndexedDB）
-   * 双写策略：同时从云端和本地删除
-   */
   async deleteAssetFromLibrary(id: string): Promise<void> {
     console.log('[Storage] 🗑️ 开始删除素材库项目:', id);
     console.log('[Storage] 当前在线状态:', this.isOnline());
     
-    // 从本地 IndexedDB 删除
+    let imageUrl: string | undefined;
+    
+    const item = await assetLibraryApi.get(id);
+    if (item) {
+      const data = item.data as Character | Scene | Prop;
+      imageUrl = data?.imageUrl;
+    }
+    
     try {
       console.log('[Storage] 开始从本地 IndexedDB 删除:', id);
       await deleteAssetFromLibraryFromDB(id);
@@ -751,7 +755,6 @@ class HybridStorageService {
       console.error('[Storage] ❌ 从本地删除素材库项目失败:', error);
     }
     
-    // 如果在线，从云端删除
     if (this.isOnline()) {
       console.log('[Storage] 尝试从云端删除:', id);
       try {
@@ -763,10 +766,21 @@ class HybridStorageService {
           error: error.message,
           details: error
         });
-        throw error;
+      }
+      
+      if (imageUrl) {
+        console.log('[Storage] 🗑️ 开始删除存储桶文件:', imageUrl);
+        try {
+          await storageApi.delete(imageUrl, 'projects');
+          console.log('[Storage] ✅ 存储桶文件已删除');
+        } catch (storageError: any) {
+          console.error('[Storage] ❌ 删除存储桶文件失败:', storageError.message);
+        }
+      } else {
+        console.log('[Storage] ⚠️ 无 imageUrl，跳过存储桶删除');
       }
     } else {
-      console.warn('[Storage] ⚠️ 用户未在线，仅删除本地数据，未删除云端数据');
+      console.warn('[Storage] ⚠️ 用户未在线，仅删除本地数据');
     }
   }
 }

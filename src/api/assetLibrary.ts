@@ -129,10 +129,28 @@ export const assetLibraryApi = {
     console.log('[AssetLibraryAPI] 🗑️ 尝试删除资产库项目:', id);
     console.log('[AssetLibraryAPI] Supabase 客户端状态:', supabase ? '已初始化' : '未初始化');
     
-    const { error } = await supabase
+    // 首先检查记录是否存在
+    console.log('[AssetLibraryAPI] 🔍 检查删除前的记录...');
+    const { data: beforeData, error: beforeError } = await supabase
+      .from('asset_library')
+      .select('id, user_id, name, type')
+      .eq('id', id)
+      .single();
+    
+    if (beforeError) {
+      console.log('[AssetLibraryAPI] 删除前查询结果: 记录不存在或查询失败', beforeError.message);
+    } else {
+      console.log('[AssetLibraryAPI] 删除前记录存在:', beforeData);
+    }
+    
+    // 执行删除
+    const { error, data } = await supabase
       .from('asset_library')
       .delete()
       .eq('id', id)
+      .select();  // 添加 select() 来获取被删除的行
+    
+    console.log('[AssetLibraryAPI] 📊 删除结果:', { error, data, affectedRows: data?.length || 0 });
     
     if (error) {
       console.error('[AssetLibraryAPI] ❌ 删除资产库项目失败:', {
@@ -145,7 +163,21 @@ export const assetLibraryApi = {
       throw new Error(`删除失败：${error.message}`);
     }
     
-    console.log('[AssetLibraryAPI] ✅ 删除成功:', id);
+    // 验证删除后记录是否还存在
+    console.log('[AssetLibraryAPI] 🔍 验证删除结果...');
+    const { data: afterData, error: afterError } = await supabase
+      .from('asset_library')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (afterData) {
+      console.error('[AssetLibraryAPI] ❌ 删除验证失败: 记录仍然存在!', afterData);
+    } else {
+      console.log('[AssetLibraryAPI] ✅ 删除验证通过: 记录已不存在');
+    }
+    
+    console.log('[AssetLibraryAPI] ✅ 删除成功:', id, '| 影响的行数:', data?.length || 0);
   },
 
   // 批量创建资产库项目
