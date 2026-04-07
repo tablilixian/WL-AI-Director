@@ -592,7 +592,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
   const handleDeleteLibraryItem = async (itemId: string) => {
     try {
-      await deleteAssetFromLibrary(itemId);
+      // 使用 hybridStorage 服务，同时删除本地和云端数据
+      await hybridStorage.deleteAssetFromLibrary(itemId);
       setLibraryItems((prev) => prev.filter((item) => item.id !== itemId));
     } catch (e: any) {
       showAlert(e?.message || '删除资产失败', { type: 'error' });

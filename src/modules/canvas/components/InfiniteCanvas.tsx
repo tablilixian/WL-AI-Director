@@ -16,9 +16,13 @@ import { ConnectionLines } from './ConnectionLines';
 import { LayerDetailPanel } from './LayerDetailPanel';
 import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
+import { SaveToLibraryDialog } from './SaveToLibraryDialog';
+import type { LayerData } from '../types/canvas';
+import type { ProjectState } from '../../../../types';
 
 interface InfiniteCanvasProps {
   className?: string;
+  project?: ProjectState;
 }
 
 interface DrawingState {
@@ -30,7 +34,7 @@ interface DrawingState {
   points: { x: number; y: number }[];
 }
 
-export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }) => {
+export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', project }) => {
   const { 
     layers, 
     offset, 
@@ -67,6 +71,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
   const [gridSize, setGridSize] = useState(50);
   const [promptLinkLayerId, setPromptLinkLayerId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null);
+  const [showSaveToLibraryDialog, setShowSaveToLibraryDialog] = useState(false);
+  const [saveToLibraryLayer, setSaveToLibraryLayer] = useState<LayerData | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -557,6 +563,17 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
         />
       )}
 
+      {showSaveToLibraryDialog && saveToLibraryLayer && (
+        <SaveToLibraryDialog
+          layer={saveToLibraryLayer}
+          project={project}
+          onClose={() => {
+            setShowSaveToLibraryDialog(false);
+            setSaveToLibraryLayer(null);
+          }}
+        />
+      )}
+
       {contextMenu && (
         <div 
           className="fixed z-[200] bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 min-w-[160px]"
@@ -583,6 +600,29 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '' }
             <span>📋</span>
             <span>复制图层</span>
           </button>
+          
+          {/* 保存到资产库 - 仅对图片和视频图层显示 */}
+          {(layers.find(l => l.id === contextMenu.layerId)?.type === 'image' || 
+            layers.find(l => l.id === contextMenu.layerId)?.type === 'video') && (
+            <>
+              <div className="border-t border-gray-700 my-1" />
+              <button
+                onClick={() => {
+                  const layer = layers.find(l => l.id === contextMenu.layerId);
+                  if (layer) {
+                    setSaveToLibraryLayer(layer);
+                    setShowSaveToLibraryDialog(true);
+                  }
+                  setContextMenu(null);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+              >
+                <span>💾</span>
+                <span>保存到资产库</span>
+              </button>
+            </>
+          )}
+          
           <div className="border-t border-gray-700 my-1" />
           <button
             onClick={() => {

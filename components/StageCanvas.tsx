@@ -676,7 +676,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        <InfiniteCanvas />
+        <InfiniteCanvas project={project} />
       </div>
 
       {showImportDialog && (

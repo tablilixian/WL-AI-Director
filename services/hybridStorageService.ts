@@ -709,6 +709,7 @@ class HybridStorageService {
   /**
    * 保存素材库项目（云端 + 本地 IndexedDB）
    * 双写策略：同时保存到云端和本地
+   * 注意：使用统一的 UUID，本地和云端 ID 一致
    */
   async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
     logger.debug(LogCategory.STORAGE, '保存素材库项目:', item.name);
@@ -725,25 +726,8 @@ class HybridStorageService {
     if (this.isOnline()) {
       try {
         const cloudItem = await assetLibraryApi.create(item);
-        logger.debug(LogCategory.STORAGE, '素材库项目已同步到云端, 云端 ID:', cloudItem.id);
-        
-        /*
-        // 更新本地 ID 映射
-        if (item.id !== cloudItem.id) {
-          setIdMapping(item.id, cloudItem.id);
-        }
-        
-        // 更新本地 IndexedDB 中的 ID 为云端 UUID
-        try {
-          // 先删除旧记录
-          await deleteAssetFromLibraryFromDB(item.id);
-          // 保存新记录（使用云端 ID）
-          await saveAssetToLibraryToDB(cloudItem);
-          logger.debug(LogCategory.STORAGE, '本地 IndexedDB 已更新为云端 ID:', cloudItem.id);
-        } catch (error) {
-          logger.error(LogCategory.STORAGE, '更新本地 IndexedDB ID 失败:', error);
-        }
-        */
+        logger.debug(LogCategory.STORAGE, '素材库项目已同步到云端, ID:', cloudItem.id);
+        // 由于使用统一的 UUID，cloudItem.id 应该等于 item.id
       } catch (error) {
         logger.error(LogCategory.STORAGE, '同步素材库项目到云端失败:', error);
       }
@@ -755,24 +739,34 @@ class HybridStorageService {
    * 双写策略：同时从云端和本地删除
    */
   async deleteAssetFromLibrary(id: string): Promise<void> {
-    logger.debug(LogCategory.STORAGE, '删除素材库项目:', id);
+    console.log('[Storage] 🗑️ 开始删除素材库项目:', id);
+    console.log('[Storage] 当前在线状态:', this.isOnline());
     
     // 从本地 IndexedDB 删除
     try {
+      console.log('[Storage] 开始从本地 IndexedDB 删除:', id);
       await deleteAssetFromLibraryFromDB(id);
-      logger.debug(LogCategory.STORAGE, '素材库项目已从本地 IndexedDB 删除');
+      console.log('[Storage] ✅ 素材库项目已从本地 IndexedDB 删除');
     } catch (error) {
-      logger.error(LogCategory.STORAGE, '从本地删除素材库项目失败:', error);
+      console.error('[Storage] ❌ 从本地删除素材库项目失败:', error);
     }
     
     // 如果在线，从云端删除
     if (this.isOnline()) {
+      console.log('[Storage] 尝试从云端删除:', id);
       try {
         await assetLibraryApi.delete(id);
-        logger.debug(LogCategory.STORAGE, '素材库项目已从云端删除');
-      } catch (error) {
-        logger.error(LogCategory.STORAGE, '从云端删除素材库项目失败:', error);
+        console.log('[Storage] ✅ 素材库项目已从云端删除');
+      } catch (error: any) {
+        console.error('[Storage] ❌ 从云端删除素材库项目失败:', {
+          id,
+          error: error.message,
+          details: error
+        });
+        throw error;
       }
+    } else {
+      console.warn('[Storage] ⚠️ 用户未在线，仅删除本地数据，未删除云端数据');
     }
   }
 }

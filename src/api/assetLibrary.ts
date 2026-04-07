@@ -64,6 +64,7 @@ export const assetLibraryApi = {
     const { data, error } = await supabase
       .from('asset_library')
       .insert({
+        id: item.id,  // 使用客户端生成的 UUID
         type: item.type,
         name: item.name,
         project_id: item.projectId,
@@ -125,15 +126,26 @@ export const assetLibraryApi = {
 
   // 删除资产库项目
   delete: async (id: string): Promise<void> => {
+    console.log('[AssetLibraryAPI] 🗑️ 尝试删除资产库项目:', id);
+    console.log('[AssetLibraryAPI] Supabase 客户端状态:', supabase ? '已初始化' : '未初始化');
+    
     const { error } = await supabase
       .from('asset_library')
       .delete()
       .eq('id', id)
     
     if (error) {
-      console.error('[AssetLibraryAPI] 删除资产库项目失败:', error)
-      throw error
+      console.error('[AssetLibraryAPI] ❌ 删除资产库项目失败:', {
+        id,
+        error: error.message,
+        details: error,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`删除失败：${error.message}`);
     }
+    
+    console.log('[AssetLibraryAPI] ✅ 删除成功:', id);
   },
 
   // 批量创建资产库项目

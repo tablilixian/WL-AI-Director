@@ -1,13 +1,26 @@
-import { AssetLibraryItem, Character, ProjectState, Prop, Scene, CharacterTurnaroundData } from '../types';
+import { AssetLibraryItem, Character, ProjectState, Prop, Scene } from '../types';
+import type { LayerData } from '../src/modules/canvas/types/canvas';
 
-const generateId = (prefix: string): string => {
-  const rand = Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${Date.now().toString(36)}-${rand}`;
+/**
+ * 生成统一的 UUID（本地和云端共用）
+ * 避免本地 ID 和云端 ID 不一致导致的重复问题
+ */
+const generateId = (): string => {
+  // 使用浏览器原生 UUID API
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // 降级方案（旧浏览器）
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 };
 
 const cloneCharacterVariation = (variation: Character['variations'][number]): Character['variations'][number] => ({
   ...variation,
-  id: generateId('var'),
+  id: generateId(),
   status: variation.imageUrl ? 'completed' : 'pending'
 });
 
@@ -19,7 +32,7 @@ export const createLibraryItemFromTurnaround = (
   
   // 创建一个简化的角色对象，只包含九宫格图片信息
   const turnaroundCharacter: Character = {
-    id: generateId('char'),
+    id: generateId(),
     name: character.name,
     gender: character.gender,
     age: character.age,
@@ -34,7 +47,7 @@ export const createLibraryItemFromTurnaround = (
   };
 
   return {
-    id: generateId('asset'),
+    id: generateId(),
     type: 'turnaround',
     name: `${character.name} - 九宫格造型`,
     projectId: project?.id,
@@ -51,7 +64,7 @@ export const createLibraryItemFromCharacter = (
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
-    id: generateId('asset'),
+    id: generateId(),
     type: 'character',
     name: character.name,
     projectId: project?.id,
@@ -71,7 +84,7 @@ export const createLibraryItemFromScene = (
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
-    id: generateId('asset'),
+    id: generateId(),
     type: 'scene',
     name: scene.location,
     projectId: project?.id,
@@ -85,7 +98,7 @@ export const createLibraryItemFromScene = (
 export const cloneCharacterForProject = (character: Character): Character => {
   return {
     ...character,
-    id: generateId('char'),
+    id: generateId(),
     variations: (character.variations || []).map(cloneCharacterVariation),
     status: character.imageUrl ? 'completed' : 'pending'
   };
@@ -94,7 +107,7 @@ export const cloneCharacterForProject = (character: Character): Character => {
 export const cloneSceneForProject = (scene: Scene): Scene => {
   return {
     ...scene,
-    id: generateId('scene'),
+    id: generateId(),
     status: scene.imageUrl ? 'completed' : 'pending'
   };
 };
@@ -105,7 +118,7 @@ export const createLibraryItemFromProp = (
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
-    id: generateId('asset'),
+    id: generateId(),
     type: 'prop',
     name: prop.name,
     projectId: project?.id,
@@ -119,7 +132,7 @@ export const createLibraryItemFromProp = (
 export const clonePropForProject = (prop: Prop): Prop => {
   return {
     ...prop,
-    id: generateId('prop'),
+    id: generateId(),
     status: prop.imageUrl ? 'completed' : 'pending'
   };
 };
@@ -156,4 +169,90 @@ export const applyLibraryItemToProject = (project: ProjectState, item: AssetLibr
     ...project,
     scriptData: newData
   };
+};
+
+/**
+ * 从画布图层创建资产库项
+ * 智能识别图层来源，保存完整的角色/场景数据或创建新资产
+ * 
+ * @param layer - 画布图层数据
+ * @param project - 当前项目状态
+ * @param assetType - 目标资产类型（当无法从图层识别时使用）
+ * @param customName - 自定义资产名称（可选）
+ * @returns 资产库项
+ */
+export const createLibraryItemFromLayer = async (
+  layer: LayerData,
+  project: ProjectState,
+  assetType: 'character' | 'scene' | 'prop',
+  customName?: string
+): Promise<AssetLibraryItem> => {
+  // 优先尝试从图层关联的资源 ID 获取完整的角色/场景数据
+  // 这样能保存完整的结构化数据（如角色设定、场景描述等），而不仅仅是一张图片
+  if (layer.linkedResourceId && layer.linkedResourceType !== 'keyframe') {
+    if (layer.linkedResourceType === 'character') {
+      const character = project.scriptData?.characters.find(c => c.id === layer.linkedResourceId);
+      if (character) {
+        console.log('[AssetLibrary] 从图层关联的角色创建资产库项:', character.name);
+        return createLibraryItemFromCharacter(character, project);
+      }
+    } else if (layer.linkedResourceType === 'scene') {
+      const scene = project.scriptData?.scenes.find(s => s.id === layer.linkedResourceId);
+      if (scene) {
+        console.log('[AssetLibrary] 从图层关联的场景创建资产库项:', scene.location);
+        return createLibraryItemFromScene(scene, project);
+      }
+    }
+  }
+  
+  // 如果图层没有关联资源 ID 或关联的是关键帧，则从图层图片创建新资产
+  // 这种情况适用于：AI 生成的图片、导入的本地图片等
+  const imageUrl = layer.src;
+  
+  console.log('[AssetLibrary] 从图层图片创建新资产，类型:', assetType, '图层标题:', layer.title);
+  
+  if (assetType === 'character') {
+    // 创建新的角色资产
+    const character: Character = {
+      id: generateId(),
+      name: customName || layer.title || '新角色',
+      gender: 'unknown',
+      age: 'unknown',
+      personality: '',
+      visualPrompt: '',
+      negativePrompt: '',
+      coreFeatures: '',
+      imageUrl,
+      turnaround: undefined,
+      variations: [],
+      status: 'completed'
+    };
+    return createLibraryItemFromCharacter(character, project);
+  } else if (assetType === 'scene') {
+    // 创建新的场景资产
+    const scene: Scene = {
+      id: generateId(),
+      location: customName || layer.title || '新场景',
+      time: '',
+      atmosphere: '',
+      visualPrompt: '',
+      negativePrompt: '',
+      imageUrl,
+      status: 'completed'
+    };
+    return createLibraryItemFromScene(scene, project);
+  } else {
+    // 创建新的道具资产
+    const prop: Prop = {
+      id: generateId(),
+      name: customName || layer.title || '新道具',
+      category: 'general',
+      description: '',
+      visualPrompt: '',
+      negativePrompt: '',
+      imageUrl,
+      status: 'completed'
+    };
+    return createLibraryItemFromProp(prop, project);
+  }
 };

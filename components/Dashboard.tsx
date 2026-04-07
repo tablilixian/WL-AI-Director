@@ -12,6 +12,7 @@ import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 import { useImageLoader } from '../hooks/useImageLoader';
 import DebugExportModal from './DebugExportModal';
+import logger, { LogCategory } from '@/services/logger';
 
 const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; type: 'character' | 'scene' | 'turnaround' }> = ({ imageUrl, alt, type }) => {
   const { src, loading } = useImageLoader(imageUrl);
@@ -209,11 +210,14 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   };
 
   const handleDeleteLibraryItem = (itemId: string) => {
+    logger.debug(LogCategory.STORAGE, `尝试删除资产库项目: ${itemId}`);
     showAlert('确定从资产库删除该资源吗？', {
       type: 'warning',
       showCancel: true,
       onConfirm: async () => {
         try {
+          logger.debug(LogCategory.STORAGE, `尝试删除资产库项目: ${itemId}`);
+          console.log('[Dashboard] 🗑️ 尝试删除资产库项目:', itemId);
           await hybridStorage.deleteAssetFromLibrary(itemId);
           setLibraryItems((prev) => prev.filter((item) => item.id !== itemId));
         } catch (error) {

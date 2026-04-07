@@ -67,7 +67,7 @@ export const LayerPanel: React.FC = () => {
           >
             {layer.type === 'video' ? (
               <>
-                {layer.src && layer.src.startsWith('http') ? (
+                {layer.src && (layer.src.startsWith('http') || layer.src.startsWith('blob:') || layer.src.startsWith('data:')) ? (
                   <video
                     src={layer.src}
                     className="w-full h-full object-cover"
