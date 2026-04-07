@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, X, Search, Trash2, Package } from 'lucide-react';
+import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, Package } from 'lucide-react';
 import { ProjectState, CharacterVariation, Character, Scene, Prop, AspectRatio, AssetLibraryItem, AssetLibraryItemType, CharacterTurnaroundPanel } from '../../types';
 import { 
   generateImage, 
@@ -29,9 +29,10 @@ import WardrobeModal from './WardrobeModal';
 import TurnaroundModal from './TurnaroundModal';
 import { useAlert } from '../GlobalAlert';
 import { useImageLoader } from '../../hooks/useImageLoader';
-import { getAllAssetLibraryItems, deleteAssetFromLibrary } from '../../services/storageService';
+
 import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene, createLibraryItemFromProp, createLibraryItemFromTurnaround, cloneCharacterForProject } from '../../services/assetLibraryService';
 import { hybridStorage } from '../../services/hybridStorageService';
+import { AssetLibraryModal } from '../../src/components/AssetLibrary';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getUserAspectRatio, setUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -78,11 +79,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
-  const [libraryItems, setLibraryItems] = useState<AssetLibraryItem[]>([]);
-  const [libraryLoading, setLibraryLoading] = useState(false);
-  const [libraryQuery, setLibraryQuery] = useState('');
-  const [libraryFilter, setLibraryFilter] = useState<'all' | 'character' | 'scene' | 'prop' | 'turnaround'>('all');
-  const [libraryProjectFilter, setLibraryProjectFilter] = useState('all');
   const [replaceTargetCharId, setReplaceTargetCharId] = useState<string | null>(null);
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
   
@@ -223,26 +219,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     };
   }, []);
 
-  const refreshLibrary = async () => {
-    setLibraryLoading(true);
-    try {
-      const items = await getAllAssetLibraryItems();
-      setLibraryItems(items);
-    } catch (e) {
-      console.error('Failed to load asset library', e);
-    } finally {
-      setLibraryLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showLibraryModal) {
-      refreshLibrary();
-    }
-  }, [showLibraryModal]);
-
   const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetCharId: string | null = null) => {
-    setLibraryFilter(filter);
     setReplaceTargetCharId(targetCharId);
     setShowLibraryModal(true);
   };
@@ -473,7 +450,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const item = createLibraryItemFromCharacter(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
-        refreshLibrary();
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
@@ -527,7 +503,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const item = createLibraryItemFromScene(sceneToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
-        refreshLibrary();
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
@@ -588,16 +563,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     showAlert(`已替换角色：${previous.name} → ${cloned.name}`, { type: 'success' });
     setShowLibraryModal(false);
     setReplaceTargetCharId(null);
-  };
-
-  const handleDeleteLibraryItem = async (itemId: string) => {
-    try {
-      // 使用 hybridStorage 服务，同时删除本地和云端数据
-      await hybridStorage.deleteAssetFromLibrary(itemId);
-      setLibraryItems((prev) => prev.filter((item) => item.id !== itemId));
-    } catch (e: any) {
-      showAlert(e?.message || '删除资产失败', { type: 'error' });
-    }
   };
 
   /**
@@ -944,7 +909,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const item = createLibraryItemFromProp(propToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
-        refreshLibrary();
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
@@ -1318,7 +1282,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         const item = createLibraryItemFromTurnaround(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
         showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
-        refreshLibrary();
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
@@ -1341,21 +1304,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const allScenesReady = project.scriptData.scenes.every(s => s.imageUrl);
   const allPropsReady = (project.scriptData.props || []).length > 0 && (project.scriptData.props || []).every(p => p.imageUrl);
   const selectedChar = project.scriptData.characters.find(c => compareIds(c.id, selectedCharId));
-  const projectNameOptions = Array.from(
-    new Set(
-      libraryItems.map((item) => (item.projectName && item.projectName.trim()) || '未知项目')
-    )
-  ).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
-  const filteredLibraryItems = libraryItems.filter((item) => {
-    if (libraryFilter !== 'all' && item.type !== libraryFilter) return false;
-    if (libraryProjectFilter !== 'all') {
-      const projectName = (item.projectName && item.projectName.trim()) || '未知项目';
-      if (projectName !== libraryProjectFilter) return false;
-    }
-    if (!libraryQuery.trim()) return true;
-    const query = libraryQuery.trim().toLowerCase();
-    return item.name.toLowerCase().includes(query);
-  });
 
   return (
     <div className={STYLES.mainContainer}>
@@ -1415,145 +1363,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       })()}
 
       {/* Asset Library Modal */}
-      {showLibraryModal && (
-        <div className={STYLES.modalOverlay} onClick={() => {
+      <AssetLibraryModal
+        isOpen={showLibraryModal}
+        onClose={() => {
           setShowLibraryModal(false);
           setReplaceTargetCharId(null);
-        }}>
-          <div className={STYLES.modalContainer} onClick={(e) => e.stopPropagation()}>
-            <div className={STYLES.modalHeader}>
-              <div className="flex items-center gap-3">
-                <Archive className="w-4 h-4 text-[var(--accent-text)]" />
-                <div>
-                  <div className="text-sm font-bold text-[var(--text-primary)]">资产库</div>
-                  <div className="text-[10px] text-[var(--text-tertiary)] font-mono uppercase tracking-widest">
-                    {libraryItems.length} assets
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowLibraryModal(false);
-                  setReplaceTargetCharId(null);
-                }}
-                className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded"
-                title="关闭"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className={STYLES.modalBody}>
-              <div className="flex flex-wrap items-center gap-3 mb-6">
-                <div className="relative flex-1 min-w-[220px]">
-                  <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    value={libraryQuery}
-                    onChange={(e) => setLibraryQuery(e.target.value)}
-                    placeholder="搜索资产名称..."
-                    className="w-full pl-9 pr-3 py-2 bg-[var(--bg-deep)] border border-[var(--border-primary)] rounded text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-secondary)]"
-                  />
-                </div>
-                <div className="min-w-[180px]">
-                  <select
-                    value={libraryProjectFilter}
-                    onChange={(e) => setLibraryProjectFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg-deep)] border border-[var(--border-primary)] rounded text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-secondary)]"
-                  >
-                    <option value="all">全部项目</option>
-                    {projectNameOptions.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  {(['all', 'character', 'scene', 'prop', 'turnaround'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setLibraryFilter(type)}
-                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border rounded ${
-                        libraryFilter === type
-                          ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border-[var(--btn-primary-bg)]'
-                          : 'bg-transparent text-[var(--text-tertiary)] border-[var(--border-primary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)]'
-                      }`}
-                    >
-                      {type === 'all' ? '全部' : type === 'character' ? '角色' : type === 'scene' ? '场景' : type === 'prop' ? '道具' : '九宫格'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {libraryLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 text-[var(--text-tertiary)] animate-spin" />
-                </div>
-              ) : filteredLibraryItems.length === 0 ? (
-                <div className="border border-dashed border-[var(--border-primary)] rounded-xl p-10 text-center text-[var(--text-muted)] text-sm">
-                  暂无资产。可在角色或场景卡片中选择“加入资产库”。
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredLibraryItems.map((item) => {
-                    const preview =
-                      item.type === 'character' || item.type === 'turnaround'
-                        ? (item.data as Character).imageUrl
-                        : item.type === 'scene'
-                        ? (item.data as Scene).imageUrl
-                        : (item.data as Prop).imageUrl;
-                    return (
-                      <div
-                        key={item.id}
-                        className="bg-[var(--bg-deep)] border border-[var(--border-primary)] rounded-xl overflow-hidden hover:border-[var(--border-secondary)] transition-colors"
-                      >
-                        <div className="aspect-video bg-[var(--bg-elevated)] relative">
-                          <AssetLibraryImage imageUrl={preview} alt={item.name} type={item.type} />
-                        </div>
-                        <div className="p-4 space-y-3">
-                          <div>
-                            <div className="text-sm text-[var(--text-primary)] font-bold line-clamp-1">{item.name}</div>
-                            <div className="text-[10px] text-[var(--text-tertiary)] font-mono uppercase tracking-widest mt-1">
-                              {item.type === 'character' ? '角色' : item.type === 'turnaround' ? '九宫格' : item.type === 'scene' ? '场景' : '道具'}
-                            </div>
-                            <div className="text-[10px] text-[var(--text-muted)] font-mono mt-1 line-clamp-1">
-                              {(item.projectName && item.projectName.trim()) || '未知项目'}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() =>
-                                replaceTargetCharId
-                                  ? handleReplaceCharacterFromLibrary(item, replaceTargetCharId)
-                                  : handleImportFromLibrary(item)
-                              }
-                              className="flex-1 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
-                            >
-                              {replaceTargetCharId ? '替换当前角色' : '导入到当前项目'}
-                            </button>
-                            <button
-                              onClick={() =>
-                                showAlert('确定从资产库删除该资源吗？', {
-                                  type: 'warning',
-                                  showCancel: true,
-                                  onConfirm: () => handleDeleteLibraryItem(item.id)
-                                })
-                              }
-                              className="p-2 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--error-text)] hover:border-[var(--error-border)] rounded transition-colors"
-                              title="删除"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        }}
+        onImport={handleImportFromLibrary}
+        onReplace={handleReplaceCharacterFromLibrary}
+        replaceTargetCharId={replaceTargetCharId}
+      />
 
       {/* Header */}
       <div className={STYLES.header}>
