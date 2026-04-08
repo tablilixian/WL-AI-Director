@@ -1,6 +1,11 @@
 /**
  * Canvas Integration Service
  * 处理画布与项目数据的集成
+ * 
+ * 集成 canvasSyncService 实现 Local-First 架构：
+ * - 本地保存：实时（防抖 500ms）
+ * - 云端同步：延迟（停止操作 10s 后，最小间隔 30s）
+ * - 关键节点：强制同步（切换项目、退出、手动保存）
  */
 
 import { ProjectState, Shot, Keyframe } from '../../../../types';
@@ -14,6 +19,7 @@ import {
   deleteCanvasDataFromLocal,
   CanvasData
 } from '../../../../services/canvasStorageService';
+import { canvasSyncService } from '../../../../services/canvasSyncService';
 
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
@@ -90,13 +96,24 @@ export class CanvasIntegrationService {
   /**
    * 设置当前项目ID
    * 在加载项目时调用
+   * 同时初始化 canvasSyncService
    */
-  setProjectId(projectId: string): void {
+  async setProjectId(projectId: string): Promise<void> {
     console.log('[CanvasIntegration] ========== 设置项目ID ==========');
     console.log('[CanvasIntegration] 旧项目ID:', this.currentProjectId);
     console.log('[CanvasIntegration] 新项目ID:', projectId);
+    
+    // 如果切换项目，先保存旧项目数据
+    if (this.currentProjectId && this.currentProjectId !== projectId) {
+      console.log('[CanvasIntegration] 切换项目，先保存旧项目数据');
+      await this.forceSync();
+    }
+    
     this.currentProjectId = projectId;
     logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 设置项目ID: ${projectId}`);
+    
+    // 初始化同步服务
+    await canvasSyncService.init(projectId);
   }
 
   /**
@@ -483,7 +500,9 @@ export class CanvasIntegrationService {
 
   /**
    * 保存画布状态
-   * 保存到本地 IndexedDB（按项目ID关联），同时保留 localStorage 备份
+   * 使用 canvasSyncService 实现 Local-First 保存
+   * - 本地保存：实时（防抖 500ms）
+   * - 云端同步：延迟（停止操作后）
    */
   async saveCanvasState(): Promise<void> {
     const { layers, offset, scale } = useCanvasStore.getState();
@@ -528,92 +547,79 @@ export class CanvasIntegrationService {
 
     console.log('[CanvasIntegration] 保存的图层数量:', layersToSave.length);
 
-    // 构建画布状态（包含 projectId 方便查看）
-    const state = {
-      projectId: this.currentProjectId || 'unknown',
-      layers: layersToSave,
-      offset,
-      scale,
-      savedAt: Date.now()
-    };
-
-    // 保存到 IndexedDB（按项目ID关联，支持后续同步）
+    // 使用 canvasSyncService 保存（Local-First）
     if (this.currentProjectId) {
-      console.log('[CanvasIntegration] 开始保存到 IndexedDB，项目:', this.currentProjectId);
       try {
-        await saveCanvasDataToLocal(
-          this.currentProjectId,
-          layersToSave,
-          offset,
-          scale
-        );
-        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 画布状态已保存到 IndexedDB，项目: ${this.currentProjectId}`);
+        await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
+        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 画布状态已保存，项目: ${this.currentProjectId}`);
       } catch (error) {
-        logger.error(LogCategory.CANVAS, `[CanvasIntegration] 保存到 IndexedDB 失败: ${error}`);
-        console.error('[CanvasIntegration] IndexedDB 保存失败:', error);
+        logger.error(LogCategory.CANVAS, `[CanvasIntegration] 保存画布状态失败: ${error}`);
+        throw error;
       }
     } else {
-      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，画布数据仅保存到 localStorage（备份），不会保存到 IndexedDB');
-      console.warn('[CanvasIntegration] 未设置项目ID，画布数据仅保存到 localStorage（备份）');
-    }
-
-    // 同时保存到 localStorage 作为备份（按项目ID区分）
-    if (this.currentProjectId) {
-      const backupKey = `wl-canvas-backup-${this.currentProjectId}`;
-      try {
-        localStorage.setItem(backupKey, JSON.stringify(state));
-        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 画布状态已保存到 localStorage（备份），项目: ${this.currentProjectId}`);
-      } catch (error) {
-        logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存画布状态失败，尝试清理旧数据');
-        localStorage.removeItem(backupKey);
-        localStorage.setItem(backupKey, JSON.stringify(state));
-      }
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法保存画布数据');
     }
   }
 
   /**
+   * 强制同步到云端
+   * 用于关键节点：切换项目、退出、手动保存
+   */
+  async forceSync(): Promise<void> {
+    console.log('[CanvasIntegration] 强制同步到云端');
+    await canvasSyncService.forceSync();
+  }
+
+  /**
+   * 设置云端同步开关
+   */
+  setCloudSyncEnabled(enabled: boolean): void {
+    canvasSyncService.setCloudSyncEnabled(enabled);
+    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 云端同步已${enabled ? '启用' : '禁用'}`);
+  }
+
+  /**
+   * 获取云端同步开关状态
+   */
+  isCloudSyncEnabled(): boolean {
+    return canvasSyncService.isCloudSyncEnabled();
+  }
+
+  /**
+   * 获取同步状态
+   */
+  getSyncState() {
+    return canvasSyncService.getState();
+  }
+
+  /**
    * 恢复画布状态
-   * 优先从 IndexedDB 加载（按项目ID），fallback 到 localStorage
+   * 使用 canvasSyncService.load() 实现 Local-First 加载
+   * - 优先本地数据
+   * - 检查云端数据
+   * - 自动处理冲突
    */
   async restoreCanvasState(): Promise<boolean> {
     try {
-      let state: any = null;
-      let source = '';
-      
-      // 优先从 IndexedDB 加载（如果有项目ID）
-      if (this.currentProjectId) {
-        const canvasData = await getCanvasDataFromLocal(this.currentProjectId);
-        if (canvasData) {
-          state = {
-            layers: canvasData.layers,
-            offset: canvasData.offset,
-            scale: canvasData.scale
-          };
-          source = `IndexedDB (项目: ${this.currentProjectId}, 版本: ${canvasData.version})`;
-        }
+      if (!this.currentProjectId) {
+        logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
+        return false;
       }
+
+      // 使用 canvasSyncService 加载（自动处理本地/云端同步）
+      const canvasData = await canvasSyncService.load();
       
-      // fallback 到 localStorage（按项目ID区分）
-      if (!state && this.currentProjectId) {
-        const backupKey = `wl-canvas-backup-${this.currentProjectId}`;
-        const saved = localStorage.getItem(backupKey);
-        if (saved) {
-          state = JSON.parse(saved);
-          source = `localStorage 备份 (项目: ${this.currentProjectId})`;
-        }
-      }
-      
-      if (!state) {
+      if (!canvasData) {
         logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未找到画布数据');
         return false;
       }
 
-      logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 从 ${source} 加载画布数据`);
+      logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 加载画布数据，版本: ${canvasData.version}, 图层数: ${canvasData.layers.length}`);
       
       const { importLayers, setOffset, setScale } = useCanvasStore.getState();
 
-      if (state.layers && state.layers.length > 0) {
-        const restoredLayers = await Promise.all(state.layers.map(async (layer: any) => {
+      if (canvasData.layers && canvasData.layers.length > 0) {
+        const restoredLayers = await Promise.all(canvasData.layers.map(async (layer: any) => {
           if (layer.type === 'image') {
             if (layer.imageId) {
               try {
@@ -689,12 +695,12 @@ export class CanvasIntegrationService {
         importLayers(restoredLayers, true);
       }
 
-      if (state.offset) {
-        setOffset(state.offset);
+      if (canvasData.offset) {
+        setOffset(canvasData.offset);
       }
 
-      if (state.scale) {
-        setScale(state.scale);
+      if (canvasData.scale) {
+        setScale(canvasData.scale);
       }
 
       logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已恢复');
@@ -703,6 +709,14 @@ export class CanvasIntegrationService {
       logger.error(LogCategory.CANVAS, '[CanvasIntegration] 恢复画布状态失败', error);
       return false;
     }
+  }
+
+  /**
+   * 清理资源 - 退出项目时调用
+   */
+  async cleanup(): Promise<void> {
+    console.log('[CanvasIntegration] 清理资源');
+    await canvasSyncService.cleanup();
   }
 }
 
