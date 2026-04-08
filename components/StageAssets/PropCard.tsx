@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Check, Sparkles, Loader2, Trash2, Edit2, AlertCircle, FolderPlus } from 'lucide-react';
+import { Package, Check, Sparkles, Loader2, Trash2, Edit2, AlertCircle, FolderPlus, Archive } from 'lucide-react';
 import { Prop } from '../../types';
 import { PROP_CATEGORIES } from './constants';
 import PromptEditor from './PromptEditor';
@@ -16,6 +16,7 @@ interface PropCardProps {
   onDelete: () => void;
   onUpdateInfo: (updates: { name?: string; category?: string; description?: string }) => void;
   onAddToLibrary: () => void;
+  onReplaceFromLibrary: () => void;
 }
 
 const PropCard: React.FC<PropCardProps> = ({
@@ -28,6 +29,7 @@ const PropCard: React.FC<PropCardProps> = ({
   onDelete,
   onUpdateInfo,
   onAddToLibrary,
+  onReplaceFromLibrary,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -198,6 +200,17 @@ const PropCard: React.FC<PropCardProps> = ({
           >
             <FolderPlus className="w-3 h-3" />
             加入资产库
+          </button>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-[var(--border-primary)]">
+          <button
+            onClick={onReplaceFromLibrary}
+            disabled={isGenerating}
+            className="w-full py-2 bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)] rounded text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Archive className="w-3 h-3" />
+            从资产库替换
           </button>
         </div>
 

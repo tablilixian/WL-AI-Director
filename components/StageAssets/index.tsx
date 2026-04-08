@@ -81,6 +81,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [replaceTargetCharId, setReplaceTargetCharId] = useState<string | null>(null);
   const [replaceTargetSceneId, setReplaceTargetSceneId] = useState<string | null>(null);
+  const [replaceTargetPropId, setReplaceTargetPropId] = useState<string | null>(null);
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
   
   // 横竖屏选择状态（从持久化配置读取）
@@ -220,16 +221,23 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     };
   }, []);
 
-  const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetType: 'character' | 'scene' | null = null, targetId: string | null = null) => {
+  const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetType: 'character' | 'scene' | 'prop' | null = null, targetId: string | null = null) => {
     if (targetType === 'character') {
       setReplaceTargetCharId(targetId);
       setReplaceTargetSceneId(null);
+      setReplaceTargetPropId(null);
     } else if (targetType === 'scene') {
       setReplaceTargetSceneId(targetId);
       setReplaceTargetCharId(null);
+      setReplaceTargetPropId(null);
+    } else if (targetType === 'prop') {
+      setReplaceTargetPropId(targetId);
+      setReplaceTargetCharId(null);
+      setReplaceTargetSceneId(null);
     } else {
       setReplaceTargetCharId(null);
       setReplaceTargetSceneId(null);
+      setReplaceTargetPropId(null);
     }
     setShowLibraryModal(true);
   };
@@ -598,6 +606,32 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     showAlert(`已替换场景：${previous.location} → ${cloned.location}`, { type: 'success' });
     setShowLibraryModal(false);
     setReplaceTargetSceneId(null);
+  };
+
+  const handleReplacePropFromLibrary = (item: AssetLibraryItem, targetId: string) => {
+    if (item.type !== 'prop') {
+      showAlert('请选择道具资产进行替换', { type: 'warning' });
+      return;
+    }
+    if (!project.scriptData) return;
+
+    const newData = { ...project.scriptData };
+    const index = (newData.props || []).findIndex((p) => compareIds(p.id, targetId));
+    if (index === -1) return;
+
+    const cloned = { ...(item.data as Prop) };
+    const previous = (newData.props || [])[index];
+
+    if (!newData.props) newData.props = [];
+    newData.props[index] = {
+      ...cloned,
+      id: previous.id
+    };
+
+    updateProject({ scriptData: newData });
+    showAlert(`已替换道具：${previous.name} → ${cloned.name}`, { type: 'success' });
+    setShowLibraryModal(false);
+    setReplaceTargetPropId(null);
   };
 
   /**
@@ -1404,6 +1438,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           setShowLibraryModal(false);
           setReplaceTargetCharId(null);
           setReplaceTargetSceneId(null);
+          setReplaceTargetPropId(null);
         }}
         onImport={handleImportFromLibrary}
         onReplace={(item, targetId) => {
@@ -1411,9 +1446,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             handleReplaceCharacterFromLibrary(item, targetId);
           } else if (replaceTargetSceneId) {
             handleReplaceSceneFromLibrary(item, targetId);
+          } else if (replaceTargetPropId) {
+            handleReplacePropFromLibrary(item, targetId);
           }
         }}
-        replaceTargetCharId={replaceTargetCharId || replaceTargetSceneId || null}
+        replaceTargetCharId={replaceTargetCharId || replaceTargetSceneId || replaceTargetPropId || null}
       />
 
       {/* Header */}
@@ -1519,7 +1556,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 onDelete={() => handleDeleteCharacter(char.id)}
                 onUpdateInfo={(updates) => handleUpdateCharacterInfo(char.id, updates)}
                 onAddToLibrary={() => handleAddCharacterToLibrary(char)}
-                onReplaceFromLibrary={() => openLibrary('character', char.id)}
+                onReplaceFromLibrary={() => openLibrary('character','character', char.id)}
               />
             ))}
           </div>
@@ -1640,6 +1677,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                   onDelete={() => handleDeleteProp(prop.id)}
                   onUpdateInfo={(updates) => handleUpdatePropInfo(prop.id, updates)}
                   onAddToLibrary={() => handleAddPropToLibrary(prop)}
+                  onReplaceFromLibrary={() => openLibrary('prop', 'prop', prop.id)}
                 />
               ))}
             </div>
