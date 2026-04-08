@@ -26,6 +26,9 @@ import {
   deleteProjectStage
 } from './storageService';
 
+// 导入画布同步服务
+import { canvasSyncService } from './canvasSyncService';
+
 // ============================================================================
 // 历史遗留数据处理（已废弃）
 // ============================================================================
@@ -431,6 +434,15 @@ class HybridStorageService {
    */
   async deleteProject(id: string): Promise<void> {
     const { user } = useAuthStore.getState();
+
+    // 先删除画布数据（本地和云端）
+    try {
+      await canvasSyncService.deleteCanvasData(id);
+      logger.debug(LogCategory.STORAGE, `✅ 画布数据已删除: ${id}`);
+    } catch (error) {
+      logger.error(LogCategory.STORAGE, '❌ 删除画布数据失败:', error);
+      // 画布删除失败不影响项目删除
+    }
 
     // 先删除本地
     await deleteProjectFromDB(id);
