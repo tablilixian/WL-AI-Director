@@ -103,7 +103,7 @@ export const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
             onSearchChange={setSearchQuery}
             onDelete={handleDelete}
             onSelect={handleSelect}
-            selectLabel={replaceTargetCharId ? '替换当前角色' : '导入到当前项目'}
+            selectLabel={replaceTargetCharId ? '替换当前图片' : '导入到当前项目'}
             emptyMessage={emptyMessage || '暂无资产。可在角色或场景卡片中选择"加入资产库"。'}
           />
         </div>

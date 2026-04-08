@@ -80,6 +80,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [replaceTargetCharId, setReplaceTargetCharId] = useState<string | null>(null);
+  const [replaceTargetSceneId, setReplaceTargetSceneId] = useState<string | null>(null);
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
   
   // 横竖屏选择状态（从持久化配置读取）
@@ -219,8 +220,17 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     };
   }, []);
 
-  const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetCharId: string | null = null) => {
-    setReplaceTargetCharId(targetCharId);
+  const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetType: 'character' | 'scene' | null = null, targetId: string | null = null) => {
+    if (targetType === 'character') {
+      setReplaceTargetCharId(targetId);
+      setReplaceTargetSceneId(null);
+    } else if (targetType === 'scene') {
+      setReplaceTargetSceneId(targetId);
+      setReplaceTargetCharId(null);
+    } else {
+      setReplaceTargetCharId(null);
+      setReplaceTargetSceneId(null);
+    }
     setShowLibraryModal(true);
   };
 
@@ -563,6 +573,31 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     showAlert(`已替换角色：${previous.name} → ${cloned.name}`, { type: 'success' });
     setShowLibraryModal(false);
     setReplaceTargetCharId(null);
+  };
+
+  const handleReplaceSceneFromLibrary = (item: AssetLibraryItem, targetId: string) => {
+    if (item.type !== 'scene') {
+      showAlert('请选择场景资产进行替换', { type: 'warning' });
+      return;
+    }
+    if (!project.scriptData) return;
+
+    const newData = { ...project.scriptData };
+    const index = newData.scenes.findIndex((s) => compareIds(s.id, targetId));
+    if (index === -1) return;
+
+    const cloned = { ...(item.data as Scene) };
+    const previous = newData.scenes[index];
+
+    newData.scenes[index] = {
+      ...cloned,
+      id: previous.id
+    };
+
+    updateProject({ scriptData: newData });
+    showAlert(`已替换场景：${previous.location} → ${cloned.location}`, { type: 'success' });
+    setShowLibraryModal(false);
+    setReplaceTargetSceneId(null);
   };
 
   /**
@@ -1368,10 +1403,17 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         onClose={() => {
           setShowLibraryModal(false);
           setReplaceTargetCharId(null);
+          setReplaceTargetSceneId(null);
         }}
         onImport={handleImportFromLibrary}
-        onReplace={handleReplaceCharacterFromLibrary}
-        replaceTargetCharId={replaceTargetCharId}
+        onReplace={(item, targetId) => {
+          if (replaceTargetCharId) {
+            handleReplaceCharacterFromLibrary(item, targetId);
+          } else if (replaceTargetSceneId) {
+            handleReplaceSceneFromLibrary(item, targetId);
+          }
+        }}
+        replaceTargetCharId={replaceTargetCharId || replaceTargetSceneId || null}
       />
 
       {/* Header */}
@@ -1534,6 +1576,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 onDelete={() => handleDeleteScene(scene.id)}
                 onUpdateInfo={(updates) => handleUpdateSceneInfo(scene.id, updates)}
                 onAddToLibrary={() => handleAddSceneToLibrary(scene)}
+                onReplaceFromLibrary={() => openLibrary('scene', 'scene', scene.id)}
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Check, Sparkles, Loader2, Upload, Trash2, Edit2, AlertCircle, FolderPlus } from 'lucide-react';
+import { MapPin, Check, Sparkles, Loader2, Upload, Trash2, Edit2, AlertCircle, FolderPlus, Archive } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
 import { useImageLoader } from '../../hooks/useImageLoader';
@@ -22,6 +22,7 @@ interface SceneCardProps {
   onDelete: () => void;
   onUpdateInfo: (updates: { location?: string; time?: string; atmosphere?: string }) => void;
   onAddToLibrary: () => void;
+  onReplaceFromLibrary: () => void;
 }
 
 const SceneCard: React.FC<SceneCardProps> = ({
@@ -34,6 +35,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
   onDelete,
   onUpdateInfo,
   onAddToLibrary,
+  onReplaceFromLibrary,
 }) => {
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -226,6 +228,17 @@ const SceneCard: React.FC<SceneCardProps> = ({
           >
             <FolderPlus className="w-3 h-3" />
             加入资产库
+          </button>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-[var(--border-primary)]">
+          <button
+            onClick={onReplaceFromLibrary}
+            disabled={isGenerating}
+            className="w-full py-2 bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)] rounded text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Archive className="w-3 h-3" />
+            从资产库替换
           </button>
         </div>
 
