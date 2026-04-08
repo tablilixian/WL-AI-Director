@@ -14,6 +14,8 @@ import { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
 import { createLibraryItemFromLayer } from '../../../../services/assetLibraryService';
 import { hybridStorage } from '../../../../services/hybridStorageService';
+import { imageStorageService } from '../../../../services/imageStorageService';
+import { useAuthStore } from '../../../../src/stores/authStore';
 
 interface SaveToLibraryDialogProps {
   layer: LayerData;           // 要保存的图层
@@ -58,11 +60,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
   // 保存状态
   const [isSaving, setIsSaving] = useState(false);
 
-  /**
-   * 处理保存操作
-   */
   const handleSave = async () => {
-    // 验证名称不能为空
     if (!assetName.trim()) {
       alert('请输入资产名称');
       return;
@@ -70,19 +68,52 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
 
     setIsSaving(true);
     try {
-      // 从图层创建资产库项
-      const item = await createLibraryItemFromLayer(layer, project, assetType, assetName.trim());
+      const { user } = useAuthStore.getState();
+      let layerToSave = { ...layer };
       
-      // 保存到资产库（云端 + 本地）
+      if (layer.src.startsWith('data:') || layer.src.startsWith('local:')) {
+        console.log('[SaveToLibrary] ☁️ 上传画布图片到云端:', layer.src.substring(0, 50));
+        
+        let blob: Blob | null = null;
+        
+        if (layer.src.startsWith('data:')) {
+          const response = await fetch(layer.src);
+          blob = await response.blob();
+        } else if (layer.src.startsWith('local:')) {
+          blob = await imageStorageService.getImage(layer.src.substring(6));
+        }
+        
+        if (!blob) {
+          console.warn('[SaveToLibrary] ⚠️ 图片读取失败，将仅保存到本地');
+        } else {
+          try {
+            const imageId = layer.imageId || `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const cloudUrl = await imageStorageService.uploadToCloud(
+              imageId,
+              blob,
+              `${user?.id || 'anonymous'}/asset_library/canvas/${imageId}`
+            );
+            
+            layerToSave = {
+              ...layerToSave,
+              src: cloudUrl,
+              imageId: imageId
+            };
+            
+            console.log('[SaveToLibrary] ✅ 图片上传成功:', cloudUrl);
+          } catch (uploadError: any) {
+            console.error('[SaveToLibrary] ❌ 上传到云端失败，仅保存到本地:', uploadError);
+            alert('云端上传失败，将仅保存到本地');
+          }
+        }
+      }
+      
+      const item = await createLibraryItemFromLayer(layerToSave, project, assetType, assetName.trim());
       await hybridStorage.saveAssetToLibrary(item);
       
-      // 显示成功提示
       alert(`已保存到资产库：${assetName}`);
-      
-      // 关闭对话框
       onClose();
     } catch (error) {
-      // 错误处理
       console.error('[SaveToLibrary] 保存失败:', error);
       alert('保存失败，请重试');
     } finally {
