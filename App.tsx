@@ -333,9 +333,9 @@ function App() {
   };
 
   // Set stage
-  const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => {
+  const setStage = async (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => {
     if (project) {
-      canvasIntegrationService.setProjectId(project.id);
+      await canvasIntegrationService.setProjectId(project.id);
     }
     
     canvasIntegrationService.saveImmediately(true);
@@ -373,10 +373,8 @@ function App() {
       logger.debug(LogCategory.APP, '正在从本地加载项目:', proj);
       const fullProject = await loadProjectFromDB(proj);
       if (fullProject) {
-        // 立即设置项目ID（确保画布保存时使用正确的ID）
-        canvasIntegrationService.setProjectId(fullProject.id);
+        await canvasIntegrationService.setProjectId(fullProject.id);
         
-        // 从单独存储中恢复 stage
         const currentStage = await getCurrentStage(proj);
         logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
         
@@ -388,11 +386,8 @@ function App() {
         logger.error(LogCategory.STORAGE, '无法加载项目，项目不存在:', proj);
       }
     } else {
-      // 如果传入的是完整项目对象，直接使用
-      // 立即设置项目ID（确保画布保存时使用正确的ID）
-      canvasIntegrationService.setProjectId(proj.id);
+      await canvasIntegrationService.setProjectId(proj.id);
       
-      // 从单独存储中恢复 stage
       const currentStage = await getCurrentStage(proj.id);
       logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
       

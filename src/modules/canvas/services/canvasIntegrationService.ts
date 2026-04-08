@@ -20,6 +20,7 @@ import {
   CanvasData
 } from '../../../../services/canvasStorageService';
 import { canvasSyncService } from '../../../../services/canvasSyncService';
+import { assetStore } from '../services/assetStore';
 
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
@@ -80,6 +81,8 @@ export class CanvasIntegrationService {
   private hasUnsavedChanges: boolean = false;
   private fallbackTimer: NodeJS.Timeout | null = null;
   private currentProjectId: string = '';
+  private isLoading: boolean = false;
+  private loadingPromise: Promise<void> | null = null;
 
   constructor(projectId?: string) {
     this.debouncedAutoSave = debounce(() => {
@@ -103,17 +106,44 @@ export class CanvasIntegrationService {
     console.log('[CanvasIntegration] 旧项目ID:', this.currentProjectId);
     console.log('[CanvasIntegration] 新项目ID:', projectId);
     
-    // 如果切换项目，先保存旧项目数据
-    if (this.currentProjectId && this.currentProjectId !== projectId) {
-      console.log('[CanvasIntegration] 切换项目，先保存旧项目数据');
-      await this.forceSync();
+    if (this.currentProjectId === projectId) {
+      console.log('[CanvasIntegration] 项目ID相同，跳过设置');
+      return;
     }
     
-    this.currentProjectId = projectId;
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 设置项目ID: ${projectId}`);
+    if (this.isLoading) {
+      console.log('[CanvasIntegration] 正在加载，等待完成...');
+      await this.loadingPromise;
+    }
     
-    // 初始化同步服务
-    await canvasSyncService.init(projectId);
+    this.isLoading = true;
+    this.loadingPromise = (async () => {
+      try {
+        if (this.currentProjectId && this.currentProjectId !== projectId) {
+          console.log('[CanvasIntegration] 切换项目，先保存旧项目数据');
+          await this.forceSync();
+          
+          console.log('[CanvasIntegration] 清空旧画布状态');
+          const { importLayers, setOffset, setScale } = useCanvasStore.getState();
+          importLayers([], true);
+          setOffset({ x: 0, y: 0 });
+          setScale(1);
+        }
+        
+        this.currentProjectId = projectId;
+        
+        const { setProjectId } = useCanvasStore.getState();
+        setProjectId(projectId);
+        
+        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 设置项目ID: ${projectId}`);
+        
+        await canvasSyncService.init(projectId);
+      } finally {
+        this.isLoading = false;
+      }
+    })();
+    
+    await this.loadingPromise;
   }
 
   /**
@@ -601,12 +631,48 @@ export class CanvasIntegrationService {
    */
   async restoreCanvasState(): Promise<boolean> {
     try {
+      if (this.isLoading && this.loadingPromise) {
+        console.log('[CanvasIntegration] 等待 setProjectId 完成...');
+        await this.loadingPromise;
+      }
+      
+      const store = useCanvasStore.getState();
+      
       if (!this.currentProjectId) {
-        logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
-        return false;
+        if (store.projectId) {
+          console.log('[CanvasIntegration] currentProjectId 为空，从 store 恢复:', store.projectId);
+          this.currentProjectId = store.projectId;
+          await canvasSyncService.init(store.projectId);
+        } else {
+          logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
+          return false;
+        }
       }
 
-      // 使用 canvasSyncService 加载（自动处理本地/云端同步）
+      if (store.projectId && store.projectId !== this.currentProjectId) {
+        console.log('[CanvasIntegration] 项目ID不匹配，清空旧数据');
+        console.log('[CanvasIntegration] localStorage 中的项目ID:', store.projectId);
+        console.log('[CanvasIntegration] 当前项目ID:', this.currentProjectId);
+        
+        store.layers.forEach(layer => {
+          if (layer.imageId) {
+            assetStore.deleteAsset(layer.imageId).catch(console.error);
+          }
+          if (layer.thumbnailId) {
+            assetStore.deleteAsset(layer.thumbnailId).catch(console.error);
+          }
+        });
+        
+        const { importLayers, setOffset, setScale, setProjectId } = store;
+        importLayers([], true);
+        setOffset({ x: 0, y: 0 });
+        setScale(1);
+        setProjectId(this.currentProjectId);
+      } else if (store.projectId === this.currentProjectId && store.layers.length > 0) {
+        console.log('[CanvasIntegration] 项目ID匹配，localStorage 数据有效，无需重新加载');
+        return true;
+      }
+
       const canvasData = await canvasSyncService.load();
       
       if (!canvasData) {

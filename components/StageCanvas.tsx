@@ -30,18 +30,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   // 自动恢复画布状态
   // 使用 canvasSyncService 实现 Local-First 架构
   React.useEffect(() => {
-    const { importLayers, setOffset, setScale } = useCanvasStore.getState();
-    
-    // 先清空当前画布状态（避免显示上一个项目的数据）
-    importLayers([], true);
-    setOffset({ x: 0, y: 0 });
-    setScale(1);
-    
-    // 设置项目ID并初始化同步服务（异步）
-    canvasIntegrationService.setProjectId(project.id).then(() => {
-      // 恢复画布状态（自动处理本地/云端同步）
-      return canvasIntegrationService.restoreCanvasState();
-    }).then(restored => {
+    canvasIntegrationService.restoreCanvasState().then(restored => {
       if (restored) {
         console.log('[StageCanvas] 画布状态恢复成功，项目:', project.id);
       } else {
@@ -51,12 +40,9 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       console.error('[StageCanvas] 初始化画布失败:', error);
     });
     
-    // 清理函数：退出项目时强制同步并清理资源
     return () => {
-      canvasIntegrationService.forceSync().then(() => {
-        return canvasIntegrationService.cleanup();
-      }).catch(error => {
-        console.error('[StageCanvas] 清理画布失败:', error);
+      canvasIntegrationService.forceSync().catch(error => {
+        console.error('[StageCanvas] 同步画布失败:', error);
       });
     };
   }, [project.id]);

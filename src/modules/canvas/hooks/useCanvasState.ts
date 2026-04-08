@@ -24,6 +24,7 @@ interface CanvasHistory {
 }
 
 interface CanvasState {
+  projectId: string | null;
   layers: LayerData[];
   offset: CanvasOffset;
   scale: number;
@@ -35,6 +36,7 @@ interface CanvasState {
 }
 
 interface CanvasActions {
+  setProjectId: (projectId: string | null) => void;
   addLayer: (layer: LayerData) => void;
   updateLayer: (id: string, updates: Partial<LayerData>) => void;
   deleteLayer: (id: string) => void;
@@ -76,6 +78,7 @@ interface CanvasActions {
 }
 
 const initialState: CanvasState = {
+  projectId: null,
   layers: [],
   offset: { x: 0, y: 0 },
   scale: 1,
@@ -90,6 +93,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
   persist(
     (set, get) => ({
       ...initialState,
+
+      setProjectId: (projectId) => {
+        set({ projectId });
+      },
 
       addLayer: (layer) => {
         const state = get();
@@ -753,6 +760,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     {
       name: 'wl-canvas-state',
       partialize: (state) => ({
+        projectId: state.projectId,
         layers: state.layers.map(layer => {
           const { src, thumbnail, ...rest } = layer;
           return { ...rest, srcSaved: src ? true : false };
@@ -761,7 +769,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         scale: state.scale
       }),
       onRehydrateStorage: () => (state) => {
-        if (state && state.layers.length > 0) {
+        if (!state) return;
+
+        if (state.projectId) {
+          console.log('[Canvas] localStorage 中存储的项目ID:', state.projectId);
+          console.log('[Canvas] 将在 restoreCanvasState 中验证项目ID是否匹配');
+        }
+
+        if (state.layers.length > 0) {
           console.log('[Canvas] 恢复图层，重新加载图片...');
           
           Promise.all(state.layers.map(async (layer) => {
