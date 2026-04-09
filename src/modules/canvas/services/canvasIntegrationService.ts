@@ -94,6 +94,14 @@ export class CanvasIntegrationService {
     if (projectId) {
       this.currentProjectId = projectId;
     }
+
+    if (typeof window !== 'undefined') {
+      const oldData = localStorage.getItem('wl-canvas-state');
+      if (oldData) {
+        console.log('[CanvasIntegration] 清理旧的 localStorage 数据（已迁移到 IndexedDB）');
+        localStorage.removeItem('wl-canvas-state');
+      }
+    }
   }
 
   /**
@@ -625,9 +633,12 @@ export class CanvasIntegrationService {
   /**
    * 恢复画布状态
    * 使用 canvasSyncService.load() 实现 Local-First 加载
-   * - 优先本地数据
+   * - 优先本地数据（IndexedDB）
    * - 检查云端数据
    * - 自动处理冲突
+   * 
+   * 注意：不再检查 localStorage 数据
+   * 原因：已移除 Zustand persist 中间件，画布数据完全由 IndexedDB 管理
    */
   async restoreCanvasState(): Promise<boolean> {
     try {
@@ -651,7 +662,7 @@ export class CanvasIntegrationService {
 
       if (store.projectId && store.projectId !== this.currentProjectId) {
         console.log('[CanvasIntegration] 项目ID不匹配，清空旧数据');
-        console.log('[CanvasIntegration] localStorage 中的项目ID:', store.projectId);
+        console.log('[CanvasIntegration] store 中的项目ID:', store.projectId);
         console.log('[CanvasIntegration] 当前项目ID:', this.currentProjectId);
         
         store.layers.forEach(layer => {
@@ -668,9 +679,6 @@ export class CanvasIntegrationService {
         setOffset({ x: 0, y: 0 });
         setScale(1);
         setProjectId(this.currentProjectId);
-      } else if (store.projectId === this.currentProjectId && store.layers.length > 0) {
-        console.log('[CanvasIntegration] 项目ID匹配，localStorage 数据有效，无需重新加载');
-        return true;
       }
 
       const canvasData = await canvasSyncService.load();

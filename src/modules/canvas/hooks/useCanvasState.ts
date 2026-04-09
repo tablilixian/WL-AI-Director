@@ -1,10 +1,23 @@
 /**
  * Canvas State Management
  * 使用 Zustand 管理画布状态
+ * 
+ * 数据持久化策略：
+ * - 内存状态：Zustand store（当前会话）
+ * - 本地持久化：IndexedDB（通过 canvasStorageService，每个项目独立存储）
+ * - 云端同步：可选（通过 canvasSyncService）
+ * 
+ * 项目切换时：
+ * 1. canvasIntegrationService.setProjectId() 保存当前项目数据到 IndexedDB
+ * 2. 清空 Zustand store
+ * 3. 从 IndexedDB 加载新项目数据
+ * 
+ * 注意：不再使用 Zustand persist 中间件
+ * 原因：persist 使用固定的 localStorage 键名，所有项目共享同一份数据
+ *       导致项目切换时画布数据混乱
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { 
   LayerData, 
   CanvasOffset, 
@@ -90,13 +103,12 @@ const initialState: CanvasState = {
 };
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+  (set, get) => ({
+    ...initialState,
 
-      setProjectId: (projectId) => {
-        set({ projectId });
-      },
+    setProjectId: (projectId) => {
+      set({ projectId });
+    },
 
       addLayer: (layer) => {
         const state = get();
@@ -756,121 +768,5 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           promptLayer.promptConfig.linkedLayerIds.includes(l.id)
         );
       }
-    }),
-    {
-      name: 'wl-canvas-state',
-      partialize: (state) => ({
-        projectId: state.projectId,
-        layers: state.layers.map(layer => {
-          const { src, thumbnail, ...rest } = layer;
-          return { ...rest, srcSaved: src ? true : false };
-        }),
-        offset: state.offset,
-        scale: state.scale
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-
-        if (state.projectId) {
-          console.log('[Canvas] localStorage 中存储的项目ID:', state.projectId);
-          console.log('[Canvas] 将在 restoreCanvasState 中验证项目ID是否匹配');
-        }
-
-        if (state.layers.length > 0) {
-          console.log('[Canvas] 恢复图层，重新加载图片...');
-          
-          Promise.all(state.layers.map(async (layer) => {
-            // 处理 image 类型
-            if (layer.type === 'image') {
-              // 优先使用 imageId
-              if (layer.imageId) {
-                try {
-                  const { imageStorageService } = await import('../../../../services/imageStorageService');
-                  const blob = await imageStorageService.getImage(layer.imageId);
-                  if (blob) {
-                    return { ...layer, src: URL.createObjectURL(blob) };
-                  }
-                } catch (e) {
-                  console.warn('恢复图片失败 (imageId):', layer.id, e);
-                }
-              }
-              // 如果 src 是 local: 格式，从 src 解析
-              if (layer.src && layer.src.startsWith('local:')) {
-                const localId = layer.src.replace('local:', '');
-                try {
-                  const { imageStorageService } = await import('../../../../services/imageStorageService');
-                  const blob = await imageStorageService.getImage(localId);
-                  if (blob) {
-                    return { ...layer, src: URL.createObjectURL(blob), imageId: localId };
-                  }
-                } catch (e) {
-                  console.warn('恢复图片失败 (local:):', layer.id, e);
-                }
-              }
-            }
-            // 处理 video 类型
-            else if (layer.type === 'video') {
-              // 优先使用 imageId（新版存储方式）
-              if (layer.imageId) {
-                try {
-                  const { videoStorageService } = await import('../../../../services/imageStorageService');
-                  const blob = await videoStorageService.getVideo(layer.imageId);
-                  if (blob) {
-                    console.log('[Canvas] 恢复视频成功 (imageId):', layer.imageId);
-                    return { ...layer, src: URL.createObjectURL(blob) };
-                  }
-                } catch (e) {
-                  console.warn('恢复视频失败 (imageId):', layer.id, e);
-                }
-              }
-              // 兼容旧的 src 存储方式
-              if (layer.src && layer.src.startsWith('video:')) {
-                try {
-                  const { videoStorageService } = await import('../../../../services/imageStorageService');
-                  const videoId = layer.src.replace('video:', '');
-                  const blob = await videoStorageService.getVideo(videoId);
-                  if (blob) {
-                    return { ...layer, src: URL.createObjectURL(blob) };
-                  }
-                } catch (e) {
-                  console.warn('恢复视频失败:', layer.id, e);
-                }
-              }
-            }
-            // 处理 drawing 类型
-            else if (layer.type === 'drawing') {
-              if (layer.imageId) {
-                try {
-                  const { imageStorageService } = await import('../../../../services/imageStorageService');
-                  const blob = await imageStorageService.getImage(layer.imageId);
-                  if (blob) {
-                    return { ...layer, src: URL.createObjectURL(blob) };
-                  }
-                } catch (e) {
-                  console.warn('恢复绘制图层失败:', layer.id, e);
-                }
-              }
-              // 如果 src 是 local: 格式
-              if (layer.src && layer.src.startsWith('local:')) {
-                const localId = layer.src.replace('local:', '');
-                try {
-                  const { imageStorageService } = await import('../../../../services/imageStorageService');
-                  const blob = await imageStorageService.getImage(localId);
-                  if (blob) {
-                    return { ...layer, src: URL.createObjectURL(blob), imageId: localId };
-                  }
-                } catch (e) {
-                  console.warn('恢复绘制图层失败 (local:):', layer.id, e);
-                }
-              }
-            }
-            return layer;
-          })).then(restoredLayers => {
-            state.layers = restoredLayers;
-            console.log('[Canvas] 图片恢复完成');
-          });
-        }
-      }
-    }
-  )
-);
+    })
+  );
