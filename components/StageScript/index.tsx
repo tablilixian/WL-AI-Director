@@ -584,13 +584,13 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   return (
     <div className="h-full bg-[var(--bg-base)]">
       {showProcessingToast && (
-        <div className="fixed right-4 top-4 z-[9999] w-full max-w-md rounded-xl border border-[var(--border-default)] bg-black/80 px-4 py-3 shadow-2xl backdrop-blur">
+        <div className="fixed right-4 top-4 z-[9999] w-full max-w-md rounded-xl border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-4 py-3 shadow-2xl backdrop-blur">
           <div className="flex items-center gap-3">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-500 border-t-white" />
-            <div className="text-sm text-white">{toastMessage}</div>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border-secondary)] border-t-[var(--accent)]" />
+            <div className="text-sm text-[var(--text-primary)]">{toastMessage}</div>
           </div>
           {processingLogs.length > 0 && (
-            <div className="mt-2 max-h-40 space-y-1 overflow-auto text-xs text-zinc-300">
+            <div className="mt-2 max-h-40 space-y-1 overflow-auto text-xs text-[var(--text-tertiary)]">
               {processingLogs.map((line, index) => (
                 <div key={`${line}-${index}`} className="truncate">
                   {line}

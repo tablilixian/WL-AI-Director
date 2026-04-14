@@ -43,7 +43,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, title, 
       onClick={onClose}
     >
       <button 
-        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-[var(--text-primary)] transition-colors z-10"
+        className="absolute top-6 right-6 p-3 bg-[var(--bg-hover)] hover:bg-[var(--bg-elevated)] rounded-full text-[var(--text-primary)] transition-colors z-10"
         onClick={onClose}
       >
         <X className="w-6 h-6" />

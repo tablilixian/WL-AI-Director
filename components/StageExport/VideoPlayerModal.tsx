@@ -110,7 +110,7 @@ const VideoPlayerModal: React.FC<Props> = ({
             className="absolute inset-0 flex items-center justify-center bg-transparent hover:bg-[var(--overlay-light)] transition-colors group"
           >
             {!isPlaying && (
-              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-20 h-20 rounded-full bg-[var(--bg-hover)] backdrop-blur-sm border border-[var(--border-secondary)] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Play className="w-10 h-10 text-[var(--text-primary)] ml-1" />
               </div>
             )}

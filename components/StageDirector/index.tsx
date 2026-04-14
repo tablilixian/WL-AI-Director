@@ -1103,8 +1103,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       )}
 
       {toastMessage && (
-        <div className="fixed left-1/2 top-1/3 z-[9999] w-full max-w-md -translate-x-1/2 rounded-xl border border-[var(--border-secondary)] bg-black/80 px-4 py-3 shadow-2xl backdrop-blur">
-          <div className="text-xs text-white whitespace-pre-line">{toastMessage}</div>
+        <div className="fixed left-1/2 top-1/3 z-[9999] w-full max-w-md -translate-x-1/2 rounded-xl border border-[var(--border-secondary)] bg-[var(--bg-elevated)] px-4 py-3 shadow-2xl backdrop-blur">
+          <div className="text-xs text-[var(--text-primary)] whitespace-pre-line">{toastMessage}</div>
         </div>
       )}
 

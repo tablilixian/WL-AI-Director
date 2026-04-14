@@ -187,7 +187,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                 <div className="mt-6 w-full max-w-lg space-y-1.5 px-6">
                   {nineGrid.panels.map((panel, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-primary)]">
-                      <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--text-primary)] flex items-center justify-center text-[9px] font-bold shrink-0">
                         {idx + 1}
                       </span>
                       <span className="text-[10px] font-bold text-[var(--text-secondary)]">
@@ -271,7 +271,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                       <div className="flex items-center gap-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           editingPanel === idx
-                            ? 'bg-[var(--accent)] text-white'
+                            ? 'bg-[var(--accent)] text-[var(--text-primary)]'
                             : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
                         }`}>
                           {idx + 1}
@@ -340,7 +340,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                           </button>
                           <button
                             onClick={handleSaveEdit}
-                            className="px-3 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
+                            className="px-3 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
                           >
                             <Save className="w-3 h-3" />
                             保存
@@ -404,8 +404,8 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                             selectedPanel === idx
                               ? 'border-[var(--accent)] border-2 bg-[var(--accent)]/10 shadow-[inset_0_0_20px_rgba(var(--accent-rgb),0.15)]'
                               : hoveredPanel === idx
-                                ? 'border-white/40 bg-white/5'
-                                : 'border-transparent hover:border-white/20'
+                                ? 'border-[var(--border-secondary)] bg-[var(--bg-hover)]'
+                                : 'border-transparent hover:border-[var(--border-subtle)]'
                           }`}
                           onMouseEnter={() => setHoveredPanel(idx)}
                           onMouseLeave={() => setHoveredPanel(null)}
@@ -418,8 +418,8 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                               : 'opacity-0 group-hover/cell:opacity-60'
                           } ${
                             selectedPanel === idx
-                              ? 'bg-[var(--accent)] text-white'
-                              : 'bg-black/60 text-white'
+                              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                              : 'bg-[var(--bg-deep)]/80 text-[var(--text-primary)]'
                           }`}>
                             {idx + 1}
                           </div>
@@ -427,14 +427,14 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                           {/* Selected checkmark */}
                           {selectedPanel === idx && (
                             <div className="absolute top-1 right-1 w-5 h-5 bg-[var(--accent)] rounded-full flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                              <Check className="w-3 h-3 text-[var(--text-primary)]" />
                             </div>
                           )}
 
                           {/* Hover tooltip */}
                           {hoveredPanel === idx && nineGrid.panels[idx] && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
-                              <p className="text-white text-[9px] font-bold">
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--bg-deep)]/90 to-transparent p-2 pt-6">
+                              <p className="text-[var(--text-primary)] text-[9px] font-bold">
                                 {nineGrid.panels[idx].shotSize} / {nineGrid.panels[idx].cameraAngle}
                               </p>
                             </div>
@@ -468,7 +468,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
                             selectedPanel === idx
-                              ? 'bg-[var(--accent)] text-white'
+                              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
                               : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
                           }`}>
                             {idx + 1}

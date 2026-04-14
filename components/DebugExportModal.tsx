@@ -267,7 +267,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[var(--overlay-medium)] flex items-center justify-center z-50">
       <div className="bg-[var(--bg-base)] border border-[var(--border-primary)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -393,7 +393,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
               <button
                 onClick={() => setShowClearConfirm(true)}
                 disabled={isExporting || isClearing}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[var(--error)] text-[var(--text-primary)] rounded-lg font-bold hover:bg-[var(--error-text)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isClearing ? (
                   <>
@@ -413,7 +413,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       </div>
 
       {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+        <div className="fixed inset-0 bg-[var(--overlay-heavy)] flex items-center justify-center z-[60]">
           <div className="bg-[var(--bg-base)] border border-[var(--border-primary)] rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-8 h-8 text-red-600 flex-shrink-0" />
@@ -452,7 +452,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
               <button
                 onClick={handleClearDatabase}
                 disabled={isClearing}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-[var(--error)] text-[var(--text-primary)] rounded-lg font-bold hover:bg-[var(--error-text)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isClearing ? (
                   <>

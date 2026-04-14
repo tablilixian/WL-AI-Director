@@ -28,7 +28,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const [projects, setProjects] = useState<ProjectState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [showGroupQr, setShowGroupQr] = useState(false);
+  // const [showGroupQr, setShowGroupQr] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
@@ -259,13 +259,13 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button
+            {/* <button
               onClick={() => setShowGroupQr(true)}
               className="group flex items-center gap-2 px-4 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"
               title={t('group.join')}
             >
               <span className="font-medium text-xs tracking-widest uppercase">{t('group.join')}</span>
-            </button>
+            </button> */}
             {onShowOnboarding && (
               <button 
                 onClick={onShowOnboarding}
@@ -423,7 +423,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       </div>
 
       {/* Group QR Modal */}
-      {showGroupQr && (
+      {/* {showGroupQr && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-base)]/70 p-6" onClick={() => setShowGroupQr(false)}>
           <div
             className="relative w-full max-w-md bg-[var(--bg-primary)] border border-[var(--border-primary)] p-6 md:p-8"
@@ -446,7 +446,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Settings Modal */}
       {showSettingsModal && (

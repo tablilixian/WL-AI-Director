@@ -196,7 +196,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
                 <div className="mt-6 w-full max-w-lg space-y-1.5 px-6">
                   {turnaround.panels.map((panel, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-primary)]">
-                      <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--text-primary)] flex items-center justify-center text-[9px] font-bold shrink-0">
                         {idx + 1}
                       </span>
                       <span className="text-[10px] font-bold text-[var(--text-secondary)]">
@@ -279,7 +279,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
                       <div className="flex items-center gap-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           editingPanel === idx
-                            ? 'bg-[var(--accent)] text-white'
+                            ? 'bg-[var(--accent)] text-[var(--text-primary)]'
                             : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
                         }`}>
                           {idx + 1}
@@ -341,7 +341,7 @@ const TurnaroundModal: React.FC<TurnaroundModalProps> = ({
                         </div>
                         <button
                           onClick={handleSaveEdit}
-                          className="w-full py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover-bg)] text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover-bg)] text-[var(--text-primary)] rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1"
                         >
                           <Save className="w-3 h-3" />
                           保存修改

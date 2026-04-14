@@ -1,79 +1,105 @@
-/* 亮色主题 (Claude 风格) - 语义化颜色令牌 */
+/* 赛博朋克霓虹风格 (Cyberpunk Neon Style) */
 [data-theme="light"] {
-  --bg-base: #F7F5F0;
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #FAF9F7;
-  --bg-surface: #FFFFFF;
-  --bg-elevated: #F5F3EE;
-  --bg-deep: #F0EDE8;
-  --bg-sunken: #F9F7F4;
-  --bg-hover: #E5E0DA;
-  --border-primary: #E5E0DA;
-  --border-secondary: #D1CDC6;
-  --border-subtle: #EDE9E3;
-  --text-primary: #1A1816;
-  --text-secondary: #44413D;
-  --text-tertiary: #6B6862;
-  --text-muted: #8A8680;
-  --scrollbar-track: #F0EDE8;
-  --scrollbar-thumb: #D1CDC6;
-  --scrollbar-thumb-hover: #ADA9A2;
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(26, 24, 22, 0.08);
-  --nav-active-bg: rgba(229, 224, 218, 0.8);
-  --nav-hover-bg: rgba(229, 224, 218, 0.5);
-  --btn-primary-bg: #1A1816;
-  --btn-primary-text: #ffffff;
-  --btn-primary-hover: #2D2A26;
-  --btn-primary-shadow: rgba(26, 24, 22, 0.1);
-  --btn-selected-bg: #E5E0DA;
-  --btn-selected-border: #E5E0DA;
-  --overlay-heavy: rgba(0, 0, 0, 0.6);
-  --overlay-medium: rgba(0, 0, 0, 0.4);
-  --overlay-light: rgba(0, 0, 0, 0.2);
-  --overlay-full: rgba(0, 0, 0, 0.85);
-  --overlay-border: rgba(0, 0, 0, 0.1);
-  --selection-bg: rgba(26, 24, 22, 0.15);
-  /* 主题强调色 (accent) - Claude 暖棕/琥珀色调 */
-  --accent: #B5936B;
-  --accent-hover: #A07D57;
-  --accent-muted: #C4A882;
-  --accent-bg: rgba(181, 147, 107, 0.12);
-  --accent-bg-hover: rgba(181, 147, 107, 0.2);
-  --accent-border: rgba(181, 147, 107, 0.35);
-  --accent-text: #8B6E4E;
-  --accent-text-hover: #6B5138;
-  --accent-on: #ffffff;
-  --accent-shadow: rgba(181, 147, 107, 0.2);
+  /* 基础背景色 - 深紫蓝色调 */
+  --bg-base: #0A0A12;
+  --bg-primary: #12121F;
+  --bg-secondary: #1A1A2E;
+  --bg-surface: #1F1F35;
+  --bg-elevated: #2A2A45;
+  --bg-deep: #06060C;
+  --bg-sunken: #16162A;
+  --bg-hover: #353555;
+
+  /* 边框色 - 霓虹边框 */
+  --border-primary: #2A2A45;
+  --border-secondary: #3D3D60;
+  --border-subtle: #1F1F35;
+
+  /* 文字色 - 霓虹白 */
+  --text-primary: #F0F0FF;
+  --text-secondary: #C8C8E8;
+  --text-tertiary: #9090C0;
+  --text-muted: #6060A0;
+
+  /* 滚动条 */
+  --scrollbar-track: #0A0A12;
+  --scrollbar-thumb: #3D3D60;
+  --scrollbar-thumb-hover: #5050A0;
+
+  /* 毛玻璃效果 */
+  --glass-bg: rgba(18, 18, 31, 0.9);
+  --glass-border: rgba(0, 255, 255, 0.1);
+
+  /* 导航样式 */
+  --nav-active-bg: rgba(0, 255, 255, 0.1);
+  --nav-hover-bg: rgba(255, 0, 255, 0.05);
+
+  /* 主按钮样式 - 霓虹青色 */
+  --btn-primary-bg: #00FFFF;
+  --btn-primary-text: #0A0A12;
+  --btn-primary-hover: #40FFFF;
+  --btn-primary-shadow: rgba(0, 255, 255, 0.4);
+
+  /* 选中状态 */
+  --btn-selected-bg: rgba(0, 255, 255, 0.15);
+  --btn-selected-border: rgba(0, 255, 255, 0.5);
+
+  /* 遮罩层 */
+  --overlay-heavy: rgba(6, 6, 12, 0.9);
+  --overlay-medium: rgba(6, 6, 12, 0.7);
+  --overlay-light: rgba(6, 6, 12, 0.4);
+  --overlay-full: rgba(6, 6, 12, 0.95);
+  --overlay-border: rgba(0, 255, 255, 0.15);
+
+  /* 选中文字背景 */
+  --selection-bg: rgba(255, 0, 255, 0.3);
+
+  /* 主题强调色 (accent) - 霓虹品红 */
+  --accent: #FF00FF;
+  --accent-hover: #FF40FF;
+  --accent-muted: #CC00CC;
+  --accent-bg: rgba(255, 0, 255, 0.12);
+  --accent-bg-hover: rgba(255, 0, 255, 0.2);
+  --accent-border: rgba(255, 0, 255, 0.4);
+  --accent-text: #FF40FF;
+  --accent-text-hover: #FF80FF;
+  --accent-on: #FFFFFF;
+  --accent-shadow: rgba(255, 0, 255, 0.35);
+
   /* 开关/Toggle */
-  --toggle-active: #B5936B;
+  --toggle-active: #00FFFF;
   --toggle-inactive: var(--border-secondary);
-  --toggle-knob: #ffffff;
-  /* 状态色: 成功 */
-  --success: #16a34a;
-  --success-text: #15803d;
-  --success-bg: rgba(22, 163, 74, 0.08);
-  --success-border: rgba(22, 163, 74, 0.25);
-  /* 状态色: 错误/危险 */
-  --error: #dc2626;
-  --error-text: #b91c1c;
-  --error-bg: rgba(220, 38, 38, 0.06);
-  --error-border: rgba(220, 38, 38, 0.2);
-  --error-hover-bg: rgba(220, 38, 38, 0.08);
-  --error-hover-bg-strong: rgba(220, 38, 38, 0.15);
-  /* 状态色: 警告 */
-  --warning: #d97706;
-  --warning-text: #b45309;
-  --warning-bg: rgba(217, 119, 6, 0.08);
-  --warning-border: rgba(217, 119, 6, 0.25);
-  /* 状态色: 信息 */
-  --info: #2563eb;
-  --info-text: #1d4ed8;
-  --info-bg: rgba(37, 99, 235, 0.06);
-  --info-border: rgba(37, 99, 235, 0.2);
-  /* 辅助标记色: purple (视频提示词) */
-  --tag-purple: #7c3aed;
-  --tag-purple-bg: rgba(124, 58, 237, 0.08);
-  --tag-purple-border: rgba(124, 58, 237, 0.2);
-  --tag-purple-hover: rgba(124, 58, 237, 0.08);
+  --toggle-knob: #FFFFFF;
+
+  /* 状态色: 成功 - 霓虹绿 */
+  --success: #00FF88;
+  --success-text: #40FFAA;
+  --success-bg: rgba(0, 255, 136, 0.1);
+  --success-border: rgba(0, 255, 136, 0.35);
+
+  /* 状态色: 错误/危险 - 霓虹红 */
+  --error: #FF0055;
+  --error-text: #FF4080;
+  --error-bg: rgba(255, 0, 85, 0.1);
+  --error-border: rgba(255, 0, 85, 0.35);
+  --error-hover-bg: rgba(255, 0, 85, 0.15);
+  --error-hover-bg-strong: rgba(255, 0, 85, 0.25);
+
+  /* 状态色: 警告 - 霓虹黄 */
+  --warning: #FFFF00;
+  --warning-text: #FFFF60;
+  --warning-bg: rgba(255, 255, 0, 0.1);
+  --warning-border: rgba(255, 255, 0, 0.35);
+
+  /* 状态色: 信息 - 霓虹青 */
+  --info: #00FFFF;
+  --info-text: #60FFFF;
+  --info-bg: rgba(0, 255, 255, 0.1);
+  --info-border: rgba(0, 255, 255, 0.35);
+
+  /* 辅助标记色: purple (霓虹紫) */
+  --tag-purple: #BF00FF;
+  --tag-purple-bg: rgba(191, 0, 255, 0.1);
+  --tag-purple-border: rgba(191, 0, 255, 0.35);
+  --tag-purple-hover: rgba(191, 0, 255, 0.18);
 }

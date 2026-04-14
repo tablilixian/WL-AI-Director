@@ -559,14 +559,14 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowImportDialog(true)}
-              className="px-3 py-1.5 bg-[var(--accent)] text-white text-xs rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+              className="px-3 py-1.5 bg-[var(--accent)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
             >
               导入素材
             </button>
             <button
               onClick={() => setShowStyleTransfer(true)}
               disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--tag-purple)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--tag-purple)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={!selectedLayerId ? '请先选中一张图片' : '风格迁移'}
             >
               风格迁移
@@ -574,7 +574,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             <button
               onClick={() => { setImageEditMode('background'); setShowImageEdit(true); }}
               disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--info)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--info)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={!selectedLayerId ? '请先选中一张图片' : '背景替换'}
             >
               背景替换
@@ -582,7 +582,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             <button
               onClick={() => { setImageEditMode('expand'); setShowImageEdit(true); }}
               disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--accent)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={!selectedLayerId ? '请先选中一张图片' : '图片扩展'}
             >
               图片扩展
@@ -590,7 +590,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             <button
               onClick={() => setShowRemoveBackground(true)}
               disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--success)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--success)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={!selectedLayerId ? '请先选中一张图片' : '智能抠图'}
             >
               智能抠图
@@ -598,7 +598,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             <button
               onClick={() => setShowVariant(true)}
               disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-lime-600 text-white text-xs rounded-lg hover:bg-lime-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--warning)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--warning)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={!selectedLayerId ? '请先选中一张图片' : '图片变体'}
             >
               图片变体
@@ -678,7 +678,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       </div>
 
       {showImportDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[var(--overlay-medium)] flex items-center justify-center z-50">
           <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">导入素材到画布</h3>
 
@@ -696,7 +696,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <button
                   onClick={handleImportShots}
                   disabled={!project.shots || project.shots.length === 0}
-                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 bg-[var(--accent)] text-[var(--text-primary)] text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   导入分镜
                 </button>
@@ -715,7 +715,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <button
                   onClick={handleImportCharacters}
                   disabled={!project.scriptData?.characters || project.scriptData.characters.length === 0}
-                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 bg-[var(--accent)] text-[var(--text-primary)] text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   导入角色
                 </button>
@@ -734,7 +734,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <button
                   onClick={handleImportScenes}
                   disabled={!project.scriptData?.scenes || project.scriptData.scenes.length === 0}
-                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 bg-[var(--accent)] text-[var(--text-primary)] text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   导入场景
                 </button>
@@ -753,7 +753,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <button
                   onClick={handleImportProps}
                   disabled={!project.scriptData?.props || project.scriptData.props.length === 0}
-                  className="w-full py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 bg-[var(--accent)] text-[var(--text-primary)] text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   导入物品
                 </button>
