@@ -650,7 +650,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 更新角色基本信息
    */
-  const handleUpdateCharacterInfo = (charId: string, updates: { name?: string; gender?: string; age?: string; personality?: string }) => {
+  const handleUpdateCharacterInfo = (charId: string, updates: {
+    name?: string;
+    gender?: string;
+    age?: string;
+    personality?: string;
+    signaturePose?: import('../../types').VisualDescriptionField;
+    microAction?: import('../../types').VisualDescriptionField;
+  }) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
     const char = newData.characters.find(c => compareIds(c.id, charId));
@@ -659,7 +666,132 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       if (updates.gender !== undefined) char.gender = updates.gender;
       if (updates.age !== undefined) char.age = updates.age;
       if (updates.personality !== undefined) char.personality = updates.personality;
+      if (updates.signaturePose !== undefined) char.signaturePose = updates.signaturePose;
+      if (updates.microAction !== undefined) char.microAction = updates.microAction;
       updateProject({ scriptData: newData });
+    }
+  };
+
+  /**
+   * AI 润色视觉描述文本
+   * 用于标志性姿态和病态微动作的润色
+   */
+  const handlePolishVisualDescription = async (
+    text: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character  // 直接传入 character 对象，而不是通过 text 查找
+  ): Promise<string> => {
+    if (!text.trim()) return text;
+
+    const char = character;
+
+    const instruction = fieldType === 'signaturePose'
+      ? `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色标志性姿态描述润色成专业的视觉指令。
+要求：
+1. 使用专业的视觉描述语言
+2. 包含镜头角度、光影、构图等电影感描述
+3. 保持角色特征一致性
+4. 控制在100字以内
+5. 只输出润色后的文本，不要其他解释`
+      : `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色病态微动作描述润色成专业的视觉指令。
+要求：
+1. 重点描述微动作的细节和表情变化
+2. 使用特写或近景镜头语言
+3. 强调情绪和心理状态
+4. 控制在80字以内
+5. 只输出润色后的文本，不要其他解释`;
+
+    const userPrompt = `${instruction}
+
+角色「${char.name}」的${fieldType === 'signaturePose' ? '标志性姿态' : '病态微动作'}：${text}`;
+
+    console.log('[AI润色] 开始润色:', { text, fieldType, charName: char.name });
+    console.log('[AI润色] 发送给模型的 prompt:', userPrompt);
+
+    try {
+      const { chatCompletion, getActiveChatModelName } = await import('../../services/ai/apiCore');
+      const modelName = getActiveChatModelName();
+      console.log('[AI润色] 使用模型:', modelName);
+
+      const result = await chatCompletion(userPrompt, modelName, 0.7, 500);
+      console.log('[AI润色] 模型返回结果:', result);
+
+      return result.trim();
+    } catch (error) {
+      console.error('[AI润色] 调用失败:', error);
+      return text;
+    }
+  };
+
+  /**
+   * 生成视觉描述预览图
+   * 使用 polished 文本生成预览图
+   */
+  const handleGenerateVisualPreview = async (
+    text: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character
+  ): Promise<string> => {
+    if (!text.trim()) return '';
+
+    const regionalPrefix = getRegionalPrefix(language, 'character');
+    const fieldTypeInstruction = fieldType === 'signaturePose'
+      ? ', cinematic portrait, dramatic lighting, character consistent with description'
+      : ', extreme close-up detail, subtle movement capture, psychological tension';
+
+    const enhancedPrompt = `${regionalPrefix}${text}${fieldTypeInstruction}`;
+
+    // 处理参考图：如果角色有原图，转为 base64 格式
+    const referenceImages: string[] = [];
+    if (character.imageUrl) {
+      if (character.imageUrl.startsWith('local:')) {
+        // 从本地存储获取图片并转为 base64
+        const localImageId = character.imageUrl.substring(6);
+        try {
+          const imageBlob = await imageStorageService.getImage(localImageId);
+          if (imageBlob) {
+            const reader = new FileReader();
+            const base64Promise = new Promise<string>((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+            });
+            reader.readAsDataURL(imageBlob);
+            const base64Url = await base64Promise;
+            referenceImages.push(base64Url);
+            console.log('[预览图生成] 已将本地图片转为 base64:', localImageId);
+          }
+        } catch (err) {
+          console.warn('[预览图生成] 获取本地图片失败:', err);
+        }
+      } else if (character.imageUrl.startsWith('data:')) {
+        referenceImages.push(character.imageUrl);
+      }
+    }
+
+    console.log('[预览图生成] 开始生成:', {
+      text,
+      fieldType,
+      charName: character.name,
+      charImageUrl: character.imageUrl,
+      enhancedPrompt,
+      referenceImages,
+      aspectRatio,
+    });
+
+    try {
+      const imageUrl = await generateImage(
+        enhancedPrompt,
+        referenceImages,
+        aspectRatio,
+        false,
+        false,
+        'character',
+        character.id
+      );
+      console.log('[预览图生成] 生成成功:', imageUrl);
+      return imageUrl;
+    } catch (error) {
+      console.error('[预览图生成] 生成失败:', error);
+      return '';
     }
   };
 
@@ -1557,6 +1689,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 onUpdateInfo={(updates) => handleUpdateCharacterInfo(char.id, updates)}
                 onAddToLibrary={() => handleAddCharacterToLibrary(char)}
                 onReplaceFromLibrary={() => openLibrary('character','character', char.id)}
+                onPolishText={handlePolishVisualDescription}
+                onGeneratePreview={handleGenerateVisualPreview}
               />
             ))}
           </div>

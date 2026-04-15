@@ -29,6 +29,16 @@ export interface CharacterTurnaroundData {
   status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
 }
 
+/**
+ * 视觉描述字段 - 用于角色标志性姿态和病态微动作
+ * 支持 AI 润色和预览图功能
+ */
+export interface VisualDescriptionField {
+  original: string;        // 用户输入的原文本
+  polished?: string;        // AI 润色后的文本（可编辑）
+  previewImageUrl?: string; // 预览图 URL
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -42,6 +52,25 @@ export interface Character {
   turnaround?: CharacterTurnaroundData;
   variations: CharacterVariation[];
   status?: 'pending' | 'generating' | 'completed' | 'failed';
+
+  // 【新增】病态微动作 - 反派专用
+  // 结构：{ original: string, polished?: string, previewImageUrl?: string }
+  // 示例：{ original: "说话前用舌头顶一下腮帮子", polished: "..." }
+  microAction?: VisualDescriptionField;
+
+  // 【新增】标志性姿态 - 所有主要角色
+  // 结构：{ original: string, polished?: string, previewImageUrl?: string }
+  // 示例：{ original: "靠在墙上，眼神不聚焦，仿佛无视一切", polished: "..." }
+  signaturePose?: VisualDescriptionField;
+
+  // 【新增】角色视觉描述增强 - S级视觉描写
+  // 用于更细致的角色外观描述（发型、身材比例、手部动作等）
+  enhancedVisualDescription?: {
+    headAndHair?: string;      // 头部/发型具体描述
+    upperBody?: string;        // 上半身/S形剪影等
+    hands?: string;            // 手部动作习惯
+    walkingPattern?: string;   // 行走姿态
+  };
 }
 
 export interface Scene {
