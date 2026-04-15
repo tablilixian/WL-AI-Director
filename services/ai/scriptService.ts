@@ -17,6 +17,7 @@ import {
 } from './apiCore';
 import { getStylePrompt } from './promptConstants';
 import { generateArtDirection, generateAllCharacterPrompts, generateVisualPrompt } from './visualService';
+import { checkScriptQuality, detectOpeningHook, detectMutedTest } from './scriptQualityService';
 
 // Re-export 日志回调函数（保持外部 API 兼容）
 export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from './apiCore';
@@ -199,6 +200,11 @@ export const parseScriptToData = async (
       props: [],
       storyParagraphs
     };
+
+    const hookResult = detectOpeningHook(rawText);
+    if (hookResult.score < 7) {
+      logger.warn(LogCategory.AI, `⚠️ 剧本质量检测: 开篇评分 ${hookResult.score}/10 - ${hookResult.issues.map(i => i.description).join('; ')}`);
+    }
 
     addRenderLogWithTokens({
       type: 'script-parsing',
@@ -428,6 +434,11 @@ ${artDirectionBlock}
 
   if (allShots.length === 0) {
     throw new Error('分镜生成失败：AI返回为空（可能是 JSON 结构不匹配或场景内容未被识别）。请打开控制台查看分镜生成日志。');
+  }
+
+  const mutedResult = detectMutedTest(allShots);
+  if (mutedResult.score < 7) {
+    logger.warn(LogCategory.AI, `⚠️ 剧本静音测试: 评分 ${mutedResult.score}/10 - ${mutedResult.issues.filter(i => i.severity === 'error').map(i => i.description).join('; ')}`);
   }
 
   return allShots.map((s, idx) => ({

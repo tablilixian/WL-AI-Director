@@ -438,6 +438,10 @@ Your task is to create a detailed visual prompt for generating a character image
 - Visual Style: ${visualStyle} (${stylePrompt})
 - Base Visual Prompt: ${character.visualPrompt || 'Not provided'}
 
+## Character Visual Constraints
+【标志性姿态】必须展现角色的标志性姿态：${character.signaturePose?.polished || character.signaturePose?.original || '待补充'}
+【微动作特征】角色必须携带其微动作特征：${character.microAction?.polished || character.microAction?.original || '无特殊微动作'}
+
 ## Art Direction Guidelines
 ${artDirection.consistencyAnchors}
 
@@ -471,6 +475,11 @@ CRITICAL REQUIREMENTS:
    - Hair (length, color, texture, style, accessories)
    - Body type and proportions
    - Clothing/outfit (style, color, materials, accessories)
+   - 【MANDATORY】Include signature pose: Must showcase the character's iconic posture from their signaturePose description
+   - 【MANDATORY】Include micro-actions: Must incorporate the character's distinctive micro-movements from their microAction description
+   - 【MANDATORY】Silhouette & Linework: Describe S-grade silhouette, body curves, and line aesthetics
+   - 【MANDATORY】Body Part Close-ups: Include specific body part details (eyes, lips, fingers, ankles, etc.)
+   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
@@ -622,7 +631,9 @@ export const generateVisualPrompt = async (
     ? `Name: ${(item as Character).name}
 Gender: ${(item as Character).gender}
 Age: ${(item as Character).age}
-Personality: ${(item as Character).personality}`
+Personality: ${(item as Character).personality}
+Signature Pose: ${(item as Character).signaturePose?.polished || (item as Character).signaturePose?.original || 'Not provided'}
+Micro Action: ${(item as Character).microAction?.polished || (item as Character).microAction?.original || 'Not provided'}`
     : `Location: ${(item as Scene).location}
 Time: ${(item as Scene).time}
 Atmosphere: ${(item as Scene).atmosphere}`;
@@ -667,7 +678,12 @@ CRITICAL REQUIREMENTS:
    - Facial features (eyes, nose, mouth, eyebrows, expression)
    - Hair (length, color, texture, style, accessories)
    - Body type and proportions
-   - Clothing/outfit (style, color, materials, accessories)` : `
+   - Clothing/outfit (style, color, materials, accessories)
+   - 【MANDATORY】Include signature pose: Must showcase the character's iconic posture
+   - 【MANDATORY】Include micro-actions: Must incorporate the character's distinctive micro-movements
+   - 【MANDATORY】Silhouette & Linework: Describe S-grade silhouette, body curves, and line aesthetics
+   - 【MANDATORY】Body Part Close-ups: Include specific body part details (eyes, lips, fingers, ankles, etc.)
+   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions` : `
    - Environment details (background, foreground, middle ground)
    - Atmospheric elements (weather, lighting, mood)
    - Composition and framing

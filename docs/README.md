@@ -35,6 +35,9 @@ docs/
 - [架构设计](./active/ARCHITECTURE.md) — 技术栈、模块划分、ADR
 - [路线图](./active/ROADMAP.md) — 短中长期规划
 
+### 剧本质量提升
+- [漫剧剧本质量提升方案](./active/SCRIPT-QUALITY-IMPROVEMENT.md) — 基于26条创作约束的剧本质量改进
+
 ### 历史参考
 - [归档文档](./archive/) — 所有历史文档（不再维护）
 

@@ -1,8 +1,57 @@
 import React from 'react';
-import { Aperture, Edit2, Check, X, UserPlus, Trash2, Plus } from 'lucide-react';
+import { Aperture, Edit2, Check, X, UserPlus, Trash2, Plus, Sparkles } from 'lucide-react';
 import { Shot, Character, ScriptData } from '../../types';
 import InlineEditor from './InlineEditor';
 import { STYLES } from './constants';
+
+const visualVerbs = [
+  '握紧', '攥紧', '颤抖', '抽搐', '低头', '抬头',
+  '挥拳', '重击', '撩发', '撕扯', '攥进', '抠进',
+  '青筋', '咬牙', '瞪眼', '皱眉', '咬唇',
+];
+
+const emotionalKeywords = [
+  '我很', '我很生气', '我伤心', '我难过',
+  '他看起来', '她看起来', '气氛', '悲伤', '压抑',
+];
+
+interface ActionDensityBadgeProps {
+  actionSummary: string;
+  dialogue?: string;
+}
+
+const ActionDensityBadge: React.FC<ActionDensityBadgeProps> = ({ actionSummary, dialogue }) => {
+  const length = actionSummary?.length || 0;
+  const hasVisualVerbs = visualVerbs.some(v => actionSummary?.includes(v));
+  const hasEmotionalDialogue = dialogue && emotionalKeywords.some(k => dialogue.includes(k));
+
+  if (length < 20 && !hasVisualVerbs) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--error-bg)]/50 text-[var(--error-text)] text-[8px] font-bold rounded" title="动作描写薄弱">
+        动作薄弱
+      </span>
+    );
+  }
+
+  if (hasVisualVerbs && !hasEmotionalDialogue) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--success-bg)]/50 text-[var(--success-text)] text-[8px] font-bold rounded" title="视觉化动作强">
+        <Sparkles className="w-3 h-3" />
+        视觉化强
+      </span>
+    );
+  }
+
+  if (hasEmotionalDialogue) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--warning-bg)]/50 text-[var(--warning-text)] text-[8px] font-bold rounded" title="台词包含情绪描述">
+        情绪冗余
+      </span>
+    );
+  }
+
+  return null;
+};
 
 interface Props {
   shot: Shot;
@@ -144,6 +193,7 @@ const ShotRow: React.FC<Props> = ({
               <p className="text-[var(--text-secondary)] text-sm leading-7 font-medium max-w-2xl flex-1">
                 {shot.actionSummary}
               </p>
+              <ActionDensityBadge actionSummary={shot.actionSummary} dialogue={shot.dialogue} />
               <button
                 onClick={() => onEditAction(shot.id, shot.actionSummary, shot.dialogue || '')}
                 className="opacity-0 group-hover/action:opacity-100 transition-opacity p-1.5 hover:bg-[var(--bg-hover)] rounded flex-shrink-0"

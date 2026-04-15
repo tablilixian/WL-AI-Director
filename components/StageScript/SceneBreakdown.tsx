@@ -5,6 +5,7 @@ import { deduplicateScenes } from './utils';
 import CharacterList from './CharacterList';
 import SceneList from './SceneList';
 import ShotRow from './ShotRow';
+import ScriptQualityPanel from './ScriptQualityPanel';
 
 interface Props {
   project: ProjectState;
@@ -126,6 +127,14 @@ const SceneBreakdown: React.FC<Props> = ({
         {/* Main: Script & Shots */}
         <div className="flex-1 overflow-y-auto bg-[var(--bg-base)] p-0">
           <div className="max-w-5xl mx-auto pb-20">
+            <div className="px-8 pt-6">
+              <ScriptQualityPanel
+                scriptText={project.rawScript}
+                shots={project.shots}
+                collapsed={false}
+              />
+            </div>
+
             {project.scriptData?.scenes.map((scene, index) => {
               const sceneShots = project.shots.filter(s => s.sceneId === scene.id);
 
