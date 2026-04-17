@@ -15,12 +15,19 @@ import {
   DEFAULT_ZOOM,
 } from '../types/editor';
 import { clampTime } from '../utils/timeFormat';
+import { MIN_ZOOM, MAX_ZOOM, TRACK_HEADER_WIDTH } from '../types/editor';
 
 // ============================================================
 // Store 接口
 // ============================================================
 
+type EditorTool = 'select' | 'trim' | 'split';
+
 interface EditorStore extends EditorState {
+  // ---------- 工具 ----------
+  activeTool: EditorTool;
+  setActiveTool: (tool: EditorTool) => void;
+
   // ---------- 历史记录 ----------
   canUndo: boolean;
   canRedo: boolean;
@@ -97,6 +104,7 @@ const initialState = {
   scrollPosition: 0,
   activeTrackId: null as string | null,
   expandedTrackIds: [] as string[],
+  activeTool: 'select' as EditorTool,
   canUndo: false,
   canRedo: false,
 };
@@ -292,26 +300,23 @@ export const useEditorStore = create<EditorStore>()(
       }));
     },
 
-    moveClip: (clipId, newTrackId, newStartTime) => {
+    moveClip: (clipId, newTrackId, startTime) => {
       const clip = get().findClip(clipId);
       if (!clip) return;
 
-      // 记录原状态
       const oldTrack = get().findTrackByClip(clipId);
       if (!oldTrack) return;
 
-      newStartTime = clampTime(newStartTime, 0);
+      const clampedStartTime = clampTime(startTime, 0);
 
       set(state => {
         let movedClip: Clip | null = null;
         const newTracks = state.tracks.map(t => {
-          // 从原轨道移除
           if (t.id === oldTrack.id) {
             const removed = t.clips.find(c => c.id === clipId);
-            if (removed) movedClip = { ...removed, trackId: newTrackId, startTime: newStartTime };
+            if (removed) movedClip = { ...removed, trackId: newTrackId, startTime: clampedStartTime };
             return { ...t, clips: t.clips.filter(c => c.id !== clipId) };
           }
-          // 添加到新轨道
           if (t.id === newTrackId && movedClip) {
             return { ...t, clips: [...t.clips, movedClip] };
           }
@@ -420,8 +425,10 @@ export const useEditorStore = create<EditorStore>()(
     })),
 
     // ---------- 视图 ----------
+    setActiveTool: (tool) => set({ activeTool: tool }),
+
     setZoom: (zoom) => {
-      const clampedZoom = clampTime(zoom, 10, 500);
+      const clampedZoom = clampTime(zoom, MIN_ZOOM, MAX_ZOOM);
       set({ zoom: clampedZoom });
     },
 
@@ -431,7 +438,7 @@ export const useEditorStore = create<EditorStore>()(
 
     scrollToTime: (time, viewportWidth = 800) => {
       const { zoom } = get();
-      const centerOffset = (viewportWidth - 150) / 2;
+      const centerOffset = (viewportWidth - TRACK_HEADER_WIDTH) / 2;
       const newPosition = (time / 1000) * zoom - centerOffset;
       set({ scrollPosition: Math.max(0, newPosition) });
     },

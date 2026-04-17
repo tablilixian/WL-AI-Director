@@ -135,8 +135,8 @@ export function useSnapCalculation() {
 
     // 时间标记吸附点
     if (config.snapToMarkers) {
-      const interval = 5000; // 每 5 秒一个标记
-      for (let t = 0; t <= currentTime * 2; t += interval) {
+      const MARKER_INTERVAL = 5000; // 5秒一个标记
+      for (let t = 0; t <= currentTime * 2; t += MARKER_INTERVAL) {
         points.push({
           type: 'time-marker',
           time: t,
