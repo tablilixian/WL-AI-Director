@@ -13,7 +13,7 @@
 |------|--------|------|------|
 | **视频编辑功能开发** | P0 | 🔄 开发中 | 分支: feature/video-editor |
 | └── Phase 1: 基础设施 | - | ✅ | 类型定义、Store、工具函数 |
-| └── Phase 2: 时间线核心 | - | ⏳ | 多轨时间线、拖拽裁剪 |
+| └── Phase 2: 时间线核心 | - | ✅ | 多轨时间线、拖拽裁剪 |
 | └── Phase 3: 预览播放 | - | ⏳ | 视频预览、播放控制 |
 
 ---
@@ -54,12 +54,12 @@ Phase 1: 基础设施 (Day 1-3)
 └── ⏳ 吸附配置 Store (stores/snapStore.ts)
 
 Phase 2: 时间线核心 (Day 4-8)
-├── ⏳ Timeline.tsx 主体结构
-├── ⏳ Track.tsx / Clip.tsx 组件
-├── ⏳ Playhead.tsx / Ruler.tsx
-├── ⏳ useTimelineDrag.ts 拖拽逻辑
-├── ⏳ useTimelineTrim.ts 裁剪逻辑
-└── ⏳ useTimelineSplit.ts 分割逻辑
+├── ✅ Timeline.tsx 主体结构
+├── ✅ Track.tsx / Clip.tsx 组件
+├── ✅ Playhead.tsx / Ruler.tsx
+├── ✅ useTimelineDrag.ts 拖拽逻辑
+├── ✅ useTimelineTrim.ts 裁剪逻辑
+└── ⏳ useTimelineSplit.ts 分割逻辑 (待开发)
 
 Phase 3: 预览播放 (Day 9-12)
 ├── ⏳ PreviewCanvas.tsx
