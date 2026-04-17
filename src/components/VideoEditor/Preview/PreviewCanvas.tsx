@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { useEditorStore } from '../../../stores/editorStore';
 import { VideoLayer } from './VideoLayer';
+import { TextLayer } from './TextLayer';
+import { isTextClip } from '../../../types/editor';
 
 interface PreviewCanvasProps {
-  width?: number;
-  height?: number;
   aspectRatio?: '16:9' | '9:16' | '4:3' | '1:1';
 }
 
@@ -27,32 +27,54 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     return tracks.filter(t => t.type === 'video' && t.visible);
   }, [tracks]);
 
+  const textTracks = useMemo(() => {
+    return tracks.filter(t => t.type === 'text' && t.visible);
+  }, [tracks]);
+
+  const hasContent = videoTracks.length > 0 || textTracks.length > 0;
+
   return (
     <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: `${aspectRatioValue}` }}>
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-        {videoTracks.length === 0 ? (
+        {!hasContent ? (
           <div className="text-center text-gray-500">
             <div className="text-4xl mb-2">🎬</div>
-            <div className="text-sm">添加视频片段开始预览</div>
+            <div className="text-sm">添加片段开始预览</div>
           </div>
         ) : (
-          videoTracks.map(track =>
-            track.clips.map(clip => (
-              <VideoLayer
-                key={clip.id}
-                clipId={clip.id}
-                src={clip.sourceUrl || ''}
-                currentTime={currentTime}
-                startTime={clip.startTime}
-                duration={clip.duration}
-                inPoint={clip.inPoint}
-                outPoint={clip.outPoint}
-                opacity={1}
-                volume={1}
-                visible={track.visible}
-              />
-            ))
-          )
+          <>
+            {videoTracks.map(track =>
+              track.clips.map(clip => (
+                <VideoLayer
+                  key={clip.id}
+                  clipId={clip.id}
+                  src={clip.sourceUrl || ''}
+                  currentTime={currentTime}
+                  startTime={clip.startTime}
+                  duration={clip.duration}
+                  inPoint={clip.inPoint}
+                  outPoint={clip.outPoint}
+                  opacity={1}
+                  volume={1}
+                  visible={track.visible}
+                />
+              ))
+            )}
+
+            {textTracks.map(track =>
+              track.clips
+                .filter(clip => isTextClip(clip))
+                .map(clip => (
+                  <TextLayer
+                    key={clip.id}
+                    clip={clip}
+                    currentTime={currentTime}
+                    startTime={clip.startTime}
+                    duration={clip.duration}
+                  />
+                ))
+            )}
+          </>
         )}
       </div>
 
