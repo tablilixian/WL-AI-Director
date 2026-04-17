@@ -14,7 +14,8 @@
 | **视频编辑功能开发** | P0 | 🔄 开发中 | 分支: feature/video-editor |
 | └── Phase 1: 基础设施 | - | ✅ | 类型定义、Store、工具函数 |
 | └── Phase 2: 时间线核心 | - | ✅ | 多轨时间线、拖拽裁剪 |
-| └── Phase 3: 预览播放 | - | ⏳ | 视频预览、播放控制 |
+| └── Phase 3: 预览播放 | - | ✅ | 视频预览、播放控制 |
+| └── Phase 4: 吸附系统 | - | ⏳ | 吸附对齐、快捷键 |
 
 ---
 
@@ -62,10 +63,10 @@ Phase 2: 时间线核心 (Day 4-8)
 └── ⏳ useTimelineSplit.ts 分割逻辑 (待开发)
 
 Phase 3: 预览播放 (Day 9-12)
-├── ⏳ PreviewCanvas.tsx
-├── ⏳ VideoLayer.tsx 多视频叠加
-├── ⏳ usePlayback.ts 播放控制
-└── ⏳ 时间线 ↔ 预览同步
+├── ✅ PreviewCanvas.tsx
+├── ✅ VideoLayer.tsx 多视频叠加
+├── ✅ usePlayback.ts 播放控制
+└── ✅ 时间线 ↔ 预览同步
 
 Phase 4: 吸附系统 (Day 13-14)
 ├── ⏳ useSnapCalculation.ts
