@@ -12,6 +12,7 @@ import { TrackHeader } from './TrackHeader';
 import { Track } from './Track';
 import { Playhead } from './Playhead';
 import { Ruler } from './Ruler';
+import { SnapControls } from './SnapControls';
 
 interface TimelineProps {
   /** 视口宽度，默认 800 */
@@ -127,19 +128,23 @@ export const Timeline: React.FC<TimelineProps> = ({
     >
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-tertiary)]">缩放:</span>
-          <input
-            type="range"
-            min={minZoom}
-            max={maxZoom}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-24 h-1 bg-[var(--bg-hover)] rounded appearance-none cursor-pointer"
-          />
-          <span className="text-xs text-[var(--text-secondary)] font-mono">
-            {zoom}px/s
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-tertiary)]">缩放:</span>
+            <input
+              type="range"
+              min={minZoom}
+              max={maxZoom}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-24 h-1 bg-[var(--bg-hover)] rounded appearance-none cursor-pointer"
+            />
+            <span className="text-xs text-[var(--text-secondary)] font-mono">
+              {zoom}px/s
+            </span>
+          </div>
+
+          <SnapControls />
         </div>
 
         <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
