@@ -9,18 +9,14 @@ import { PreviewCanvas } from './Preview/PreviewCanvas';
 import { ImportMedia } from './ImportMedia';
 import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
+import { ProjectState } from '../../../types';
 
 interface VideoEditorProps {
-  projectId: string;
-  initialTracks?: Array<{
-    type: 'video' | 'audio' | 'text';
-    name: string;
-  }>;
+  project?: ProjectState;
 }
 
 export const VideoEditor: React.FC<VideoEditorProps> = ({
-  projectId,
-  initialTracks,
+  project,
 }) => {
   usePlayback();
 
@@ -42,19 +38,43 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     activeTool,
     setActiveTool,
     addTrack,
+    addClip,
   } = useEditorStore();
 
   useEffect(() => {
-    if (initialTracks && initialTracks.length > 0) {
-      initialTracks.forEach((trackConfig) => {
-        addTrack(trackConfig.type, trackConfig.name);
+    if (project?.shots && project.shots.length > 0) {
+      let currentTime = 0;
+      
+      project.shots.forEach((shot) => {
+        if (shot.interval?.videoUrl) {
+          const videoTrack = useEditorStore.getState().tracks.find(t => t.type === 'video');
+          const trackId = videoTrack?.id || addTrack('video', '视频轨道');
+          
+          const clip: any = {
+            id: shot.id,
+            type: 'video',
+            sourceType: 'video',
+            sourceId: shot.id,
+            sourceUrl: shot.interval.videoUrl,
+            startTime: currentTime,
+            duration: shot.interval.duration || 3000,
+            inPoint: 0,
+            outPoint: (shot.interval.duration || 3000) * 1000,
+            volume: 1,
+            speed: 1,
+            opacity: 1,
+          };
+          
+          addClip(trackId, clip);
+          currentTime += (shot.interval.duration || 3000);
+        }
       });
     } else {
       addTrack('video', '视频 1');
       addTrack('audio', '音频 1');
       addTrack('text', '字幕 1');
     }
-  }, []);
+  }, [project]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
