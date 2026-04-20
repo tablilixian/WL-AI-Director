@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Scissors,
   Upload, Download, Undo2, Redo2, Repeat
@@ -40,18 +40,22 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     addTrack,
     addClip,
   } = useEditorStore();
+  const importedRef = useRef(false);
 
   useEffect(() => {
+    if (importedRef.current) return;
+    importedRef.current = true;
+
     if (project?.shots && project.shots.length > 0) {
       let currentTime = 0;
       
-      project.shots.forEach((shot) => {
+      project.shots.forEach((shot, index) => {
         if (shot.interval?.videoUrl) {
           const videoTrack = useEditorStore.getState().tracks.find(t => t.type === 'video');
           const trackId = videoTrack?.id || addTrack('video', '视频轨道');
           
           const clip: any = {
-            id: shot.id,
+            id: `clip-${project.id}-${index}-${shot.id}`,
             type: 'video',
             sourceType: 'video',
             sourceId: shot.id,
