@@ -40,16 +40,25 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     setActiveTool,
     addTrack,
     addClip,
+    removeTrack,
+    tracks,
   } = useEditorStore();
-  const importedRef = useRef(false);
+  const importedRef = useRef<string>('');
 
   useEffect(() => {
-    if (importedRef.current) return;
-    importedRef.current = true;
+    const projectId = project?.id;
+    if (!projectId || importedRef.current === projectId) return;
+    importedRef.current = projectId;
 
     const importVideos = async () => {
+      tracks.forEach(track => {
+        removeTrack(track.id);
+      });
+      
       if (project?.shots && project.shots.length > 0) {
         let currentTime = 0;
+        
+        const trackId = addTrack('video', '视频轨道');
         
         for (let i = 0; i < project.shots.length; i++) {
           const shot = project.shots[i];
@@ -57,11 +66,8 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
             
             if (resolvedUrl) {
-              const videoTrack = useEditorStore.getState().tracks.find(t => t.type === 'video');
-              const trackId = videoTrack?.id || addTrack('video', '视频轨道');
-              
               const clip: any = {
-                id: `clip-${project.id}-${i}-${shot.id}`,
+                id: `${project.id}-clip-${i}`,
                 type: 'video',
                 sourceType: 'video',
                 sourceId: shot.id,
@@ -88,7 +94,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     };
 
     importVideos();
-  }, [project]);
+  }, [project?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
