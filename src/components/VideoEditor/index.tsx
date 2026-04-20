@@ -10,7 +10,7 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 
 interface VideoEditorProps {
-  projectId?: string;
+  projectId: string;
   initialTracks?: Array<{
     type: 'video' | 'audio' | 'text';
     name: string;

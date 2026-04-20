@@ -6,6 +6,7 @@ import StageDirector from './components/StageDirector';
 import StageExport from './components/StageExport';
 import StagePrompts from './components/StagePrompts';
 import StageCanvas from './components/StageCanvas';
+import VideoEditor from './src/components/VideoEditor';
 import { canvasIntegrationService } from './src/modules/canvas/services/canvasIntegrationService';
 import Dashboard from './components/Dashboard';
 import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/Onboarding';
@@ -333,7 +334,7 @@ function App() {
   };
 
   // Set stage
-  const setStage = async (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas') => {
+  const setStage = async (stage: 'script' | 'assets' | 'director' | 'editor' | 'export' | 'prompts' | 'canvas') => {
     if (project) {
       await canvasIntegrationService.setProjectId(project.id);
     }
@@ -486,6 +487,8 @@ function App() {
         return <StageAssets project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
       case 'director':
         return <StageDirector project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
+      case 'editor':
+        return <VideoEditor projectId={project.id} />;
       case 'export':
         return <StageExport project={project} />;
       case 'prompts':
