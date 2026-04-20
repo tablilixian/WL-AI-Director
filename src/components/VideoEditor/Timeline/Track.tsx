@@ -30,6 +30,7 @@ export const Track: React.FC<TrackProps> = ({
         ${track.locked ? 'pointer-events-none' : ''}
       `}
       style={{ height }}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* 轨道背景 - 可选：显示网格或辅助线 */}
       <div 

@@ -66,6 +66,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
             
             if (resolvedUrl) {
+              const clipDuration = shot.interval.duration || 3000;
               const clip: any = {
                 id: `${project.id}-clip-${i}`,
                 type: 'video',
@@ -73,18 +74,24 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
                 sourceId: shot.id,
                 sourceUrl: resolvedUrl,
                 startTime: currentTime,
-                duration: shot.interval.duration || 3000,
+                duration: clipDuration,
                 inPoint: 0,
-                outPoint: (shot.interval.duration || 3000) * 1000,
+                outPoint: clipDuration * 1000,
                 volume: 1,
                 speed: 1,
                 opacity: 1,
               };
               
               addClip(trackId, clip);
-              currentTime += (shot.interval.duration || 3000);
+              currentTime += clipDuration;
             }
           }
+        }
+        
+        if (currentTime === 0) {
+          addTrack('video', '视频 1');
+          addTrack('audio', '音频 1');
+          addTrack('text', '字幕 1');
         }
       } else {
         addTrack('video', '视频 1');

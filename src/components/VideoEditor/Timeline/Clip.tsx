@@ -14,8 +14,8 @@ export const Clip: React.FC<{
 }> = ({ clip, track, height, zoom, isSelected }) => {
   const selectClip = useEditorStore(s => s.selectClip);
   const left = timeToPixels(clip.startTime, zoom);
-  const width = Math.max(20, timeToPixels(clip.duration, zoom));
-  const clipDuration = clip.duration / 1000;
+  const width = Math.max(40, timeToPixels(clip.duration || 100, zoom));
+  const clipDuration = (clip.duration || 0) / 1000;
 
   const colors: Record<string, string> = {
     video: 'from-blue-600/80 to-blue-700/80 border-blue-500',
@@ -32,13 +32,13 @@ export const Clip: React.FC<{
   return (
     <div
       className={`absolute top-1 rounded-md overflow-hidden cursor-pointer bg-gradient-to-b ${colors[track.type] || ''} ${isSelected ? 'ring-2 ring-white/50' : ''}`}
-      style={{ left, width, height: height - 2 }}
+      style={{ left, width: Math.max(40, width), height: height - 2 }}
       onClick={() => selectClip(clip.id, false)}
     >
       <div className="relative flex items-center h-full px-2 gap-1.5">
         <span className="text-white/80">{icons[track.type]}</span>
         <span className="text-[10px] text-white/90 truncate font-medium">
-          {formatTime(clipDuration)}
+          {clipDuration > 0 ? formatTime(clipDuration) : '0:00'}
         </span>
       </div>
     </div>
