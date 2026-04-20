@@ -10,6 +10,7 @@ import { ImportMedia } from './ImportMedia';
 import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 import { ProjectState } from '../../../types';
+import { unifiedImageService } from '../../../services/unifiedImageService';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -46,38 +47,47 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     if (importedRef.current) return;
     importedRef.current = true;
 
-    if (project?.shots && project.shots.length > 0) {
-      let currentTime = 0;
-      
-      project.shots.forEach((shot, index) => {
-        if (shot.interval?.videoUrl) {
-          const videoTrack = useEditorStore.getState().tracks.find(t => t.type === 'video');
-          const trackId = videoTrack?.id || addTrack('video', '视频轨道');
-          
-          const clip: any = {
-            id: `clip-${project.id}-${index}-${shot.id}`,
-            type: 'video',
-            sourceType: 'video',
-            sourceId: shot.id,
-            sourceUrl: shot.interval.videoUrl,
-            startTime: currentTime,
-            duration: shot.interval.duration || 3000,
-            inPoint: 0,
-            outPoint: (shot.interval.duration || 3000) * 1000,
-            volume: 1,
-            speed: 1,
-            opacity: 1,
-          };
-          
-          addClip(trackId, clip);
-          currentTime += (shot.interval.duration || 3000);
+    const importVideos = async () => {
+      if (project?.shots && project.shots.length > 0) {
+        let currentTime = 0;
+        
+        for (let i = 0; i < project.shots.length; i++) {
+          const shot = project.shots[i];
+          if (shot.interval?.videoUrl) {
+            const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
+            
+            if (resolvedUrl) {
+              const videoTrack = useEditorStore.getState().tracks.find(t => t.type === 'video');
+              const trackId = videoTrack?.id || addTrack('video', '视频轨道');
+              
+              const clip: any = {
+                id: `clip-${project.id}-${i}-${shot.id}`,
+                type: 'video',
+                sourceType: 'video',
+                sourceId: shot.id,
+                sourceUrl: resolvedUrl,
+                startTime: currentTime,
+                duration: shot.interval.duration || 3000,
+                inPoint: 0,
+                outPoint: (shot.interval.duration || 3000) * 1000,
+                volume: 1,
+                speed: 1,
+                opacity: 1,
+              };
+              
+              addClip(trackId, clip);
+              currentTime += (shot.interval.duration || 3000);
+            }
+          }
         }
-      });
-    } else {
-      addTrack('video', '视频 1');
-      addTrack('audio', '音频 1');
-      addTrack('text', '字幕 1');
-    }
+      } else {
+        addTrack('video', '视频 1');
+        addTrack('audio', '音频 1');
+        addTrack('text', '字幕 1');
+      }
+    };
+
+    importVideos();
   }, [project]);
 
   useEffect(() => {
