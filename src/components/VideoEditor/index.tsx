@@ -6,6 +6,7 @@ import {
 import { useEditorStore } from '../../stores/editorStore';
 import { Timeline } from './Timeline/Timeline';
 import { PreviewCanvas } from './Preview/PreviewCanvas';
+import { ImportMedia } from './ImportMedia';
 import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 
@@ -87,10 +88,6 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const handleToolChange = useCallback((tool: 'select' | 'trim' | 'split') => {
     setActiveTool(tool);
   }, [setActiveTool]);
-
-  const handleAddMedia = useCallback(() => {
-    console.log('添加素材');
-  }, []);
 
   const handleExport = useCallback(() => {
     console.log('导出项目');
@@ -223,13 +220,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
           <div className="w-px h-5 bg-[var(--border-subtle)] mx-1" />
 
-          <button
-            onClick={handleAddMedia}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] transition-colors"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            添加素材
-          </button>
+          <ImportMedia />
 
           <button
             onClick={handleExport}
