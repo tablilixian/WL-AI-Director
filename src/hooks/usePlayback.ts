@@ -20,8 +20,9 @@ export function usePlayback() {
       startTimeRef.current = timestamp;
     }
 
-    const elapsed = (timestamp - startTimeRef.current) * playbackRate;
-    const newTime = useEditorStore.getState().currentTime + elapsed / 1000;
+    const currentTime = useEditorStore.getState().currentTime;
+    const elapsed = timestamp - startTimeRef.current;
+    const newTime = currentTime + elapsed * playbackRate;
     startTimeRef.current = timestamp;
     lastTimeRef.current = timestamp;
 

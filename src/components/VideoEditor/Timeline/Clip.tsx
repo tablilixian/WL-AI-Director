@@ -17,6 +17,8 @@ export const Clip: React.FC<{
   const width = Math.max(40, timeToPixels(clip.duration || 100, zoom));
   const clipDuration = (clip.duration || 0) / 1000;
 
+  
+
   const colors: Record<string, string> = {
     video: 'from-blue-600/80 to-blue-700/80 border-blue-500',
     audio: 'from-green-600/80 to-green-700/80 border-green-500',

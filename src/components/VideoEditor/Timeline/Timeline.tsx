@@ -47,7 +47,9 @@ export const Timeline: React.FC<TimelineProps> = ({
   // 计算时间线总宽度
   const totalWidth = useMemo(() => {
     const minWidth = Math.max(duration * 2, viewportWidth);
-    return Math.max(calculateTimelineWidth(minWidth, zoom), viewportWidth);
+    const result = Math.max(calculateTimelineWidth(minWidth, zoom), viewportWidth);
+    console.log('[Timeline] 计算 totalWidth', { duration, minWidth, result, zoom });
+    return result;
   }, [duration, zoom, viewportWidth]);
 
   // 处理滚动
@@ -72,11 +74,11 @@ export const Timeline: React.FC<TimelineProps> = ({
   // 处理时间线点击跳转
   const handleTimelineClick = useCallback((e: React.MouseEvent) => {
     if (!contentRef.current) return;
-    
+
     const rect = contentRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - TRACK_HEADER_WIDTH + scrollPosition;
+    const x = e.clientX - rect.left + scrollPosition;
     const clickTime = pixelsToTime(Math.max(0, x), zoom);
-    
+
     seek(Math.min(clickTime, duration));
   }, [scrollPosition, zoom, seek, duration]);
 
@@ -116,8 +118,8 @@ export const Timeline: React.FC<TimelineProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [seek, duration, handleZoomChange]);
 
-  // 计算播放头位置
-  const playheadX = TRACK_HEADER_WIDTH + timeToPixels(currentTime, zoom) - scrollPosition;
+  
+  const playheadX = timeToPixels(currentTime, zoom) - scrollPosition;
 
   return (
     <div 
@@ -162,18 +164,13 @@ export const Timeline: React.FC<TimelineProps> = ({
         className="flex-1 overflow-x-auto overflow-y-auto"
         onScroll={handleScroll}
       >
-        <div 
+        <div
           ref={contentRef}
-          className="relative min-h-full cursor-pointer"
+          className="relative min-h-full flex"
           style={{ width: totalWidth }}
-          onClick={handleTimelineClick}
         >
-          {/* 轨道头部列 */}
-          <div className="sticky left-0 z-20 bg-[var(--bg-base)]">
-            {/* 标尺头部留空 */}
+          <div className="sticky left-0 z-20 flex-shrink-0">
             <div className="h-8 border-b border-[var(--border-subtle)]" />
-            
-            {/* 轨道头部 */}
             {tracks.map((track) => (
               <TrackHeader
                 key={track.id}
@@ -183,14 +180,11 @@ export const Timeline: React.FC<TimelineProps> = ({
             ))}
           </div>
 
-          {/* 轨道内容区 */}
-          <div 
-            className="absolute top-0 right-0 bottom-0"
-            style={{ left: TRACK_HEADER_WIDTH }}
+          <div
+            className="flex-1 relative"
           >
-            {/* 时间标尺 */}
             <Ruler
-              width={totalWidth - TRACK_HEADER_WIDTH}
+              width={totalWidth}
               height={32}
               zoom={zoom}
               scrollPosition={scrollPosition}
@@ -211,9 +205,9 @@ export const Timeline: React.FC<TimelineProps> = ({
             ))}
 
             {/* 播放头 */}
-            {playheadX >= TRACK_HEADER_WIDTH && (
+            {playheadX >= 0 && (
               <Playhead
-                x={playheadX - TRACK_HEADER_WIDTH}
+                x={playheadX}
                 height={tracks.length * TRACK_HEIGHT + 32}
                 currentTime={currentTime}
               />

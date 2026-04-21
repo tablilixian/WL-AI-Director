@@ -86,7 +86,7 @@ export function calculateVisibleRange(
   viewportWidth: number,
   zoom: number
 ): { start: number; end: number } {
-  const start = pixelsToTime(Math.max(0, scrollPosition - TRACK_HEADER_WIDTH), zoom);
+  const start = pixelsToTime(Math.max(0, scrollPosition), zoom);
   const end = pixelsToTime(scrollPosition + viewportWidth, zoom);
   return { start, end };
 }
@@ -162,12 +162,12 @@ export function isTimeInClip(
  * 根据缩放级别自动选择合适的刻度间隔
  */
 export function calculateRulerInterval(zoom: number): number {
-  if (zoom >= 200) return MS_PER_SECOND; // 每秒一个刻度
-  if (zoom >= 100) return MS_PER_SECOND * 2; // 每 2 秒
-  if (zoom >= 50) return MS_PER_SECOND * 5; // 每 5 秒
-  if (zoom >= 25) return MS_PER_SECOND * 10; // 每 10 秒
-  if (zoom >= 10) return MS_PER_SECOND * 30; // 每 30 秒
-  return MS_PER_SECOND * 60; // 每分钟
+  if (zoom >= 200) return MS_PER_SECOND;
+  if (zoom >= 100) return MS_PER_SECOND;
+  if (zoom >= 50) return MS_PER_SECOND * 2;
+  if (zoom >= 25) return MS_PER_SECOND * 5;
+  if (zoom >= 10) return MS_PER_SECOND * 10;
+  return MS_PER_SECOND * 30;
 }
 
 /**

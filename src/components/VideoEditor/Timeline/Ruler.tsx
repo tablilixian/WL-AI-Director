@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { generateRulerTicks } from '../../../utils/timeCalculation';
+import { generateRulerTicks, pixelsToTime } from '../../../utils/timeCalculation';
 import { formatTime } from '../../../utils/timeFormat';
 
 interface RulerProps {
@@ -26,19 +26,25 @@ export const Ruler: React.FC<RulerProps> = ({
 }) => {
   // 生成刻度点
   const ticks = useMemo(() => {
-    return generateRulerTicks(duration * 2, zoom, scrollPosition, width);
+    const fullDuration = duration * 2;
+    const result = generateRulerTicks(fullDuration, zoom, scrollPosition, width);
+    if (result.length > 0) {
+      console.log('[Ruler] ticks 详情', { width, height, tickCount: result.length, firstX: result[0]?.x, lastX: result[result.length-1]?.x });
+    }
+    return result;
   }, [duration, zoom, scrollPosition, width]);
 
   const handleClick = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = (x / width) * duration * 2;
+    const x = e.clientX - rect.left + scrollPosition;
+    const time = pixelsToTime(Math.max(0, x), zoom);
     onClick(Math.max(0, time));
   };
 
   return (
     <div
-      className="relative bg-[var(--bg-base)] border-b border-[var(--border-subtle)] cursor-pointer"
+      data-testid="ruler"
+      className="relative bg-[var(--bg-base)] border-b border-[var(--border-subtle)]"
       style={{ width, height }}
       onClick={handleClick}
     >

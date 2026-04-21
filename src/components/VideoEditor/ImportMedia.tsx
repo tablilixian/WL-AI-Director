@@ -24,6 +24,28 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getMediaDuration = (url: string, type: string): Promise<number> => {
+    return new Promise((resolve) => {
+      if (type.startsWith('video') || type.startsWith('audio')) {
+        const media = document.createElement(type.startsWith('video') ? 'video' : 'audio');
+        media.preload = 'metadata';
+        media.onloadedmetadata = () => {
+          console.log('[ImportMedia] 获取视频时长成功', { type, duration: media.duration * 1000 });
+          URL.revokeObjectURL(url);
+          resolve(media.duration * 1000);
+        };
+        media.onerror = () => {
+          console.warn('[ImportMedia] 获取视频时长失败，使用默认值');
+          URL.revokeObjectURL(url);
+          resolve(5000);
+        };
+        media.src = url;
+      } else {
+        resolve(3000);
+      }
+    });
+  };
+
   const getOrCreateTrack = useCallback((type: 'video' | 'audio' | 'text', name: string) => {
     let track = tracks.find(t => t.type === type);
     if (!track) {
@@ -47,6 +69,8 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       const videoTrack = getOrCreateTrack('video', '视频轨道');
       if (!videoTrack) continue;
 
+      const duration = await getMediaDuration(url, file.type);
+
       const clip: any = {
         id: nanoid(),
         type: 'video',
@@ -54,9 +78,9 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
         sourceId: file.name,
         sourceUrl: url,
         startTime: 0,
-        duration: 5000,
+        duration,
         inPoint: 0,
-        outPoint: 5000,
+        outPoint: duration,
         volume: 1,
         speed: 1,
         opacity: 1,
@@ -91,6 +115,8 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       const track = getOrCreateTrack('video', '视频轨道');
       if (!track) continue;
 
+      const duration = await getMediaDuration(url, file.type);
+
       const clip: any = {
         id: nanoid(),
         type: 'video',
@@ -98,9 +124,9 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
         sourceId: file.name,
         sourceUrl: url,
         startTime: 0,
-        duration: 5000,
+        duration,
         inPoint: 0,
-        outPoint: 5000,
+        outPoint: duration,
         volume: 1,
         speed: 1,
         opacity: 1,

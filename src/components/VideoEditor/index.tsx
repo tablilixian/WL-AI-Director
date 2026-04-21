@@ -54,19 +54,27 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       tracks.forEach(track => {
         removeTrack(track.id);
       });
-      
+
+      console.log('[VideoEditor] 开始导入视频', { shotsCount: project?.shots?.length });
+
       if (project?.shots && project.shots.length > 0) {
         let currentTime = 0;
-        
+
         const trackId = addTrack('video', '视频轨道');
-        
+        console.log('[VideoEditor] 创建视频轨道', { trackId });
+
         for (let i = 0; i < project.shots.length; i++) {
           const shot = project.shots[i];
+          console.log('[VideoEditor] 处理 shot', { index: i, shotId: shot.id, interval: shot.interval });
+
           if (shot.interval?.videoUrl) {
             const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
-            
+
             if (resolvedUrl) {
-              const clipDuration = shot.interval.duration || 3000;
+              const rawDuration = shot.interval.duration || 3;
+              const clipDuration = rawDuration * 1000;
+              console.log('[VideoEditor] clip 时长', { shotId: shot.id, rawDuration, clipDuration });
+
               const clip: any = {
                 id: `${project.id}-clip-${i}`,
                 type: 'video',
@@ -81,8 +89,9 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
                 speed: 1,
                 opacity: 1,
               };
-              
+
               addClip(trackId, clip);
+              console.log('[VideoEditor] 添加 clip 完成', { clipId: clip.id, duration: clipDuration });
               currentTime += clipDuration;
             }
           }

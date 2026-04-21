@@ -262,15 +262,27 @@ export const useEditorStore = create<EditorStore>()(
 
     // ---------- 片段操作 ----------
     addClip: (trackId, clip) => {
-      set(state => ({
-        tracks: state.tracks.map(t =>
+      set(state => {
+        const newTracks = state.tracks.map(t =>
           t.id === trackId
             ? { ...t, clips: [...t.clips, { ...clip, trackId }] }
             : t
-        ),
-        duration: get().calculateDuration(),
-        updatedAt: Date.now(),
-      }));
+        );
+        let maxEnd = 0;
+        for (const track of newTracks) {
+          for (const c of track.clips) {
+            const clipEnd = c.startTime + c.duration;
+            if (clipEnd > maxEnd) maxEnd = clipEnd;
+          }
+        }
+        console.log('[EditorStore] addClip 计算', { newDuration: maxEnd, clipCount: newTracks.flatMap(t => t.clips).length });
+        return {
+          tracks: newTracks,
+          duration: maxEnd,
+          updatedAt: Date.now(),
+        };
+      });
+      console.log('[EditorStore] addClip 完成', { track: get().tracks.find(t => t.id === trackId)?.clips.length, duration: get().duration });
       get().pushHistory('添加片段');
     },
 
