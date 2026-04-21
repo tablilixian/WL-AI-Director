@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useEditorStore } from '../../../stores/editorStore';
 
 interface VideoLayerProps {
@@ -14,26 +14,56 @@ interface VideoLayerProps {
   visible: boolean;
 }
 
+const PRELOAD_THRESHOLD = 2000;
+
 export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
   const isActive = props.visible && props.currentTime >= props.startTime && props.currentTime < props.startTime + props.duration;
+  const isUpcoming = props.visible && 
+    props.currentTime >= props.startTime - PRELOAD_THRESHOLD && 
+    props.currentTime < props.startTime;
+  const shouldBeLoaded = isActive || isUpcoming;
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const playState = useEditorStore(s => s.playState);
+  const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
     if (!videoRef.current) return;
-    playState === 'paused' ? videoRef.current.pause() : videoRef.current.play().catch(() => {});
-  }, [playState]);
+    
+    if (playState === 'playing' && isActive) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [playState, isActive]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isActive) return;
+    if (!video || !shouldBeLoaded) return;
+    
     const targetTime = (props.currentTime - props.startTime + props.inPoint) / 1000;
-    if (Math.abs(video.currentTime - targetTime) > 0.3) {
+    if (Math.abs(video.currentTime - targetTime) > 0.1) {
       video.currentTime = targetTime;
     }
-  }, [props.currentTime, isActive]);
+  }, [props.currentTime, shouldBeLoaded, props.startTime, props.inPoint]);
 
-  if (!isActive) {
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleCanPlay = () => setVideoReady(true);
+    video.addEventListener('canplay', handleCanPlay);
+    
+    if (video.readyState >= 3) {
+      setVideoReady(true);
+    }
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+    };
+  }, []);
+
+  if (!props.visible) {
     return null;
   }
 
@@ -42,11 +72,14 @@ export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
       ref={videoRef}
       src={props.src}
       className="absolute inset-0 w-full h-full object-contain"
-      style={{ opacity: props.opacity }}
+      style={{ 
+        opacity: props.opacity,
+        display: isActive ? 'block' : 'none',
+      }}
       muted={props.volume === 0}
       volume={props.volume}
       playsInline
-      preload="auto"
+      preload={shouldBeLoaded ? 'auto' : 'metadata'}
     />
   );
 };

@@ -13,6 +13,7 @@ export function usePlayback() {
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
+  const startCurrentTimeRef = useRef<number>(0);
 
   const animate = useCallback((timestamp: number) => {
     if (lastTimeRef.current === 0) {
@@ -20,18 +21,17 @@ export function usePlayback() {
       startTimeRef.current = timestamp;
     }
 
-    const currentTime = useEditorStore.getState().currentTime;
     const elapsed = timestamp - startTimeRef.current;
-    const newTime = currentTime + elapsed * playbackRate;
-    startTimeRef.current = timestamp;
-    lastTimeRef.current = timestamp;
-
+    const delta = elapsed * playbackRate;
+    const newTime = startCurrentTimeRef.current + delta;
+    
     const currentDuration = useEditorStore.getState().duration;
 
     if (newTime >= currentDuration) {
       if (loop) {
         storeSeek(0);
         startTimeRef.current = timestamp;
+        startCurrentTimeRef.current = 0;
       } else {
         storeSeek(currentDuration);
         useEditorStore.getState().pause();
@@ -50,6 +50,7 @@ export function usePlayback() {
     if (playState === 'playing') {
       lastTimeRef.current = 0;
       startTimeRef.current = 0;
+      startCurrentTimeRef.current = useEditorStore.getState().currentTime;
       rafRef.current = requestAnimationFrame(animate);
     } else {
       if (rafRef.current !== null) {
