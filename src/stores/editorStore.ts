@@ -322,15 +322,21 @@ export const useEditorStore = create<EditorStore>()(
       const clampedStartTime = clampTime(startTime, 0);
 
       set(state => {
-        let movedClip: Clip | null = null;
         const newTracks = state.tracks.map(t => {
+          if (t.id === oldTrack.id && t.id === newTrackId) {
+            return {
+              ...t,
+              clips: t.clips.map(c =>
+                c.id === clipId ? { ...c, trackId: newTrackId, startTime: clampedStartTime } : c
+              ),
+            };
+          }
           if (t.id === oldTrack.id) {
-            const removed = t.clips.find(c => c.id === clipId);
-            if (removed) movedClip = { ...removed, trackId: newTrackId, startTime: clampedStartTime };
             return { ...t, clips: t.clips.filter(c => c.id !== clipId) };
           }
-          if (t.id === newTrackId && movedClip) {
-            return { ...t, clips: [...t.clips, movedClip] };
+          if (t.id === newTrackId) {
+            const updatedClip = { ...clip, trackId: newTrackId, startTime: clampedStartTime };
+            return { ...t, clips: [...t.clips, updatedClip] };
           }
           return t;
         });
