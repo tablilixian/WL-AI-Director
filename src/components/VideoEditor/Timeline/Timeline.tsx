@@ -5,6 +5,7 @@
 
 import React, { useRef, useCallback, useMemo } from 'react';
 import { useEditorStore } from '../../../stores/editorStore';
+import { useSnapStore } from '../../../stores/snapStore';
 import { TRACK_HEIGHT, TRACK_HEADER_WIDTH, DEFAULT_ZOOM } from '../../../types/editor';
 import { timeToPixels, pixelsToTime, calculateTimelineWidth } from '../../../utils/timeCalculation';
 import { formatTime } from '../../../utils/timeFormat';
@@ -13,6 +14,7 @@ import { Track } from './Track';
 import { Playhead } from './Playhead';
 import { Ruler } from './Ruler';
 import { SnapControls } from './SnapControls';
+import { SnapLine } from './SnapLine';
 
 interface TimelineProps {
   /** 视口宽度，默认 800 */
@@ -43,6 +45,8 @@ export const Timeline: React.FC<TimelineProps> = ({
     setZoom,
     setScrollPosition,
   } = useEditorStore();
+
+  const activeSnap = useSnapStore(s => s.activeSnap);
 
   // 计算时间线总宽度
   const totalWidth = useMemo(() => {
@@ -210,6 +214,15 @@ export const Timeline: React.FC<TimelineProps> = ({
                 x={playheadX}
                 height={tracks.length * TRACK_HEIGHT + 32}
                 currentTime={currentTime}
+              />
+            )}
+
+            {/* 吸附线 */}
+            {activeSnap.snapped && (
+              <SnapLine
+                x={timeToPixels(activeSnap.snapTime, zoom) - scrollPosition}
+                height={tracks.length * TRACK_HEIGHT + 32}
+                label={activeSnap.snapPoint?.label}
               />
             )}
           </div>

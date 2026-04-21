@@ -5,10 +5,17 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { SnapConfig, DEFAULT_SNAP_CONFIG } from '../types/editor';
+import { SnapConfig, DEFAULT_SNAP_CONFIG, SnapPoint, SnapResult } from '../types/editor';
+
+interface ActiveSnap {
+  snapped: boolean;
+  snapTime: number;
+  snapPoint: SnapPoint | null;
+}
 
 interface SnapStore {
   config: SnapConfig;
+  activeSnap: ActiveSnap;
   toggleSnap: () => void;
   setThreshold: (threshold: number) => void;
   togglePlayheadSnap: () => void;
@@ -16,12 +23,15 @@ interface SnapStore {
   toggleClipEdgesSnap: () => void;
   toggleClipCenterSnap: () => void;
   resetConfig: () => void;
+  setActiveSnap: (snap: ActiveSnap) => void;
+  clearActiveSnap: () => void;
 }
 
 export const useSnapStore = create<SnapStore>()(
   persist(
     (set) => ({
       config: { ...DEFAULT_SNAP_CONFIG },
+      activeSnap: { snapped: false, snapTime: 0, snapPoint: null },
 
       toggleSnap: () => set((state) => ({
         config: { ...state.config, enabled: !state.config.enabled }
@@ -47,10 +57,14 @@ export const useSnapStore = create<SnapStore>()(
         config: { ...state.config, snapToClipCenter: !state.config.snapToClipCenter }
       })),
 
-      resetConfig: () => set({ config: { ...DEFAULT_SNAP_CONFIG } }),
+      resetConfig: () => set({ config: { ...DEFAULT_SNAP_CONFIG }, activeSnap: { snapped: false, snapTime: 0, snapPoint: null } }),
+
+      setActiveSnap: (snap) => set({ activeSnap: snap }),
+      clearActiveSnap: () => set({ activeSnap: { snapped: false, snapTime: 0, snapPoint: null } }),
     }),
     {
       name: 'video-editor-snap-config',
+      partialize: (state) => ({ config: state.config }),
     }
   )
 );
@@ -59,11 +73,6 @@ export const useSnapStore = create<SnapStore>()(
 // 吸附计算 Hook
 // ============================================================
 
-import {
-  Track,
-  SnapPoint,
-  SnapResult,
-} from '../types/editor';
 import { useEditorStore } from './editorStore';
 
 /**

@@ -2,7 +2,28 @@
 
 > **创建时间**: 2026-04-17
 > **分支**: feature/video-editor
-> **状态**: 开发中
+> **状态**: 核心功能已完成，持续优化中
+> **最后更新**: 2026-04-21
+
+---
+
+## 0. 开发日志
+
+### 2026-04-21 更新
+
+**Bug 修复**:
+- ✅ 修复视频切换卡顿问题
+  - 原因：VideoLayer 组件在 `isActive` 变化时卸载/重新挂载，导致 video 元素重新加载
+  - 解决：改用 CSS `display: none` 隐藏非活跃视频，保持元素在 DOM 中
+  - 添加预加载逻辑，提前 2 秒缓冲即将播放的片段
+- ✅ 修复进入编辑页面后自动播放问题
+  - 原因：`playState === 'stopped'` 时 VideoLayer 仍调用 `play()`
+  - 解决：只有 `playState === 'playing'` 时才调用 `play()`
+- ✅ 修复暂停后再播放从头开始问题
+  - 原因：usePlayback RAF 循环中 `startTimeRef` 重置导致时间计算跳变
+  - 解决：新增 `startCurrentTimeRef` 记录播放起始时间，使用增量计算
+
+**提交**: `3625f2b` - fix: 修复视频播放卡顿和自动播放问题
 
 ---
 
@@ -813,3 +834,117 @@ useEditorStore.subscribe(
 - [React Video Editor](https://www.reactvideoeditor.com/) - React 视频编辑组件库
 - [Remotion Editor Starter](https://remotion.dev/) - 基于 Remotion 的编辑器
 - [OpenVideo](https://github.com/openvideodev/openvideo) - WebCodecs + WebGL 方案
+
+---
+
+## 10. 功能验收清单
+
+### Phase 1: 基础设施 ✅
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 类型定义 | ✅ 完成 | `types/editor.ts` | Track, Clip, EditorState, Snap* 等 |
+| Store 状态管理 | ✅ 完成 | `stores/editorStore.ts` | Zustand + subscribeWithSelector |
+| 吸附配置 Store | ✅ 完成 | `stores/snapStore.ts` | persist 中间件 |
+| 存储服务 | ✅ 完成 | `services/editorStorage.ts` | localStorage 实现 |
+| 时间格式化 | ✅ 完成 | `utils/timeFormat.ts` | |
+| 时间计算 | ✅ 完成 | `utils/timeCalculation.ts` | timeToPixels, pixelsToTime |
+
+### Phase 2: 时间线核心 ✅
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 时间线主容器 | ✅ 完成 | `Timeline/Timeline.tsx` | 滚动、缩放 |
+| 轨道组件 | ✅ 完成 | `Timeline/Track.tsx` | 背景网格、空状态 |
+| 轨道头部 | ✅ 完成 | `Timeline/TrackHeader.tsx` | 名称、锁定、可见性 |
+| 片段组件 | ✅ 完成 | `Timeline/Clip.tsx` | 颜色区分、选中状态 |
+| 播放头 | ✅ 完成 | `Timeline/Playhead.tsx` | 竖线 + 时间显示 |
+| 时间标尺 | ✅ 完成 | `Timeline/Ruler.tsx` | 点击跳转 |
+| 拖拽移动 | ✅ 完成 | `hooks/useTimelineDrag.ts` | 轨道内/间移动 |
+| 边缘裁剪 | ✅ 完成 | `hooks/useTimelineTrim.ts` | 左右边缘调整 |
+| 分割功能 | ❌ 待开发 | `hooks/useTimelineSplit.ts` | 计划中 |
+| 吸附控制 UI | ✅ 完成 | `Timeline/SnapControls.tsx` | |
+| 吸附线 | ✅ 完成 | `Timeline/SnapLine.tsx` | |
+
+### Phase 3: 预览播放 ✅
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 预览画布 | ✅ 完成 | `Preview/PreviewCanvas.tsx` | 16:9 比例 |
+| 视频图层 | ✅ 完成 | `Preview/VideoLayer.tsx` | 预加载优化 |
+| 文字图层 | ✅ 完成 | `Preview/TextLayer.tsx` | Canvas 绘制 |
+| 音频图层 | ✅ 完成 | `Preview/AudioLayer.tsx` | |
+| 播放控制 | ✅ 完成 | `Preview/PlaybackControls.tsx` | |
+| 播放循环 | ✅ 完成 | `hooks/usePlayback.ts` | RAF 循环，增量计算 |
+| 时间同步 | ✅ 完成 | - | 时间线 ↔ 预览同步 |
+| 循环播放 | ✅ 完成 | - | toggleLoop |
+| 播放速率 | ✅ 完成 | - | 0.5x, 1x, 1.5x, 2x |
+
+### Phase 4: 吸附系统 ✅
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 吸附计算 | ✅ 完成 | `stores/snapStore.ts` | useSnapCalculation |
+| 边界吸附 | ✅ 完成 | - | clip-start, clip-end |
+| 中心吸附 | ✅ 完成 | - | clip-center |
+| 播放头吸附 | ✅ 完成 | - | playhead |
+| 时间标记吸附 | ✅ 完成 | - | 5s 间隔 |
+| 吸附配置 UI | ✅ 完成 | `Timeline/SnapControls.tsx` | 开关、阈值 |
+
+### Phase 5: 字幕功能 ⚠️
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 文字片段类型 | ✅ 完成 | `types/editor.ts` | TextClip 接口 |
+| 文字图层渲染 | ✅ 完成 | `Preview/TextLayer.tsx` | |
+| 文字编辑器 UI | ⚠️ 部分完成 | `Preview/TextEditor.tsx` | 未集成到主界面 |
+| 样式编辑 | ❌ 待开发 | - | 字体、大小、颜色 |
+| 位置编辑 | ❌ 待开发 | - | x, y 坐标 |
+| 文字动画 | ❌ 待开发 | - | fade, slide, pop |
+
+### Phase 6: 音频功能 ⚠️
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 音频轨道 | ✅ 完成 | `stores/editorStore.ts` | addTrack('audio') |
+| 音频片段类型 | ✅ 完成 | `types/editor.ts` | AudioClip 接口 |
+| 音频图层 | ✅ 完成 | `Preview/AudioLayer.tsx` | |
+| 音量控制 | ⚠️ 基础完成 | - | volume 属性 |
+| 淡入淡出 | ❌ 待开发 | - | fadeIn, fadeOut |
+| 波形显示 | ❌ 待开发 | - | |
+
+### Phase 7: 素材与持久化 ⚠️
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 项目导入 | ✅ 完成 | `VideoEditor/index.tsx` | 从 project.shots 导入 |
+| 导入媒体 UI | ✅ 完成 | `ImportMedia.tsx` | |
+| 自动保存 | ✅ 完成 | `stores/editorStore.ts` | 30 秒防抖 |
+| localStorage 存储 | ✅ 完成 | `services/editorStorage.ts` | |
+| Undo/Redo | ✅ 完成 | `stores/editorStore.ts` | 最多 50 步 |
+| 素材库 | ⚠️ 部分完成 | `Preview/AssetLibrary.tsx` | 未完善 |
+
+### Phase 8: UI 打磨与集成 ⚠️
+
+| 功能 | 状态 | 文件 | 备注 |
+|------|------|------|------|
+| 工具栏 | ✅ 完成 | `VideoEditor/index.tsx` | 播放控制、工具选择 |
+| 快捷键 | ✅ 完成 | `VideoEditor/index.tsx` | Space, Ctrl+Z, Home, End |
+| 缩放控制 | ✅ 完成 | `Timeline/Timeline.tsx` | 滑块 + Ctrl+滚轮 |
+| 侧边面板 | ❌ 待开发 | `Sidebar/` | Inspector, AssetLibrary |
+| 导出功能 | ❌ 待开发 | - | 仅占位符 |
+| 虚拟滚动 | ❌ 待开发 | - | 性能优化 |
+
+### 总体完成度
+
+| Phase | 完成度 | 备注 |
+|-------|--------|------|
+| Phase 1: 基础设施 | 100% | ✅ |
+| Phase 2: 时间线核心 | 85% | 分割功能待开发 |
+| Phase 3: 预览播放 | 95% | 基本完成 |
+| Phase 4: 吸附系统 | 100% | ✅ |
+| Phase 5: 字幕功能 | 40% | 基础类型完成，UI 待完善 |
+| Phase 6: 音频功能 | 35% | 基础类型完成，功能待开发 |
+| Phase 7: 素材与持久化 | 70% | 核心完成，素材库待完善 |
+| Phase 8: UI 打磨与集成 | 50% | 工具栏完成，侧边面板待开发 |
+| **总体** | **~70%** | 核心编辑功能可用 |

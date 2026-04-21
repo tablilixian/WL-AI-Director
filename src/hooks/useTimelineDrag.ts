@@ -5,7 +5,8 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { useEditorStore } from '../stores/editorStore';
-import { useSnapCalculation } from '../stores/snapStore';
+import { useSnapCalculation, useSnapStore } from '../stores/snapStore';
+import { SnapPoint } from '../types/editor';
 import { pixelsToTime } from '../utils/timeCalculation';
 
 export function useTimelineDrag(clipId: string) {
@@ -18,6 +19,8 @@ export function useTimelineDrag(clipId: string) {
 
   const { zoom, tracks, moveClip, findClip, findTrackByClip, pushHistory } = useEditorStore();
   const { calculateClipSnap, getSnapPoints } = useSnapCalculation();
+  const setActiveSnap = useSnapStore(s => s.setActiveSnap);
+  const clearActiveSnap = useSnapStore(s => s.clearActiveSnap);
 
   const handleDragStart = useCallback((e: React.PointerEvent) => {
     const clip = findClip(clipId);
@@ -37,7 +40,8 @@ export function useTimelineDrag(clipId: string) {
     };
 
     setIsDragging(true);
-  }, [clipId, findClip, findTrackByClip]);
+    clearActiveSnap();
+  }, [clipId, findClip, findTrackByClip, clearActiveSnap]);
 
   const handleDragMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging) return;
@@ -49,25 +53,32 @@ export function useTimelineDrag(clipId: string) {
     // 边界限制
     newStartTime = Math.max(0, newStartTime);
 
-    // 吸附处理
+    // 吸附处理：不过滤当前轨道，允许同轨道内片段互相吸附
     const clip = findClip(clipId);
     if (clip) {
-      const snapPoints = getSnapPoints(clipId, dragState.current.trackId);
-      const { finalTime } = calculateClipSnap(newStartTime, clip.duration, snapPoints);
+      const snapPoints = getSnapPoints(clipId);
+      const { finalTime, snapInfo: snap } = calculateClipSnap(newStartTime, clip.duration, snapPoints);
       newStartTime = finalTime;
+      
+      if (snap?.snapped) {
+        setActiveSnap({ snapped: true, snapTime: snap.snappedTime, snapPoint: snap.snapPoint });
+      } else {
+        clearActiveSnap();
+      }
     }
 
     // 实时更新位置
     moveClip(clipId, dragState.current.trackId, newStartTime);
-  }, [isDragging, zoom, clipId, findClip, getSnapPoints, calculateClipSnap, moveClip]);
+  }, [isDragging, zoom, clipId, findClip, getSnapPoints, calculateClipSnap, moveClip, setActiveSnap, clearActiveSnap]);
 
   const handleDragEnd = useCallback((e: React.PointerEvent) => {
     if (!isDragging) return;
 
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     setIsDragging(false);
+    clearActiveSnap();
     pushHistory('移动片段');
-  }, [isDragging, pushHistory]);
+  }, [isDragging, pushHistory, clearActiveSnap]);
 
   return {
     isDragging,
