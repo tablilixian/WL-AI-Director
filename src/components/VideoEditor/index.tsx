@@ -137,13 +137,30 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
   useEffect(() => {
     const hasClips = tracks.some(t => t.clips.length > 0);
-    if (hasClips) {
-      const timer = setTimeout(() => {
-        save();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
+    if (!hasClips) return;
+
+    const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
+    console.log('[VideoEditor] tracks 变化，执行保存，片段数:', clipCount);
+    save();
   }, [tracks, save]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log('[VideoEditor] 页面卸载，同步保存');
+      save();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [save]);
+
+  useEffect(() => {
+    console.log('[VideoEditor] 组件挂载，当前片段数:', tracks.reduce((sum, t) => sum + t.clips.length, 0));
+    return () => {
+      console.log('[VideoEditor] 组件卸载，当前片段数:', tracks.reduce((sum, t) => sum + t.clips.length, 0));
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
