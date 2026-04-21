@@ -46,25 +46,26 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     save,
   } = useEditorStore();
   const importedRef = useRef<string>('');
-  const loadedRef = useRef(false);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-    const tryLoadSaved = async () => {
+    const init = async () => {
       const hasSaved = await load();
       if (hasSaved) {
         console.log('[VideoEditor] 恢复上次编辑状态');
-      } else {
-        console.log('[VideoEditor] 没有保存的状态，初始化默认轨道');
-        addTrack('video', '视频 1');
-        addTrack('audio', '音频 1');
-        addTrack('text', '字幕 1');
+        return;
       }
+
+      console.log('[VideoEditor] 没有保存的状态，初始化默认轨道');
+      addTrack('video', '视频 1');
+      addTrack('audio', '音频 1');
+      addTrack('text', '字幕 1');
     };
 
-    tryLoadSaved();
+    init();
   }, [load, addTrack]);
 
   useEffect(() => {

@@ -536,10 +536,9 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 持久化 ----------
     save: async () => {
       const state = get();
-      if (!state.projectId) return;
 
       const data = {
-        projectId: state.projectId,
+        projectId: state.projectId || 'default',
         createdAt: state.createdAt,
         updatedAt: state.updatedAt,
         tracks: state.tracks.map(t => ({
@@ -561,6 +560,13 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     load: async () => {
+      const state = get();
+      const hasExistingClips = state.tracks.some(t => t.clips.length > 0);
+      if (hasExistingClips) {
+        console.log('[EditorStore] 已有片段数据，跳过加载');
+        return false;
+      }
+
       try {
         const saved = localStorage.getItem(PERSIST_KEY);
         if (!saved) return false;
@@ -581,19 +587,28 @@ export const useEditorStore = create<EditorStore>()(
         history = [snapshotTracks(data.tracks, '加载保存')];
         historyIndex = 0;
 
+        const duration = data.tracks.reduce((max: number, t: Track) => {
+          for (const c of t.clips) {
+            const end = c.startTime + c.duration;
+            if (end > max) max = end;
+          }
+          return max;
+        }, 0);
+
         set({
-          ...data,
+          projectId: data.projectId || 'default',
+          createdAt: data.createdAt || Date.now(),
+          updatedAt: data.updatedAt || Date.now(),
+          tracks: data.tracks,
+          zoom: data.zoom || DEFAULT_ZOOM,
           playState: 'stopped',
           currentTime: 0,
+          duration,
           selectedClipIds: [],
           scrollPosition: 0,
           canUndo: false,
           canRedo: false,
-          duration: 0,
         });
-
-        const duration = get().calculateDuration();
-        set({ duration });
 
         console.log('[EditorStore] 从 localStorage 加载成功');
         return true;
