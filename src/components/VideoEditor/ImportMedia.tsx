@@ -31,12 +31,10 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
         media.preload = 'metadata';
         media.onloadedmetadata = () => {
           console.log('[ImportMedia] 获取视频时长成功', { type, duration: media.duration * 1000 });
-          URL.revokeObjectURL(url);
           resolve(media.duration * 1000);
         };
         media.onerror = () => {
           console.warn('[ImportMedia] 获取视频时长失败，使用默认值');
-          URL.revokeObjectURL(url);
           resolve(5000);
         };
         media.src = url;

@@ -287,6 +287,14 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     removeClips: (clipIds) => {
+      const { tracks } = get();
+      for (const track of tracks) {
+        for (const clip of track.clips) {
+          if (clipIds.includes(clip.id) && clip.sourceUrl && clip.sourceUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(clip.sourceUrl);
+          }
+        }
+      }
       set(state => ({
         tracks: state.tracks.map(t => ({
           ...t,
@@ -561,6 +569,14 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     clear: () => {
+      const { tracks } = get();
+      for (const track of tracks) {
+        for (const clip of track.clips) {
+          if (clip.sourceUrl && clip.sourceUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(clip.sourceUrl);
+          }
+        }
+      }
       history = [];
       historyIndex = -1;
       set({ ...initialState });
