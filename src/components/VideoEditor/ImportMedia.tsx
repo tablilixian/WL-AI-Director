@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Upload, X, Plus } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
+import { indexedDBService } from '../../services/indexedDB';
 import { nanoid } from 'nanoid';
 
 interface MediaAsset {
@@ -19,7 +20,7 @@ interface ImportMediaProps {
 export const ImportMedia: React.FC<ImportMediaProps> = ({
   onImport,
 }) => {
-  const { tracks, addTrack, addClip, clear } = useEditorStore();
+  const { tracks, addTrack, addClip, clear, save } = useEditorStore();
   const [showPanel, setShowPanel] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,11 +70,18 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const duration = await getMediaDuration(url, file.type);
 
+      const sourceId = `file-${nanoid()}`;
+      try {
+        await indexedDBService.saveFile(sourceId, file);
+      } catch (err) {
+        console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+      }
+
       const clip: any = {
         id: nanoid(),
         type: 'video',
         sourceType: type,
-        sourceId: file.name,
+        sourceId,
         sourceUrl: url,
         startTime: 0,
         duration,
@@ -87,11 +95,12 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       addClip(videoTrack.id, clip);
     }
 
+    await save();
     setImporting(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [getOrCreateTrack, addClip]);
+  }, [getOrCreateTrack, addClip, save]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -115,11 +124,18 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const duration = await getMediaDuration(url, file.type);
 
+      const sourceId = `file-${nanoid()}`;
+      try {
+        await indexedDBService.saveFile(sourceId, file);
+      } catch (err) {
+        console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+      }
+
       const clip: any = {
         id: nanoid(),
         type: 'video',
         sourceType: type,
-        sourceId: file.name,
+        sourceId,
         sourceUrl: url,
         startTime: 0,
         duration,
@@ -133,11 +149,13 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       addClip(track.id, clip);
     }
 
+    await save();
     setImporting(false);
-  }, [getOrCreateTrack, addClip]);
+  }, [getOrCreateTrack, addClip, save]);
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     clear();
+    await save();
   };
 
   const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);

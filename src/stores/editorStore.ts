@@ -16,6 +16,9 @@ import {
 } from '../types/editor';
 import { clampTime } from '../utils/timeFormat';
 import { MIN_ZOOM, MAX_ZOOM, TRACK_HEADER_WIDTH } from '../types/editor';
+import { indexedDBService } from '../services/indexedDB';
+
+const PERSIST_KEY = 'video-editor-persist';
 
 // ============================================================
 // Store 接口
@@ -75,7 +78,7 @@ interface EditorStore extends EditorState {
 
   // ---------- 持久化 ----------
   save: () => Promise<void>;
-  load: (projectId: string) => Promise<boolean>;
+  load: () => Promise<boolean>;
   clear: () => void;
 
   // ---------- 内部方法 ----------
@@ -263,14 +266,24 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 片段操作 ----------
     addClip: (trackId, clip) => {
       set(state => {
+        const track = state.tracks.find(t => t.id === trackId);
+        if (!track) return state;
+
+        let startTime = clip.startTime;
+        if (track.clips.length > 0) {
+          const lastClip = track.clips[track.clips.length - 1];
+          startTime = lastClip.startTime + lastClip.duration;
+        }
+
+        const newClip = { ...clip, trackId, startTime };
         const newTracks = state.tracks.map(t =>
           t.id === trackId
-            ? { ...t, clips: [...t.clips, { ...clip, trackId }] }
+            ? { ...t, clips: [...t.clips, newClip] }
             : t
         );
         let maxEnd = 0;
-        for (const track of newTracks) {
-          for (const c of track.clips) {
+        for (const t of newTracks) {
+          for (const c of t.clips) {
             const clipEnd = c.startTime + c.duration;
             if (clipEnd > maxEnd) maxEnd = clipEnd;
           }
@@ -523,45 +536,67 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 持久化 ----------
     save: async () => {
       const state = get();
+      if (!state.projectId) return;
+
       const data = {
         projectId: state.projectId,
         createdAt: state.createdAt,
         updatedAt: state.updatedAt,
-        tracks: state.tracks,
+        tracks: state.tracks.map(t => ({
+          ...t,
+          clips: t.clips.map(c => ({
+            ...c,
+            sourceUrl: undefined,
+          })),
+        })),
         zoom: state.zoom,
       };
 
       try {
-        localStorage.setItem(
-          `video-editor-${state.projectId}`,
-          JSON.stringify(data)
-        );
-        console.log('[EditorStore] 已保存到 localStorage:', state.projectId);
+        localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
+        console.log('[EditorStore] 已保存到 localStorage');
       } catch (error) {
         console.error('[EditorStore] 保存失败:', error);
       }
     },
 
-    load: async (projectId) => {
+    load: async () => {
       try {
-        const saved = localStorage.getItem(`video-editor-${projectId}`);
-        if (saved) {
-          const data = JSON.parse(saved);
-          history = [snapshotTracks(data.tracks, '加载保存')];
-          historyIndex = 0;
+        const saved = localStorage.getItem(PERSIST_KEY);
+        if (!saved) return false;
 
-          set({
-            ...data,
-            playState: 'stopped',
-            currentTime: 0,
-            selectedClipIds: [],
-            scrollPosition: 0,
-            canUndo: false,
-            canRedo: false,
-          });
-          console.log('[EditorStore] 从 localStorage 加载:', projectId);
-          return true;
+        const data = JSON.parse(saved);
+        
+        for (const track of data.tracks) {
+          for (const clip of track.clips) {
+            if (clip.sourceId) {
+              const file = await indexedDBService.getFile(clip.sourceId);
+              if (file) {
+                clip.sourceUrl = URL.createObjectURL(file);
+              }
+            }
+          }
         }
+
+        history = [snapshotTracks(data.tracks, '加载保存')];
+        historyIndex = 0;
+
+        set({
+          ...data,
+          playState: 'stopped',
+          currentTime: 0,
+          selectedClipIds: [],
+          scrollPosition: 0,
+          canUndo: false,
+          canRedo: false,
+          duration: 0,
+        });
+
+        const duration = get().calculateDuration();
+        set({ duration });
+
+        console.log('[EditorStore] 从 localStorage 加载成功');
+        return true;
       } catch (error) {
         console.error('[EditorStore] 加载失败:', error);
       }
