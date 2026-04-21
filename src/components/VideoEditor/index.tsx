@@ -179,7 +179,43 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   }, [setActiveTool]);
 
   const handleExport = useCallback(() => {
-    console.log('导出项目');
+    const state = useEditorStore.getState();
+    const exportData = {
+      projectId: state.projectId,
+      createdAt: state.createdAt,
+      updatedAt: state.updatedAt,
+      duration: state.duration,
+      zoom: state.zoom,
+      tracks: state.tracks.map(t => ({
+        id: t.id,
+        name: t.name,
+        type: t.type,
+        locked: t.locked,
+        visible: t.visible,
+        clips: t.clips.map(c => ({
+          id: c.id,
+          sourceType: c.sourceType,
+          sourceId: c.sourceId,
+          sourceUrl: c.sourceUrl ? '(blob URL)' : null,
+          startTime: c.startTime,
+          duration: c.duration,
+          inPoint: c.inPoint,
+          outPoint: c.outPoint,
+          volume: c.volume,
+          speed: c.speed,
+          opacity: c.opacity,
+        })),
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `video-editor-state-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('[VideoEditor] 导出状态:', exportData);
   }, []);
 
   const rates = [0.5, 1, 1.5, 2];
