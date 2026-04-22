@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Scissors,
-  Upload, Download, Undo2, Redo2, Repeat
+  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson
 } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { Timeline } from './Timeline/Timeline';
@@ -11,8 +11,6 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
-import { indexedDBService } from '../../services/indexedDB';
-import { nanoid } from 'nanoid';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -42,10 +40,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     setActiveTool,
     addTrack,
     addClip,
-    removeTrack,
     tracks,
     load,
     save,
+    reset,
   } = useEditorStore();
   const importedRef = useRef<string>('');
   const initializingRef = useRef(false);
@@ -61,69 +59,6 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         return;
       }
 
-      const projectId = project?.id;
-      if (projectId && project?.shots && project.shots.length > 0) {
-        console.log('[VideoEditor] 开始从项目导入视频', { shotsCount: project.shots.length });
-
-        let currentTime = 0;
-        const trackId = addTrack('video', '视频轨道');
-
-        for (let i = 0; i < project.shots.length; i++) {
-          const shot = project.shots[i];
-
-          if (shot.interval?.videoUrl) {
-            const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
-
-            if (resolvedUrl) {
-              const rawDuration = shot.interval.duration || 3;
-              const clipDuration = rawDuration * 1000;
-
-              let sourceId = `file-${nanoid()}`;
-              
-              if (resolvedUrl.startsWith('blob:')) {
-                try {
-                  const response = await fetch(resolvedUrl);
-                  const blob = await response.blob();
-                  const file = new File([blob], `shot-${i}.mp4`, { type: blob.type });
-                  await indexedDBService.saveFile(sourceId, file);
-                  console.log('[VideoEditor] 视频已保存到 IndexedDB', { sourceId });
-                } catch (err) {
-                  console.error('[VideoEditor] 保存视频到 IndexedDB 失败:', err);
-                }
-              }
-
-              const clip: any = {
-                id: `${project.id}-clip-${i}`,
-                type: 'video',
-                sourceType: 'video',
-                sourceId,
-                sourceUrl: resolvedUrl,
-                startTime: currentTime,
-                duration: clipDuration,
-                inPoint: 0,
-                outPoint: clipDuration * 1000,
-                volume: 1,
-                speed: 1,
-                opacity: 1,
-              };
-
-              addClip(trackId, clip);
-              currentTime += clipDuration;
-            }
-          }
-        }
-        
-        if (currentTime === 0) {
-          addTrack('video', '视频 1');
-          addTrack('audio', '音频 1');
-          addTrack('text', '字幕 1');
-        }
-        
-        importedRef.current = projectId;
-        console.log('[VideoEditor] 项目导入完成');
-        return;
-      }
-
       console.log('[VideoEditor] 没有保存的状态，初始化默认轨道');
       addTrack('video', '视频 1');
       addTrack('audio', '音频 1');
@@ -131,89 +66,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     };
 
     init();
-  }, [load, addTrack, addClip, project]);
-
-  useEffect(() => {
-    const projectId = project?.id;
-    if (!projectId || importedRef.current === projectId) return;
-    importedRef.current = projectId;
-
-    const hasSavedClips = tracks.some(t => t.clips.length > 0);
-    if (hasSavedClips) {
-      console.log('[VideoEditor] 已有片段数据，跳过项目导入');
-      return;
-    }
-
-    console.log('[VideoEditor] 项目 ID 变化，重新导入视频', { projectId });
-
-    const importVideos = async () => {
-      tracks.forEach(track => {
-        removeTrack(track.id);
-      });
-
-      if (project?.shots && project.shots.length > 0) {
-        let currentTime = 0;
-        const trackId = addTrack('video', '视频轨道');
-
-        for (let i = 0; i < project.shots.length; i++) {
-          const shot = project.shots[i];
-
-          if (shot.interval?.videoUrl) {
-            const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
-
-            if (resolvedUrl) {
-              const rawDuration = shot.interval.duration || 3;
-              const clipDuration = rawDuration * 1000;
-
-              let sourceId = `file-${nanoid()}`;
-              
-              if (resolvedUrl.startsWith('blob:')) {
-                try {
-                  const response = await fetch(resolvedUrl);
-                  const blob = await response.blob();
-                  const file = new File([blob], `shot-${i}.mp4`, { type: blob.type });
-                  await indexedDBService.saveFile(sourceId, file);
-                  console.log('[VideoEditor] 视频已保存到 IndexedDB', { sourceId });
-                } catch (err) {
-                  console.error('[VideoEditor] 保存视频到 IndexedDB 失败:', err);
-                }
-              }
-
-              const clip: any = {
-                id: `${project.id}-clip-${i}`,
-                type: 'video',
-                sourceType: 'video',
-                sourceId,
-                sourceUrl: resolvedUrl,
-                startTime: currentTime,
-                duration: clipDuration,
-                inPoint: 0,
-                outPoint: clipDuration * 1000,
-                volume: 1,
-                speed: 1,
-                opacity: 1,
-              };
-
-              addClip(trackId, clip);
-              currentTime += clipDuration;
-            }
-          }
-        }
-        
-        if (currentTime === 0) {
-          addTrack('video', '视频 1');
-          addTrack('audio', '音频 1');
-          addTrack('text', '字幕 1');
-        }
-      } else {
-        addTrack('video', '视频 1');
-        addTrack('audio', '音频 1');
-        addTrack('text', '字幕 1');
-      }
-    };
-
-    importVideos();
-  }, [project?.id]);
+  }, [load, addTrack]);
 
   useEffect(() => {
     const hasClips = tracks.some(t => t.clips.length > 0);
@@ -272,7 +125,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     setActiveTool(tool);
   }, [setActiveTool]);
 
-  const handleExport = useCallback(() => {
+  const handleExportJSON = useCallback(() => {
     const state = useEditorStore.getState();
     const exportData = {
       projectId: state.projectId,
@@ -288,6 +141,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         visible: t.visible,
         clips: t.clips.map(c => ({
           id: c.id,
+          name: c.name,
           sourceType: c.sourceType,
           sourceId: c.sourceId,
           sourceUrl: c.sourceUrl ? '(blob URL)' : null,
@@ -309,8 +163,148 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     a.download = `video-editor-state-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    console.log('[VideoEditor] 导出状态:', exportData);
+    console.log('[VideoEditor] 导出 JSON:', exportData);
   }, []);
+
+  const handleExportVideo = useCallback(async () => {
+    const state = useEditorStore.getState();
+    const videoTracks = state.tracks.filter(t => t.type === 'video' && t.visible);
+    const audioTracks = state.tracks.filter(t => t.type === 'audio' && t.visible);
+
+    if (videoTracks.length === 0 && audioTracks.length === 0) {
+      alert('没有可导出的内容');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const stream = canvas.captureStream(30);
+
+    const audioElements: HTMLAudioElement[] = [];
+    for (const track of audioTracks) {
+      for (const clip of track.clips) {
+        if (clip.sourceUrl) {
+          const audio = new Audio(clip.sourceUrl);
+          audio.volume = clip.volume ?? 1;
+          audioElements.push(audio);
+          const audioStream = (audio as any).captureStream ? (audio as any).captureStream() : null;
+          if (audioStream) {
+            audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+          }
+        }
+      }
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+    const chunks: Blob[] = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `exported-video-${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      audioElements.forEach(audio => {
+        audio.pause();
+        audio.src = '';
+      });
+    };
+
+    recorder.start();
+
+    const totalDuration = state.duration;
+    const startTime = performance.now();
+
+    const videoElements: { el: HTMLVideoElement; clip: any }[] = [];
+    for (const track of videoTracks) {
+      for (const clip of track.clips) {
+        if (clip.sourceUrl) {
+          const video = document.createElement('video');
+          video.src = clip.sourceUrl;
+          video.muted = true;
+          video.preload = 'auto';
+          await new Promise<void>((resolve) => {
+            video.onloadeddata = () => resolve();
+            video.onerror = () => resolve();
+          });
+          videoElements.push({ el: video, clip });
+        }
+      }
+    }
+
+    const renderFrame = () => {
+      const elapsed = performance.now() - startTime;
+      const currentTime = elapsed;
+
+      if (currentTime >= totalDuration) {
+        recorder.stop();
+        return;
+      }
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (const { el, clip } of videoElements) {
+        if (currentTime >= clip.startTime && currentTime < clip.startTime + clip.duration) {
+          const clipTime = (currentTime - clip.startTime + clip.inPoint) / 1000;
+          if (Math.abs(el.currentTime - clipTime) > 0.1) {
+            el.currentTime = clipTime;
+          }
+          if (el.readyState >= 2) {
+            ctx.globalAlpha = clip.opacity ?? 1;
+            ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      for (const track of state.tracks.filter(t => t.type === 'text' && t.visible)) {
+        for (const clip of track.clips) {
+          if (currentTime >= clip.startTime && currentTime < clip.startTime + clip.duration) {
+            const textClip = clip as any;
+            if (textClip.text) {
+              ctx.fillStyle = textClip.color || '#ffffff';
+              ctx.font = `${textClip.fontWeight || 400} ${textClip.fontSize || 48}px ${textClip.fontFamily || 'sans-serif'}`;
+              ctx.textAlign = textClip.align || 'center';
+              const x = (textClip.x ?? 50) / 100 * canvas.width;
+              const y = (textClip.y ?? 50) / 100 * canvas.height;
+              ctx.fillText(textClip.text, x, y);
+            }
+          }
+        }
+      }
+
+      requestAnimationFrame(renderFrame);
+    };
+
+    videoElements.forEach(({ el }) => el.play());
+    audioElements.forEach(audio => audio.play());
+    renderFrame();
+  }, []);
+
+  const handleReset = useCallback(async () => {
+    if (window.confirm('确定要重置编辑器吗？这将清除所有编辑状态并重新导入项目视频。')) {
+      await reset();
+      importedRef.current = '';
+      initializingRef.current = false;
+      console.log('[VideoEditor] 已重置编辑器');
+    }
+  }, [reset]);
 
   const rates = [0.5, 1, 1.5, 2];
 
@@ -439,14 +433,33 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
           <div className="w-px h-5 bg-[var(--border-subtle)] mx-1" />
 
-          <ImportMedia />
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+            title="重置编辑器"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            重置
+          </button>
+
+          <ImportMedia project={project} />
 
           <button
-            onClick={handleExport}
+            onClick={handleExportJSON}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] transition-colors"
+            title="导出 JSON 工程文件"
+          >
+            <FileJson className="w-3.5 h-3.5" />
+            导出 JSON
+          </button>
+
+          <button
+            onClick={handleExportVideo}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+            title="导出视频文件"
           >
             <Download className="w-3.5 h-3.5" />
-            导出
+            导出视频
           </button>
         </div>
       </div>

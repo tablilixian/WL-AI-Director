@@ -1,8 +1,10 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Upload, X, Plus } from 'lucide-react';
+import { Upload, X, Plus, FolderOpen } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { indexedDBService } from '../../services/indexedDB';
 import { nanoid } from 'nanoid';
+import { ProjectState } from '../../../types';
+import { ImportFromProject } from './ImportFromProject';
 
 interface MediaAsset {
   id: string;
@@ -15,14 +17,17 @@ interface MediaAsset {
 
 interface ImportMediaProps {
   onImport?: (clips: any[]) => void;
+  project?: ProjectState;
 }
 
 export const ImportMedia: React.FC<ImportMediaProps> = ({
   onImport,
+  project,
 }) => {
   const { tracks, addTrack, addClip, clear, save } = useEditorStore();
   const [showPanel, setShowPanel] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'file' | 'project'>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getMediaDuration = (url: string, type: string): Promise<number> => {
@@ -65,10 +70,13 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       const type = file.type.startsWith('video') ? 'video' 
         : file.type.startsWith('audio') ? 'audio' : 'image';
 
-      const videoTrack = getOrCreateTrack('video', '视频轨道');
-      if (!videoTrack) continue;
+      const trackType = type === 'audio' ? 'audio' : 'video';
+      const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
+      const track = getOrCreateTrack(trackType, trackName);
+      if (!track) continue;
 
       const duration = await getMediaDuration(url, file.type);
+      const fileName = file.name.replace(/\.[^/.]+$/, '');
 
       const sourceId = `file-${nanoid()}`;
       try {
@@ -79,20 +87,21 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const clip: any = {
         id: nanoid(),
-        type: 'video',
+        type: type === 'image' ? 'image' : type,
         sourceType: type,
         sourceId,
         sourceUrl: url,
+        name: fileName,
         startTime: 0,
         duration,
         inPoint: 0,
         outPoint: duration,
-        volume: 1,
+        volume: type === 'audio' ? 1 : undefined,
         speed: 1,
-        opacity: 1,
+        opacity: type === 'image' ? 1 : undefined,
       };
 
-      addClip(videoTrack.id, clip);
+      addClip(track.id, clip);
     }
 
     await save();
@@ -119,10 +128,13 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       const type = file.type.startsWith('video') ? 'video' 
         : file.type.startsWith('audio') ? 'audio' : 'image';
 
-      const track = getOrCreateTrack('video', '视频轨道');
+      const trackType = type === 'audio' ? 'audio' : 'video';
+      const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
+      const track = getOrCreateTrack(trackType, trackName);
       if (!track) continue;
 
       const duration = await getMediaDuration(url, file.type);
+      const fileName = file.name.replace(/\.[^/.]+$/, '');
 
       const sourceId = `file-${nanoid()}`;
       try {
@@ -133,17 +145,18 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const clip: any = {
         id: nanoid(),
-        type: 'video',
+        type: type === 'image' ? 'image' : type,
         sourceType: type,
         sourceId,
         sourceUrl: url,
+        name: fileName,
         startTime: 0,
         duration,
         inPoint: 0,
         outPoint: duration,
-        volume: 1,
+        volume: type === 'audio' ? 1 : undefined,
         speed: 1,
-        opacity: 1,
+        opacity: type === 'image' ? 1 : undefined,
       };
 
       addClip(track.id, clip);
@@ -157,6 +170,47 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
     clear();
     await save();
   };
+
+  const handleProjectImport = useCallback(async (shots: any[]) => {
+    if (shots.length === 0) return;
+
+    setImporting(true);
+
+    const videoTrack = getOrCreateTrack('video', '视频轨道');
+    if (!videoTrack) {
+      setImporting(false);
+      return;
+    }
+
+    let currentTime = 0;
+
+    for (const shot of shots) {
+      const clipDuration = shot.duration * 1000;
+
+      const clip: any = {
+        id: nanoid(),
+        type: 'video',
+        sourceType: 'video',
+        sourceId: shot.id,
+        sourceUrl: shot.videoUrl,
+        name: `片段 ${shot.index + 1}`,
+        startTime: currentTime,
+        duration: clipDuration,
+        inPoint: 0,
+        outPoint: clipDuration,
+        volume: 1,
+        speed: 1,
+        opacity: 1,
+      };
+
+      addClip(videoTrack.id, clip);
+      currentTime += clipDuration;
+    }
+
+    await save();
+    setImporting(false);
+    setShowPanel(false);
+  }, [getOrCreateTrack, addClip, save]);
 
   const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
 
@@ -180,7 +234,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
           添加素材 ({clipCount})
         </button>
       ) : (
-        <div className="absolute top-0 right-0 w-72 bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-lg shadow-xl z-50">
+        <div className="absolute top-0 right-0 w-80 bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-lg shadow-xl z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
             <h3 className="text-sm font-medium text-[var(--text-primary)]">添加素材</h3>
             <button
@@ -191,50 +245,82 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
             </button>
           </div>
 
-          <div 
-            className="p-4"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
+          <div className="flex border-b border-[var(--border-subtle)]">
             <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="w-full py-6 border-2 border-dashed border-[var(--border-subtle)] rounded-lg text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors flex flex-col items-center gap-2 disabled:opacity-50"
+              onClick={() => setActiveTab('file')}
+              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'file'
+                  ? 'text-[var(--accent)] border-b-2 border-[var(--accent)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              {importing ? (
-                <span className="text-xs">导入中...</span>
-              ) : (
-                <>
-                  <Upload className="w-6 h-6" />
-                  <span className="text-xs">点击上传文件</span>
-                  <span className="text-[10px]">或拖拽文件到这里</span>
-                </>
-              )}
+              <Upload className="w-3.5 h-3.5 inline mr-1" />
+              本地文件
             </button>
-
-            <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
-              <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-                <span>当前素材: {clipCount} 个片段</span>
-                {clipCount > 0 && (
-                  <button
-                    onClick={handleClearAll}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    清空全部
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 p-3 bg-[var(--bg-secondary)] rounded-lg">
-              <div className="text-xs text-[var(--text-muted)]">
-                <div className="font-medium text-[var(--text-tertiary)] mb-2">支持格式</div>
-                <div>• 视频: MP4, WebM, MOV</div>
-                <div>• 音频: MP3, WAV, OGG</div>
-                <div>• 图片: PNG, JPG, GIF</div>
-              </div>
-            </div>
+            <button
+              onClick={() => setActiveTab('project')}
+              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'project'
+                  ? 'text-[var(--accent)] border-b-2 border-[var(--accent)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5 inline mr-1" />
+              项目素材
+            </button>
           </div>
+
+          {activeTab === 'file' ? (
+            <div 
+              className="p-4"
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="w-full py-6 border-2 border-dashed border-[var(--border-subtle)] rounded-lg text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors flex flex-col items-center gap-2 disabled:opacity-50"
+              >
+                {importing ? (
+                  <span className="text-xs">导入中...</span>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6" />
+                    <span className="text-xs">点击上传文件</span>
+                    <span className="text-[10px]">或拖拽文件到这里</span>
+                  </>
+                )}
+              </button>
+
+              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
+                  <span>当前素材: {clipCount} 个片段</span>
+                  {clipCount > 0 && (
+                    <button
+                      onClick={handleClearAll}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      清空全部
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-[var(--bg-secondary)] rounded-lg">
+                <div className="text-xs text-[var(--text-muted)]">
+                  <div className="font-medium text-[var(--text-tertiary)] mb-2">支持格式</div>
+                  <div>• 视频: MP4, WebM, MOV</div>
+                  <div>• 音频: MP3, WAV, OGG</div>
+                  <div>• 图片: PNG, JPG, GIF</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ImportFromProject
+              project={project}
+              onImport={handleProjectImport}
+            />
+          )}
         </div>
       )}
     </div>

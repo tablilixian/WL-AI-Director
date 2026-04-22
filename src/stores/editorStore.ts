@@ -17,6 +17,7 @@ import {
 import { clampTime } from '../utils/timeFormat';
 import { MIN_ZOOM, MAX_ZOOM, TRACK_HEADER_WIDTH } from '../types/editor';
 import { indexedDBService } from '../services/indexedDB';
+import { unifiedImageService } from '../../services/unifiedImageService';
 
 const PERSIST_KEY = 'video-editor-persist';
 
@@ -80,6 +81,7 @@ interface EditorStore extends EditorState {
   save: () => Promise<void>;
   load: () => Promise<boolean>;
   clear: () => void;
+  reset: () => Promise<void>;
 
   // ---------- 内部方法 ----------
   calculateDuration: () => number;
@@ -583,12 +585,26 @@ export const useEditorStore = create<EditorStore>()(
         for (const track of data.tracks) {
           for (const clip of track.clips) {
             if (clip.sourceId) {
-              const file = await indexedDBService.getFile(clip.sourceId);
-              if (file) {
-                clip.sourceUrl = URL.createObjectURL(file);
-                console.log('[EditorStore] 恢复 blob URL:', clip.sourceId);
+              const source = unifiedImageService.parseUrl(clip.sourceId);
+              
+              if (source.type === 'video') {
+                const resolvedUrl = await unifiedImageService.resolveForDisplay(clip.sourceId);
+                if (resolvedUrl) {
+                  clip.sourceUrl = resolvedUrl;
+                  console.log('[EditorStore] 恢复本地视频 URL:', clip.sourceId);
+                } else {
+                  console.log('[EditorStore] 本地视频不存在:', clip.sourceId);
+                }
+              } else if (source.type === 'local') {
+                const file = await indexedDBService.getFile(clip.sourceId);
+                if (file) {
+                  clip.sourceUrl = URL.createObjectURL(file);
+                  console.log('[EditorStore] 恢复 blob URL:', clip.sourceId);
+                } else {
+                  console.log('[EditorStore] IndexedDB 中未找到文件:', clip.sourceId);
+                }
               } else {
-                console.log('[EditorStore] IndexedDB 中未找到文件:', clip.sourceId);
+                console.log('[EditorStore] 保留已有 sourceUrl:', clip.sourceId, clip.sourceUrl);
               }
             }
           }
@@ -640,6 +656,29 @@ export const useEditorStore = create<EditorStore>()(
       history = [];
       historyIndex = -1;
       set({ ...initialState });
+    },
+
+    reset: async () => {
+      const { tracks } = get();
+      for (const track of tracks) {
+        for (const clip of track.clips) {
+          if (clip.sourceUrl && clip.sourceUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(clip.sourceUrl);
+          }
+        }
+      }
+      history = [];
+      historyIndex = -1;
+      
+      try {
+        localStorage.removeItem(PERSIST_KEY);
+        console.log('[EditorStore] 已清除 localStorage');
+      } catch (error) {
+        console.error('[EditorStore] 清除 localStorage 失败:', error);
+      }
+      
+      set({ ...initialState });
+      console.log('[EditorStore] 已重置编辑器状态');
     },
 
     // ---------- 内部方法 ----------

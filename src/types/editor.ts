@@ -60,6 +60,8 @@ export interface Clip {
   sourceUrl: string;
   /** 视频缩略图 URL（可选） */
   thumbnailUrl?: string;
+  /** 片段显示名称 */
+  name?: string;
 
   // ---------- 时间信息（单位：毫秒） ----------
   
