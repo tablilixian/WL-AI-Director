@@ -63,14 +63,14 @@ export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
     };
   }, []);
 
-  if (!props.visible) {
+  if (!props.visible || !props.src) {
     return null;
   }
 
   return (
     <video
       ref={videoRef}
-      src={props.src}
+      src={props.src || undefined}
       className="absolute inset-0 w-full h-full object-contain"
       style={{ 
         opacity: props.opacity,

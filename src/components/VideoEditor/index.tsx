@@ -74,6 +74,12 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     importedRef.current = projectId;
 
     const importVideos = async () => {
+      const hasSavedClips = tracks.some(t => t.clips.length > 0);
+      if (hasSavedClips) {
+        console.log('[VideoEditor] 已有片段数据，跳过项目导入');
+        return;
+      }
+
       tracks.forEach(track => {
         removeTrack(track.id);
       });
@@ -145,15 +151,12 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   }, [tracks, save]);
 
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      console.log('[VideoEditor] 页面卸载，同步保存');
+    return () => {
+      const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
+      console.log('[VideoEditor] 组件卸载，同步保存，片段数:', clipCount);
       save();
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [save]);
+  }, [save, tracks]);
 
   useEffect(() => {
     console.log('[VideoEditor] 组件挂载，当前片段数:', tracks.reduce((sum, t) => sum + t.clips.length, 0));
