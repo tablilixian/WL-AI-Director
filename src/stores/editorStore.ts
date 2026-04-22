@@ -536,6 +536,8 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 持久化 ----------
     save: async () => {
       const state = get();
+      const clipCount = state.tracks.reduce((sum, t) => sum + t.clips.length, 0);
+      console.log('[EditorStore] 开始保存，片段数:', clipCount);
 
       const data = {
         projectId: state.projectId || 'default',
@@ -553,7 +555,7 @@ export const useEditorStore = create<EditorStore>()(
 
       try {
         localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
-        console.log('[EditorStore] 已保存到 localStorage');
+        console.log('[EditorStore] 已保存到 localStorage，数据大小:', JSON.stringify(data).length);
       } catch (error) {
         console.error('[EditorStore] 保存失败:', error);
       }
@@ -562,6 +564,7 @@ export const useEditorStore = create<EditorStore>()(
     load: async () => {
       const state = get();
       const hasExistingClips = state.tracks.some(t => t.clips.length > 0);
+      console.log('[EditorStore] load() 被调用，当前片段数:', state.tracks.reduce((sum, t) => sum + t.clips.length, 0));
       if (hasExistingClips) {
         console.log('[EditorStore] 已有片段数据，跳过加载');
         return false;
@@ -569,9 +572,13 @@ export const useEditorStore = create<EditorStore>()(
 
       try {
         const saved = localStorage.getItem(PERSIST_KEY);
-        if (!saved) return false;
+        if (!saved) {
+          console.log('[EditorStore] localStorage 中没有保存的数据');
+          return false;
+        }
 
         const data = JSON.parse(saved);
+        console.log('[EditorStore] 找到保存的数据，轨道数:', data.tracks?.length);
         
         for (const track of data.tracks) {
           for (const clip of track.clips) {
@@ -579,6 +586,9 @@ export const useEditorStore = create<EditorStore>()(
               const file = await indexedDBService.getFile(clip.sourceId);
               if (file) {
                 clip.sourceUrl = URL.createObjectURL(file);
+                console.log('[EditorStore] 恢复 blob URL:', clip.sourceId);
+              } else {
+                console.log('[EditorStore] IndexedDB 中未找到文件:', clip.sourceId);
               }
             }
           }
@@ -610,7 +620,7 @@ export const useEditorStore = create<EditorStore>()(
           canRedo: false,
         });
 
-        console.log('[EditorStore] 从 localStorage 加载成功');
+        console.log('[EditorStore] 从 localStorage 加载成功，片段数:', data.tracks.reduce((sum: number, t: Track) => sum + t.clips.length, 0));
         return true;
       } catch (error) {
         console.error('[EditorStore] 加载失败:', error);
