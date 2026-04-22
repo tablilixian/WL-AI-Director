@@ -11,6 +11,8 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
+import { indexedDBService } from '../../services/indexedDB';
+import { nanoid } from 'nanoid';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -46,11 +48,11 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     save,
   } = useEditorStore();
   const importedRef = useRef<string>('');
-  const initializedRef = useRef(false);
+  const initializingRef = useRef(false);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    if (initializingRef.current) return;
+    initializingRef.current = true;
 
     const init = async () => {
       const hasSaved = await load();
@@ -59,42 +61,15 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         return;
       }
 
-      console.log('[VideoEditor] 没有保存的状态，初始化默认轨道');
-      addTrack('video', '视频 1');
-      addTrack('audio', '音频 1');
-      addTrack('text', '字幕 1');
-    };
+      const projectId = project?.id;
+      if (projectId && project?.shots && project.shots.length > 0) {
+        console.log('[VideoEditor] 开始从项目导入视频', { shotsCount: project.shots.length });
 
-    init();
-  }, [load, addTrack]);
-
-  useEffect(() => {
-    const projectId = project?.id;
-    if (!projectId || importedRef.current === projectId) return;
-    importedRef.current = projectId;
-
-    const importVideos = async () => {
-      const hasSavedClips = tracks.some(t => t.clips.length > 0);
-      if (hasSavedClips) {
-        console.log('[VideoEditor] 已有片段数据，跳过项目导入');
-        return;
-      }
-
-      tracks.forEach(track => {
-        removeTrack(track.id);
-      });
-
-      console.log('[VideoEditor] 开始导入视频', { shotsCount: project?.shots?.length });
-
-      if (project?.shots && project.shots.length > 0) {
         let currentTime = 0;
-
         const trackId = addTrack('video', '视频轨道');
-        console.log('[VideoEditor] 创建视频轨道', { trackId });
 
         for (let i = 0; i < project.shots.length; i++) {
           const shot = project.shots[i];
-          console.log('[VideoEditor] 处理 shot', { index: i, shotId: shot.id, interval: shot.interval });
 
           if (shot.interval?.videoUrl) {
             const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
@@ -102,13 +77,26 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             if (resolvedUrl) {
               const rawDuration = shot.interval.duration || 3;
               const clipDuration = rawDuration * 1000;
-              console.log('[VideoEditor] clip 时长', { shotId: shot.id, rawDuration, clipDuration });
+
+              let sourceId = `file-${nanoid()}`;
+              
+              if (resolvedUrl.startsWith('blob:')) {
+                try {
+                  const response = await fetch(resolvedUrl);
+                  const blob = await response.blob();
+                  const file = new File([blob], `shot-${i}.mp4`, { type: blob.type });
+                  await indexedDBService.saveFile(sourceId, file);
+                  console.log('[VideoEditor] 视频已保存到 IndexedDB', { sourceId });
+                } catch (err) {
+                  console.error('[VideoEditor] 保存视频到 IndexedDB 失败:', err);
+                }
+              }
 
               const clip: any = {
                 id: `${project.id}-clip-${i}`,
                 type: 'video',
                 sourceType: 'video',
-                sourceId: shot.id,
+                sourceId,
                 sourceUrl: resolvedUrl,
                 startTime: currentTime,
                 duration: clipDuration,
@@ -120,7 +108,93 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
               };
 
               addClip(trackId, clip);
-              console.log('[VideoEditor] 添加 clip 完成', { clipId: clip.id, duration: clipDuration });
+              currentTime += clipDuration;
+            }
+          }
+        }
+        
+        if (currentTime === 0) {
+          addTrack('video', '视频 1');
+          addTrack('audio', '音频 1');
+          addTrack('text', '字幕 1');
+        }
+        
+        importedRef.current = projectId;
+        console.log('[VideoEditor] 项目导入完成');
+        return;
+      }
+
+      console.log('[VideoEditor] 没有保存的状态，初始化默认轨道');
+      addTrack('video', '视频 1');
+      addTrack('audio', '音频 1');
+      addTrack('text', '字幕 1');
+    };
+
+    init();
+  }, [load, addTrack, addClip, project]);
+
+  useEffect(() => {
+    const projectId = project?.id;
+    if (!projectId || importedRef.current === projectId) return;
+    importedRef.current = projectId;
+
+    const hasSavedClips = tracks.some(t => t.clips.length > 0);
+    if (hasSavedClips) {
+      console.log('[VideoEditor] 已有片段数据，跳过项目导入');
+      return;
+    }
+
+    console.log('[VideoEditor] 项目 ID 变化，重新导入视频', { projectId });
+
+    const importVideos = async () => {
+      tracks.forEach(track => {
+        removeTrack(track.id);
+      });
+
+      if (project?.shots && project.shots.length > 0) {
+        let currentTime = 0;
+        const trackId = addTrack('video', '视频轨道');
+
+        for (let i = 0; i < project.shots.length; i++) {
+          const shot = project.shots[i];
+
+          if (shot.interval?.videoUrl) {
+            const resolvedUrl = await unifiedImageService.resolveForDisplay(shot.interval.videoUrl);
+
+            if (resolvedUrl) {
+              const rawDuration = shot.interval.duration || 3;
+              const clipDuration = rawDuration * 1000;
+
+              let sourceId = `file-${nanoid()}`;
+              
+              if (resolvedUrl.startsWith('blob:')) {
+                try {
+                  const response = await fetch(resolvedUrl);
+                  const blob = await response.blob();
+                  const file = new File([blob], `shot-${i}.mp4`, { type: blob.type });
+                  await indexedDBService.saveFile(sourceId, file);
+                  console.log('[VideoEditor] 视频已保存到 IndexedDB', { sourceId });
+                } catch (err) {
+                  console.error('[VideoEditor] 保存视频到 IndexedDB 失败:', err);
+                }
+              }
+
+              const clip: any = {
+                id: `${project.id}-clip-${i}`,
+                type: 'video',
+                sourceType: 'video',
+                sourceId,
+                sourceUrl: resolvedUrl,
+                startTime: currentTime,
+                duration: clipDuration,
+                inPoint: 0,
+                outPoint: clipDuration * 1000,
+                volume: 1,
+                speed: 1,
+                opacity: 1,
+              };
+
+              addClip(trackId, clip);
               currentTime += clipDuration;
             }
           }
