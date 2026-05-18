@@ -54,12 +54,20 @@ const isBigModelModel = (modelId: string): boolean => {
 };
 
 /**
+ * 检查是否为 NewAPI 提供商
+ */
+const isNewapiModel = (modelId: string): boolean => {
+  return modelId.startsWith('newapi-');
+};
+
+/**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
  */
 const getDevApiBaseUrl = (modelId: string): string => {
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
   }
+  // NewAPI 使用直连方式（localhost 或生产环境）
   return getApiBaseUrlForModel(modelId);
 };
 
@@ -203,9 +211,18 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
       endpoint = '/api/paas/v4/chat/completions';
     }
     
+    // 如果是 NewAPI URL（localhost 或生产环境），直接使用
+    if (url.includes('localhost') || url.includes('newapi.ai')) {
+      endpoint = '/v1/chat/completions';
+    }
+    
     // 根据 URL 选择合适的测试模型
-    const isBigModel = url === '/bigmodel';
-    const testModel = isBigModel ? 'glm-4-flash' : 'gpt-5.1';
+    let testModel = 'gpt-5.1';
+    if (url === '/bigmodel') {
+      testModel = 'glm-4-flash';
+    } else if (url.includes('localhost') || url.includes('newapi.ai')) {
+      testModel = 'poolside/laguna-xs.2:free';
+    }
     
     const response = await fetch(`${url}${endpoint}`, {
       method: 'POST',

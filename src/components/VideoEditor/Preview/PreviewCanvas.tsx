@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { useEditorStore } from '../../../stores/editorStore';
 import { VideoLayer } from './VideoLayer';
 import { TextLayer } from './TextLayer';
-import { isTextClip } from '../../../types/editor';
+import { AudioLayer } from './AudioLayer';
+import { isTextClip, isAudioClip } from '../../../types/editor';
 
 interface PreviewCanvasProps {
   aspectRatio?: '16:9' | '9:16' | '4:3' | '1:1';
@@ -27,11 +28,15 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     return tracks.filter(t => t.type === 'video' && t.visible);
   }, [tracks]);
 
+  const audioTracks = useMemo(() => {
+    return tracks.filter(t => t.type === 'audio' && t.visible);
+  }, [tracks]);
+
   const textTracks = useMemo(() => {
     return tracks.filter(t => t.type === 'text' && t.visible);
   }, [tracks]);
 
-  const hasContent = videoTracks.length > 0 || textTracks.length > 0;
+  const hasContent = videoTracks.length > 0 || audioTracks.length > 0 || textTracks.length > 0;
 
   return (
     <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: `${aspectRatioValue}` }}>
@@ -59,6 +64,22 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
                   visible={track.visible}
                 />
               ))
+            )}
+
+            {audioTracks.map(track =>
+              track.clips
+                .filter(clip => isAudioClip(clip))
+                .map(clip => (
+                  <AudioLayer
+                    key={clip.id}
+                    clip={clip}
+                    currentTime={currentTime}
+                    startTime={clip.startTime}
+                    duration={clip.duration}
+                    volume={clip.volume ?? 1}
+                    muted={false}
+                  />
+                ))
             )}
 
             {textTracks.map(track =>

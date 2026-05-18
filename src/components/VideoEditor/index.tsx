@@ -11,6 +11,7 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { formatTime } from '../../utils/timeFormat';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
+import { isAudioClip } from '../../types/editor';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -184,16 +185,53 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
     const stream = canvas.captureStream(30);
 
-    const audioElements: HTMLAudioElement[] = [];
+    const audioContext = new AudioContext();
+    const destination = audioContext.createMediaStreamDestination();
+    destination.stream.getAudioTracks().forEach(track => {
+      stream.addTrack(track);
+    });
+
+    const audioBuffers: { source: AudioBufferSourceNode; gain: GainNode }[] = [];
+
     for (const track of audioTracks) {
       for (const clip of track.clips) {
         if (clip.sourceUrl) {
-          const audio = new Audio(clip.sourceUrl);
-          audio.volume = clip.volume ?? 1;
-          audioElements.push(audio);
-          const audioStream = (audio as any).captureStream ? (audio as any).captureStream() : null;
-          if (audioStream) {
-            audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+          try {
+            const response = await fetch(clip.sourceUrl);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = clip.volume ?? 1;
+
+            if (isAudioClip(clip) && clip.fadeIn && clip.fadeIn > 0) {
+              const fadeInStart = clip.startTime / 1000;
+              const fadeInEnd = fadeInStart + clip.fadeIn / 1000;
+              gainNode.gain.setValueAtTime(0, audioContext.currentTime + fadeInStart);
+              gainNode.gain.linearRampToValueAtTime(clip.volume ?? 1, audioContext.currentTime + fadeInEnd);
+            }
+
+            if (isAudioClip(clip) && clip.fadeOut && clip.fadeOut > 0) {
+              const fadeOutStart = (clip.startTime + clip.duration - clip.fadeOut) / 1000;
+              const fadeOutEnd = (clip.startTime + clip.duration) / 1000;
+              gainNode.gain.setValueAtTime(clip.volume ?? 1, audioContext.currentTime + fadeOutStart);
+              gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + fadeOutEnd);
+            }
+
+            source.connect(gainNode);
+            gainNode.connect(destination);
+
+            const offset = clip.inPoint / 1000;
+            const duration = clip.duration / 1000;
+            const when = audioContext.currentTime + clip.startTime / 1000;
+
+            source.start(when, offset, duration);
+            audioBuffers.push({ source, gain: gainNode });
+          } catch (error) {
+            console.error(`[VideoEditor] 音频加载失败: ${clip.sourceUrl}`, error);
           }
         }
       }
@@ -219,10 +257,12 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       a.click();
       URL.revokeObjectURL(url);
 
-      audioElements.forEach(audio => {
-        audio.pause();
-        audio.src = '';
+      audioBuffers.forEach(({ source }) => {
+        try {
+          source.stop();
+        } catch (e) {}
       });
+      audioContext.close();
     };
 
     recorder.start();
@@ -293,7 +333,6 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     };
 
     videoElements.forEach(({ el }) => el.play());
-    audioElements.forEach(audio => audio.play());
     renderFrame();
   }, []);
 
