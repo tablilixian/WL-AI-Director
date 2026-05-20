@@ -434,6 +434,20 @@ export const BUILTIN_IMAGE_MODELS: ImageModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_IMAGE_PARAMS },
   },
+  {
+    id: 'dramabackend',
+    name: 'Drama Backend',
+    type: 'image',
+    providerId: 'wldrama',
+    endpoint: '/api/v1/generate/txt2image',
+    description: '自建 Drama Backend 图片生成服务，支持文生图和图生图',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+    },
+  },
 ];
 
 /**
@@ -573,6 +587,13 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     isBuiltIn: true,
     isDefault: false,
   },
+  {
+    id: 'wldrama',
+    name: 'WLDrama (自建服务)',
+    baseUrl: 'http://117.50.108.73:8082',
+    isBuiltIn: true,
+    isDefault: false,
+  },
 ];
 
 /**
@@ -589,6 +610,6 @@ export const ALL_BUILTIN_MODELS: ModelDefinition[] = [
  */
 export const DEFAULT_ACTIVE_MODELS: ActiveModels = {
   chat: 'gpt-5.1',
-  image: 'gemini-3-pro-image-preview',
+  image: 'dramabackend',
   video: 'sora-2',
 };

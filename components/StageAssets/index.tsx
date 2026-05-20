@@ -331,6 +331,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         }
         updateProject({ scriptData: newData }, { forceSync: true });
       }
+      
+      // 生成成功后关闭图片预览 Modal
+      setPreviewImage(null);
 
     } catch (e: any) {
       console.error(e);

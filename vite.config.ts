@@ -10,6 +10,12 @@ export default defineConfig(({ mode }) => {
         port: 3001,
         host: '0.0.0.0',
         proxy: {
+          // Drama Backend 代理 (解决 CORS)
+          '/drama-api': {
+            target: 'http://117.50.108.73:8082',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/drama-api/, ''),
+          },
           // BigModel API 代理
           '/bigmodel': {
             target: 'https://open.bigmodel.cn',

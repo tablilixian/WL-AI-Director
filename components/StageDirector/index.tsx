@@ -239,6 +239,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
 
         return updatedProject;
       });
+      
+      // 生成成功后关闭图片预览 Modal
+      setPreviewImage(null);
     } catch (e: any) {
       logger.error(LogCategory.AI, e);
       updateProject((prevProject: ProjectState) => ({
