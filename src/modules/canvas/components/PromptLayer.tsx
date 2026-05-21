@@ -123,14 +123,26 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
     
     setIsExecuting(true);
     const outputIds: string[] = [];
+    const traceId = `layer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    
+    console.log(`\n========== [I2I:${traceId}] PromptLayer 执行启动 ==========`);
+    console.log(`[I2I:${traceId}] 模式: 图生图 (${promptConfig.mode})`);
+    console.log(`[I2I:${traceId}] 关联图层数: ${linkedLayers.length}`);
+    console.log(`[I2I:${traceId}] 已增强: ${promptConfig.isEnhanced}`);
     
     try {
       const promptToUse = promptConfig.isEnhanced && promptConfig.enhancedPrompt
         ? promptConfig.enhancedPrompt
         : promptConfig.prompt;
+      console.log(`[I2I:${traceId}] 提示词: ${promptToUse.substring(0, 80)}...`);
       
       for (let i = 0; i < linkedLayers.length; i++) {
         const sourceLayer = linkedLayers[i];
+        
+        console.log(`[I2I:${traceId}] 处理关联图层 ${i + 1}/${linkedLayers.length}: ${sourceLayer.id}`);
+        console.log(`[I2I:${traceId}]   源图层标题: ${sourceLayer.title}`);
+        console.log(`[I2I:${traceId}]   源图层位置: (${sourceLayer.x}, ${sourceLayer.y})`);
+        console.log(`[I2I:${traceId}]   源图层图片: ${sourceLayer.src ? sourceLayer.src.substring(0, 60) + '...' : '无'}`);
         
         const placeholderId = crypto.randomUUID();
         addLayer({
@@ -150,6 +162,8 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
                         promptConfig.mode === 'background-replace' ? 'background-replace' :
                         promptConfig.mode === 'expand' ? 'expand' : 'image-to-image'
         });
+        
+        console.log(`[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 开始执行 (mode: ${promptConfig.mode})...`);
         
         try {
           let resultUrl: string;
@@ -183,6 +197,10 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
           
           const { src, imageId } = await resolveAndSaveImage(resultUrl);
           
+          console.log(`[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 生成完成`);
+          console.log(`[I2I:${traceId}]   结果图片: ${src}`);
+          console.log(`[I2I:${traceId}]   图片ID: ${imageId || '无'}`);
+          
           updateLayer(placeholderId, {
             src,
             imageId,
@@ -200,6 +218,8 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
         }
       }
       
+      console.log(`[I2I:${traceId}] 全部完成, 生成 ${outputIds.length} 张图片`);
+      console.log(`========== [I2I:${traceId}] PromptLayer 执行结束 ==========\n`);
       updatePromptConfig(layer.id, { outputLayerIds: outputIds });
     } finally {
       setIsExecuting(false);
