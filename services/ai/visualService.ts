@@ -565,10 +565,10 @@ Create a comprehensive visual prompt that will be used to generate a scene/envir
 
 CRITICAL REQUIREMENTS:
 1. Describe the scene in DETAIL:
-   - Environment and background elements
+   - Environment and background elements (buildings, streets, weather, sky)
    - Architecture and structures
    - Natural elements (sky, water, vegetation)
-   - Atmospheric effects (fog, mist, particles)
+   - Atmospheric effects (fog, mist, rain, particles, lighting)
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
@@ -581,10 +581,13 @@ CRITICAL REQUIREMENTS:
    - Include specific details about materials, textures, and lighting
    - Describe the composition and perspective
    
-4. IMPORTANT - NO CHARACTERS:
-   - This is a PURE SCENE/ENVIRONMENT shot
-   - ABSOLUTELY NO people, NO human figures, NO characters, NO silhouettes, NO crowds
-   - Empty scene only - background and environment elements only
+4. ⛔ ABSOLUTELY NO CHARACTERS - THIS IS THE MOST IMPORTANT RULE:
+   - This is a PURE SCENE/ENVIRONMENT shot with ZERO characters
+   - DO NOT write about any person, human figure, character, silhouette, or crowd
+   - DO NOT use words like 他/她/男子/女子/人物/角色/穿着 in the description
+   - DO NOT describe human actions, poses, emotions, or appearances
+   - Focus ONLY on: buildings, weather, lighting, atmosphere, objects, nature
+   - If you describe a location, describe it as empty - no one is there
    
 5. Language:
    - Write the prompt in ${language}
@@ -687,7 +690,8 @@ CRITICAL REQUIREMENTS:
    - Environment details (background, foreground, middle ground)
    - Atmospheric elements (weather, lighting, mood)
    - Composition and framing
-   - Objects and props in the scene`}
+   - Objects and props in the scene
+   ⛔ STRICT RULE: This is a PURE SCENE IMAGE with NO characters. Do NOT describe any person, human figure, character, or crowd. Focus only on the empty environment.`}
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
