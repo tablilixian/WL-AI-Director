@@ -67,6 +67,7 @@ export {
   CHARACTER_TURNAROUND_LAYOUT,
   generateCharacterTurnaroundPanels,
   generateCharacterTurnaroundImage,
+  generateCharacterFromDesignImage,
 } from './visualService';
 
 // 视频生成服务

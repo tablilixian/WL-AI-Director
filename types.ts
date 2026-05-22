@@ -49,6 +49,7 @@ export interface Character {
   negativePrompt?: string;
   coreFeatures?: string;
   imageUrl?: string;
+  threeViewImageUrl?: string;
   turnaround?: CharacterTurnaroundData;
   variations: CharacterVariation[];
   status?: 'pending' | 'generating' | 'completed' | 'failed';
@@ -238,8 +239,8 @@ export interface ProjectState {
   title: string;
   createdAt: number;
   lastModified: number;
-  version: number; // 数据版本号，用于并发控制和冲突检测
-  stage: 'script' | 'assets' | 'director' | 'export' | 'prompts' | 'canvas';
+  version: number;
+  stage: 'script' | 'assets' | 'director' | 'editor' | 'export' | 'prompts' | 'canvas';
   
   // Script Phase Data
   rawScript: string;

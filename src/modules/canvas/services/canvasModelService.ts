@@ -46,28 +46,34 @@ export class CanvasModelService {
     }
   }
 
+  generateTraceId(): string {
+    return `i2i_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  }
+
   async generateImage(options: GenerateImageOptions): Promise<string> {
     const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress } = options;
     const provider = this.getProvider();
+    const traceId = this.generateTraceId();
+    const startTime = Date.now();
+    const isImageToImage = referenceImages.length > 0;
 
-    console.log('=== 图片生成请求 ===');
-    console.log('[请求类型]', referenceImages.length > 0 ? '图生图 (Image-to-Image)' : '文生图 (Text-to-Image)');
-    console.log('[提供商]', provider);
-    console.log('[提示词]', prompt);
-    console.log('[宽高比]', aspectRatio);
-    console.log('[参考图数量]', referenceImages.length);
-    if (referenceImages.length > 0) {
-      console.log('[参考图信息]');
+    console.log(`\n========== [I2I:${traceId}] 图生图流程启动 ==========`);
+    console.log(`[I2I:${traceId}] 阶段 1/5 - 发起请求`);
+    console.log(`[I2I:${traceId}] 请求类型: ${isImageToImage ? '图生图 (Image-to-Image)' : '文生图 (Text-to-Image)'}`);
+    console.log(`[I2I:${traceId}] 当前提供商: ${provider}`);
+    console.log(`[I2I:${traceId}] 提示词: ${prompt}`);
+    console.log(`[I2I:${traceId}] 宽高比: ${aspectRatio}`);
+    console.log(`[I2I:${traceId}] 参考图数量: ${referenceImages.length}`);
+    if (isImageToImage) {
+      console.log(`[I2I:${traceId}] 参考图详情:`);
       referenceImages.forEach((img, i) => {
-        console.log(`  参考图 ${i + 1}:`, {
-          类型: img.startsWith('data:') ? 'Base64' : img.startsWith('local:') ? '本地引用' : 'URL',
-          长度: img.length,
-          前缀: img.substring(0, 50) + '...'
-        });
+        console.log(`  [${i + 1}] 来源类型: ${img.startsWith('data:') ? 'Base64' : img.startsWith('local:') ? '本地IndexedDB' : img.startsWith('blob:') ? 'Blob URL' : '远程URL'}`);
+        console.log(`  [${i + 1}] 数据长度: ${img.length} 字符`);
+        console.log(`  [${i + 1}] 预览前缀: ${img.substring(0, 60)}...`);
       });
     }
 
-    logger.debug(LogCategory.CANVAS, `[CanvasModelService] Generating image with ${provider}`);
+    logger.debug(LogCategory.CANVAS, `[I2I:${traceId}] Generating image with ${provider}, isI2I=${isImageToImage}`);
 
     onProgress?.(10);
 
@@ -76,30 +82,35 @@ export class CanvasModelService {
 
       onProgress?.(30);
 
-      console.log('[调用 API] 开始调用 callImageApi...');
+      console.log(`[I2I:${traceId}] 阶段 2/5 - 调用 ImageAdapter (callImageApi)...`);
 
       const imageUrl = await callImageApi({
         prompt,
         referenceImages,
         aspectRatio,
         resourceType: 'canvas',
-        resourceId: 'canvas-' + Date.now()
-      });
+        resourceId: traceId
+      }, undefined, traceId);
 
-      console.log('=== 图片生成响应 ===');
-      console.log('[响应类型]', imageUrl?.startsWith('local:') ? '本地引用' : imageUrl?.startsWith('data:') ? 'Base64' : '未知');
-      console.log('[响应内容]', {
-        长度: imageUrl?.length,
-        前缀: imageUrl?.substring(0, 50) + '...'
-      });
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+      console.log(`\n[I2I:${traceId}] 阶段 5/5 - 生成完成 ✓`);
+      console.log(`[I2I:${traceId}] 总耗时: ${totalTime}s`);
+      console.log(`[I2I:${traceId}] 结果类型: ${imageUrl?.startsWith('local:') ? '本地IndexedDB引用' : imageUrl?.startsWith('data:') ? 'Base64' : '未知'}`);
+      console.log(`[I2I:${traceId}] 结果ID: ${imageUrl}`);
+      console.log(`========== [I2I:${traceId}] 流程结束 ==========\n`);
 
       onProgress?.(100);
 
       return imageUrl;
     } catch (error: any) {
-      console.error('=== 图片生成失败 ===');
-      console.error('[错误信息]', error.message);
-      logger.error(LogCategory.CANVAS, '[CanvasModelService] Image generation failed', error);
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.error(`\n[I2I:${traceId}] ❌ 图生图流程失败 (${totalTime}s)`);
+      console.error(`[I2I:${traceId}] 错误信息: ${error.message}`);
+      if (error.stack) {
+        console.error(`[I2I:${traceId}] 错误堆栈: ${error.stack.split('\n').slice(0, 3).join('\n')}`);
+      }
+      logger.error(LogCategory.CANVAS, `[I2I:${traceId}] Image generation failed`, error);
       throw error;
     }
   }

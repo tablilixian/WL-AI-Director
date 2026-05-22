@@ -38,7 +38,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const [localDuration, setLocalDuration] = useState(project.targetDuration || DEFAULTS.duration);
   const [localLanguage, setLocalLanguage] = useState(project.language || DEFAULTS.language);
   const [localModel, setLocalModel] = useState(project.shotGenerationModel || getDefaultChatModelId());
-  const [localVisualStyle, setLocalVisualStyle] = useState(project.visualStyle || DEFAULTS.visualStyle);
+  const [localVisualStyle, setLocalVisualStyle] = useState(project.scriptData?.visualStyle || project.visualStyle || DEFAULTS.visualStyle);
   const [customDurationInput, setCustomDurationInput] = useState('');
   const [customModelInput, setCustomModelInput] = useState('');
   const [customStyleInput, setCustomStyleInput] = useState('');
@@ -153,6 +153,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
       const updatedProject: ProjectState = {
         ...project,
+        visualStyle: finalVisualStyle,
         scriptData, 
         shots, 
         isParsingScript: false,

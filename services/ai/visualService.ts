@@ -155,7 +155,12 @@ Requirements:
 - Do not copy clothing from reference image
 - Body proportions should remain consistent`;
       } else {
-        finalPrompt = `Generate cinematic shot matching: "${prompt}"
+        // 当prompt已包含角色/场景一致性要求时（AI增强版或含结构化段落），不再重复包裹
+        const hasConsistencySection = /角色一致性|CHARACTER CONSISTENCY|Scene consistency/i.test(prompt);
+        if (hasConsistencySection) {
+          finalPrompt = prompt;
+        } else {
+          finalPrompt = `Generate cinematic shot matching: "${prompt}"
 
 Character consistency requirements:
 - Facial features, hair, clothing must match character references exactly
@@ -163,7 +168,8 @@ Character consistency requirements:
 - Props and items must match their reference images
 
 Scene consistency requirements:
-- Maintain visual style, lighting, and environment from scene reference`;
+- Maintain visual style, lighting, and atmosphere from scene reference`;
+        }
       }
     }
 
@@ -565,10 +571,10 @@ Create a comprehensive visual prompt that will be used to generate a scene/envir
 
 CRITICAL REQUIREMENTS:
 1. Describe the scene in DETAIL:
-   - Environment and background elements
+   - Environment and background elements (buildings, streets, weather, sky)
    - Architecture and structures
    - Natural elements (sky, water, vegetation)
-   - Atmospheric effects (fog, mist, particles)
+   - Atmospheric effects (fog, mist, rain, particles, lighting)
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
@@ -581,10 +587,13 @@ CRITICAL REQUIREMENTS:
    - Include specific details about materials, textures, and lighting
    - Describe the composition and perspective
    
-4. IMPORTANT - NO CHARACTERS:
-   - This is a PURE SCENE/ENVIRONMENT shot
-   - ABSOLUTELY NO people, NO human figures, NO characters, NO silhouettes, NO crowds
-   - Empty scene only - background and environment elements only
+4. ⛔ ABSOLUTELY NO CHARACTERS - THIS IS THE MOST IMPORTANT RULE:
+   - This is a PURE SCENE/ENVIRONMENT shot with ZERO characters
+   - DO NOT write about any person, human figure, character, silhouette, or crowd
+   - DO NOT use words like 他/她/男子/女子/人物/角色/穿着 in the description
+   - DO NOT describe human actions, poses, emotions, or appearances
+   - Focus ONLY on: buildings, weather, lighting, atmosphere, objects, nature
+   - If you describe a location, describe it as empty - no one is there
    
 5. Language:
    - Write the prompt in ${language}
@@ -687,7 +696,8 @@ CRITICAL REQUIREMENTS:
    - Environment details (background, foreground, middle ground)
    - Atmospheric elements (weather, lighting, mood)
    - Composition and framing
-   - Objects and props in the scene`}
+   - Objects and props in the scene
+   ⛔ STRICT RULE: This is a PURE SCENE IMAGE with NO characters. Do NOT describe any person, human figure, character, or crowd. Focus only on the empty environment.`}
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
@@ -723,6 +733,35 @@ Output the result in the following JSON format:
   } catch (error: any) {
     logger.error(LogCategory.AI, `❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`, error);
     throw new Error(`${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 调用 Drama Backend image2character API 生成角色立绘图（三视图）
+ * 基于角色设计图，由服务端模型自动生成角色立绘图
+ */
+export const generateCharacterFromDesignImage = async (
+  character: Character,
+  designImageUrl: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  logger.debug(LogCategory.AI, `🎨 generateCharacterFromDesignImage 调用 - 基于设计图生成角色立绘图: ${character.name}`);
+
+  try {
+    const imageUrl = await callImageApi({
+      prompt: `Character turnaround sheet for ${character.name}`,
+      referenceImages: [designImageUrl],
+      isCharacterTurnaround: true,
+      resourceType,
+      resourceId,
+    });
+
+    logger.debug(LogCategory.AI, '✅ 角色立绘图生成完成');
+    return imageUrl;
+  } catch (error: any) {
+    logger.error(LogCategory.AI, '❌ 角色立绘图生成失败:', error);
+    throw new Error(`角色立绘图生成失败: ${error.message}`);
   }
 };
 

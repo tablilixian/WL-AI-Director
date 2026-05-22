@@ -23,7 +23,8 @@ import {
   Grid3x3,
   Loader2,
   Wand2,
-  Sparkles
+  Sparkles,
+  ImageIcon
 } from 'lucide-react';
 import { Character, VisualDescriptionField } from '../../types';
 import PromptEditor from './PromptEditor';
@@ -39,6 +40,7 @@ interface CharacterCardProps {
   onPromptSave: (newPrompt: string) => void;
   onOpenWardrobe: () => void;
   onOpenTurnaround: () => void;
+  onOpenThreeView: () => void;
   onImageClick: (imageUrl: string) => void;
   onDelete: () => void;
   /**
@@ -72,6 +74,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onPromptSave,
   onOpenWardrobe,
   onOpenTurnaround,
+  onOpenThreeView,
   onImageClick,
   onDelete,
   onUpdateInfo,
@@ -427,6 +430,22 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                 <Grid3x3 className="w-3 h-3" />
                 造型九宫格
                 {character.turnaround?.status === 'completed' && (
+                  <Check className="w-2.5 h-2.5" />
+                )}
+              </button>
+
+              {/* 三视图立绘图 */}
+              <button
+                onClick={onOpenThreeView}
+                className={`w-full py-1.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-colors ${
+                  character.threeViewImageUrl
+                    ? 'bg-[var(--success-bg)] hover:bg-[var(--success-hover-bg)] text-[var(--success-text)] border-[var(--success-border)]'
+                    : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border-[var(--border-primary)]'
+                }`}
+              >
+                <ImageIcon className="w-3 h-3" />
+                三视图
+                {character.threeViewImageUrl && (
                   <Check className="w-2.5 h-2.5" />
                 )}
               </button>

@@ -305,7 +305,7 @@ ${artDirectionBlock}
       Total Shots Budget: ${totalShotsNeeded} shots (Each shot = 10 seconds of video)
       Shots for This Scene: Approximately ${shotsPerScene} shots
       
-      Characters:
+      Characters (CRITICAL: use 'id' for the 'characters' field in each shot, NOT the character name):
       ${JSON.stringify(scriptData.characters.map(c => ({ id: c.id, name: c.name, desc: c.visualPrompt || c.personality })))}
 
       Professional Camera Movement Reference (Choose from these categories):
@@ -358,7 +358,7 @@ ${artDirectionBlock}
             "dialogue": "string (empty if none)",
             "cameraMovement": "string",
             "shotSize": "string",
-            "characters": ["string"],
+            "characters": ["character_id_here"], // ⚠️ MUST use character 'id' from the Characters list above, NOT the name
             "keyframes": [
               {"id": "string", "type": "start|end", "visualPrompt": "string (MUST include ${visualStyle} style keywords${artDir ? ' and follow Art Direction' : ''})"}
             ]
@@ -441,9 +441,16 @@ ${artDirectionBlock}
     logger.warn(LogCategory.AI, `⚠️ 剧本静音测试: 评分 ${mutedResult.score}/10 - ${mutedResult.issues.filter(i => i.severity === 'error').map(i => i.description).join('; ')}`);
   }
 
+  // 构建角色 name→id 映射，规范化 shot.characters（防止 LLM 输出角色名而非 ID）
+  const charNameToId = new Map<string, string>();
+  for (const c of scriptData.characters) {
+    charNameToId.set(c.name, c.id);
+  }
+
   return allShots.map((s, idx) => ({
     ...s,
     id: `shot-${idx + 1}`,
+    characters: (s.characters || []).map((charRef: string) => charNameToId.get(charRef) || charRef),
     keyframes: Array.isArray(s.keyframes) ? s.keyframes.map((k: any) => ({
       ...k,
       id: `kf-${idx + 1}-${k.type}`,

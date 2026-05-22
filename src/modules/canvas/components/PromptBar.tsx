@@ -96,6 +96,14 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           progress: 100
         });
       } else if (mode === 'edit' && hasSelectedImage && selectedLayer) {
+        const traceId = `promptbar_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        console.log(`\n========== [I2I:${traceId}] PromptBar 图生图启动 ==========`);
+        console.log(`[I2I:${traceId}] 源图层: ${selectedLayer.title} (${selectedLayer.id})`);
+        console.log(`[I2I:${traceId}] 源图层位置: (${selectedLayer.x}, ${selectedLayer.y})`);
+        console.log(`[I2I:${traceId}] 源图层尺寸: ${selectedLayer.width}x${selectedLayer.height}`);
+        console.log(`[I2I:${traceId}] 源图层图片: ${selectedLayer.src ? selectedLayer.src.substring(0, 60) + '...' : '无'}`);
+        console.log(`[I2I:${traceId}] 编辑提示词: ${prompt}`);
+
         updateLayer(selectedLayer.id, {
           isLoading: true,
           progress: 0
@@ -127,6 +135,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         } else if (resolvedUrl.startsWith('local:')) {
           imageId = resolvedUrl.replace('local:', '');
         }
+
+        console.log(`[I2I:${traceId}] 图生图完成, 结果: ${resolvedUrl.substring(0, 60)}...`);
+        console.log(`[I2I:${traceId}] 新图层位置: (${selectedLayer.x + selectedLayer.width + 20}, ${selectedLayer.y})`);
+        console.log(`========== [I2I:${traceId}] PromptBar 图生图结束 ==========\n`);
 
         const newLayerId = crypto.randomUUID();
         addLayer({

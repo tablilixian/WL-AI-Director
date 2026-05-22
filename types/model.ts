@@ -179,6 +179,7 @@ export interface ImageGenerateOptions {
   aspectRatio?: AspectRatio;
   resourceType?: string;  // 资源类型：character, scene, prop, keyframe等
   resourceId?: string;    // 资源ID：用于构建存储路径
+  isCharacterTurnaround?: boolean;  // 是否为 Drama Backend 角色立绘图生成
 }
 
 /**
@@ -290,6 +291,31 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     type: 'chat',
     providerId: 'antsk',
     description: '长文友好：适合长篇剧本的分段、摘要与角色弧线整理，文字表达更细腻',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  // NewAPI Chat Models
+  {
+    id: 'newapi-laguna-xs',
+    name: 'Laguna XS (NewAPI)',
+    type: 'chat',
+    providerId: 'newapi',
+    apiModel: 'poolside/laguna-xs.2:free',
+    endpoint: '/v1/chat/completions',
+    description: 'Laguna XS via NewAPI，轻量级对话模型',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  {
+    id: 'newapi-laguna-m',
+    name: 'Laguna M (NewAPI)',
+    type: 'chat',
+    providerId: 'newapi',
+    apiModel: 'poolside/laguna-m.1:free',
+    endpoint: '/v1/chat/completions',
+    description: 'Laguna M via NewAPI，中等规模对话模型',
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
@@ -408,6 +434,20 @@ export const BUILTIN_IMAGE_MODELS: ImageModelDefinition[] = [
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_IMAGE_PARAMS },
+  },
+  {
+    id: 'dramabackend',
+    name: 'Drama Backend',
+    type: 'image',
+    providerId: 'wldrama',
+    endpoint: '/api/v1/generate/txt2image',
+    description: '自建 Drama Backend 图片生成服务，支持文生图和图生图',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+    },
   },
 ];
 
@@ -541,6 +581,20 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     isBuiltIn: true,
     isDefault: false,
   },
+  {
+    id: 'newapi',
+    name: 'NewAPI (本地部署)',
+    baseUrl: 'http://localhost:3000',
+    isBuiltIn: true,
+    isDefault: false,
+  },
+  {
+    id: 'wldrama',
+    name: 'WLDrama (自建服务)',
+    baseUrl: 'http://117.50.108.73:8082',
+    isBuiltIn: true,
+    isDefault: false,
+  },
 ];
 
 /**
@@ -557,6 +611,6 @@ export const ALL_BUILTIN_MODELS: ModelDefinition[] = [
  */
 export const DEFAULT_ACTIVE_MODELS: ActiveModels = {
   chat: 'gpt-5.1',
-  image: 'gemini-3-pro-image-preview',
+  image: 'dramabackend',
   video: 'sora-2',
 };

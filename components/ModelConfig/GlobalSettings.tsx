@@ -124,6 +124,8 @@ const GlobalSettings: React.FC<GlobalSettingsProps> = ({ onRefresh }) => {
     switch (selectedProvider) {
       case 'bigmodel':
         return 'BigModel API Key';
+      case 'newapi':
+        return 'NewAPI Key';
       case 'global':
         return '全局 API Key';
       default:
@@ -135,6 +137,8 @@ const GlobalSettings: React.FC<GlobalSettingsProps> = ({ onRefresh }) => {
     switch (selectedProvider) {
       case 'bigmodel':
         return '输入 BigModel API Key (open.bigmodel.cn)...';
+      case 'newapi':
+        return '输入 NewAPI Key (newapi.ai)...';
       case 'global':
         return '输入全局 API Key...';
       default:
@@ -222,6 +226,9 @@ const GlobalSettings: React.FC<GlobalSettingsProps> = ({ onRefresh }) => {
           {selectedProvider === 'bigmodel' && (
             <span className="text-[10px] text-[var(--accent)]">(open.bigmodel.cn)</span>
           )}
+          {selectedProvider === 'newapi' && (
+            <span className="text-[10px] text-[var(--accent)]">(newapi.ai)</span>
+          )}
           {selectedProvider === 'global' && (
             <span className="text-[10px] text-[var(--accent)]">(api.antsk.cn)</span>
           )}
@@ -289,6 +296,7 @@ const GlobalSettings: React.FC<GlobalSettingsProps> = ({ onRefresh }) => {
         <ul className="text-[10px] text-[var(--text-muted)] space-y-1 list-disc list-inside">
           <li><strong>全局 API Key</strong>：用于所有模型调用（默认 api.antsk.cn）</li>
           <li><strong>BigModel API Key</strong>：专门用于 GLM、CogView、Vidu 等模型（open.bigmodel.cn）</li>
+          <li><strong>NewAPI Key</strong>：专门用于 GPT-4o、DALL-E 等模型（newapi.ai）</li>
           <li>可以为不同提供商配置不同的 API Key</li>
           <li>所有配置仅保存在本地浏览器，不会上传到服务器</li>
         </ul>
