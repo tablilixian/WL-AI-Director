@@ -591,7 +591,8 @@ export const enhanceKeyframePrompt = async (
   visualStyle: string,
   cameraMovement: string,
   frameType: 'start' | 'end',
-  model?: string
+  model?: string,
+  propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   console.log(`🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, resolvedModel);
@@ -599,78 +600,59 @@ export const enhanceKeyframePrompt = async (
 
   const styleDesc = getStylePromptCN(visualStyle);
   const frameLabel = frameType === 'start' ? '起始帧' : '结束帧';
+  const frameDesc = frameType === 'start'
+    ? '建立清晰的初始状态和场景氛围，人物/物体的起始位置、姿态和表情要明确，为后续运动预留视觉空间和动势'
+    : '展现动作完成后的最终状态，人物/物体的终点位置、姿态和情绪变化，体现镜头运动带来的视角变化';
+
+  const propsBlock = propsInfo && propsInfo.length > 0
+    ? propsInfo.map(p => `${p.name}: ${p.description}${p.hasImage ? ' (有参考图)' : ''}`).join('\n')
+    : '';
 
   const prompt = `
-你是一位资深的电影摄影指导和视觉特效专家。请基于以下基础提示词,生成一个包含详细技术规格和视觉细节的专业级${frameLabel}描述。
+Generate a complete keyframe prompt for IMAGE generation (not video). Output ONLY the formatted prompt below, no extra text.
 
-## 基础提示词
-${basePrompt}
+## Input
+Scene: ${basePrompt}
+Visual Style: ${styleDesc}
+Camera: ${cameraMovement}
+Frame: ${frameLabel}
+${propsBlock ? `Props:\n${propsBlock}` : ''}
 
-## 视觉风格
-${styleDesc}
+## Output Template (fill in all sections, each 2-3 concise bullet points)
 
-## 镜头运动
-${cameraMovement}
+画面描述: [rephrase scene in vivid cinematic Chinese, 1-2 sentences]
 
-## ${frameLabel}要求
-${frameType === 'start' ? '建立清晰的初始状态、起始姿态、为后续运动预留空间' : '展现最终状态、动作完成、情绪高潮'}
+【视觉风格】Visual Style
+[English keywords for image model]
 
-## 任务
-请在基础提示词的基础上,添加以下专业的电影级视觉规格描述:
+【构图】Composition
+帧类型: ${frameLabel}，镜头运动: ${cameraMovement}
 
-### 1. 技术规格 (Technical Specifications)
-- 分辨率规格 (8K等)
-- 镜头语言和摄影美学
-- 景深控制和焦点策略
+【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
+如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
+• 面部特征、发型、服装、体型必须与参考图完全一致
+• 这是最高优先级要求，不可妥协
+${propsBlock ? `
+【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
+以下道具已提供参考图，画面中出现时必须严格遵循：
+• 外形、颜色、材质、细节必须与参考图一致
+${propsBlock}` : ''}
 
-### 2. 视觉细节 (Visual Details)  
-- 光影层次: 三点布光、阴影与高光的配置
-- 色彩饱和度: 色彩分级、色温控制
-- 材质质感: 表面纹理、细节丰富度
-- 大气效果: 体积光、雾气、粒子、天气效果
+【摄影技术】Cinematography
+• 分辨率: 4K (3840×2160)
+• 光源: [主光/辅光/背光配置，1-2句]
+• 色彩: [色温/色调，1句]
+• 景深: [焦点策略，1句]
 
-### 3. 角色要求 (Character Details) - 如果有角色
-⚠️ 最高优先级: 如果提供了角色参考图,必须严格保持人物外观的完全一致性!
-- 面部表情: 在保持外观一致的基础上,添加微表情、情绪真实度、眼神方向
-- 肢体语言: 在保持体型一致的基础上,展现自然的身体姿态、重心分布、肌肉张力
-- 服装细节: 服装的运动感、物理真实性、纹理细节
-- 毛发细节: 头发丝、自然的毛发运动
+【场景与氛围】Scene & Atmosphere
+• 环境: [背景层次、空间透视，1-2句]
+• 氛围: [情绪基调、色彩心理，1句]
 
-### 4. 环境要求 (Environment Details)
-- 背景层次: 前景、中景、背景的深度分离
-- 空间透视: 准确的线性透视、大气透视
-- 环境光影: 光源的真实性、阴影投射
-- 细节丰富度: 环境叙事元素、纹理变化
+【角色演绎】Character Performance
+• 表情: [眼神、微表情，1句]
+• 姿态: [肢体语言、动作，1句]
 
-### 5. 氛围营造 (Mood & Atmosphere)
-- 情绪基调与场景情感的匹配
-- 色彩心理学的运用
-- 视觉节奏的平衡
-- 叙事的视觉暗示
-
-### 6. 质量保证 (Quality Assurance)
-- 主体清晰度和轮廓
-- 背景过渡的自然性
-- 光影一致性
-- 色彩协调性
-- 构图平衡(三分法或黄金比例)
-- 动作连贯性
-
-## 输出格式
-请使用清晰的分节格式输出,包含上述所有要素。使用中文输出,保持专业性和可读性。
-
-格式示例:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【技术规格】Technical Specifications
-• 分辨率: ...
-
-【视觉细节】Visual Details  
-• 光影层次: ...
-• 色彩饱和度: ...
-
-(依次类推)
-
-请开始创作:
+Output now:
 `;
 
   try {
@@ -679,13 +661,23 @@ ${frameType === 'start' ? '建立清晰的初始状态、起始姿态、为后�
 
     console.log(`✅ AI ${frameLabel}增强成功，耗时:`, duration, 'ms');
 
-    return `${basePrompt}
-
-${result.trim()}`;
+    return result.trim();
   } catch (error: any) {
     console.error(`❌ AI ${frameLabel}增强失败:`, error);
     console.warn('⚠️ 回退到基础提示词');
-    return basePrompt;
+    const fallbackStyle = getStylePrompt(visualStyle);
+    return `${basePrompt}
+
+【视觉风格】Visual Style
+${fallbackStyle}
+
+【构图】Composition
+${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}
+
+【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
+如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
+• 面部特征、发型、服装、体型必须与参考图完全一致
+• 这是最高优先级要求，不可妥协`;
   }
 };
 

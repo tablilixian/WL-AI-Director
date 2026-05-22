@@ -97,21 +97,15 @@ export const buildKeyframePrompt = (
   propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): string => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
-  const cameraGuide = getCameraMovementCompositionGuide(cameraMovement, frameType);
-  
-  // 针对起始帧和结束帧的特定指导
-  const frameSpecificGuide = frameType === 'start' 
-    ? `【起始帧要求】建立清晰的初始状态和场景氛围,人物/物体的起始位置、姿态和表情要明确,为后续运动预留视觉空间和动势。`
-    : `【结束帧要求】展现动作完成后的最终状态,人物/物体的终点位置、姿态和情绪变化,体现镜头运动带来的视角变化。`;
+  console.log('🎨 [buildKeyframePrompt] visualStyle key:', visualStyle, '→ resolved style:', stylePrompt.substring(0, 60));
+  // 仅记录镜头运动作为上下文，不附加模板构图指令（避免与场景描述冲突）
+  const compositionNote = `帧类型: ${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}`;
 
   // 角色一致性要求
-  const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL
-⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:
-• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致
-• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致
-• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配
-• 体型特征: 身材比例、身高体型必须保持一致
-⚠️ 这是最高优先级要求,不可妥协!`;
+  const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
+如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
+• 面部特征、发型、服装、体型必须与参考图完全一致
+• 这是最高优先级要求，不可妥协`;
 
   // 道具一致性要求（仅在有道具时添加）
   let propConsistencyGuide = '';
@@ -121,49 +115,31 @@ export const buildKeyframePrompt = (
 
     let sections: string[] = [];
 
-    // 有参考图的道具：要求严格遵循参考图
     if (propsWithImage.length > 0) {
       const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
-      sections.push(`⚠️ 以下道具已提供参考图,画面中出现时必须严格遵循参考图:
-• 外形特征: 道具的形状、大小、比例必须与参考图一致
-• 颜色材质: 颜色、材质、纹理必须保持一致
-• 细节元素: 图案、文字、装饰细节必须与参考图匹配
-⚠️ 这是高优先级要求!
-
-有参考图的道具:
+      sections.push(`【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
+以下道具已提供参考图，画面中出现时必须严格遵循：
+• 外形、颜色、材质、细节必须与参考图一致
 ${list}`);
     }
 
-    // 无参考图的道具：仅文字描述约束
     if (propsWithoutImage.length > 0) {
       const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
-      sections.push(`以下道具无参考图,请根据文字描述准确呈现:
+      sections.push(`以下道具无参考图，请根据文字描述准确呈现：
 ${list}`);
     }
 
-    propConsistencyGuide = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
-${sections.join('\n\n')}`;
+    propConsistencyGuide = '\n\n' + sections.join('\n\n');
   }
 
   return `${basePrompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【视觉风格】Visual Style
 ${stylePrompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【镜头运动】Camera Movement
-${cameraMovement} (${frameType === 'start' ? 'Initial Frame 起始帧' : 'Final Frame 结束帧'})
+【构图】Composition
+${compositionNote}
 
-【构图指导】Composition Guide
-${cameraGuide}
-
-${frameSpecificGuide}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${characterConsistencyGuide}${propConsistencyGuide}`;
 };
 
@@ -186,22 +162,19 @@ export const buildKeyframePromptWithAI = async (
   enhanceWithAI: boolean = true,
   propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): Promise<string> => {
-  // 先构建基础提示词
-  const basicPrompt = buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
-  
-  // 如果不需要AI增强,直接返回基础提示词
+  // 如果不需要AI增强,直接使用模板构建
   if (!enhanceWithAI) {
-    return basicPrompt;
+    return buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
   }
   
   // 动态导入aiService以避免循环依赖
   try {
     const { enhanceKeyframePrompt } = await import('../../services/aiService');
-    const enhanced = await enhanceKeyframePrompt(basicPrompt, visualStyle, cameraMovement, frameType);
+    const enhanced = await enhanceKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, undefined, propsInfo);
     return enhanced;
   } catch (error) {
     logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-    return basicPrompt;
+    return buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
   }
 };
 
@@ -267,12 +240,27 @@ export const buildVideoPrompt = (
 };
 
 /**
- * 从现有提示词中提取基础部分（移除追加的样式信息）
+ * 从现有提示词中提取基础部分（移除追加的样式/规格段落）
+ * 支持三种格式：
+ *   - 无分隔旧格式: "...\n\nVisual Style:..."
+ *   - 分隔线旧格式: "...\n━━━...\n【视觉风格】..."
+ *   - 新格式:       "...\n\n【视觉风格】Visual Style..."
  */
 export const extractBasePrompt = (fullPrompt: string, fallback: string): string => {
+  // 新格式：\n\n【视觉风格】 开头
+  const newMatch = fullPrompt.match(/\n\n【视觉风格】/);
+  if (newMatch && newMatch.index && newMatch.index > 0) {
+    return fullPrompt.substring(0, newMatch.index).trim();
+  }
+  // 旧格式：━━━ 分隔线
+  const sepMatch = fullPrompt.match(/\n━{2,}[\s\S]*?\n【视觉风格】/);
+  if (sepMatch && sepMatch.index && sepMatch.index > 0) {
+    return fullPrompt.substring(0, sepMatch.index).trim();
+  }
+  // 兼容：\n\nVisual Style:
   const visualStyleIndex = fullPrompt.indexOf('\n\nVisual Style:');
   if (visualStyleIndex > 0) {
-    return fullPrompt.substring(0, visualStyleIndex);
+    return fullPrompt.substring(0, visualStyleIndex).trim();
   }
   return fullPrompt || fallback;
 };
@@ -453,13 +441,10 @@ export const buildPromptFromNineGridPanel = (
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   
   // 角色一致性要求
-  const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS - CRITICAL
-⚠️ 如果提供了角色参考图,画面中的人物外观必须严格遵循参考图:
-• 面部特征: 五官轮廓、眼睛颜色和形状、鼻子和嘴巴的结构必须完全一致
-• 发型发色: 头发的长度、颜色、质感、发型样式必须保持一致
-• 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配
-• 体型特征: 身材比例、身高体型必须保持一致
-⚠️ 这是最高优先级要求,不可妥协!`;
+  const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
+如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
+• 面部特征、发型、服装、体型必须与参考图完全一致
+• 这是最高优先级要求，不可妥协`;
 
   // 道具一致性要求（仅在有道具时添加）
   let propConsistencyGuide = '';
@@ -471,46 +456,34 @@ export const buildPromptFromNineGridPanel = (
 
     if (propsWithImage.length > 0) {
       const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
-      sections.push(`⚠️ 以下道具已提供参考图,画面中出现时必须严格遵循参考图:
-• 外形特征: 道具的形状、大小、比例必须与参考图一致
-• 颜色材质: 颜色、材质、纹理必须保持一致
-• 细节元素: 图案、文字、装饰细节必须与参考图匹配
-⚠️ 这是高优先级要求!
-
-有参考图的道具:
+      sections.push(`【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
+以下道具已提供参考图，画面中出现时必须严格遵循：
+• 外形、颜色、材质、细节必须与参考图一致
 ${list}`);
     }
 
     if (propsWithoutImage.length > 0) {
       const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
-      sections.push(`以下道具无参考图,请根据文字描述准确呈现:
+      sections.push(`以下道具无参考图，请根据文字描述准确呈现：
 ${list}`);
     }
 
-    propConsistencyGuide = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
-${sections.join('\n\n')}`;
+    propConsistencyGuide = '\n\n' + sections.join('\n\n');
   }
 
   return `${panel.description}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【来源】九宫格分镜预览 - ${NINE_GRID.positionLabels[panel.index]}
 【景别】${panel.shotSize}
 【机位角度】${panel.cameraAngle}
 【原始动作】${actionSummary}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【视觉风格】Visual Style
 ${stylePrompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【镜头运动】Camera Movement
+【构图】Composition
 ${cameraMovement}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${characterConsistencyGuide}${propConsistencyGuide}`;
 };
 

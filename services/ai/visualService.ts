@@ -155,7 +155,12 @@ Requirements:
 - Do not copy clothing from reference image
 - Body proportions should remain consistent`;
       } else {
-        finalPrompt = `Generate cinematic shot matching: "${prompt}"
+        // 当prompt已包含角色/场景一致性要求时（AI增强版或含结构化段落），不再重复包裹
+        const hasConsistencySection = /角色一致性|CHARACTER CONSISTENCY|Scene consistency/i.test(prompt);
+        if (hasConsistencySection) {
+          finalPrompt = prompt;
+        } else {
+          finalPrompt = `Generate cinematic shot matching: "${prompt}"
 
 Character consistency requirements:
 - Facial features, hair, clothing must match character references exactly
@@ -163,7 +168,8 @@ Character consistency requirements:
 - Props and items must match their reference images
 
 Scene consistency requirements:
-- Maintain visual style, lighting, and environment from scene reference`;
+- Maintain visual style, lighting, and atmosphere from scene reference`;
+        }
       }
     }
 

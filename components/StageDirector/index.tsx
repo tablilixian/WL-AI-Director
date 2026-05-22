@@ -188,7 +188,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       ? extractBasePrompt(existingKf.visualPrompt, shot.actionSummary)
       : shot.actionSummary;
     
-    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
+    console.log('🎯 [handleGenerateKeyframe] project.visualStyle:', project.visualStyle, 'scriptData.visualStyle:', project.scriptData?.visualStyle, '→ resolved:', visualStyle);
     
     // 立即设置生成状态，显示loading
     updateProject((prevProject: ProjectState) => ({
@@ -638,7 +639,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         });
       }
       
-      const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+      const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
       const actionSummary = activeShot.actionSummary || '未定义的动作';
       const cameraMovement = activeShot.cameraMovement || '平移';
       
@@ -701,7 +702,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         });
       }
       
-      const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+      const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
       const actionSummary = activeShot.actionSummary || '未定义的动作';
       const cameraMovement = activeShot.cameraMovement || '平移';
       
@@ -786,7 +787,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       });
     }
     
-    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
     const activeChatModel = getActiveChatModel();
     const shotGenerationModel = project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
     console.log('🎬 九宫格分镜 - shotGenerationModel:', shotGenerationModel, 'activeChatModel:', activeChatModel?.id);
@@ -855,7 +856,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       });
     }
     
-    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
     const activeChatModel = getActiveChatModel();
     const shotGenerationModel = project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
     console.log('🎬 九宫格分镜 - shotGenerationModel:', shotGenerationModel, 'activeChatModel:', activeChatModel?.id);
@@ -918,7 +919,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   const handleConfirmNineGridPanels = async (confirmedPanels: NineGridPanel[]) => {
     if (!activeShot) return;
     
-    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
     
     // 1. 更新面板数据并设置生成图片状态
     updateShot(activeShot.id, (s) => ({
@@ -1002,7 +1003,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   const handleSelectNineGridPanel = async (panel: NineGridPanel) => {
     if (!activeShot || !activeShot.nineGrid?.imageUrl) return;
     
-    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
     
     // 1. 构建首帧提示词（保留视角信息，方便后续重新生成）
     const shotPropsInfo = getPropsInfoForShot(activeShot, project.scriptData);

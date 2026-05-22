@@ -231,6 +231,7 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
             logger.debug(LogCategory.STORAGE, `🔄 项目 "${project.title}" 已迁移旧数据格式`);
           }).catch(() => { /* 回写失败不影响运行 */ });
         }
+        console.log('📦 [loadProject] visualStyle from DB:', project.visualStyle, 'scriptData.visualStyle:', project.scriptData?.visualStyle);
         resolve(project);
       }
       else reject(new Error("Project not found"));
