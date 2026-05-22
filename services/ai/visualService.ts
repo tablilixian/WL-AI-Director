@@ -736,6 +736,35 @@ Output the result in the following JSON format:
   }
 };
 
+/**
+ * 调用 Drama Backend image2character API 生成角色立绘图（三视图）
+ * 基于角色设计图，由服务端模型自动生成角色立绘图
+ */
+export const generateCharacterFromDesignImage = async (
+  character: Character,
+  designImageUrl: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  logger.debug(LogCategory.AI, `🎨 generateCharacterFromDesignImage 调用 - 基于设计图生成角色立绘图: ${character.name}`);
+
+  try {
+    const imageUrl = await callImageApi({
+      prompt: `Character turnaround sheet for ${character.name}`,
+      referenceImages: [designImageUrl],
+      isCharacterTurnaround: true,
+      resourceType,
+      resourceId,
+    });
+
+    logger.debug(LogCategory.AI, '✅ 角色立绘图生成完成');
+    return imageUrl;
+  } catch (error: any) {
+    logger.error(LogCategory.AI, '❌ 角色立绘图生成失败:', error);
+    throw new Error(`角色立绘图生成失败: ${error.message}`);
+  }
+};
+
 export async function generateVisualPrompts(
   characters: Character[],
   scenes: Scene[],

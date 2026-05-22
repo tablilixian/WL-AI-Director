@@ -113,6 +113,39 @@
     "duration": 3.63
 }
 
+### POST /api/v1/generate/image2character
+
+基于角色设计图生成角色立绘图（三视图）
+
+**请求体 (Image2CharacterRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `image` | string | 是 | - | 角色设计图（文件名） |
+
+**请求示例:**
+```json
+{
+  "image": "character_design.png"
+}
+```
+
+**响应:** 返回生成的角色立绘图
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "dramma_character_visual_image.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=dramma_character_visual_image.png",
+    "duration": 3.63
+}
+
+**说明:** 
+- 该接口将根据输入的角色设计图生成三视图立绘图
+- 包含正面特写、侧面全身、背面全身三个视角
+- 背景为纯白色
+
 
 ## 图像上传
 

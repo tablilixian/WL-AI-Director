@@ -618,6 +618,95 @@ const callGeminiApi = async (
 };
 
 /**
+ * 调用 Drama Backend 角色立绘图生成 API (image2character)
+ * 基于角色设计图生成角色立绘图（三视图）
+ */
+const callDramaBackendCharacterApi = async (
+  options: ImageGenerateOptions,
+  model: ImageModelDefinition,
+  apiBase: string,
+  traceId: string
+): Promise<string> => {
+  const startTime = Date.now();
+
+  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用角色立绘图 API`);
+  console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
+  console.log(`[I2I:${traceId}] 端点: /api/v1/generate/image2character`);
+
+  // 上传参考图（角色设计图）
+  let imageFilename = '';
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    const imageUrl = options.referenceImages[0];
+    console.log(`[I2I:${traceId}] 上传角色设计图到 Drama Backend...`);
+    imageFilename = await measureTime('上传角色设计图', traceId, () =>
+      uploadImageToDramaBackend(imageUrl, apiBase, traceId)
+    );
+    console.log(`[I2I:${traceId}] 角色设计图上传成功 -> filename: ${imageFilename}`);
+  } else {
+    throw new Error('角色立绘图生成需要提供角色设计图');
+  }
+
+  const requestBody = { image: imageFilename };
+
+  console.log(`[I2I:${traceId}] 请求参数:`, JSON.stringify(requestBody));
+
+  const response = await measureTime('Drama Backend 角色立绘图生成', traceId, () =>
+    retryOperation(async () => {
+      const res = await fetch(`${apiBase}/api/v1/generate/image2character`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!res.ok) {
+        let errorMessage = `HTTP 错误: ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+        } catch (e) {
+          const errorText = await res.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return await res.json();
+    })
+  );
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error('角色立绘图生成失败：未能从响应中获取图片 URL');
+  }
+
+  console.log(`[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  // 开发环境使用代理下载
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+    console.log(`[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
+  }
+
+  const imageBlob = await measureTime('下载生成图片', traceId, async () => {
+    const imageResponse = await fetch(downloadUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`图片下载失败: ${imageResponse.status}`);
+    }
+    return await imageResponse.blob();
+  });
+
+  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+
+  return `local:${localImageId}`;
+};
+
+/**
  * 调用图片生成 API
  */
 export const callImageApi = async (
@@ -650,9 +739,15 @@ export const callImageApi = async (
 
   // 根据提供商选择不同的 API
   if (isDramaBackendProvider(activeModel)) {
-    console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);
     // 开发环境使用 Vite 代理解决 CORS，生产环境直接使用服务端地址
     const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+    if (options.isCharacterTurnaround) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2character 端点)`);
+      return callDramaBackendCharacterApi(options, activeModel, baseUrl, tid);
+    }
+
+    console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);
     return callDramaBackendApi(options, activeModel, baseUrl, tid);
   } else if (isBigModelProvider(activeModel)) {
     if (!apiKey) {

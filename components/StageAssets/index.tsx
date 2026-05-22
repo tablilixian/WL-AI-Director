@@ -6,7 +6,8 @@ import {
   generateCharacterVisualPrompt, 
   generateSceneVisualPrompt,
   generateCharacterTurnaroundPanels, 
-  generateCharacterTurnaroundImage 
+  generateCharacterTurnaroundImage,
+  generateCharacterFromDesignImage 
 } from '../../services/aiService';
 import { imageStorageService } from '../../services/imageStorageService';
 import { unifiedImageService } from '../../services/unifiedImageService';
@@ -27,6 +28,7 @@ import SceneCard from './SceneCard';
 import PropCard from './PropCard';
 import WardrobeModal from './WardrobeModal';
 import TurnaroundModal from './TurnaroundModal';
+import ThreeViewModal from './ThreeViewModal';
 import { useAlert } from '../GlobalAlert';
 import { useImageLoader } from '../../hooks/useImageLoader';
 
@@ -83,6 +85,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [replaceTargetSceneId, setReplaceTargetSceneId] = useState<string | null>(null);
   const [replaceTargetPropId, setReplaceTargetPropId] = useState<string | null>(null);
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
+  const [threeViewCharId, setThreeViewCharId] = useState<string | null>(null);
+  const [threeViewLoading, setThreeViewLoading] = useState(false);
   
   // 横竖屏选择状态（从持久化配置读取）
   const [aspectRatio, setAspectRatioState] = useState<AspectRatio>(() => getUserAspectRatio());
@@ -1524,6 +1528,46 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     void saveItem();
   };
 
+  /**
+   * 生成角色三视图立绘图（调用 image2character API）
+   */
+  const handleGenerateThreeView = async (charId: string) => {
+    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    if (!char?.imageUrl) {
+      showAlert('请先生成该角色的定妆照', { type: 'warning' });
+      return;
+    }
+
+    setThreeViewLoading(true);
+    try {
+      const imageUrl = await generateCharacterFromDesignImage(
+        char,
+        char.imageUrl,
+        'character',
+        charId
+      );
+
+      updateProject((prev) => {
+        if (!prev.scriptData) return prev;
+        const newData = { ...prev.scriptData };
+        const c = newData.characters.find(c => compareIds(c.id, charId));
+        if (c) {
+          c.threeViewImageUrl = imageUrl;
+        }
+        return { ...prev, scriptData: newData };
+      });
+    } catch (e: any) {
+      console.error('三视图生成失败:', e);
+      if (onApiKeyError && onApiKeyError(e)) {
+        setThreeViewLoading(false);
+        return;
+      }
+      showAlert('三视图生成失败', { type: 'error' });
+    } finally {
+      setThreeViewLoading(false);
+    }
+  };
+
   // 空状态
   if (!project.scriptData) {
     return (
@@ -1591,6 +1635,23 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             onRegenerateImage={handleRegenerateTurnaroundImage}
             onImageClick={setPreviewImage}
             onAddToLibrary={handleAddTurnaroundToLibrary}
+          />
+        ) : null;
+      })()}
+
+      {/* Three-View Modal */}
+      {threeViewCharId && (() => {
+        const threeViewChar = project.scriptData?.characters.find(c => compareIds(c.id, threeViewCharId));
+        return threeViewChar ? (
+          <ThreeViewModal
+            character={threeViewChar}
+            onClose={() => {
+              setThreeViewCharId(null);
+              setThreeViewLoading(false);
+            }}
+            onGenerate={handleGenerateThreeView}
+            onImageClick={setPreviewImage}
+            isGenerating={threeViewLoading}
           />
         ) : null;
       })()}
@@ -1716,6 +1777,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 onPromptSave={(newPrompt) => handleSaveCharacterPrompt(char.id, newPrompt)}
                 onOpenWardrobe={() => setSelectedCharId(char.id)}
                 onOpenTurnaround={() => setTurnaroundCharId(char.id)}
+                onOpenThreeView={() => setThreeViewCharId(char.id)}
                 onImageClick={setPreviewImage}
                 onDelete={() => handleDeleteCharacter(char.id)}
                 onUpdateInfo={(updates) => handleUpdateCharacterInfo(char.id, updates)}

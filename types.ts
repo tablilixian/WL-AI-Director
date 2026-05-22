@@ -49,6 +49,7 @@ export interface Character {
   negativePrompt?: string;
   coreFeatures?: string;
   imageUrl?: string;
+  threeViewImageUrl?: string;
   turnaround?: CharacterTurnaroundData;
   variations: CharacterVariation[];
   status?: 'pending' | 'generating' | 'completed' | 'failed';
