@@ -55,6 +55,25 @@ export const SCENE_NEGATIVE_PROMPTS: { [key: string]: string } = {
   'oil-painting': 'person, people, human, figure, silhouette, crowd, portrait, face, body, ' + NEGATIVE_PROMPTS['oil-painting'],
 };
 
+// ============================================
+// 通用质量增强标签（文生图默认追加）
+// ============================================
+
+export const DEFAULT_QUALITY_TAGS = 'cinematic, highly detailed, 8K resolution, professional lighting, sharp focus, film grain texture';
+
+export const getDefaultQualityTags = (): string => DEFAULT_QUALITY_TAGS;
+
+/**
+ * 为文生图 prompt 自动追加质量标签（如果尚未包含）
+ */
+export const enhanceWithQualityTags = (prompt: string): string => {
+  const hasQualityTerms = /cinematic|8K|photorealistic|highly detailed|professional|sharp focus|film grain/i.test(prompt);
+  if (hasQualityTerms) {
+    return prompt;
+  }
+  return `${prompt}, ${DEFAULT_QUALITY_TAGS}`;
+};
+
 /**
  * 获取视觉风格的英文提示词，如果风格不在预设中则原样返回
  */

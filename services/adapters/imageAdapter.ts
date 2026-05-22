@@ -5,6 +5,7 @@
 
 import { ImageModelDefinition, ImageGenerateOptions, AspectRatio } from '../../types/model';
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProviderById } from '../modelRegistry';
+import { enhanceWithQualityTags } from '../ai/promptConstants';
 import { ApiKeyError } from './chatAdapter';
 import { storageApi } from '../../src/api/storage';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -104,13 +105,16 @@ const callCogViewApi = async (
   };
   const size = sizeMap[aspectRatio] || '1024x1024';
   
+  const finalPrompt = enhanceWithQualityTags(options.prompt);
+
   console.log(`[I2I:${traceId}] 提供商: BigModel CogView`);
   console.log(`[I2I:${traceId}] 注意: BigModel 不支持参考图，降级为文生图`);
   console.log(`[I2I:${traceId}] 请求模型: ${apiModel}, 尺寸: ${size}`);
+  console.log(`[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`);
   
   const requestBody: any = {
     model: apiModel,
-    prompt: options.prompt,
+    prompt: finalPrompt,
     size,
   };
   
@@ -198,8 +202,12 @@ const callDramaBackendApi = async (
     ? '/api/v1/generate/image2image' 
     : '/api/v1/generate/txt2image';
   
+  const finalPrompt = hasReferenceImages
+    ? options.prompt
+    : enhanceWithQualityTags(options.prompt);
+
   const requestBody: any = {
-    prompt: options.prompt,
+    prompt: finalPrompt,
     width: size.width,
     height: size.height,
   };
@@ -209,6 +217,9 @@ const callDramaBackendApi = async (
   console.log(`[I2I:${traceId}] 端点: ${endpoint}`);
   console.log(`[I2I:${traceId}] 尺寸: ${size.width}x${size.height}`);
   console.log(`[I2I:${traceId}] 图生图模式: ${hasReferenceImages ? '是' : '否（文生图）'}`);
+  if (!hasReferenceImages) {
+    console.log(`[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`);
+  }
   
   if (hasReferenceImages && options.referenceImages) {
     console.log(`[I2I:${traceId}] 开始上传 ${options.referenceImages.length} 张参考图到 Drama Backend...`);
