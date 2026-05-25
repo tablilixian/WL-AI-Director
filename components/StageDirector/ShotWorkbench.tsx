@@ -15,6 +15,7 @@ interface ShotWorkbenchProps {
   nextShotHasStartFrame?: boolean; // 下一个镜头是否有首帧
   isAIOptimizing?: boolean;
   isSplittingShot?: boolean;
+  aspectRatio: AspectRatio;
   onClose: () => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -56,6 +57,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   nextShotHasStartFrame = false,
   isAIOptimizing = false,
   isSplittingShot = false,
+  aspectRatio,
   onClose,
   onPrevious,
   onNext,
@@ -274,6 +276,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           canCopyNext={shotIndex < totalShots - 1 && nextShotHasStartFrame}
           isAIOptimizing={isAIOptimizing}
           useAIEnhancement={useAIEnhancement}
+          aspectRatio={aspectRatio}
           onToggleAIEnhancement={onToggleAIEnhancement}
           onGenerateKeyframe={onGenerateKeyframe}
           onUploadKeyframe={onUploadKeyframe}

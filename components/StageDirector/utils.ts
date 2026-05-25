@@ -1,7 +1,18 @@
-import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData } from '../../types';
+import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData, AspectRatio } from '../../types';
 import { VISUAL_STYLE_PROMPTS, VIDEO_PROMPT_TEMPLATES, NINE_GRID } from './constants';
 import { getCameraMovementCompositionGuide } from './cameraMovementGuides';
 import { logger, LogCategory } from '../../services/logger';
+
+/**
+ * 根据横竖屏比例获取 CSS aspect-ratio 值
+ */
+export const getImageAspectRatio = (ratio: AspectRatio): string => {
+  switch (ratio) {
+    case '16:9': return '16 / 9';
+    case '9:16': return '9 / 16';
+    case '1:1': return '1 / 1';
+  }
+};
 
 /**
  * getRefImagesForShot 的返回类型
@@ -46,7 +57,9 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
         }
       }
 
-      if (char.imageUrl) {
+      if (char.threeViewImageUrl) {
+        referenceImages.push(char.threeViewImageUrl);
+      } else if (char.imageUrl) {
         referenceImages.push(char.imageUrl);
       }
 

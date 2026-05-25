@@ -1186,6 +1186,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                 shot={shot}
                 index={idx}
                 isActive={activeShotId === shot.id}
+                aspectRatio={keyframeAspectRatio}
                 onClick={() => setActiveShotId(shot.id)}
                 onDelete={handleDeleteShot}
               />
@@ -1272,6 +1273,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
               });
             }}
             onImageClick={(url, title) => setPreviewImage({ url, title })}
+            aspectRatio={keyframeAspectRatio}
             onGenerateNineGrid={() => handleGenerateNineGrid(activeShot)}
             nineGrid={activeShot.nineGrid}
             onSelectNineGridPanel={handleSelectNineGridPanel}

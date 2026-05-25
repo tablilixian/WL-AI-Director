@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Video, Loader2, Edit2 } from 'lucide-react';
 import { Shot, AspectRatio, VideoDuration } from '../../types';
+import { getImageAspectRatio } from './utils';
 import { VideoSettingsPanel } from '../AspectRatioSelector';
 import { 
   getDefaultAspectRatio, 
@@ -223,11 +224,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       
       {/* Video Preview */}
       {videoUrl ? (
-        <div className="w-full aspect-video bg-[var(--bg-base)] rounded-lg overflow-hidden border border-[var(--border-secondary)] relative shadow-lg">
+        <div className="w-full bg-[var(--bg-base)] rounded-lg overflow-hidden border border-[var(--border-secondary)] relative shadow-lg" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
           <video src={videoUrl} controls className="w-full h-full" />
         </div>
       ) : (
-        <div className="w-full aspect-video bg-[var(--nav-hover-bg)] rounded-lg border border-dashed border-[var(--border-primary)] flex items-center justify-center">
+        <div className="w-full bg-[var(--nav-hover-bg)] rounded-lg border border-dashed border-[var(--border-primary)] flex items-center justify-center" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
           <span className="text-xs text-[var(--text-muted)] font-mono">PREVIEW AREA</span>
         </div>
       )}

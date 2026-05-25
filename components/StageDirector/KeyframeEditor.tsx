@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
-import { Keyframe } from '../../types';
+import { Keyframe, AspectRatio } from '../../types';
 import { unifiedImageService } from '../../services/unifiedImageService';
+import { getImageAspectRatio } from './utils';
 
 interface KeyframeEditorProps {
   startKeyframe?: Keyframe;
@@ -11,6 +12,7 @@ interface KeyframeEditorProps {
   canCopyNext: boolean; // 是否可以复制下一镜头的首帧（需要有下一个镜头且已生成首帧）
   isAIOptimizing?: boolean;
   useAIEnhancement: boolean;
+  aspectRatio: AspectRatio;
   onToggleAIEnhancement: () => void;
   onGenerateKeyframe: (type: 'start' | 'end') => void;
   onUploadKeyframe: (type: 'start' | 'end') => void;
@@ -30,6 +32,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   canCopyNext,
   isAIOptimizing = false,
   useAIEnhancement,
+  aspectRatio,
   onToggleAIEnhancement,
   onGenerateKeyframe,
   onUploadKeyframe,
@@ -99,7 +102,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
           </div>
         </div>
         
-        <div className="aspect-video bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden relative group">
+        <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden relative group" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
           {imageUrl ? (
             <>
               <img
