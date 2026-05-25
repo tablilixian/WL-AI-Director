@@ -253,6 +253,7 @@ export interface ProjectState {
   shots: Shot[];
   isParsingScript: boolean;
   renderLogs: RenderLog[]; // History of all API calls for this project
+  aspectRatio?: AspectRatio; // 工程级横竖屏比例（可选，向后兼容）
 }
 
 // ============================================

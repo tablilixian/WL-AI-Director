@@ -26,15 +26,17 @@ import {
   Sparkles,
   ImageIcon
 } from 'lucide-react';
-import { Character, VisualDescriptionField } from '../../types';
+import { Character, VisualDescriptionField, AspectRatio } from '../../types';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
 import VisualDescriptionModal from './VisualDescriptionModal';
 import { useImageLoader } from '../../hooks/useImageLoader';
+import { getImageAspectRatio } from './constants';
 
 interface CharacterCardProps {
   character: Character;
   isGenerating: boolean;
+  aspectRatio: AspectRatio;
   onGenerate: () => void;
   onUpload: (file: File) => void;
   onPromptSave: (newPrompt: string) => void;
@@ -69,6 +71,7 @@ interface CharacterCardProps {
 const CharacterCard: React.FC<CharacterCardProps> = ({
   character,
   isGenerating,
+  aspectRatio,
   onGenerate,
   onUpload,
   onPromptSave,
@@ -203,7 +206,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           {/* ========== 角色图像区域 ========== */}
           <div className="w-48 flex-shrink-0">
             <div
-              className="aspect-video bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer"
+              className="bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer"
+              style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
               onClick={() => character.imageUrl && onImageClick(character.imageUrl)}
             >
               {imageSrc ? (

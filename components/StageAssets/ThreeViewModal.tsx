@@ -1,7 +1,8 @@
 import React from 'react';
 import { X, User, ImageIcon, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
-import { Character } from '../../types';
+import { Character, AspectRatio } from '../../types';
 import { useImageLoader } from '../../hooks/useImageLoader';
+import { getImageAspectRatio } from './constants';
 
 interface ThreeViewModalProps {
   character: Character;
@@ -9,6 +10,7 @@ interface ThreeViewModalProps {
   onGenerate: (charId: string) => void;
   onImageClick: (imageUrl: string) => void;
   isGenerating?: boolean;
+  aspectRatio: AspectRatio;
 }
 
 const ThreeViewModal: React.FC<ThreeViewModalProps> = ({
@@ -17,6 +19,7 @@ const ThreeViewModal: React.FC<ThreeViewModalProps> = ({
   onGenerate,
   onImageClick,
   isGenerating = false,
+  aspectRatio,
 }) => {
   const { src: characterImageSrc, loading: characterImageLoading } = useImageLoader(character.imageUrl);
   const { src: threeViewImageSrc, loading: threeViewImageLoading } = useImageLoader(character.threeViewImageUrl);
@@ -61,7 +64,8 @@ const ThreeViewModal: React.FC<ThreeViewModalProps> = ({
               </h4>
               <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-primary)]">
                 <div
-                  className="aspect-video bg-[var(--bg-elevated)] rounded-lg overflow-hidden mb-4 relative cursor-pointer"
+                  className="bg-[var(--bg-elevated)] rounded-lg overflow-hidden mb-4 relative cursor-pointer"
+                  style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
                   onClick={() => characterImageSrc && onImageClick(characterImageSrc)}
                 >
                   {characterImageLoading ? (

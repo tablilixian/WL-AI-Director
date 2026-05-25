@@ -1,3 +1,14 @@
+import { AspectRatio } from '../../types';
+
+// 根据比例获取图片容器的 aspect-ratio 值
+export function getImageAspectRatio(ratio: AspectRatio): string {
+  switch (ratio) {
+    case '16:9': return '16 / 9';
+    case '9:16': return '9 / 16';
+    case '1:1': return '1 / 1';
+  }
+}
+
 // UI样式常量
 export const STYLES = {
   // 容器样式
@@ -19,8 +30,8 @@ export const STYLES = {
   input: "w-full bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-secondary)]",
   textarea: "w-full bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-secondary)] resize-none",
   
-  // 图片容器样式
-  imageContainer: "aspect-video bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer",
+  // 图片容器样式（基础类，不包含 aspect-ratio，需通过 style 动态设置）
+  imageContainer: "bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer",
   imagePreview: "w-full h-full object-cover",
   
   // 标签样式

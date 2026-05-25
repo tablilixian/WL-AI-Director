@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Package, Check, Sparkles, Loader2, Trash2, Edit2, AlertCircle, FolderPlus, Archive } from 'lucide-react';
-import { Prop } from '../../types';
-import { PROP_CATEGORIES } from './constants';
+import { Prop, AspectRatio } from '../../types';
+import { PROP_CATEGORIES, getImageAspectRatio } from './constants';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
 import { useImageLoader } from '../../hooks/useImageLoader';
@@ -9,6 +9,7 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 interface PropCardProps {
   prop: Prop;
   isGenerating: boolean;
+  aspectRatio: AspectRatio;
   onGenerate: () => void;
   onUpload: (file: File) => void;
   onPromptSave: (newPrompt: string) => void;
@@ -22,6 +23,7 @@ interface PropCardProps {
 const PropCard: React.FC<PropCardProps> = ({
   prop,
   isGenerating,
+  aspectRatio,
   onGenerate,
   onUpload,
   onPromptSave,
@@ -53,7 +55,8 @@ const PropCard: React.FC<PropCardProps> = ({
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
       <div 
-        className="aspect-video bg-[var(--bg-elevated)] relative cursor-pointer"
+        className="bg-[var(--bg-elevated)] relative cursor-pointer"
+        style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
         onClick={() => imageSrc && onImageClick(imageSrc)}
       >
         {imageSrc ? (

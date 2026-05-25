@@ -30,7 +30,7 @@ import ImagePreviewModal from './ImagePreviewModal';
 import NineGridPreview from './NineGridPreview';
 import { useAlert } from '../GlobalAlert';
 import { AspectRatioSelector } from '../AspectRatioSelector';
-import { getUserAspectRatio, setUserAspectRatio, getModelById } from '../../services/modelRegistry';
+import { getUserAspectRatio, getModelById } from '../../services/modelRegistry';
 import { saveProject as saveProjectToCloud } from '../../services/hybridStorageService';
 
 interface Props {
@@ -51,13 +51,20 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   const [showNineGrid, setShowNineGrid] = useState(false); // 是否显示九宫格预览弹窗
   const [toastMessage, setToastMessage] = useState('');
   
-  // 关键帧生成使用的横竖屏比例（从持久化配置读取）
-  const [keyframeAspectRatio, setKeyframeAspectRatioState] = useState<AspectRatio>(() => getUserAspectRatio());
-  
-  // 包装 setKeyframeAspectRatio，同时持久化到模型配置
+  // 关键帧生成使用的横竖屏比例（优先读取工程级配置，向后兼容全局）
+  const [keyframeAspectRatio, setKeyframeAspectRatioState] = useState<AspectRatio>(() => project.aspectRatio ?? getUserAspectRatio());
+
+  // 同步工程外的 aspectRatio 变更
+  useEffect(() => {
+    if (project.aspectRatio && project.aspectRatio !== keyframeAspectRatio) {
+      setKeyframeAspectRatioState(project.aspectRatio);
+    }
+  }, [project.aspectRatio]);
+
+  // 包装 setKeyframeAspectRatio，持久化到工程数据
   const setKeyframeAspectRatio = (ratio: AspectRatio) => {
     setKeyframeAspectRatioState(ratio);
-    setUserAspectRatio(ratio);
+    updateProject({ aspectRatio: ratio });
   };
   
   // 统一的编辑状态

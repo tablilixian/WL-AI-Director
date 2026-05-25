@@ -3,6 +3,8 @@ import { MapPin, Check, Sparkles, Loader2, Upload, Trash2, Edit2, AlertCircle, F
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
 import { useImageLoader } from '../../hooks/useImageLoader';
+import { AspectRatio } from '../../types';
+import { getImageAspectRatio } from './constants';
 
 interface SceneCardProps {
   scene: {
@@ -15,6 +17,7 @@ interface SceneCardProps {
     status?: 'pending' | 'generating' | 'completed' | 'failed';
   };
   isGenerating: boolean;
+  aspectRatio: AspectRatio;
   onGenerate: () => void;
   onUpload: (file: File) => void;
   onPromptSave: (newPrompt: string) => void;
@@ -28,6 +31,7 @@ interface SceneCardProps {
 const SceneCard: React.FC<SceneCardProps> = ({
   scene,
   isGenerating,
+  aspectRatio,
   onGenerate,
   onUpload,
   onPromptSave,
@@ -70,7 +74,8 @@ const SceneCard: React.FC<SceneCardProps> = ({
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
       <div 
-        className="aspect-video bg-[var(--bg-elevated)] relative cursor-pointer"
+        className="bg-[var(--bg-elevated)] relative cursor-pointer"
+        style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
         onClick={() => imageSrc && onImageClick(imageSrc)}
       >
         {imageSrc ? (

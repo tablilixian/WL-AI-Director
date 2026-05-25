@@ -36,7 +36,7 @@ import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibrar
 import { hybridStorage } from '../../services/hybridStorageService';
 import { AssetLibraryModal } from '../../src/components/AssetLibrary';
 import { AspectRatioSelector } from '../AspectRatioSelector';
-import { getUserAspectRatio, setUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
+import { getUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
 import { useAuthStore } from '../../src/stores/authStore';
 
 interface Props {
@@ -88,13 +88,20 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [threeViewCharId, setThreeViewCharId] = useState<string | null>(null);
   const [threeViewLoading, setThreeViewLoading] = useState(false);
   
-  // 横竖屏选择状态（从持久化配置读取）
-  const [aspectRatio, setAspectRatioState] = useState<AspectRatio>(() => getUserAspectRatio());
-  
-  // 包装 setAspectRatio，同时持久化到模型配置
+  // 横竖屏选择状态（优先读取工程级配置，向后兼容全局）
+  const [aspectRatio, setAspectRatioState] = useState<AspectRatio>(() => project.aspectRatio ?? getUserAspectRatio());
+
+  // 同步工程外的 aspectRatio 变更（如从其他页面修改后返回）
+  useEffect(() => {
+    if (project.aspectRatio && project.aspectRatio !== aspectRatio) {
+      setAspectRatioState(project.aspectRatio);
+    }
+  }, [project.aspectRatio]);
+
+  // 包装 setAspectRatio，持久化到工程数据
   const setAspectRatio = (ratio: AspectRatio) => {
     setAspectRatioState(ratio);
-    setUserAspectRatio(ratio);
+    updateProject({ aspectRatio: ratio });
   };
   
 
@@ -1652,6 +1659,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             onGenerate={handleGenerateThreeView}
             onImageClick={setPreviewImage}
             isGenerating={threeViewLoading}
+            aspectRatio={aspectRatio}
           />
         ) : null;
       })()}
@@ -1772,6 +1780,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 key={char.id}
                 character={char}
                 isGenerating={char.status === 'generating'}
+                aspectRatio={aspectRatio}
                 onGenerate={() => handleGenerateAsset('character', char.id)}
                 onUpload={(file) => handleUploadCharacterImage(char.id, file)}
                 onPromptSave={(newPrompt) => handleSaveCharacterPrompt(char.id, newPrompt)}
@@ -1834,6 +1843,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 key={scene.id}
                 scene={scene}
                 isGenerating={scene.status === 'generating'}
+                aspectRatio={aspectRatio}
                 onGenerate={() => handleGenerateAsset('scene', scene.id)}
                 onUpload={(file) => handleUploadSceneImage(scene.id, file)}
                 onPromptSave={(newPrompt) => handleSaveScenePrompt(scene.id, newPrompt)}
@@ -1898,6 +1908,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                   key={prop.id}
                   prop={prop}
                   isGenerating={prop.status === 'generating'}
+                  aspectRatio={aspectRatio}
                   onGenerate={() => handleGeneratePropAsset(prop.id)}
                   onUpload={(file) => handleUploadPropImage(prop.id, file)}
                   onPromptSave={(newPrompt) => handleSavePropPrompt(prop.id, newPrompt)}
