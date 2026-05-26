@@ -91,7 +91,7 @@ export interface LayerData {
   zIndex?: number; // 图层顺序
   // 来源追踪
   sourceLayerId?: string; // 来源图层 ID
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | '9grid' | '4grid' | '25grid'; // 操作类型
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid'; // 操作类型
   // 宫格生成数据（用于后续宫格拆分）
   gridData?: GridGenerationData;
   // 关联信息（用于与主项目联动）

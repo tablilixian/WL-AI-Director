@@ -18,7 +18,14 @@ const operationColors: Record<string, string> = {
   'background-remove': '#14b8a6',
   'variant': '#84cc16',
   'import': '#6b7280',
-  'drawing': '#eab308'
+  'drawing': '#eab308',
+  'multi-angle': '#a855f7',
+  'three-view': '#06b6d4',
+  'storyboard-deduction': '#f59e0b',
+  'lighting': '#fbbf24',
+  '9grid': '#a855f7',
+  '4grid': '#f59e0b',
+  '25grid': '#f97316'
 };
 
 const operationLabels: Record<string, string> = {
@@ -32,7 +39,14 @@ const operationLabels: Record<string, string> = {
   'background-remove': '智能抠图',
   'variant': '图片变体',
   'import': '导入',
-  'drawing': '绘图'
+  'drawing': '绘图',
+  'multi-angle': '多角度',
+  'three-view': '三视图',
+  'storyboard-deduction': '剧情推演',
+  'lighting': '光影校正',
+  '9grid': '九宫格',
+  '4grid': '四宫格',
+  '25grid': '25宫格'
 };
 
 export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale }) => {

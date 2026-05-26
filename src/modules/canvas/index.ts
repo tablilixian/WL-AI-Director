@@ -18,6 +18,10 @@ export { ImageEditPanel } from './components/ImageEditPanel';
 export { PromptLayer } from './components/PromptLayer';
 export { PromptLinkPanel } from './components/PromptLinkPanel';
 export { ImageActionMenu } from './components/ImageActionMenu';
+export { MultiAnglePanel } from './components/MultiAnglePanel';
+export { ThreeViewPanel } from './components/ThreeViewPanel';
+export { StoryboardDeductionPanel } from './components/StoryboardDeductionPanel';
+export { LightingControlPanel } from './components/LightingControlPanel';
 
 export { useCanvasStore } from './hooks/useCanvasState';
 export { useCanvasControls } from './hooks/useCanvasControls';
