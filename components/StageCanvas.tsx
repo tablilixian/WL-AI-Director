@@ -12,6 +12,7 @@ import { StyleTransferPanel } from '../src/modules/canvas/components/StyleTransf
 import { ImageEditPanel } from '../src/modules/canvas/components/ImageEditPanel';
 import { RemoveBackgroundPanel } from '../src/modules/canvas/components/RemoveBackgroundPanel';
 import { VariantPanel } from '../src/modules/canvas/components/VariantPanel';
+import { getCanvasDataFromLocal } from '../services/canvasStorageService';
 
 interface StageCanvasProps {
   project: ProjectState;
@@ -521,17 +522,15 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     }
   };
 
-  const handleExportJson = () => {
-    const backupKey = `wl-canvas-backup-${project.id}`;
-    const saved = localStorage.getItem(backupKey);
-    if (!saved) {
+  const handleExportJson = async () => {
+    const canvasData = await getCanvasDataFromLocal(project.id);
+    if (!canvasData) {
       alert('没有找到保存的画布数据，请先点击"保存画布"');
       return;
     }
 
     try {
-      const data = JSON.parse(saved);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(canvasData, null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `canvas-data-${project.id}-${Date.now()}.json`;

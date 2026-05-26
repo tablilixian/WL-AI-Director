@@ -563,16 +563,16 @@ export class CanvasIntegrationService {
       
       let imageId = layer.imageId;
       
-      if (layer.type === 'drawing' && src && src.startsWith('data:')) {
+      if (src && src.startsWith('data:') && !imageId) {
         try {
           const imgId = unifiedImageService.generateImageId();
           const response = await fetch(src);
           const blob = await response.blob();
           await unifiedImageService.saveImage(imgId, blob);
           imageId = imgId;
-          console.log('[CanvasIntegration] 绘制图层已保存到 IndexedDB:', imgId);
+          console.log(`[CanvasIntegration] ${layer.type}图层已保存到 IndexedDB:`, imgId);
         } catch (e) {
-          console.warn('[CanvasIntegration] 保存绘制图层失败:', e);
+          console.warn(`[CanvasIntegration] 保存${layer.type}图层到 IndexedDB 失败:`, e);
         }
       }
       

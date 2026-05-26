@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Grid3x3, Scissors, Palette, ImagePlus, Maximize2, Copy, ChevronDown, X } from 'lucide-react';
+import { Grid3x3, Scissors, Palette, ImagePlus, Maximize2, Copy, ChevronDown, X, Download } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { StyleTransferPanel } from './StyleTransferPanel';
 import { ImageEditPanel } from './ImageEditPanel';
 import { RemoveBackgroundPanel } from './RemoveBackgroundPanel';
 import { VariantPanel } from './VariantPanel';
+import { GridSplitPanel } from './GridSplitPanel';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
 export type ImageAction =
@@ -16,7 +17,10 @@ export type ImageAction =
   | 'variant'
   | '9grid'
   | '4grid'
-  | '25grid';
+  | '25grid'
+  | 'split-9grid'
+  | 'split-4grid'
+  | 'split-25grid';
 
 interface ImageActionMenuProps {
   layer: LayerData;
@@ -31,16 +35,23 @@ const GRID_LABELS: Record<GridGenerationType, string> = {
 
 export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenRect }) => {
   const [showGridDropdown, setShowGridDropdown] = useState(false);
+  const [showSplitDropdown, setShowSplitDropdown] = useState(false);
   const [activePanel, setActivePanel] = useState<ImageAction | null>(null);
   const [showGridDialog, setShowGridDialog] = useState(false);
+  const [showSplitPanel, setShowSplitPanel] = useState(false);
   const [gridType, setGridType] = useState<GridGenerationType | null>(null);
+  const [splitGridType, setSplitGridType] = useState<GridGenerationType | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const splitDropdownRef = useRef<HTMLDivElement>(null);
   const { addLayer } = useCanvasStore();
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowGridDropdown(false);
+      }
+      if (splitDropdownRef.current && !splitDropdownRef.current.contains(e.target as Node)) {
+        setShowSplitDropdown(false);
       }
     };
     window.addEventListener('mousedown', handleClick);
@@ -49,9 +60,14 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
 
   const handleAction = (action: ImageAction) => {
     setShowGridDropdown(false);
+    setShowSplitDropdown(false);
     if (action === '9grid' || action === '4grid' || action === '25grid') {
       setGridType(action);
       setShowGridDialog(true);
+    } else if (action === 'split-9grid' || action === 'split-4grid' || action === 'split-25grid') {
+      const gt = action === 'split-9grid' ? '9grid' : action === 'split-4grid' ? '4grid' : '25grid';
+      setSplitGridType(gt);
+      setShowSplitPanel(true);
     } else {
       setActivePanel(action);
     }
@@ -78,6 +94,12 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
     { id: '9grid', label: '多机位九宫格' },
     { id: '4grid', label: '剧情推演四宫格' },
     { id: '25grid', label: '25宫格连贯分镜' },
+  ];
+
+  const splitOptions: { id: ImageAction; label: string }[] = [
+    { id: 'split-9grid', label: '九宫格切分' },
+    { id: 'split-4grid', label: '四宫格切分' },
+    { id: 'split-25grid', label: '25宫格切分' },
   ];
 
   const menu = (
@@ -119,6 +141,32 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {showGridDropdown && (
             <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-50">
               {gridOptions.map(option => (
+                <button
+                  key={option.id}
+                  onClick={(e) => { e.stopPropagation(); handleAction(option.id); }}
+                  className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Grid3x3 className="w-3.5 h-3.5" />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={splitDropdownRef}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowSplitDropdown(!showSplitDropdown); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-gray-700 rounded text-gray-200 hover:text-white transition-colors text-xs font-medium"
+          >
+            <Download className="w-3.5 h-3.5" />
+            宫格切分
+            <ChevronDown className={`w-3 h-3 transition-transform ${showSplitDropdown ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showSplitDropdown && (
+            <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-50">
+              {splitOptions.map(option => (
                 <button
                   key={option.id}
                   onClick={(e) => { e.stopPropagation(); handleAction(option.id); }}
@@ -239,6 +287,14 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           </div>
         </div>,
         document.body
+      )}
+
+      {showSplitPanel && splitGridType && (
+        <GridSplitPanel
+          selectedLayerId={layer.id}
+          gridType={splitGridType}
+          onClose={() => { setShowSplitPanel(false); setSplitGridType(null); }}
+        />
       )}
     </>
   );
