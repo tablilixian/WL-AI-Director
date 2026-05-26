@@ -17,6 +17,7 @@ export { StyleTransferPanel } from './components/StyleTransferPanel';
 export { ImageEditPanel } from './components/ImageEditPanel';
 export { PromptLayer } from './components/PromptLayer';
 export { PromptLinkPanel } from './components/PromptLinkPanel';
+export { ImageActionMenu } from './components/ImageActionMenu';
 
 export { useCanvasStore } from './hooks/useCanvasState';
 export { useCanvasControls } from './hooks/useCanvasControls';
@@ -46,8 +47,13 @@ export type {
   PromptLayerConfig,
   PromptMode,
   PromptExecutionStatus,
-  PromptExecutionResult
+  PromptExecutionResult,
+  GridGenerationType,
+  GridPanelData,
+  GridGenerationData
 } from './types/canvas';
+
+export type { ImageAction } from './components/ImageActionMenu';
 
 export {
   PROMPT_MODE_COLORS,

@@ -41,6 +41,24 @@ export type Annotation = DrawingPath | TextAnnotation | RectangleAnnotation;
 
 export type LayerType = 'image' | 'video' | 'sticky' | 'text' | 'group' | 'drawing' | 'audio' | 'prompt';
 
+// ============================================
+// 宫格生成类型
+// ============================================
+
+export type GridGenerationType = '9grid' | '4grid' | '25grid';
+
+export interface GridPanelData {
+  index: number;
+  shotSize: string;
+  cameraAngle: string;
+  description: string;
+}
+
+export interface GridGenerationData {
+  type: GridGenerationType;
+  panels: GridPanelData[];
+}
+
 export interface LayerData {
   id: string;
   parentId?: string; // ID of the group this layer belongs to
@@ -73,7 +91,9 @@ export interface LayerData {
   zIndex?: number; // 图层顺序
   // 来源追踪
   sourceLayerId?: string; // 来源图层 ID
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing'; // 操作类型
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | '9grid' | '4grid' | '25grid'; // 操作类型
+  // 宫格生成数据（用于后续宫格拆分）
+  gridData?: GridGenerationData;
   // 关联信息（用于与主项目联动）
   linkedResourceId?: string; // 关联的角色/场景 ID
   linkedResourceType?: 'character' | 'scene' | 'keyframe'; // 关联的资源类型

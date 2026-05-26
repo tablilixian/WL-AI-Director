@@ -364,29 +364,31 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       )}
 
       {isSelected && (
-        <div 
-          className="absolute -top-6 left-0 px-2 py-0.5 bg-blue-500 text-white text-xs rounded truncate max-w-full flex items-center gap-1 cursor-pointer"
-          onDoubleClick={handleDoubleClick}
-        >
-          {layer.locked && (
-            <svg className="w-3 h-3 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-          )}
-          {isRenaming ? (
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onBlur={handleRenameSubmit}
-              onKeyDown={handleRenameKeyDown}
-              className="bg-transparent border-none outline-none text-white text-xs w-20"
-              autoFocus
-            />
-          ) : (
-            layer.title
-          )}
-        </div>
+        <>
+          <div 
+            className="absolute -top-6 left-0 px-2 py-0.5 bg-blue-500 text-white text-xs rounded truncate max-w-full flex items-center gap-1 cursor-pointer"
+            onDoubleClick={handleDoubleClick}
+          >
+            {layer.locked && (
+              <svg className="w-3 h-3 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            )}
+            {isRenaming ? (
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onBlur={handleRenameSubmit}
+                onKeyDown={handleRenameKeyDown}
+                className="bg-transparent border-none outline-none text-white text-xs w-20"
+                autoFocus
+              />
+            ) : (
+              layer.title
+            )}
+          </div>
+        </>
       )}
     </div>
   );

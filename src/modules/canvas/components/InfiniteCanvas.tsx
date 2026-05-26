@@ -17,6 +17,7 @@ import { LayerDetailPanel } from './LayerDetailPanel';
 import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
 import { SaveToLibraryDialog } from './SaveToLibraryDialog';
+import { ImageActionMenu } from './ImageActionMenu';
 import type { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
 
@@ -510,6 +511,23 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           ))}
         </div>
       </div>
+
+      {(() => {
+        const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image') : undefined;
+        if (!imgLayer || !containerRef.current) return null;
+        const cr = containerRef.current.getBoundingClientRect();
+        return (
+          <ImageActionMenu
+            layer={imgLayer}
+            screenRect={{
+              top: cr.top + offset.y + imgLayer.y * scale,
+              left: cr.left + offset.x + imgLayer.x * scale,
+              width: imgLayer.width * scale,
+              height: imgLayer.height * scale,
+            }}
+          />
+        );
+      })()}
 
       <Minimap />
       <LayerPanel />
