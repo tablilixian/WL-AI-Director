@@ -707,6 +707,169 @@ const callDramaBackendCharacterApi = async (
 };
 
 /**
+ * 调用 Drama Backend 分镜生成 API (image2storyboard)
+ * 根据文本描述生成分镜图像（格子分镜）
+ */
+const callDramaBackendStoryboardApi = async (
+  options: ImageGenerateOptions,
+  model: ImageModelDefinition,
+  apiBase: string,
+  traceId: string
+): Promise<string> => {
+  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用分镜生成 API`);
+  console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
+  console.log(`[I2I:${traceId}] 端点: /api/v1/generate/image2storyboard`);
+
+  // 上传参考图（可选）
+  let imageFilename = '';
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    const imageUrl = options.referenceImages[0];
+    console.log(`[I2I:${traceId}] 上传参考图到 Drama Backend...`);
+    imageFilename = await measureTime('上传参考图', traceId, () =>
+      uploadImageToDramaBackend(imageUrl, apiBase, traceId)
+    );
+    console.log(`[I2I:${traceId}] 参考图上传成功 -> filename: ${imageFilename}`);
+  }
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    gridnum: options.gridnum || 4,
+    width: options.itemWidth || 1024,
+  };
+  if (imageFilename) {
+    requestBody.image = imageFilename;
+  }
+
+  console.log(`[I2I:${traceId}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await measureTime('Drama Backend 分镜生成', traceId, () =>
+    retryOperation(async () => {
+      const res = await fetch(`${apiBase}/api/v1/generate/image2storyboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!res.ok) {
+        let errorMessage = `HTTP 错误: ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+        } catch (e) {
+          const errorText = await res.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return await res.json();
+    })
+  );
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error('分镜生成失败：未能从响应中获取图片 URL');
+  }
+
+  console.log(`[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+    console.log(`[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
+  }
+
+  const imageBlob = await measureTime('下载生成图片', traceId, async () => {
+    const imageResponse = await fetch(downloadUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`图片下载失败: ${imageResponse.status}`);
+    }
+    return await imageResponse.blob();
+  });
+
+  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+
+  return `local:${localImageId}`;
+};
+
+/**
+ * 调用 Drama Backend 视觉语言推理 API (image2vl)
+ * 基于图像和文本提示进行视觉语言模型推理，返回文本输出
+ */
+export const callDramaBackendVLApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `vl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[VL:${tid}] 调用视觉语言推理 API`);
+  console.log(`[VL:${tid}] 端点: /api/v1/generate/image2vl`);
+  console.log(`[VL:${tid}] API基础地址: ${apiBase}`);
+
+  // 上传参考图（可选）
+  let imageFilename = '';
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    const imageUrl = options.referenceImages[0];
+    console.log(`[VL:${tid}] 上传参考图到 Drama Backend...`);
+    imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+    console.log(`[VL:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
+  }
+
+  const requestBody: any = {
+    system_prompt: options.systemPrompt || 'You are a helpful assistant.',
+    prompt: options.prompt,
+  };
+  if (imageFilename) {
+    requestBody.image = imageFilename;
+  }
+
+  console.log(`[VL:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2vl`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  if (!response.output) {
+    throw new Error(`视觉语言推理失败：响应中未找到 output 字段: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[VL:${tid}] 推理完成，输出长度: ${response.output.length} 字符`);
+
+  return response.output;
+};
+
+/**
  * 调用图片生成 API
  */
 export const callImageApi = async (
@@ -745,6 +908,11 @@ export const callImageApi = async (
     if (options.isCharacterTurnaround) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2character 端点)`);
       return callDramaBackendCharacterApi(options, activeModel, baseUrl, tid);
+    }
+
+    if (options.isStoryboard) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (分镜生成 image2storyboard 端点)`);
+      return callDramaBackendStoryboardApi(options, activeModel, baseUrl, tid);
     }
 
     console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);

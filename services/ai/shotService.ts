@@ -15,7 +15,7 @@ import {
   getDefaultChatModelId,
 } from './apiCore';
 import { getStylePromptCN, getStylePrompt } from './promptConstants';
-import { generateImage } from './visualService';
+import { generateStoryboardImage } from './visualService';
 
 // ============================================
 // 关键帧优化
@@ -776,7 +776,7 @@ export const generateNineGridPanels = async (
 };
 
 /**
- * 使用图像模型生成九宫格分镜图片
+ * 使用 Drama Backend 分镜生成 API 生成九宫格分镜图片
  */
 export const generateNineGridImage = async (
   panels: NineGridPanel[],
@@ -788,38 +788,24 @@ export const generateNineGridImage = async (
   const startTime = Date.now();
   console.log('🎬 九宫格分镜 - 开始生成九宫格图片...');
 
-  const stylePrompt = getStylePrompt(visualStyle);
+  // 将 9 个 panel 描述拼接为多行 prompt（每行对应一个格子）
+  const panelLines = panels.map((panel, idx) =>
+    `Panel ${idx + 1}: [${panel.shotSize} / ${panel.cameraAngle}] ${panel.description}`
+  );
+  const storyboardPrompt = panelLines.join('\n');
 
-  const positionLabels = [
-    'Top-Left', 'Top-Center', 'Top-Right',
-    'Middle-Left', 'Center', 'Middle-Right',
-    'Bottom-Left', 'Bottom-Center', 'Bottom-Right'
-  ];
-
-  const panelDescriptions = panels.map((panel, idx) =>
-    `Panel ${idx + 1} (${positionLabels[idx]}): [${panel.shotSize} / ${panel.cameraAngle}] - ${panel.description}`
-  ).join('\n');
-
-  const nineGridPrompt = `Generate a SINGLE image composed as a cinematic storyboard with a 3x3 grid layout (9 equal panels).
-The image shows the SAME scene from 9 DIFFERENT camera angles and shot sizes.
-Each panel is separated by thin white borders.
-
-Visual Style: ${stylePrompt}
-
-Grid Layout (left to right, top to bottom):
-${panelDescriptions}
-
-CRITICAL REQUIREMENTS:
-- The output MUST be a SINGLE image divided into exactly 9 equal rectangular panels in a 3x3 grid layout
-- Each panel MUST have a thin white border/separator (2-3px) between panels
-- All 9 panels show the SAME scene from DIFFERENT camera angles and shot sizes
-- Maintain STRICT character consistency across ALL panels (same face, hair, clothing, body proportions)
-- Maintain consistent lighting, color palette, and atmosphere across all panels
-- Each panel should be a complete, well-composed frame suitable for use as a keyframe
-- The overall image should read as a professional cinematographer's shot planning board`;
+  console.log('🎬 九宫格分镜 - 调用 Drama Backend image2storyboard 接口');
+  console.log(`🎬 九宫格分镜 - 格子数: ${panels.length}`);
 
   try {
-    const imageUrl = await generateImage(nineGridPrompt, referenceImages, aspectRatio, false, false, 'ninegrid', shotId);
+    const imageUrl = await generateStoryboardImage(
+      storyboardPrompt,
+      panels.length,       // gridnum
+      1024,                // itemWidth
+      referenceImages[0],  // referenceImage (只传第一张)
+      'ninegrid',
+      shotId
+    );
     const duration = Date.now() - startTime;
 
     console.log(`✅ 九宫格分镜 - 图片生成完成，耗时: ${duration}ms`);

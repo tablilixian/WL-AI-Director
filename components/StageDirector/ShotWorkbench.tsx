@@ -43,6 +43,7 @@ interface ShotWorkbenchProps {
   onImageClick: (url: string, title: string) => void;
   // 九宫格分镜预览（高级功能）
   onGenerateNineGrid: () => void;
+  onGenerateNineGridV2?: () => void; // V2 测试：风格帧 → image2storyboard
   nineGrid?: NineGridData;
   onSelectNineGridPanel: (panel: NineGridPanel) => void;
   onShowNineGrid: () => void;
@@ -84,6 +85,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onVideoModelChange,
   onImageClick,
   onGenerateNineGrid,
+  onGenerateNineGridV2,
   nineGrid,
   onSelectNineGridPanel,
   onShowNineGrid
@@ -98,6 +100,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   const endKf = shot.keyframes?.find(k => k.type === 'end');
   const [localVideoModelId, setLocalVideoModelId] = useState(currentVideoModelId);
   const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
+  const [styleFrameDisplayUrl, setStyleFrameDisplayUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalVideoModelId(currentVideoModelId);
@@ -112,6 +115,16 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
       setNineGridImageUrl(null);
     }
   }, [nineGrid?.imageUrl]);
+
+  useEffect(() => {
+    if (nineGrid?.styleFrameUrl) {
+      unifiedImageService.resolveForDisplay(nineGrid.styleFrameUrl).then(url => {
+        setStyleFrameDisplayUrl(url);
+      });
+    } else {
+      setStyleFrameDisplayUrl(null);
+    }
+  }, [nineGrid?.styleFrameUrl]);
 
   const normalizedModelId = localVideoModelId.trim().toLowerCase();
   // 所有视频模型都支持首尾帧模式
@@ -264,6 +277,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
               </div>
             </div>
           )}
+
         </div>
         )}
 

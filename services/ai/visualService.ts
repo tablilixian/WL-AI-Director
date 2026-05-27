@@ -23,7 +23,7 @@ import {
   getNegativePrompt,
   getSceneNegativePrompt,
 } from './promptConstants';
-import { callImageApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -762,6 +762,121 @@ export const generateCharacterFromDesignImage = async (
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 角色立绘图生成失败:', error);
     throw new Error(`角色立绘图生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 生成分镜图像（格子分镜）
+ * 调用 Drama Backend image2storyboard API，根据文本描述生成分镜图像
+ */
+export const generateStoryboardImage = async (
+  prompt: string,
+  gridnum: number = 4,
+  itemWidth: number = 1024,
+  referenceImage?: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎨 generateStoryboardImage 调用 - 生成分镜图像`);
+    logger.debug(LogCategory.AI, `📝 分镜提示词:\n${'='.repeat(80)}\n${prompt}\n${'='.repeat(80)}`);
+
+    const imageUrl = await callImageApi({
+      prompt,
+      referenceImages: referenceImage ? [referenceImage] : [],
+      isStoryboard: true,
+      gridnum,
+      itemWidth,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'storyboard-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt: prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, '✅ 分镜图像生成完成');
+    return imageUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'storyboard-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt: prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`分镜图像生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 视觉语言模型推理
+ * 调用 Drama Backend image2vl API，基于图像和文本进行视觉语言推理
+ */
+export const generateVisualLanguage = async (
+  systemPrompt: string,
+  prompt: string,
+  referenceImage?: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🧠 generateVisualLanguage 调用 - 视觉语言推理`);
+    logger.debug(LogCategory.AI, `📝 系统提示词: ${systemPrompt}`);
+    logger.debug(LogCategory.AI, `📝 用户提示词: ${prompt}`);
+
+    const output = await callDramaBackendVLApi({
+      prompt,
+      systemPrompt,
+      referenceImages: referenceImage ? [referenceImage] : [],
+      isVisualLanguage: true,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'vl-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt: prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, '✅ 视觉语言推理完成');
+    return output;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'vl-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt: prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`视觉语言推理失败: ${error.message}`);
   }
 };
 

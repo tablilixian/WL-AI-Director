@@ -68,6 +68,8 @@ export {
   generateCharacterTurnaroundPanels,
   generateCharacterTurnaroundImage,
   generateCharacterFromDesignImage,
+  generateStoryboardImage,
+  generateVisualLanguage,
 } from './visualService';
 
 // 视频生成服务

@@ -180,6 +180,20 @@ export interface ImageGenerateOptions {
   resourceType?: string;  // 资源类型：character, scene, prop, keyframe等
   resourceId?: string;    // 资源ID：用于构建存储路径
   isCharacterTurnaround?: boolean;  // 是否为 Drama Backend 角色立绘图生成
+  isStoryboard?: boolean;  // 是否为分镜生成
+  gridnum?: number;        // 分镜格子数量（默认 4）
+  itemWidth?: number;      // 分镜图像每个 item 宽度（默认 1024）
+  isVisualLanguage?: boolean;  // 是否为视觉语言推理
+  systemPrompt?: string;       // 视觉语言的系统提示词
+}
+
+/**
+ * 视觉语言推理响应
+ */
+export interface VLResponse {
+  prompt_id: string;
+  output: string;
+  duration: number;
 }
 
 /**

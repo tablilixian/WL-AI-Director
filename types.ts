@@ -146,13 +146,17 @@ export interface NineGridPanel {
  * 九宫格分镜预览数据
  */
 export interface NineGridData {
-  panels: NineGridPanel[];  // 9个格子的描述数据
+  panels: NineGridPanel[];  // 格子的描述数据
+  gridnum?: number;         // 格子数量（默认 9）
   imageUrl?: string;        // 生成的九宫格图片 (base64)
   prompt?: string;          // 生成时使用的完整提示词
   status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
-  // generating_panels: AI正在生成9个镜头描述
+  // generating_panels: AI正在生成镜头描述
   // panels_ready: 镜头描述已生成，等待用户确认/编辑后再生成图片
   // generating_image: 用户已确认，正在生成九宫格图片
+  // V2 风格帧信息（风格帧→image2storyboard 流程）
+  styleFramePrompt?: string; // 风格帧生成的提示词
+  styleFrameUrl?: string;    // 风格帧图片
 }
 
 export interface Shot {

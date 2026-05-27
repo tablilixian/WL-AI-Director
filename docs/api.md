@@ -10,6 +10,8 @@
 - [图像生成](#图像生成)
 - [图像上传](#图像上传)
 - [图像查看](#图像查看)
+- [分镜生成](#分镜生成)
+- [视觉语言](#视觉语言)
 
 ---
 
@@ -113,6 +115,28 @@
     "duration": 3.63
 }
 
+### GET /api/v1/generate/image
+
+生成默认图像（使用预置提示词）
+
+**请求参数:** 无
+
+**响应:** 返回生成的图像数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "z-image_00039_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=z-image_00039_.png",
+    "duration": 3.63
+}
+```
+
+**说明:**
+- 该端点使用内部预置的提示词生成图像
+- 适用于快速测试或生成默认风格图像
+
 ### POST /api/v1/generate/image2character
 
 基于角色设计图生成角色立绘图（三视图）
@@ -183,6 +207,82 @@
 | `filename` | string | 是 | 要获取的图像文件名 |
 
 **响应:** 返回图像二进制数据 (image/png)
+
+---
+
+## 分镜生成
+
+### POST /api/v1/generate/image2storyboard
+
+根据文本描述生成分镜图像（格子分镜）
+
+**请求体 (Image2StoryboardRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述（每行描述一个分镜场景） |
+| `gridnum` | integer | 否 | 4 | 分镜格子数量 |
+| `width` | integer | 否 | 1024 | 分镜图像每个item宽度 |
+| `image` | string | 否 | "" | 参考图像（文件名） |
+
+**请求示例:**
+```json
+{
+  "prompt": "Character enters the forest\nCharacter finds a treasure\nCharacter leaves with treasure",
+  "gridnum": 4,
+  "width": 1024,
+  "image": "reference.png"
+}
+```
+
+**响应:** 返回生成的分镜图像数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "storyboard_00001_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=storyboard_00001_.png",
+    "duration": 5.23
+}
+```
+
+---
+
+## 视觉语言
+
+### POST /api/v1/generate/image2vl
+
+基于图像和文本提示进行视觉语言模型推理
+
+**请求体 (Image2VLRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `system_prompt` | string | 是 | - | 系统提示词 |
+| `prompt` | string | 是 | - | 用户提示词 |
+| `image` | string | 否 | "" | 参考图像（文件名） |
+
+**请求示例:**
+```json
+{
+  "system_prompt": "You are a helpful assistant.",
+  "prompt": "Describe this image in detail",
+  "image": "input_image.png"
+}
+```
+
+**响应:** 返回模型生成的文本结果
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "output": "镜头从低角仰视缓缓抬升至中景，男子静坐石阶，烛光在衣褶投下流动阴影；手持微颤，眼神凝望远方，似有心事未诉。暖黄光线勾勒轮廓，木窗格虚化成背景呼吸脉动。\n\n镜头横向平滑右移，聚焦其左手轻抚袖口细节，布料纹理清晰可见；耳后簪子反射烛火余晖，眉宇间紧锁一丝沉思。远处三支蜡烛依次渐隐，在空间纵深里营造仪式感压迫气氛。\n\n近景特写他指尖微微蜷曲，指腹压住袍边暗纹处——那是旧伤痕印记；瞳孔深处映着一缕斜射而来的烛焰，情绪由内敛转为警觉。背景柱体模糊，强化角色心理独白强度。\n\n缓慢拉远镜头，展现全身盘腿端坐姿态，灰袍宽大垂落形成对称美感；身后阶梯层层叠起，烛台排列如阵列守卫。面部神情自若却透出压抑重量，暗示即将发生重大抉择或对话转折。",
+    "duration": 3.12
+}
+```
+
 
 ---
 

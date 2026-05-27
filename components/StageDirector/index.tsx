@@ -920,6 +920,106 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   };
 
   /**
+   * 九宫格分镜预览 V2（测试新流程）
+   * 先生成风格帧（style frame）作为参考图，再调用 image2storyboard
+   */
+  const handleGenerateNineGridV2 = async (shot: Shot) => {
+    if (!shot) return;
+
+    const scene = project.scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
+    if (!scene) {
+      showAlert('找不到场景信息', { type: 'warning' });
+      return;
+    }
+
+    const characterNames: string[] = [];
+    if (shot.characters && project.scriptData?.characters) {
+      shot.characters.forEach(charId => {
+        const char = project.scriptData?.characters.find(c => String(c.id) === String(charId));
+        if (char) characterNames.push(char.name);
+      });
+    }
+
+    const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
+    const activeChatModel = getActiveChatModel();
+    const shotGenerationModel = project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
+
+    setShowNineGrid(true);
+    updateShot(shot.id, (s) => ({
+      ...s,
+      nineGrid: {
+        panels: [],
+        status: 'generating_panels' as const
+      }
+    }));
+
+    try {
+      // Step 1: 生成 9 个镜头描述
+      const panels = await generateNineGridPanels(
+        shot.actionSummary,
+        shot.cameraMovement,
+        { location: scene.location, time: scene.time, atmosphere: scene.atmosphere },
+        characterNames,
+        visualStyle,
+        shotGenerationModel
+      );
+
+      // Step 2: 生成风格帧（style frame）作为统一参考
+      updateShot(shot.id, (s) => ({
+        ...s,
+        nineGrid: { panels, status: 'generating_image' as const }
+      }));
+
+      const refResult = getRefImagesForShot(shot, project.scriptData);
+      const styleFramePrompt = buildKeyframePrompt(shot.actionSummary, visualStyle, shot.cameraMovement, 'start');
+      const styleFrameUrl = await generateImage(
+        styleFramePrompt,
+        refResult.images,
+        keyframeAspectRatio,
+        false,
+        false,
+        'ninegrid-styleframe',
+        shot.id
+      );
+
+      // Step 3: 以风格帧作为参考图 → image2storyboard
+      const imageUrl = await generateNineGridImage(
+        panels,
+        [styleFrameUrl],   // 只用风格帧作为参考
+        visualStyle,
+        keyframeAspectRatio,
+        shot.id
+      );
+
+      updateShot(shot.id, (s) => ({
+        ...s,
+        nineGrid: {
+          panels,
+          imageUrl,
+          gridnum: 9,
+          prompt: `V2 Flow - Style Frame → Storyboard - ${shot.actionSummary}`,
+          status: 'completed' as const,
+          styleFramePrompt,
+          styleFrameUrl,
+        }
+      }));
+
+      showAlert('V2 九宫格分镜生成完成！（风格帧→分格）', { type: 'success' });
+    } catch (e: any) {
+      console.error('V2 九宫格分镜生成失败:', e);
+      updateShot(shot.id, (s) => ({
+        ...s,
+        nineGrid: {
+          panels: s.nineGrid?.panels || [],
+          status: 'failed' as const
+        }
+      }));
+      if (onApiKeyError && onApiKeyError(e)) return;
+      showAlert(`V2 九宫格分镜生成失败: ${e.message}`, { type: 'error' });
+    }
+  };
+
+  /**
    * 九宫格分镜预览 - 第二步：确认并生成图片
    * 用户确认/编辑完面板描述后，调用图片生成 API 生成九宫格图片
    */
@@ -1275,6 +1375,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             onImageClick={(url, title) => setPreviewImage({ url, title })}
             aspectRatio={keyframeAspectRatio}
             onGenerateNineGrid={() => handleGenerateNineGrid(activeShot)}
+            onGenerateNineGridV2={() => handleGenerateNineGridV2(activeShot)}
             nineGrid={activeShot.nineGrid}
             onSelectNineGridPanel={handleSelectNineGridPanel}
             onShowNineGrid={() => setShowNineGrid(true)}
