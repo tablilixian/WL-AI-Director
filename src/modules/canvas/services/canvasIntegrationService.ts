@@ -174,11 +174,53 @@ export class CanvasIntegrationService {
 
   /**
    * 手动触发即时保存（用于事件触发，如服务器响应后）
-   * 立即执行，无延迟
+   * 立即执行，无延迟，绕过 canvasSyncService 的 500ms 防抖
    * @param force 强制保存，忽略变化检测和时间间隔限制
+   * @returns 保存完成的 Promise（可用于退出前等待保存完成）
    */
-  saveImmediately(force: boolean = false): void {
-    this.performSave(false, force);
+  saveImmediately(force: boolean = false): Promise<void> {
+    if (!force && !this.hasUnsavedChanges) {
+      return Promise.resolve();
+    }
+    return this.doImmediateSave().catch(e => {
+      console.warn('[CanvasIntegration] 即时保存失败:', e);
+    });
+  }
+
+  private async doImmediateSave(): Promise<void> {
+    if (!this.currentProjectId) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法立即保存');
+      return;
+    }
+
+    const { layers, offset, scale } = useCanvasStore.getState();
+    if (layers.length === 0) return;
+
+    const layersToSave = await Promise.all(layers.map(async (layer) => {
+      const { src, thumbnail, ...rest } = layer;
+      let imageId = layer.imageId;
+      if (src && src.startsWith('data:') && !imageId) {
+        try {
+          const imgId = unifiedImageService.generateImageId();
+          const response = await fetch(src);
+          const blob = await response.blob();
+          await unifiedImageService.saveImage(imgId, blob);
+          imageId = imgId;
+        } catch (e) {
+          console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败:`, e);
+        }
+      }
+      return { ...rest, imageId, srcSaved: src ? true : false };
+    }));
+
+    try {
+      await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
+      this.lastSaveTime = Date.now();
+      this.hasUnsavedChanges = false;
+      console.log('[CanvasIntegration] 即时保存画布成功');
+    } catch (e) {
+      console.warn('[CanvasIntegration] 即时保存画布失败:', e);
+    }
   }
 
   /**
@@ -528,11 +570,18 @@ export class CanvasIntegrationService {
   }
 
   /**
-   * 清空画布
+   * 清空画布（会保存空状态到 IndexedDB，确保刷新后保持为空）
    */
   clearCanvas(): void {
-    const { clearCanvas } = useCanvasStore.getState();
+    const { clearCanvas, offset, scale } = useCanvasStore.getState();
     clearCanvas();
+    
+    if (this.currentProjectId) {
+      canvasSyncService.saveNow(this.currentProjectId, [], offset, scale).catch(e => {
+        console.warn('[CanvasIntegration] 保存空画布失败:', e);
+      });
+    }
+    
     logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布已清空');
   }
 
@@ -661,10 +710,38 @@ export class CanvasIntegrationService {
       }
 
       if (store.projectId && store.projectId !== this.currentProjectId) {
-        console.log('[CanvasIntegration] 项目ID不匹配，清空旧数据');
+        console.log('[CanvasIntegration] 项目ID不匹配，先保存旧数据再清空');
         console.log('[CanvasIntegration] store 中的项目ID:', store.projectId);
         console.log('[CanvasIntegration] 当前项目ID:', this.currentProjectId);
-        
+
+        // 先保存旧项目的数据，防止丢失
+        const oldProjectId = store.projectId;
+        const { layers: oldLayers, offset: oldOffset, scale: oldScale } = store;
+        if (oldLayers.length > 0) {
+          try {
+            const layersToSave = await Promise.all(oldLayers.map(async (layer) => {
+              const { src, thumbnail, ...rest } = layer;
+              let imageId = layer.imageId;
+              if (src && src.startsWith('data:') && !imageId) {
+                try {
+                  const imgId = unifiedImageService.generateImageId();
+                  const response = await fetch(src);
+                  const blob = await response.blob();
+                  await unifiedImageService.saveImage(imgId, blob);
+                  imageId = imgId;
+                } catch (e) {
+                  console.warn(`[CanvasIntegration] 保存旧项目图片失败:`, e);
+                }
+              }
+              return { ...rest, imageId, srcSaved: src ? true : false };
+            }));
+            await canvasSyncService.saveNow(oldProjectId, layersToSave, oldOffset, oldScale);
+            console.log('[CanvasIntegration] 旧项目画布数据已保存');
+          } catch (e) {
+            console.warn('[CanvasIntegration] 保存旧项目画布数据失败:', e);
+          }
+        }
+
         store.layers.forEach(layer => {
           if (layer.imageId) {
             assetStore.deleteAsset(layer.imageId).catch(console.error);

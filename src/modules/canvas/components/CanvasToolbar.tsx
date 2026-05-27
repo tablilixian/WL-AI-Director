@@ -7,6 +7,7 @@ import React from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { PromptMode } from '../types/canvas';
+import { unifiedImageService } from '../../../../services/unifiedImageService';
 
 export const CanvasToolbar: React.FC = () => {
   const { 
@@ -45,15 +46,25 @@ export const CanvasToolbar: React.FC = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const base64 = event.target?.result as string;
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
+          let imageId: string | undefined;
+          try {
+            const id = unifiedImageService.generateImageId();
+            const blob = await (await fetch(base64)).blob();
+            await unifiedImageService.saveImage(id, blob);
+            imageId = id;
+          } catch (e) {
+            console.warn('[CanvasToolbar] 保存图片到 IndexedDB 失败:', e);
+          }
+
           useCanvasStore.getState().addLayer({
             id: crypto.randomUUID(),
             type: 'image',
@@ -62,6 +73,7 @@ export const CanvasToolbar: React.FC = () => {
             width: img.width,
             height: img.height,
             src: base64,
+            imageId,
             title: file.name,
             createdAt: Date.now()
           });

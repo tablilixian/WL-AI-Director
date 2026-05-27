@@ -3,7 +3,7 @@
  * 集成无限画布功能到 WL AI Director
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProjectState, Shot, Keyframe } from '../types';
 import { InfiniteCanvas } from '../src/modules/canvas';
 import { canvasIntegrationService } from '../src/modules/canvas/services/canvasIntegrationService';
@@ -28,25 +28,48 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
 
+  const isMountedRef = useRef(false);
+  const isRestoringRef = useRef(false);
+
   // 自动恢复画布状态
   // 使用 canvasSyncService 实现 Local-First 架构
-  React.useEffect(() => {
+  // 使用 ref 防止 React Strict Mode 下双重执行导致竞争
+  useEffect(() => {
+    isMountedRef.current = true;
+    isRestoringRef.current = true;
+
     canvasIntegrationService.restoreCanvasState().then(restored => {
+      if (!isMountedRef.current) return;
+      isRestoringRef.current = false;
       if (restored) {
         console.log('[StageCanvas] 画布状态恢复成功，项目:', project.id);
       } else {
         console.log('[StageCanvas] 未找到画布数据，项目:', project.id);
       }
     }).catch(error => {
+      isRestoringRef.current = false;
       console.error('[StageCanvas] 初始化画布失败:', error);
     });
     
     return () => {
-      canvasIntegrationService.forceSync().catch(error => {
-        console.error('[StageCanvas] 同步画布失败:', error);
-      });
+      isMountedRef.current = false;
+      // 只在 restore 完成后执行 cleanup，避免 Strict Mode 双重 mount 误清理
+      if (!isRestoringRef.current) {
+        canvasIntegrationService.forceSync().catch(error => {
+          console.error('[StageCanvas] 同步画布失败:', error);
+        });
+      }
     };
   }, [project.id]);
+
+  // 浏览器刷新/关闭前兜底保存
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      canvasIntegrationService.saveImmediately(true);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const getAllKeyframes = (): Keyframe[] => {
     if (!project.shots) return [];

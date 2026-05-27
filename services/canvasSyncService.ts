@@ -161,6 +161,51 @@ class CanvasSyncService {
   }
 
   /**
+   * 立即保存画布状态 - 绕过防抖，直接写入 IndexedDB
+   * 用于关键节点：手动保存、切换页面、浏览器关闭前兜底
+   * 
+   * @param projectId 项目ID
+   * @param layers 图层数据
+   * @param offset 画布偏移
+   * @param scale 画布缩放
+   */
+  async saveNow(
+    projectId: string,
+    layers: any[],
+    offset: { x: number; y: number },
+    scale: number
+  ): Promise<void> {
+    if (!projectId) {
+      logger.warn(LogCategory.CANVAS, '[CanvasSync] 项目ID为空，无法立即保存');
+      return;
+    }
+
+    this.currentProjectId = projectId;
+    this.pendingSaveData = null;
+
+    if (this.debouncedSaveTimer) {
+      clearTimeout(this.debouncedSaveTimer);
+      this.debouncedSaveTimer = null;
+    }
+
+    try {
+      const canvasData = await saveCanvasDataToLocal(projectId, layers, offset, scale);
+      this.state.lastLocalSave = Date.now();
+      this.state.dirty = true;
+
+      logger.debug(
+        LogCategory.CANVAS,
+        `[CanvasSync] 立即保存成功，项目: ${projectId}, 版本: ${canvasData.version}`
+      );
+
+      this.scheduleCloudSync();
+    } catch (error) {
+      logger.error(LogCategory.CANVAS, '[CanvasSync] 立即保存失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 执行保存
    */
   private async doSave(): Promise<void> {
@@ -424,6 +469,7 @@ class CanvasSyncService {
 
   /**
    * 确定同步方向
+   * 安全策略：本地有内容且云端为空时，优先保留本地数据，防止云端空数据覆盖
    */
   private determineSyncDirection(
     localData: CanvasData | null,
@@ -446,6 +492,18 @@ class CanvasSyncService {
 
     // 情况4: 都有 -> 比较版本
     if (localData && cloudData) {
+      // 安全策略：本地有内容但云端为空，使用本地
+      if (localData.layers.length > 0 && (!cloudData.layers || cloudData.layers.length === 0)) {
+        logger.warn(LogCategory.CANVAS, '[CanvasSync] 本地有内容但云端为空，优先保留本地数据');
+        return ConflictResolution.USE_LOCAL;
+      }
+
+      // 安全策略：云端有内容但本地为空，使用云端
+      if ((!localData.layers || localData.layers.length === 0) && cloudData.layers && cloudData.layers.length > 0) {
+        logger.warn(LogCategory.CANVAS, '[CanvasSync] 云端有内容但本地为空，下载云端数据');
+        return ConflictResolution.USE_CLOUD;
+      }
+
       // 如果本地有待同步数据，优先使用本地
       if (localData.syncStatus === 'pending') {
         return ConflictResolution.USE_LOCAL;

@@ -447,6 +447,7 @@ function App() {
           setIsGenerating(false);
           setIsExiting(true);
           if (project) {
+            await canvasIntegrationService.saveImmediately(true);
             await hybridStorage.saveProject(project);
           }
           logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
@@ -460,6 +461,7 @@ function App() {
     logger.debug(LogCategory.APP, '💾 开始保存项目...');
     setIsExiting(true);
     if (project) {
+      await canvasIntegrationService.saveImmediately(true);
       await hybridStorage.saveProject(project);
     }
     logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
