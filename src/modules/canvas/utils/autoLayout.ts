@@ -10,11 +10,11 @@ interface PlacedNode {
   height: number;
 }
 
-const CLUSTER_GAP = 120;
-const ROW_GAP = 120;
-const PARENT_CHILD_GAP = 48;
-const VERTICAL_GAP = 40;
-const PADDING = 200;
+const CLUSTER_GAP = 200;
+const ROW_GAP = 200;
+const PARENT_CHILD_GAP = 240;
+const VERTICAL_GAP = 200;
+const PADDING = 240;
 
 /** Build a map of layerId → layers whose sourceLayerId or parentId points to it */
 function buildChildrenMap(visibleLayers: LayerData[]): Map<string, LayerData[]> {
