@@ -33,6 +33,7 @@ export const CanvasToolbar: React.FC = () => {
     createPromptLayer
   } = useCanvasStore();
   const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
+  const autoArrangeLayers = useCanvasStore((s) => s.autoArrangeLayers);
   const scale = useCanvasStore((s) => s.scale);
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
@@ -449,6 +450,16 @@ export const CanvasToolbar: React.FC = () => {
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+      </button>
+
+      <button
+        onClick={autoArrangeLayers}
+        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
+        title="Auto Arrange Layers"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
         </svg>
       </button>
 

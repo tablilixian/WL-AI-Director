@@ -7,20 +7,7 @@ interface ThreeViewPanelProps {
   onClose: () => void;
 }
 
-type GenerationMode = 'three-view' | 'turnaround-9';
-
-const MODE_LABELS: Record<GenerationMode, string> = {
-  'three-view': '正/侧/背三视图',
-  'turnaround-9': '九宫格多角度',
-};
-
-const MODE_DESCRIPTIONS: Record<GenerationMode, string> = {
-  'three-view': '生成角色的正面、侧面、背面三张视图，以3宫格组合展示',
-  'turnaround-9': '生成角色9个不同角度的视图，以3×3九宫格组合展示',
-};
-
 export const ThreeViewPanel: React.FC<ThreeViewPanelProps> = ({ selectedLayerId, onClose }) => {
-  const [mode, setMode] = useState<GenerationMode>('three-view');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const { layers, addLayer } = useCanvasStore();
@@ -37,68 +24,58 @@ export const ThreeViewPanel: React.FC<ThreeViewPanelProps> = ({ selectedLayerId,
     try {
       const { imageStorageService } = await import('../../../../services/imageStorageService');
 
-      if (mode === 'three-view') {
-        const prompt = `Character three-view reference sheet with 3 EQUAL-SIZED panels side by side. Left: front view, Center: side/profile view, Right: back view. ALL 3 panels must be IDENTICAL in size. Clean white or transparent background. Consistent character design across all views. Professional character design sheet, turnaround reference.`;
+      const imageUrl = await canvasModelService.generateImage({
+        prompt: `Character turnaround sheet for ${selectedLayer.title}`,
+        referenceImages: [selectedLayer.src],
+        isCharacterTurnaround: true,
+        onProgress: (p) => setProgress(p),
+      });
 
-        const imageUrl = await canvasModelService.generateImage({
-          prompt,
-          referenceImages: [selectedLayer.src],
-          aspectRatio: '16:9',
-          onProgress: (p) => setProgress(p),
-        });
+      let resolvedUrl = imageUrl;
+      let imageId: string | undefined;
 
-        let resolvedUrl = imageUrl;
-        let imageId: string | undefined;
-
-        if (imageUrl.startsWith('local:')) {
-          const localId = imageUrl.replace('local:', '');
-          imageId = localId;
-          const blob = await imageStorageService.getImage(localId);
-          if (blob) {
-            const reader = new FileReader();
-            resolvedUrl = await new Promise((resolve) => {
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-          }
-        } else if (imageUrl.startsWith('data:')) {
-          const imgId = `three_view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          await imageStorageService.saveImage(imgId, blob);
-          imageId = imgId;
+      if (imageUrl.startsWith('local:')) {
+        const localId = imageUrl.replace('local:', '');
+        imageId = localId;
+        const blob = await imageStorageService.getImage(localId);
+        if (blob) {
+          const reader = new FileReader();
+          resolvedUrl = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
         }
-
-        addLayer({
-          id: crypto.randomUUID(),
-          type: 'image',
-          x: selectedLayer.x,
-          y: selectedLayer.y + selectedLayer.height + 40,
-          width: selectedLayer.width * 1.5,
-          height: selectedLayer.height * 0.6,
-          src: resolvedUrl,
-          imageId,
-          title: `${selectedLayer.title} - 三视图`,
-          createdAt: Date.now(),
-          sourceLayerId: selectedLayer.id,
-          operationType: 'three-view',
-        });
-
-        addLayer({
-          id: crypto.randomUUID(),
-          type: 'image',
-          x: selectedLayer.x,
-          y: selectedLayer.y + selectedLayer.height + 40,
-          width: size,
-          height: size,
-          src: resolvedUrl,
-          imageId,
-          title: `${selectedLayer.title} - 九宫格多角度`,
-          createdAt: Date.now(),
-          sourceLayerId: selectedLayer.id,
-          operationType: 'three-view',
-        });
+      } else if (imageUrl.startsWith('data:')) {
+        const imgId = `three_view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        await imageStorageService.saveImage(imgId, blob);
+        imageId = imgId;
       }
+
+      const img = new Image();
+      const naturalSize = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = reject;
+        img.src = resolvedUrl;
+      });
+
+      const maxWidth = selectedLayer.width * 1.5;
+      const scale = Math.min(maxWidth / naturalSize.width, 1);
+      addLayer({
+        id: crypto.randomUUID(),
+        type: 'image',
+        x: selectedLayer.x,
+        y: selectedLayer.y + selectedLayer.height + 40,
+        width: naturalSize.width * scale,
+        height: naturalSize.height * scale,
+        src: resolvedUrl,
+        imageId,
+        title: `${selectedLayer.title} - 三视图`,
+        createdAt: Date.now(),
+        sourceLayerId: selectedLayer.id,
+        operationType: 'three-view',
+      });
 
       onClose();
     } catch (error: any) {
@@ -150,31 +127,9 @@ export const ThreeViewPanel: React.FC<ThreeViewPanelProps> = ({ selectedLayerId,
               </div>
             </div>
           ) : (
-            <>
-              <div>
-                <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">生成模式</label>
-                <div className="flex gap-2">
-                  {(Object.entries(MODE_LABELS) as [GenerationMode, string][]).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setMode(key)}
-                      className={`flex-1 p-3 rounded-lg border text-left transition-all ${
-                        mode === key
-                          ? 'border-purple-500 bg-purple-500/10'
-                          : 'border-[var(--border-primary)] bg-[var(--bg-hover)] hover:border-[var(--border-secondary)]'
-                      }`}
-                    >
-                      <div className="text-sm font-bold text-[var(--text-primary)]">{label}</div>
-                      <div className="text-[10px] text-[var(--text-tertiary)] mt-1">{MODE_DESCRIPTIONS[key]}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-base)] p-3 rounded-lg border border-[var(--border-primary)]">
-                <p>基于角色的定妆照，AI 会保持角色设计的一致性，生成正面、侧面、背面的多角度视图。适合用于角色设计确认和后续分镜制作。</p>
-              </div>
-            </>
+            <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-base)] p-3 rounded-lg border border-[var(--border-primary)]">
+              <p>基于角色的定妆照，AI 会保持角色设计的一致性，生成正面、侧面、背面的多角度视图。适合用于角色设计确认和后续分镜制作。</p>
+            </div>
           )}
         </div>
 
@@ -187,7 +142,7 @@ export const ThreeViewPanel: React.FC<ThreeViewPanelProps> = ({ selectedLayerId,
               onClick={handleGenerate}
               className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
             >
-              生成{mode === 'three-view' ? '三视图' : '九宫格'}
+              生成三视图
             </button>
           </div>
         )}

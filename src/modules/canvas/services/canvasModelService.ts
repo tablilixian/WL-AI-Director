@@ -11,6 +11,7 @@ interface GenerateImageOptions {
   referenceImages?: string[];
   aspectRatio?: AspectRatio;
   onProgress?: (progress: number) => void;
+  isCharacterTurnaround?: boolean;
 }
 
 interface GenerateVideoOptions {
@@ -51,7 +52,7 @@ export class CanvasModelService {
   }
 
   async generateImage(options: GenerateImageOptions): Promise<string> {
-    const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress } = options;
+    const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround } = options;
     const provider = this.getProvider();
     const traceId = this.generateTraceId();
     const startTime = Date.now();
@@ -89,7 +90,8 @@ export class CanvasModelService {
         referenceImages,
         aspectRatio,
         resourceType: 'canvas',
-        resourceId: traceId
+        resourceId: traceId,
+        isCharacterTurnaround
       }, undefined, traceId);
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);

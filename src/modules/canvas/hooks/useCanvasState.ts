@@ -28,6 +28,7 @@ import {
 } from '../types/canvas';
 import { assetStore } from '../services/assetStore';
 import { canvasIntegrationService } from '../services/canvasIntegrationService';
+import { autoLayout } from '../utils/autoLayout';
 
 const MAX_HISTORY = 20;
 
@@ -83,6 +84,7 @@ interface CanvasActions {
   ungroupLayers: (groupId: string) => void;
   mergeSelectedLayers: () => Promise<void>;
   searchLayers: (query: string) => LayerData[];
+  autoArrangeLayers: () => void;
   createPromptLayer: (x: number, y: number, mode?: PromptMode) => string;
   updatePromptConfig: (id: string, config: Partial<PromptLayerConfig>) => void;
   linkLayerToPrompt: (promptId: string, layerId: string) => boolean;
@@ -669,6 +671,40 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           l.title.toLowerCase().includes(lowerQuery) ||
           l.text?.toLowerCase().includes(lowerQuery)
         );
+      },
+
+      autoArrangeLayers: () => {
+        const state = get();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const result = autoLayout(state.layers, viewportWidth, viewportHeight);
+
+        set({
+          layers: result.updatedLayers,
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+
+        // Fit viewport — scale so all content is visible with generous padding
+        const { minX, minY, maxX, maxY } = result.bounds;
+        const contentWidth = Math.max(maxX - minX, 1);
+        const contentHeight = Math.max(maxY - minY, 1);
+        const pad = 60;
+        const scaleX = (viewportWidth - pad * 2) / contentWidth;
+        const scaleY = (viewportHeight - pad * 2) / contentHeight;
+        const newScale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.1), 5);
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        set({
+          scale: newScale,
+          offset: {
+            x: viewportWidth / 2 - cx * newScale,
+            y: viewportHeight / 2 - cy * newScale,
+          },
+        });
       },
 
       createPromptLayer: (x, y, mode = 'image-to-image') => {
