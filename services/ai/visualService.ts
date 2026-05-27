@@ -23,7 +23,7 @@ import {
   getNegativePrompt,
   getSceneNegativePrompt,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -820,6 +820,124 @@ export const generateStoryboardImage = async (
     });
 
     throw new Error(`分镜图像生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 生成图像分割网格
+ * 调用 Drama Backend image2splitegrid API，将图像分割成网格布局
+ * 返回分割后的多张图片的 local: 引用
+ */
+export const generateSpliteGridImage = async (
+  imageUrl: string,
+  row: number = 2,
+  column: number = 2,
+  targetWidth: number = 1024,
+  targetHeight: number = 720,
+  resourceType?: string,
+  resourceId?: string,
+  selectedIndices?: number[]
+): Promise<string[]> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🔲 generateSpliteGridImage 调用 - 图像分割网格`);
+    logger.debug(LogCategory.AI, `📐 网格参数: ${row}行 x ${column}列, 目标尺寸: ${targetWidth}x${targetHeight}`);
+
+    const localUrls = await callDramaBackendSpliteGridApi({
+      prompt: '',
+      referenceImages: [imageUrl],
+      isSpliteGrid: true,
+      spliteGridRow: row,
+      spliteGridColumn: column,
+      spliteGridTargetWidth: targetWidth,
+      spliteGridTargetHeight: targetHeight,
+      resourceType,
+      resourceId,
+    }, undefined, selectedIndices);
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'splitegrid-' + Date.now(),
+      resourceName: `${row}x${column} grid`,
+      status: 'success',
+      model: imageModelId,
+      prompt: `split image into ${row}x${column} grid`,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 图像分割网格完成，共 ${localUrls.length} 张图片`);
+    return localUrls;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'splitegrid-' + Date.now(),
+      resourceName: `${row}x${column} grid`,
+      status: 'failed',
+      model: imageModelId,
+      prompt: `split image into ${row}x${column} grid`,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`图像分割网格失败: ${error.message}`);
+  }
+};
+
+/**
+ * 生成图像修复（Inpainting）
+ * 调用 Drama Backend image2inpaint API，对图像进行修复或编辑
+ * 返回修复后的图片 local: 引用
+ */
+export const generateInpaintImage = async (
+  imageUrl: string,
+  prompt: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🩹 generateInpaintImage 调用 - 图像修复`);
+    logger.debug(LogCategory.AI, `📝 修复提示词: ${prompt}`);
+
+    const localUrl = await callDramaBackendInpaintApi({
+      prompt,
+      referenceImages: [imageUrl],
+      isInpaint: true,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'inpaint-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 图像修复完成: ${localUrl}`);
+    return localUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'inpaint-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`图像修复失败: ${error.message}`);
   }
 };
 

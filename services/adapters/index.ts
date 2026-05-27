@@ -6,7 +6,7 @@
 export { callChatApi, verifyApiKey, ApiKeyError } from './chatAdapter';
 
 // Image 适配器
-export { callImageApi, isAspectRatioSupported as isImageAspectRatioSupported } from './imageAdapter';
+export { callImageApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, isAspectRatioSupported as isImageAspectRatioSupported } from './imageAdapter';
 
 // Video 适配器
 export { callVideoApi, isAspectRatioSupported as isVideoAspectRatioSupported, isDurationSupported } from './videoAdapter';

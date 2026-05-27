@@ -69,6 +69,8 @@ export {
   generateCharacterTurnaroundImage,
   generateCharacterFromDesignImage,
   generateStoryboardImage,
+  generateSpliteGridImage,
+  generateInpaintImage,
   generateVisualLanguage,
 } from './visualService';
 

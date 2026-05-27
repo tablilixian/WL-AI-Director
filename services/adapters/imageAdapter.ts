@@ -798,6 +798,208 @@ const callDramaBackendStoryboardApi = async (
 };
 
 /**
+ * 调用 Drama Backend 图像分割网格 API (image2splitegrid)
+ * 将图像按照指定的行列数分割成网格，返回分割后的多张图片
+ */
+export const callDramaBackendSpliteGridApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string,
+  selectedIndices?: number[]
+): Promise<string[]> => {
+  const tid = traceId || `sg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[SG:${tid}] 调用图像分割网格 API`);
+  console.log(`[SG:${tid}] 端点: /api/v1/generate/image2splitegrid`);
+  console.log(`[SG:${tid}] API基础地址: ${apiBase}`);
+
+  // 上传参考图（必填）
+  let imageFilename = '';
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    const imageUrl = options.referenceImages[0];
+    console.log(`[SG:${tid}] 上传参考图到 Drama Backend...`);
+    imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+    console.log(`[SG:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
+  } else {
+    throw new Error('图像分割网格需要提供参考图像');
+  }
+
+  const requestBody: any = {
+    row: options.spliteGridRow || 2,
+    column: options.spliteGridColumn || 2,
+    target_width: options.spliteGridTargetWidth || 1024,
+    target_height: options.spliteGridTargetHeight || 720,
+    image: imageFilename,
+  };
+
+  console.log(`[SG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2splitegrid`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const images = response.images;
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    throw new Error(`图像分割网格失败：响应中未找到图片列表: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[SG:${tid}] Drama Backend 返回 ${images.length} 张分割图片`);
+
+  // 只下载需要的格子（用户选中 + 占位保留未选中）
+  const selectedSet = selectedIndices ? new Set(selectedIndices) : null;
+  const localUrls: (string | null)[] = [];
+
+  for (let i = 0; i < images.length; i++) {
+    // 如果指定了选中索引且当前格不在选中列表，跳过下载，留 null 占位
+    if (selectedSet && !selectedSet.has(i)) {
+      localUrls.push(null);
+      console.log(`[SG:${tid}] 第 ${i + 1} 格未选中，跳过下载`);
+      continue;
+    }
+
+    const item = images[i];
+    const imageUrl = item.url;
+
+    if (!imageUrl) {
+      console.warn(`[SG:${tid}] 第 ${i + 1} 张图片无 URL，跳过`);
+      localUrls.push(null);
+      continue;
+    }
+
+    let downloadUrl = imageUrl;
+    if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+      downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+    }
+
+    const imageBlob = await fetch(downloadUrl).then(r => {
+      if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+      return r.blob();
+    });
+
+    const localImageId = generateImageId();
+    await imageStorageService.saveImage(localImageId, imageBlob);
+    localUrls.push(`local:${localImageId}`);
+
+    console.log(`[SG:${tid}] 第 ${i + 1}/${images.length} 张分割图片已保存: ${localImageId}`);
+  }
+
+  const downloaded = localUrls.filter(Boolean).length;
+  console.log(`[SG:${tid}] 图像分割网格完成，共下载 ${downloaded}/${localUrls.length} 张图片`);
+  return localUrls as string[];
+};
+
+/**
+ * 调用 Drama Backend 图像修复 API (image2inpaint)
+ * 对图像进行修复或编辑（Inpainting），返回修复后的图片
+ */
+export const callDramaBackendInpaintApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `inp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[INP:${tid}] 调用图像修复 API`);
+  console.log(`[INP:${tid}] 端点: /api/v1/generate/image2inpaint`);
+  console.log(`[INP:${tid}] API基础地址: ${apiBase}`);
+
+  // 上传参考图（要修复的图像）
+  let imageFilename = '';
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    const imageUrl = options.referenceImages[0];
+    console.log(`[INP:${tid}] 上传待修复图像到 Drama Backend...`);
+    imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+    console.log(`[INP:${tid}] 图像上传成功 -> filename: ${imageFilename}`);
+  } else {
+    throw new Error('图像修复需要提供待修复的图像');
+  }
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    image: imageFilename,
+  };
+
+  console.log(`[INP:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2inpaint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error(`图像修复失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[INP:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const imageBlob = await fetch(downloadUrl).then(r => {
+    if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+    return r.blob();
+  });
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[INP:${tid}] 修复后图片已保存: ${localImageId}`);
+  return `local:${localImageId}`;
+};
+
+/**
  * 调用 Drama Backend 视觉语言推理 API (image2vl)
  * 基于图像和文本提示进行视觉语言模型推理，返回文本输出
  */
@@ -945,3 +1147,5 @@ export const isAspectRatioSupported = (
   
   return activeModel.params.supportedAspectRatios.includes(aspectRatio);
 };
+
+

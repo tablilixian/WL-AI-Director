@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Grid3x3, X, Download } from 'lucide-react';
+import { Grid3x3, X, Download, Cpu, Zap } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
+import { generateSpliteGridImage } from '@/services/aiService';
+import { imageStorageService, generateImageId } from '@/services/imageStorageService';
 import type { GridGenerationType } from '../types/canvas';
 
 interface GridSplitPanelProps {
@@ -10,10 +12,22 @@ interface GridSplitPanelProps {
   onClose: () => void;
 }
 
+type SplitMode = 'fast' | 'ai';
+
 const GRID_CONFIG: Record<GridGenerationType, { cols: number; rows: number; label: string }> = {
   '9grid': { cols: 3, rows: 3, label: '九宫格' },
   '4grid': { cols: 2, rows: 2, label: '四宫格' },
   '25grid': { cols: 5, rows: 5, label: '25宫格' },
+};
+
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches) throw new Error('无效的图片数据格式');
+  const mimeType = matches[1];
+  const binary = atob(matches[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
 };
 
 export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId, gridType, onClose }) => {
@@ -21,6 +35,7 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imgNaturalSize, setImgNaturalSize] = useState({ w: 0, h: 0 });
+  const [splitMode, setSplitMode] = useState<SplitMode>('fast');
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { layers, addLayer } = useCanvasStore();
@@ -38,53 +53,121 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
     });
   };
 
+  const addCellLayer = (
+    src: string,
+    cellIndex: number,
+    col: number,
+    row: number,
+    displayCellW: number,
+    displayCellH: number,
+    order: number
+  ) => {
+    addLayer({
+      id: crypto.randomUUID(),
+      type: 'image',
+      x: selectedLayer!.x + col * displayCellW,
+      y: selectedLayer!.y + selectedLayer!.height + 40 + order * (displayCellH + 8),
+      width: displayCellW,
+      height: displayCellH,
+      src,
+      title: `${selectedLayer!.title || '图片'} - 分镜 ${cellIndex + 1}`,
+      createdAt: Date.now(),
+      sourceLayerId: selectedLayer!.id,
+      operationType: gridType,
+    });
+  };
+
+  const extractCellsFast = async (indices: number[]) => {
+    const img = imgRef.current;
+    if (!img) throw new Error('图片未加载');
+
+    const cellW = imgNaturalSize.w / config.cols;
+    const cellH = imgNaturalSize.h / config.rows;
+    const displayCellW = selectedLayer!.width / config.cols;
+    const displayCellH = selectedLayer!.height / config.rows;
+
+    for (let i = 0; i < indices.length; i++) {
+      const cellIndex = indices[i];
+      const col = cellIndex % config.cols;
+      const row = Math.floor(cellIndex / config.cols);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = cellW;
+      canvas.height = cellH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+
+      ctx.drawImage(
+        img,
+        col * cellW, row * cellH, cellW, cellH,
+        0, 0, cellW, cellH
+      );
+
+      addCellLayer(canvas.toDataURL('image/png'), cellIndex, col, row, displayCellW, displayCellH, i);
+    }
+  };
+
+  const extractCellsAi = async (indices: number[]) => {
+    const src = selectedLayer!.src;
+    if (!src) throw new Error('图层无图片数据');
+
+    // 确保图片已保存到 IndexedDB（如果是 data URL 则先保存）
+    let imageRef = src;
+    if (src.startsWith('data:')) {
+      const blob = dataUrlToBlob(src);
+      const id = generateImageId();
+      await imageStorageService.saveImage(id, blob);
+      imageRef = `local:${id}`;
+    }
+
+    // 调用 API 分割（只下载用户选中的格子）
+    const localUrls = await generateSpliteGridImage(
+      imageRef,
+      config.rows,
+      config.cols,
+      Math.round(imgNaturalSize.w / config.cols),
+      Math.round(imgNaturalSize.h / config.rows),
+      undefined,
+      undefined,
+      indices,
+    );
+
+    const displayCellW = selectedLayer!.width / config.cols;
+    const displayCellH = selectedLayer!.height / config.rows;
+
+    for (let i = 0; i < indices.length; i++) {
+      const cellIndex = indices[i];
+      const localUrl = localUrls[cellIndex];
+      if (!localUrl) continue;
+
+      // 从 IndexedDB 读取并转 base64
+      const localId = localUrl.replace('local:', '');
+      const blob = await imageStorageService.getImage(localId);
+      if (!blob) continue;
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const col = cellIndex % config.cols;
+      const row = Math.floor(cellIndex / config.cols);
+      addCellLayer(dataUrl, cellIndex, col, row, displayCellW, displayCellH, i);
+    }
+  };
+
   const extractCells = async (indices: number[]) => {
     if (!selectedLayer || isProcessing) return;
     setIsProcessing(true);
 
     try {
-      const img = imgRef.current;
-      if (!img) throw new Error('图片未加载');
-
-      const cellW = imgNaturalSize.w / config.cols;
-      const cellH = imgNaturalSize.h / config.rows;
-      const displayCellW = selectedLayer.width / config.cols;
-      const displayCellH = selectedLayer.height / config.rows;
-
-      for (let i = 0; i < indices.length; i++) {
-        const cellIndex = indices[i];
-        const col = cellIndex % config.cols;
-        const row = Math.floor(cellIndex / config.cols);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = cellW;
-        canvas.height = cellH;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) continue;
-
-        ctx.drawImage(
-          img,
-          col * cellW, row * cellH, cellW, cellH,
-          0, 0, cellW, cellH
-        );
-
-        const dataUrl = canvas.toDataURL('image/png');
-
-        addLayer({
-          id: crypto.randomUUID(),
-          type: 'image',
-          x: selectedLayer.x + col * displayCellW,
-          y: selectedLayer.y + selectedLayer.height + 40 + i * (displayCellH + 8),
-          width: displayCellW,
-          height: displayCellH,
-          src: dataUrl,
-          title: `${selectedLayer.title || '图片'} - 分镜 ${cellIndex + 1}`,
-          createdAt: Date.now(),
-          sourceLayerId: selectedLayer.id,
-          operationType: gridType,
-        });
+      if (splitMode === 'fast') {
+        await extractCellsFast(indices);
+      } else {
+        await extractCellsAi(indices);
       }
-
       onClose();
     } catch (error: any) {
       console.error('提取宫格失败:', error);
@@ -129,6 +212,30 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
             <h3 className="text-sm font-bold text-[var(--text-primary)]">
               {config.label}切分
             </h3>
+            <div className="flex items-center gap-1 ml-4 bg-[var(--bg-base)] rounded-lg p-0.5 border border-[var(--border-secondary)]">
+              <button
+                onClick={() => setSplitMode('fast')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${
+                  splitMode === 'fast'
+                    ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] shadow-sm'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Zap className="w-3 h-3" />
+                快速切分
+              </button>
+              <button
+                onClick={() => setSplitMode('ai')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${
+                  splitMode === 'ai'
+                    ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] shadow-sm'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Cpu className="w-3 h-3" />
+                AI高清切分
+              </button>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[var(--error-hover-bg)] rounded text-[var(--text-tertiary)] hover:text-[var(--error-text)] transition-colors">
             <X className="w-4 h-4" />
@@ -185,10 +292,16 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
         {/* Footer */}
         <div className="px-6 py-4 border-t border-[var(--border-primary)] flex items-center justify-between shrink-0">
           <div className="text-xs text-[var(--text-tertiary)]">
-            {imageLoaded
-              ? `原图 ${imgNaturalSize.w} × ${imgNaturalSize.h}px · ${config.cols}×${config.rows} 共 ${totalCells} 格 · 已选 ${selectedCells.size} 格`
-              : '加载图片中...'
-            }
+            {isProcessing ? (
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 border-2 border-[var(--text-tertiary)]/30 border-t-[var(--text-tertiary)] rounded-full animate-spin" />
+                {splitMode === 'ai' ? '正在通过 AI 服务分割图片...' : '正在提取宫格...'}
+              </span>
+            ) : (
+              imageLoaded
+                ? `原图 ${imgNaturalSize.w} × ${imgNaturalSize.h}px · ${config.cols}×${config.rows} 共 ${totalCells} 格 · 已选 ${selectedCells.size} 格`
+                : '加载图片中...'
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button

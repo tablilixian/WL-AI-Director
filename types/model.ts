@@ -185,6 +185,12 @@ export interface ImageGenerateOptions {
   itemWidth?: number;      // 分镜图像每个 item 宽度（默认 1024）
   isVisualLanguage?: boolean;  // 是否为视觉语言推理
   systemPrompt?: string;       // 视觉语言的系统提示词
+  isInpaint?: boolean;         // 是否为图像修复（Inpainting）
+  isSpliteGrid?: boolean;      // 是否为图像分割网格
+  spliteGridRow?: number;      // 网格行数（默认 2）
+  spliteGridColumn?: number;   // 网格列数（默认 2）
+  spliteGridTargetWidth?: number;  // 目标图像宽度（默认 1024）
+  spliteGridTargetHeight?: number; // 目标图像高度（默认 720）
 }
 
 /**

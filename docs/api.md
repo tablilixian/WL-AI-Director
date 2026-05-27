@@ -11,7 +11,10 @@
 - [图像上传](#图像上传)
 - [图像查看](#图像查看)
 - [分镜生成](#分镜生成)
-- [视觉语言](#视觉语言)
+- [图像分割网格](#图像分割网格)
+- [图像修复](#图像修复)
+- [视觉语言模型](#视觉语言模型)
+- [视频生成](#视频生成)
 
 ---
 
@@ -249,7 +252,110 @@
 
 ---
 
-## 视觉语言
+## 图像分割网格
+
+### POST /api/v1/generate/image2splitegrid
+
+将图像分割成网格布局
+
+**请求体 (Image2SpliteGridRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `row` | integer | 否 | 2 | 网格行数 |
+| `column` | integer | 否 | 2 | 网格列数 |
+| `target_width` | integer | 否 | 1024 | 目标图像宽度 |
+| `target_height` | integer | 否 | 720 | 目标图像高度 |
+| `image` | string | 是 | - | 要分割的图像（文件名） |
+
+**请求示例:**
+```json
+{
+  "row": 2,
+  "column": 2,
+  "target_width": 1024,
+  "target_height": 720,
+  "image": "input_image.png"
+}
+```
+
+**响应:** 返回分割后的网格图像
+
+**响应示例:**
+```json
+{
+    "prompt_id": "c9c1236f-fff7-4083-b405-cb422ee285d9",
+    "images": [
+        {
+            "filename": "splitegrid_img_1716656698_00001_.png",
+            "url": "http://100.90.169.105:8081/view?filename=splitegrid_img_1716656698_00001_.png"
+        },
+        {
+            "filename": "splitegrid_img_1716656698_00002_.png",
+            "url": "http://100.90.169.105:8081/view?filename=splitegrid_img_1716656698_00002_.png"
+        },
+        {
+            "filename": "splitegrid_img_1716656698_00003_.png",
+            "url": "http://100.90.169.105:8081/view?filename=splitegrid_img_1716656698_00003_.png"
+        },
+        {
+            "filename": "splitegrid_img_1716656698_00004_.png",
+            "url": "http://100.90.169.105:8081/view?filename=splitegrid_img_1716656698_00004_.png"
+        }
+    ],
+    "total_count": 4,
+    "duration": 1.03
+}
+```
+
+**说明:**
+- 该端点将输入图像按照指定的行列数分割成网格
+- 适用于将大图分割成小图、或创建拼图效果
+- 支持任意行列组合（如 2x2, 3x3, 2x3 等）
+
+---
+
+## 图像修复
+
+### POST /api/v1/generate/image2inpaint
+
+对图像进行修复或编辑（Inpainting）
+
+**请求体 (Image2InpaintRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 图像修复描述（描述需要修复或添加的内容） |
+| `image` | string | 是 | - | 要修复的图像（文件名） |
+
+**请求示例:**
+```json
+{
+  "prompt": "Remove the person and fill with forest background",
+  "image": "input_image.png"
+}
+```
+
+**响应:** 返回修复后的图像
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "inpaint_00001_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=inpaint_00001_.png",
+    "duration": 4.55
+}
+```
+
+**说明:**
+- 该端点使用 Inpainting 技术对图像进行修复或编辑
+- 可以移除图像中的不需要元素并智能填充背景
+- 可以根据提示词添加新元素到图像中
+
+---
+
+## 视觉语言模型
 
 ### POST /api/v1/generate/image2vl
 
@@ -283,6 +389,29 @@
 }
 ```
 
+---
+
+## 视频生成
+
+### POST /api/v1/generate/video
+
+生成视频
+
+**请求体:** 无（当前版本不需要请求参数）
+
+**请求示例:**
+```json
+{}
+```
+
+**响应:** 返回生成的视频信息
+
+**响应示例:**
+```json
+{
+    "status": "video generated"
+}
+```
 
 ---
 
