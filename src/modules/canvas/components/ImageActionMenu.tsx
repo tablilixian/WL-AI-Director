@@ -132,7 +132,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       className="fixed z-[200] pointer-events-none"
       style={{
         left: screenRect.left + screenRect.width / 2,
-        bottom: window.innerHeight - (screenRect.top - 10),
+        bottom: window.innerHeight - (screenRect.top - 26),
         transform: 'translateX(-50%)',
       }}
     >

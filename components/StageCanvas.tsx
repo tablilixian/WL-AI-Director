@@ -585,46 +585,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             >
               导入素材
             </button>
-            <button
-              onClick={() => setShowStyleTransfer(true)}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--tag-purple)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--tag-purple)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!selectedLayerId ? '请先选中一张图片' : '风格迁移'}
-            >
-              风格迁移
-            </button>
-            <button
-              onClick={() => { setImageEditMode('background'); setShowImageEdit(true); }}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--info)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--info)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!selectedLayerId ? '请先选中一张图片' : '背景替换'}
-            >
-              背景替换
-            </button>
-            <button
-              onClick={() => { setImageEditMode('expand'); setShowImageEdit(true); }}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--accent)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!selectedLayerId ? '请先选中一张图片' : '图片扩展'}
-            >
-              图片扩展
-            </button>
-            <button
-              onClick={() => setShowRemoveBackground(true)}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--success)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--success)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!selectedLayerId ? '请先选中一张图片' : '智能抠图'}
-            >
-              智能抠图
-            </button>
-            <button
-              onClick={() => setShowVariant(true)}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--warning)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--warning)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!selectedLayerId ? '请先选中一张图片' : '图片变体'}
-            >
-              图片变体
-            </button>
+
             <button
               onClick={handleExportImages}
               className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
