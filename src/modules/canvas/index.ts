@@ -18,6 +18,7 @@ export { ImageEditPanel } from './components/ImageEditPanel';
 export { PromptLayer } from './components/PromptLayer';
 export { PromptLinkPanel } from './components/PromptLinkPanel';
 export { ImageActionMenu } from './components/ImageActionMenu';
+export { InpaintPanel } from './components/InpaintPanel';
 export { MultiAnglePanel } from './components/MultiAnglePanel';
 export { ThreeViewPanel } from './components/ThreeViewPanel';
 export { StoryboardDeductionPanel } from './components/StoryboardDeductionPanel';

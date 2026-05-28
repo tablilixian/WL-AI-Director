@@ -23,6 +23,7 @@ const operationColors: Record<string, string> = {
   'three-view': '#06b6d4',
   'storyboard-deduction': '#f59e0b',
   'lighting': '#fbbf24',
+  'inpaint': '#22c55e',
   '9grid': '#a855f7',
   '4grid': '#f59e0b',
   '25grid': '#f97316'
@@ -44,6 +45,7 @@ const operationLabels: Record<string, string> = {
   'three-view': '三视图',
   'storyboard-deduction': '剧情推演',
   'lighting': '光影校正',
+  'inpaint': '重绘',
   '9grid': '九宫格',
   '4grid': '四宫格',
   '25grid': '25宫格'

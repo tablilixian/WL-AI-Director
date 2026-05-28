@@ -9,6 +9,7 @@ import { MultiAnglePanel } from './MultiAnglePanel';
 import { ThreeViewPanel } from './ThreeViewPanel';
 import { StoryboardDeductionPanel } from './StoryboardDeductionPanel';
 import { LightingControlPanel } from './LightingControlPanel';
+import { InpaintPanel } from './InpaintPanel';
 import { GridSplitPanel } from './GridSplitPanel';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
@@ -17,6 +18,7 @@ export type ImageAction =
   | 'style-transfer'
   | 'background-replace'
   | 'expand'
+  | 'inpaint'
   | 'variant'
   | 'multi-angle'
   | 'three-view'
@@ -85,6 +87,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
         { id: 'remove-bg', label: '智能抠图' },
         { id: 'background-replace', label: '背景替换' },
         { id: 'expand', label: '图片扩展' },
+        { id: 'inpaint', label: '局部重绘' },
       ],
     },
     {
@@ -186,7 +189,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
 
   return (
     <>
-      {createPortal(menu, document.body)}
+      {!activePanel && !showSplitPanel && createPortal(menu, document.body)}
 
       {activePanel && createPortal(
         <>
@@ -198,6 +201,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {activePanel === 'multi-angle' && <MultiAnglePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'three-view' && <ThreeViewPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'storyboard-deduction' && <StoryboardDeductionPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'inpaint' && <InpaintPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'lighting' && <LightingControlPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
         </>,
         document.body

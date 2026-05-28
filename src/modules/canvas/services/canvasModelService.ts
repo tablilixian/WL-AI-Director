@@ -345,6 +345,33 @@ export class CanvasModelService {
     });
   }
 
+  async inpaint(
+    compositedImageUrl: string,
+    prompt: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    console.log('=== 局部重绘请求 ===');
+    console.log('[提示词]', prompt);
+
+    onProgress?.(10);
+
+    try {
+      const { callDramaBackendInpaintApi } = await import('../../../../services/adapters/imageAdapter');
+      const traceId = this.generateTraceId();
+
+      const result = await callDramaBackendInpaintApi({
+        prompt,
+        referenceImages: [compositedImageUrl],
+      }, traceId);
+
+      onProgress?.(100);
+      return result;
+    } catch (error) {
+      console.error('局部重绘失败:', error);
+      throw error;
+    }
+  }
+
   async generateVariants(imageUrl: string, options: {
     count?: number;
     strength?: number;
