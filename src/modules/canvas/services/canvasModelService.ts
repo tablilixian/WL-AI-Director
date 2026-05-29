@@ -346,7 +346,7 @@ export class CanvasModelService {
   }
 
   async inpaint(
-    compositedImageUrl: string,
+    imageUrl: string,
     prompt: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
@@ -361,7 +361,7 @@ export class CanvasModelService {
 
       const result = await callDramaBackendInpaintApi({
         prompt,
-        referenceImages: [compositedImageUrl],
+        referenceImages: [imageUrl],
       }, traceId);
 
       onProgress?.(100);

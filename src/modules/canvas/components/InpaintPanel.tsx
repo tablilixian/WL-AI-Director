@@ -116,6 +116,7 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
 
       if (drawCanvas && img && imgNaturalSize.width > 0) {
         const { unifiedImageService } = await import('../../../../services/unifiedImageService');
+        const { imageStorageService, generateImageId } = await import('../../../../services/imageStorageService');
         const fullResUrl = await unifiedImageService.resolveForDisplay(selectedLayer.src);
 
         const compositeCanvas = document.createElement('canvas');
@@ -132,7 +133,14 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
           });
           compositeCtx.drawImage(fullResImg, 0, 0);
           compositeCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
-          compositedImageUrl = compositeCanvas.toDataURL('image/png');
+
+          let blob = await new Promise<Blob>(resolve => compositeCanvas.toBlob(b => resolve(b!), 'image/png'));
+          if (blob.size > 9 * 1024 * 1024) {
+            blob = await new Promise<Blob>(resolve => compositeCanvas.toBlob(b => resolve(b!), 'image/jpeg', 0.9));
+          }
+          const localId = generateImageId();
+          await imageStorageService.saveImage(localId, blob);
+          compositedImageUrl = `local:${localId}`;
         }
       }
 
@@ -222,7 +230,7 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
         </div>
 
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          用画笔在要修改的区域涂抹，然后输入提示词描述期望的效果。
+          用画笔标记要修改的区域，然后输入提示词描述期望的效果。
         </p>
 
         <div

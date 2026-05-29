@@ -360,7 +360,15 @@ const uploadImageToDramaBackend = async (
   });
   
   if (!res.ok) {
-    throw new Error(`图片上传失败: ${res.status}`);
+    let errorMsg = `图片上传失败: ${res.status}`;
+    try {
+      const errorBody = await res.text();
+      console.error(`[${traceId || 'upload'}] 上传失败响应体:`, errorBody);
+      errorMsg += ` - ${errorBody}`;
+    } catch (e) {
+      // ignore
+    }
+    throw new Error(errorMsg);
   }
   
   const data = await res.json();
