@@ -127,8 +127,18 @@ export const MultiAnglePanel: React.FC<MultiAnglePanelProps> = ({ selectedLayerI
       if (layout === 'grid' && results.length > 0) {
         const cols = Math.min(3, results.length);
         const rows = Math.ceil(results.length / cols);
-        const cellW = 320;
-        const cellH = 180;
+
+        // 取第一张图的原始尺寸
+        const firstBlobUrl = URL.createObjectURL(results[0].blob);
+        const firstImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject();
+          img.src = firstBlobUrl;
+        });
+        const cellW = firstImg.naturalWidth;
+        const cellH = firstImg.naturalHeight;
+        URL.revokeObjectURL(firstBlobUrl);
         const gap = 4;
 
         const canvas = document.createElement('canvas');

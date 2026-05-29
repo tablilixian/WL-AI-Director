@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { assetStore } from '../services/assetStore';
@@ -9,6 +9,27 @@ interface PromptBarProps {
 }
 
 type Mode = 'generate' | 'edit' | 'video' | 'video-edit';
+
+function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function getVideoDimensions(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      resolve({ width: video.videoWidth, height: video.videoHeight });
+    };
+    video.onerror = reject;
+    video.src = src;
+  });
+}
 
 /**
  * 解析图片 URL 为 Base64 格式
@@ -32,7 +53,14 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [mode, setMode] = useState<Mode>('generate');
-  const { layers, addLayer, updateLayer } = useCanvasStore();
+  const { layers, addLayer, updateLayer, suggestedPrompt, setSuggestedPrompt } = useCanvasStore();
+
+  useEffect(() => {
+    if (suggestedPrompt) {
+      setPrompt(suggestedPrompt);
+      setSuggestedPrompt('');
+    }
+  }, [suggestedPrompt, setSuggestedPrompt]);
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
   const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
@@ -88,9 +116,13 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           imageId = resolvedUrl.replace('local:', '');
         }
 
+        const dimensions = await getImageDimensions(resolvedUrl);
+
         updateLayer(placeholderId, {
           src: resolvedUrl,
           imageId,
+          width: Math.round(dimensions.width),
+          height: Math.round(dimensions.height),
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100
@@ -195,9 +227,22 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           console.log('[PromptBar] 视频已保存到本地:', videoId);
         }
 
+        // 获取视频实际尺寸，替代占位的 640x360
+        let videoWidth = 640;
+        let videoHeight = 360;
+        try {
+          const dims = await getVideoDimensions(resolvedUrl);
+          videoWidth = dims.width;
+          videoHeight = dims.height;
+        } catch (e) {
+          console.warn('[PromptBar] 获取视频尺寸失败，使用默认值:', e);
+        }
+
         updateLayer(placeholderId, {
           src: resolvedUrl,
           imageId: videoId,
+          width: videoWidth,
+          height: videoHeight,
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100
@@ -239,9 +284,22 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           console.log('[PromptBar] 视频已保存到本地:', videoId);
         }
 
+        // 获取视频实际尺寸，替代占位的 640x360
+        let videoWidth = 640;
+        let videoHeight = 360;
+        try {
+          const dims = await getVideoDimensions(resolvedUrl);
+          videoWidth = dims.width;
+          videoHeight = dims.height;
+        } catch (e) {
+          console.warn('[PromptBar] 获取视频尺寸失败，使用默认值:', e);
+        }
+
         updateLayer(placeholderId, {
           src: resolvedUrl,
           imageId: videoId,
+          width: videoWidth,
+          height: videoHeight,
           title: prompt.slice(0, 30),
           isLoading: false,
           progress: 100

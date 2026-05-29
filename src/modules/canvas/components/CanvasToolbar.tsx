@@ -30,11 +30,14 @@ export const CanvasToolbar: React.FC = () => {
     groupSelectedLayers,
     ungroupLayers,
     mergeSelectedLayers,
-    createPromptLayer
+    createPromptLayer,
+    setScale
   } = useCanvasStore();
   const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
   const autoArrangeLayers = useCanvasStore((s) => s.autoArrangeLayers);
   const scale = useCanvasStore((s) => s.scale);
+  const templatePanelOpen = useCanvasStore((s) => s.templatePanelOpen);
+  const setTemplatePanelOpen = useCanvasStore((s) => s.setTemplatePanelOpen);
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
   const hasMultipleSelection = selectedLayerIds.length > 1;
@@ -419,29 +422,20 @@ export const CanvasToolbar: React.FC = () => {
 
       <div className="w-px h-6 bg-gray-600 mx-1" />
 
-      <button
-        onClick={zoomOut}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Zoom Out"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-        </svg>
-      </button>
-
-      <span className="px-2 text-sm text-gray-300 min-w-[50px] text-center">
-        {Math.round(scale * 100)}%
-      </span>
-
-      <button
-        onClick={zoomIn}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Zoom In"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-        </svg>
-      </button>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={5}
+          max={200}
+          value={Math.round(scale * 100)}
+          onChange={(e) => setScale(Number(e.target.value) / 100)}
+          className="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          title="Zoom"
+        />
+        <span className="text-sm text-gray-300 min-w-[45px] text-center tabular-nums">
+          {Math.round(scale * 100)}%
+        </span>
+      </div>
 
       <button
         onClick={fitToContent}
@@ -460,6 +454,20 @@ export const CanvasToolbar: React.FC = () => {
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+        </svg>
+      </button>
+
+      <button
+        onClick={() => setTemplatePanelOpen(!templatePanelOpen)}
+        className={`p-2 rounded-md transition-colors ${
+          templatePanelOpen
+            ? 'bg-blue-600 text-white'
+            : 'hover:bg-gray-700 text-gray-300 hover:text-white'
+        }`}
+        title="风格模板"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
         </svg>
       </button>
 

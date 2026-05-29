@@ -18,6 +18,7 @@ import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
 import { SaveToLibraryDialog } from './SaveToLibraryDialog';
 import { ImageActionMenu } from './ImageActionMenu';
+import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
 
@@ -53,10 +54,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     addLayer,
     duplicateLayer,
     undo, 
-    redo 
+    redo,
+    templatePanelOpen
   } = useCanvasStore();
-  const { handleMouseDown, handleWheel } = useCanvasControls();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { canvasRef, handleMouseDown } = useCanvasControls();
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
@@ -211,7 +212,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   }, [offset, undo, redo]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === containerRef.current || e.target === e.currentTarget) {
+    if (e.target === canvasRef.current || e.target === e.currentTarget) {
       if (activeTool === 'select') {
         selectLayer(null);
       }
@@ -229,7 +230,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     if (activeTool === 'select') {
       handleMouseDown(e);
     } else if (e.button === 0) {
-      const rect = containerRef.current?.getBoundingClientRect();
+      const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
       const screenX = e.clientX - rect.left;
@@ -249,7 +250,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
     if (!drawingState.isDrawing) return;
 
-    const rect = containerRef.current?.getBoundingClientRect();
+    const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const screenX = e.clientX - rect.left;
@@ -313,7 +314,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   const handleCanvasMouseUp = useCallback(() => {
     if (drawingState.isDrawing) {
-      const rect = containerRef.current?.getBoundingClientRect();
+      const rect = canvasRef.current?.getBoundingClientRect();
       if (rect && drawingCanvasRef.current) {
         const canvas = document.createElement('canvas');
         canvas.width = drawingCanvasRef.current.width;
@@ -448,13 +449,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       <CanvasToolbar />
 
       <div
-        ref={containerRef}
+        ref={canvasRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
-        onWheel={handleWheel}
         onClick={handleCanvasClick}
         style={{ 
           cursor: activeTool !== 'select' ? 'crosshair' : undefined,
@@ -487,8 +487,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         <canvas
           ref={drawingCanvasRef}
           className="absolute inset-0 w-full h-full pointer-events-none"
-          width={containerRef.current?.clientWidth || 1920}
-          height={containerRef.current?.clientHeight || 1080}
+          width={canvasRef.current?.clientWidth || 1920}
+          height={canvasRef.current?.clientHeight || 1080}
         />
 
         <ConnectionLines offset={offset} scale={scale} />
@@ -514,8 +514,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
       {(() => {
         const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image') : undefined;
-        if (!imgLayer || !containerRef.current) return null;
-        const cr = containerRef.current.getBoundingClientRect();
+        if (!imgLayer || !canvasRef.current) return null;
+        const cr = canvasRef.current.getBoundingClientRect();
         return (
           <ImageActionMenu
             layer={imgLayer}
@@ -559,6 +559,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       {showLayerDetail && (
         <LayerDetailPanel onClose={() => setShowLayerDetail(false)} />
       )}
+
+      {templatePanelOpen && <StyleTemplatePanel />}
 
       {showSettings && (
         <CanvasSettingsPanel

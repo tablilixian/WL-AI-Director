@@ -27,7 +27,6 @@ import {
   PROMPT_MODE_COLORS 
 } from '../types/canvas';
 import { assetStore } from '../services/assetStore';
-import { canvasIntegrationService } from '../services/canvasIntegrationService';
 import { autoLayout } from '../utils/autoLayout';
 
 const MAX_HISTORY = 20;
@@ -47,6 +46,8 @@ interface CanvasState {
   history: CanvasHistory[];
   historyIndex: number;
   clipboard: LayerData[];
+  suggestedPrompt: string;
+  templatePanelOpen: boolean;
 }
 
 interface CanvasActions {
@@ -90,6 +91,8 @@ interface CanvasActions {
   linkLayerToPrompt: (promptId: string, layerId: string) => boolean;
   unlinkLayerFromPrompt: (promptId: string, layerId: string) => void;
   getPromptLinkedLayers: (promptId: string) => LayerData[];
+  setSuggestedPrompt: (prompt: string) => void;
+  setTemplatePanelOpen: (open: boolean) => void;
 }
 
 const initialState: CanvasState = {
@@ -101,7 +104,9 @@ const initialState: CanvasState = {
   selectedLayerIds: [],
   history: [],
   historyIndex: -1,
-  clipboard: []
+  clipboard: [],
+  suggestedPrompt: '',
+  templatePanelOpen: false
 };
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
@@ -123,14 +128,6 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }].slice(-MAX_HISTORY),
           historyIndex: state.historyIndex + 1
         });
-        
-        if (layer.type === 'drawing' && layer.src && !layer.imageId) {
-          canvasIntegrationService.triggerAutoSave();
-        }
-        
-        if (layer.type === 'image' && layer.src) {
-          canvasIntegrationService.triggerAutoSave();
-        }
       },
 
       updateLayer: (id, updates) => {
@@ -146,20 +143,6 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }].slice(-MAX_HISTORY),
           historyIndex: state.historyIndex + 1
         });
-        
-        const updatedLayer = newLayers.find(l => l.id === id);
-        
-        // 触发 transform 类型的保存（位置、大小等变化）
-        const transformKeys = ['x', 'y', 'width', 'height', 'rotation', 'opacity'];
-        const hasTransformChange = transformKeys.some(key => key in updates);
-        if (hasTransformChange) {
-          canvasIntegrationService.triggerAutoSave('transform');
-        }
-        
-        // 触发 drawing 类型的保存（图片内容变化）
-        if ((updatedLayer?.type === 'drawing' || updatedLayer?.type === 'image') && updates.src) {
-          canvasIntegrationService.triggerAutoSave('drawing');
-        }
       },
 
       deleteLayer: (id) => {
@@ -177,6 +160,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         set({
           layers: newLayers,
           selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+          selectedLayerIds: state.selectedLayerIds.filter(sid => sid !== id),
           history: [...state.history.slice(0, state.historyIndex + 1), {
             layers: state.layers,
             timestamp: Date.now()
@@ -233,12 +217,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       setOffset: (offset) => {
         set({ offset });
-        canvasIntegrationService.triggerAutoSave('transform');
       },
 
       setScale: (scale) => {
         set({ scale: Math.min(Math.max(scale, 0.1), 5) });
-        canvasIntegrationService.triggerAutoSave('transform');
       },
 
       selectLayer: (id, multiSelect = false) => {
@@ -392,6 +374,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         set({
           layers: [],
           selectedLayerId: null,
+          selectedLayerIds: [],
           history: [...state.history.slice(0, state.historyIndex + 1), {
             layers: state.layers,
             timestamp: Date.now()
@@ -803,6 +786,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         return state.layers.filter(l => 
           promptLayer.promptConfig.linkedLayerIds.includes(l.id)
         );
+      },
+
+      setSuggestedPrompt: (prompt) => {
+        set({ suggestedPrompt: prompt });
+      },
+
+      setTemplatePanelOpen: (open) => {
+        set({ templatePanelOpen: open });
       }
     })
   );

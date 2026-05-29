@@ -532,7 +532,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   };
 
   const handleSaveCanvas = async () => {
-    await canvasIntegrationService.saveCanvasState();
+    await canvasIntegrationService.saveImmediately();
     alert('画布状态已保存');
   };
 

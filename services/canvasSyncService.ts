@@ -334,7 +334,7 @@ class CanvasSyncService {
   }
 
   /**
-   * 上传到云端（带重试）
+   * 上传到云端（带版本冲突检测 + 重试）
    */
   private async uploadToCloud(data: CanvasData): Promise<void> {
     const cloudData: CloudCanvasData = {
@@ -345,6 +345,31 @@ class CanvasSyncService {
       version: data.version,
       savedAt: data.savedAt,
     };
+
+    // 版本冲突检测：先获取云端版本，只在本地版本 >= 云端版本时才上传
+    try {
+      const serverData = await canvasCloudApi.get(data.projectId);
+      if (serverData && serverData.version > data.version) {
+        logger.warn(
+          LogCategory.CANVAS,
+          `[CanvasSync] 云端版本(${serverData.version}) 高于本地(${data.version})，跳过上传`
+        );
+        return;
+      }
+      if (serverData && serverData.version === data.version) {
+        // 版本相同，使用 serverData.savedAt 判断，如果服务器更新则跳过
+        if (serverData.savedAt > data.savedAt) {
+          logger.warn(
+            LogCategory.CANVAS,
+            `[CanvasSync] 云端版本与本地相同但时间更新，跳过上传`
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      logger.warn(LogCategory.CANVAS, '[CanvasSync] 获取云端版本失败，尝试继续上传:', error);
+      // 版本检测失败不影响上传（网络抖动等）
+    }
 
     let lastError: Error | null = null;
 

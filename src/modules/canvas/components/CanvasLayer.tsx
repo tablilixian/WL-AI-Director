@@ -10,7 +10,6 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
-import { canvasIntegrationService } from '../services/canvasIntegrationService';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -183,9 +182,6 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsResizing(false);
-      
-      // 拖拽/调整大小结束后触发自动保存（带 1s 延迟，等待操作完全结束）
-      canvasIntegrationService.triggerAutoSave('transform');
     };
 
     window.addEventListener('mousemove', handleMouseMove);

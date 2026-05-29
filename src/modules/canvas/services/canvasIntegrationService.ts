@@ -43,64 +43,88 @@ const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   startY: 100
 };
 
-let autoSaveTimer: NodeJS.Timeout | null = null;
-const AUTO_SAVE_DELAY = 2000;
-const MIN_SAVE_INTERVAL = 5000;
-const FALLBACK_SAVE_INTERVAL = 60000;
-
-function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): T {
-  let timer: NodeJS.Timeout | null = null;
-  return ((...args: Parameters<T>) => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  }) as T;
-}
-
-function computeLayersHash(layers: LayerData[]): string {
-  const str = layers.map(l => 
-    `${l.id}|${l.type}|${l.x}|${l.y}|${l.width}|${l.height}|${l.imageId || ''}|${l.src ? '1' : '0'}`
-  ).join('|||');
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
-
 const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   sortByPosition: true,
   includeAnnotations: false
 };
 
+function loadImageDimensions(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 export class CanvasIntegrationService {
-  private debouncedAutoSave: () => void;
-  private lastSaveTime: number = 0;
-  private lastSavedHash: string = '';
-  private hasUnsavedChanges: boolean = false;
-  private fallbackTimer: NodeJS.Timeout | null = null;
   private currentProjectId: string = '';
   private isLoading: boolean = false;
   private loadingPromise: Promise<void> | null = null;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   constructor(projectId?: string) {
-    this.debouncedAutoSave = debounce(() => {
-      this.autoSaveCanvasState();
-    }, AUTO_SAVE_DELAY);
-    
-    this.startFallbackSaveTimer();
-    
     if (projectId) {
       this.currentProjectId = projectId;
     }
+    this.setupAutoSave();
+    this.setupBeforeUnload();
+    this.cleanupLegacyLocalStorage();
+  }
 
+  /**
+   * 清理旧的 localStorage 数据（已迁移到 IndexedDB）
+   */
+  private cleanupLegacyLocalStorage(): void {
     if (typeof window !== 'undefined') {
       const oldData = localStorage.getItem('wl-canvas-state');
       if (oldData) {
         console.log('[CanvasIntegration] 清理旧的 localStorage 数据（已迁移到 IndexedDB）');
         localStorage.removeItem('wl-canvas-state');
       }
+    }
+  }
+
+  /**
+   * 通过 Zustand subscribe 自动检测画布变化并触发保存
+   */
+  private setupAutoSave(): void {
+    let prevLayers = useCanvasStore.getState().layers;
+    let prevOffset = useCanvasStore.getState().offset;
+    let prevScale = useCanvasStore.getState().scale;
+
+    this.unsubscribe = useCanvasStore.subscribe((state) => {
+      if (state.layers !== prevLayers || state.offset !== prevOffset || state.scale !== prevScale) {
+        prevLayers = state.layers;
+        prevOffset = state.offset;
+        prevScale = state.scale;
+        this.scheduleSave();
+      }
+    });
+  }
+
+  private scheduleSave(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      if (this.currentProjectId) {
+        this.saveCanvasState();
+      }
+    }, 1000);
+  }
+
+  private setupBeforeUnload(): void {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        if (this.saveTimer) {
+          clearTimeout(this.saveTimer);
+          this.saveTimer = null;
+        }
+        this.doImmediateSave();
+      });
     }
   }
 
@@ -155,33 +179,11 @@ export class CanvasIntegrationService {
   }
 
   /**
-   * 快速检查层：检查是否有变化
-   * 仅计算 hash，不执行序列化
-   */
-  checkForChanges(): boolean {
-    const { layers } = useCanvasStore.getState();
-    if (layers.length === 0) return false;
-
-    const currentHash = computeLayersHash(layers);
-    if (currentHash !== this.lastSavedHash) {
-      this.hasUnsavedChanges = true;
-      this.lastSavedHash = currentHash;
-      console.log('[CanvasIntegration] 检测到画布变化，标记需要保存');
-      return true;
-    }
-    return false;
-  }
-
-  /**
    * 手动触发即时保存（用于事件触发，如服务器响应后）
    * 立即执行，无延迟，绕过 canvasSyncService 的 500ms 防抖
-   * @param force 强制保存，忽略变化检测和时间间隔限制
    * @returns 保存完成的 Promise（可用于退出前等待保存完成）
    */
-  saveImmediately(force: boolean = false): Promise<void> {
-    if (!force && !this.hasUnsavedChanges) {
-      return Promise.resolve();
-    }
+  saveImmediately(_force?: boolean): Promise<void> {
     return this.doImmediateSave().catch(e => {
       console.warn('[CanvasIntegration] 即时保存失败:', e);
     });
@@ -194,10 +196,9 @@ export class CanvasIntegrationService {
     }
 
     const { layers, offset, scale } = useCanvasStore.getState();
-    if (layers.length === 0) return;
 
     const layersToSave = await Promise.all(layers.map(async (layer) => {
-      const { src, thumbnail, ...rest } = layer;
+      const { src, ...rest } = layer;
       let imageId = layer.imageId;
       if (src && src.startsWith('data:') && !imageId) {
         try {
@@ -210,94 +211,48 @@ export class CanvasIntegrationService {
           console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败:`, e);
         }
       }
-      return { ...rest, imageId, srcSaved: src ? true : false };
+      return { ...rest, imageId };
     }));
 
     try {
       await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
-      this.lastSaveTime = Date.now();
-      this.hasUnsavedChanges = false;
       console.log('[CanvasIntegration] 即时保存画布成功');
     } catch (e) {
       console.warn('[CanvasIntegration] 即时保存画布失败:', e);
     }
   }
 
-  /**
-   * 触发自动保存（用于用户操作后）
-   * 带延迟，等待数据稳定
-   * 
-   * @param operationType 操作类型：
-   *   - 'drawing': 绘制/导入图片，延迟 2s（数据生成需要时间）
-   *   - 'transform': 拖拽/缩放/调整大小，延迟 1s（操作更快完成）
-   *   - 默认: 使用 AUTO_SAVE_DELAY (2s)
-   */
-  triggerAutoSave(operationType: 'drawing' | 'transform' = 'drawing'): void {
-    // 根据操作类型选择延迟时间
-    const delay = operationType === 'transform' ? 1000 : AUTO_SAVE_DELAY;
-    
-    this.checkForChanges();
-    
-    if (autoSaveTimer) {
-      clearTimeout(autoSaveTimer);
-    }
-    autoSaveTimer = setTimeout(() => {
-      this.debouncedAutoSave();
-    }, delay);
-  }
+  private async saveCanvasState(): Promise<void> {
+    // console.log('[CanvasIntegration] 保存画布');
+    const { layers, offset, scale } = useCanvasStore.getState();
 
-  /**
-   * 兜底层：定时检查未保存的更改
-   * 60 秒执行一次
-   */
-  private startFallbackSaveTimer(): void {
-    if (this.fallbackTimer) {
-      clearInterval(this.fallbackTimer);
+    if (!this.currentProjectId) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法保存画布数据');
+      return;
     }
-    this.fallbackTimer = setInterval(() => {
-      if (this.hasUnsavedChanges) {
-        const now = Date.now();
-        if (now - this.lastSaveTime >= FALLBACK_SAVE_INTERVAL) {
-          console.log('[CanvasIntegration] 兜底保存触发');
-          this.performSave(false);
+
+    const layersToSave = await Promise.all(layers.map(async (layer) => {
+      const { src, ...rest } = layer;
+      let imageId = layer.imageId;
+      if (src && src.startsWith('data:') && !imageId) {
+        try {
+          const imgId = unifiedImageService.generateImageId();
+          const response = await fetch(src);
+          const blob = await response.blob();
+          await unifiedImageService.saveImage(imgId, blob);
+          imageId = imgId;
+        } catch (e) {
+          console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败:`, e);
         }
       }
-    }, FALLBACK_SAVE_INTERVAL);
-  }
-
-  /**
-   * 执行实际保存
-   * @param isAutoSave 是否是自动保存（自动保存带变化检测）
-   * @param force 强制保存，忽略变化检测和时间间隔限制
-   */
-  private async performSave(isAutoSave: boolean = true, force: boolean = false): Promise<void> {
-    const now = Date.now();
-    
-    // 强制保存时跳过变化检测和时间间隔检查
-    if (!force) {
-      if (isAutoSave && !this.hasUnsavedChanges) {
-        console.log('[CanvasIntegration] 跳过保存：无变化');
-        return;
-      }
-      
-      if (now - this.lastSaveTime < MIN_SAVE_INTERVAL) {
-        console.log('[CanvasIntegration] 跳过保存：距离上次保存不足 5 秒');
-        return;
-      }
-    }
+      return { ...rest, imageId };
+    }));
 
     try {
-      await this.saveCanvasState();
-      this.lastSaveTime = now;
-      this.hasUnsavedChanges = false;
-      console.log('[CanvasIntegration] 保存画布成功');
-    } catch (e) {
-      console.warn('[CanvasIntegration] 保存画布失败:', e);
+      await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
+    } catch (error) {
+      logger.error(LogCategory.CANVAS, `[CanvasIntegration] 保存画布状态失败: ${error}`);
     }
-  }
-
-  private async autoSaveCanvasState(): Promise<void> {
-    await this.performSave(true);
   }
 
   /**
@@ -350,14 +305,20 @@ export class CanvasIntegrationService {
         const col = importedCount % (opts.columns || 4);
         const row = Math.floor(importedCount / (opts.columns || 4));
 
-        let width = 400;
-        let height = 300;
+        let width = 1024;
+        let height = 576;
         try {
           const dims = await unifiedImageService.getDimensions(resolvedUrl);
           width = dims.width + 10;
           height = dims.height + 10;
         } catch (e) {
-          logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取图片尺寸失败，使用默认尺寸:', e);
+          try {
+            const dims = await loadImageDimensions(resolvedUrl);
+            width = dims.width + 10;
+            height = dims.height + 10;
+          } catch {
+            logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取镜头图片尺寸失败，使用默认值:', e);
+          }
         }
 
         const layer: LayerData = {
@@ -408,14 +369,20 @@ export class CanvasIntegrationService {
       return '';
     }
 
-    let width = 400;
-    let height = 400;
+    let width = 1024;
+    let height = 1024;
     try {
       const dims = await unifiedImageService.getDimensions(resolvedUrl);
       width = dims.width + 10;
       height = dims.height + 10;
     } catch (e) {
-      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取角色图片尺寸失败:', e);
+      try {
+        const dims = await loadImageDimensions(resolvedUrl);
+        width = dims.width + 10;
+        height = dims.height + 10;
+      } catch {
+        logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取角色图片尺寸失败，使用默认值:', e);
+      }
     }
 
     const layerId = crypto.randomUUID();
@@ -473,14 +440,20 @@ export class CanvasIntegrationService {
       return '';
     }
 
-    let width = 640;
-    let height = 360;
+    let width = 1024;
+    let height = 576;
     try {
       const dims = await unifiedImageService.getDimensions(resolvedUrl);
       width = dims.width + 10;
       height = dims.height + 10;
     } catch (e) {
-      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取场景图片尺寸失败:', e);
+      try {
+        const dims = await loadImageDimensions(resolvedUrl);
+        width = dims.width + 10;
+        height = dims.height + 10;
+      } catch {
+        logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取场景图片尺寸失败，使用默认值:', e);
+      }
     }
 
     const layerId = crypto.randomUUID();
@@ -586,69 +559,6 @@ export class CanvasIntegrationService {
   }
 
   /**
-   * 保存画布状态
-   * 使用 canvasSyncService 实现 Local-First 保存
-   * - 本地保存：实时（防抖 500ms）
-   * - 云端同步：延迟（停止操作后）
-   */
-  async saveCanvasState(): Promise<void> {
-    const { layers, offset, scale } = useCanvasStore.getState();
-
-    console.log('[CanvasIntegration] ========== 保存画布 ==========');
-    console.log('[CanvasIntegration] 当前项目ID:', this.currentProjectId);
-    console.log('[CanvasIntegration] 保存画布，图层数量:', layers.length);
-    console.log('[CanvasIntegration] 图层类型分布:', {
-      image: layers.filter(l => l.type === 'image').length,
-      video: layers.filter(l => l.type === 'video').length,
-      drawing: layers.filter(l => l.type === 'drawing').length,
-      sticky: layers.filter(l => l.type === 'sticky').length,
-      text: layers.filter(l => l.type === 'text').length,
-      group: layers.filter(l => l.type === 'group').length,
-      other: layers.filter(l => !['image', 'video', 'drawing', 'sticky', 'text', 'group'].includes(l.type)).length
-    });
-
-    const layersToSave = await Promise.all(layers.map(async (layer) => {
-      const { src, thumbnail, ...rest } = layer;
-      
-      let imageId = layer.imageId;
-      
-      if (src && src.startsWith('data:') && !imageId) {
-        try {
-          const imgId = unifiedImageService.generateImageId();
-          const response = await fetch(src);
-          const blob = await response.blob();
-          await unifiedImageService.saveImage(imgId, blob);
-          imageId = imgId;
-          console.log(`[CanvasIntegration] ${layer.type}图层已保存到 IndexedDB:`, imgId);
-        } catch (e) {
-          console.warn(`[CanvasIntegration] 保存${layer.type}图层到 IndexedDB 失败:`, e);
-        }
-      }
-      
-      return {
-        ...rest,
-        imageId,
-        srcSaved: src ? true : false
-      };
-    }));
-
-    console.log('[CanvasIntegration] 保存的图层数量:', layersToSave.length);
-
-    // 使用 canvasSyncService 保存（Local-First）
-    if (this.currentProjectId) {
-      try {
-        await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
-        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 画布状态已保存，项目: ${this.currentProjectId}`);
-      } catch (error) {
-        logger.error(LogCategory.CANVAS, `[CanvasIntegration] 保存画布状态失败: ${error}`);
-        throw error;
-      }
-    } else {
-      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法保存画布数据');
-    }
-  }
-
-  /**
    * 强制同步到云端
    * 用于关键节点：切换项目、退出、手动保存
    */
@@ -733,7 +643,7 @@ export class CanvasIntegrationService {
                   console.warn(`[CanvasIntegration] 保存旧项目图片失败:`, e);
                 }
               }
-              return { ...rest, imageId, srcSaved: src ? true : false };
+              return { ...rest, imageId };
             }));
             await canvasSyncService.saveNow(oldProjectId, layersToSave, oldOffset, oldScale);
             console.log('[CanvasIntegration] 旧项目画布数据已保存');
@@ -866,7 +776,21 @@ export class CanvasIntegrationService {
    * 清理资源 - 退出项目时调用
    */
   async cleanup(): Promise<void> {
-    console.log('[CanvasIntegration] 清理资源');
+    console.log('[CanvasIntegration] 清理资源，触发强制云同步...');
+    // 切换页签前先确保数据已上传到云端
+    try {
+      await canvasSyncService.forceSync();
+    } catch (e) {
+      console.warn('[CanvasIntegration] 强制云同步失败:', e);
+    }
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
     await canvasSyncService.cleanup();
   }
 }

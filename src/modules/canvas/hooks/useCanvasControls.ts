@@ -3,14 +3,14 @@
  * 处理画布平移和缩放
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useCanvasStore } from './useCanvasState';
 import { CanvasOffset } from '../types/canvas';
 import { clamp } from '../utils/canvasMath';
 
 interface UseCanvasControlsReturn {
+  canvasRef: React.RefObject<HTMLDivElement | null>;
   handleMouseDown: (e: React.MouseEvent) => void;
-  handleWheel: (e: React.WheelEvent) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -22,16 +22,9 @@ export function useCanvasControls(): UseCanvasControlsReturn {
   const { offset, scale, setOffset, setScale, layers, undo, redo } = useCanvasStore();
   const isPanningRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
-      isPanningRef.current = true;
-      lastMouseRef.current = { x: e.clientX, y: e.clientY };
-      e.preventDefault();
-    }
-  }, []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = -e.deltaY * 0.002;
@@ -45,6 +38,21 @@ export function useCanvasControls(): UseCanvasControlsReturn {
       setOffset(newOffset);
     }
   }, [offset, scale, setOffset, setScale]);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+      isPanningRef.current = true;
+      lastMouseRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+    }
+  }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -113,8 +121,8 @@ export function useCanvasControls(): UseCanvasControlsReturn {
   }, [layers, setScale, setOffset, resetZoom]);
 
   return {
+    canvasRef,
     handleMouseDown,
-    handleWheel,
     handleKeyDown,
     zoomIn,
     zoomOut,

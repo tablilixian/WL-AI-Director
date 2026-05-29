@@ -125,21 +125,8 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
       const panelCount = mode === 'before-after' ? 3 : 5;
       const cols = mode === 'before-after' ? 2 : 5;
       const rows = mode === 'before-after' ? 2 : 1;
-      const cellW = 320;
-      const cellH = 180;
       const gap = 4;
       const labelH = 24;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = cols * cellW + (cols - 1) * gap;
-      canvas.height = rows * cellH + (rows - 1) * gap + (mode === 'before-after' ? 0 : labelH);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Failed to create canvas context');
-      }
-
-      ctx.fillStyle = '#1f2937';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const allItems = mode === 'before-after'
         ? [
@@ -165,11 +152,39 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
         url: allUrls[i],
       }));
 
-      for (let i = 0; i < allLabels.length; i++) {
+      // 解析 local: URL 为可显示的 blob URL
+      const { unifiedImageService } = await import('../../../../services/unifiedImageService');
+      const resolvedLabels = await Promise.all(allLabels.map(async (item) => ({
+        ...item,
+        url: await unifiedImageService.resolveForDisplay(item.url),
+      })));
+
+      // 用第一张图原始尺寸确定宫格大小
+      const firstLoaded = await new Promise<{ w: number; h: number }>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => resolve({ w: 1024, h: 576 });
+        img.src = resolvedLabels[0].url;
+      });
+      const cellW = firstLoaded.w;
+      const cellH = firstLoaded.h;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = cols * cellW + (cols - 1) * gap;
+      canvas.height = rows * cellH + (rows - 1) * gap + (mode === 'before-after' ? 0 : labelH);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to create canvas context');
+      }
+
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < resolvedLabels.length; i++) {
         const col = i % cols;
         const row = Math.floor(i / cols);
         const img = new Image();
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
           img.onload = () => {
             ctx!.drawImage(img, col * (cellW + gap), row * (cellH + gap), cellW, cellH);
             ctx!.fillStyle = 'rgba(0,0,0,0.65)';
@@ -178,11 +193,14 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
             ctx!.fillStyle = '#ffffff';
             ctx!.font = '11px sans-serif';
             ctx!.textAlign = 'center';
-            ctx!.fillText(allLabels[i].label, col * (cellW + gap) + cellW / 2, ly + 16);
+            ctx!.fillText(resolvedLabels[i].label, col * (cellW + gap) + cellW / 2, ly + 16);
             resolve();
           };
-          img.onerror = () => resolve();
-          img.src = allLabels[i].url;
+          img.onerror = () => {
+            console.warn('[StoryboardDeduction] 图片加载失败:', resolvedLabels[i].url);
+            resolve();
+          };
+          img.src = resolvedLabels[i].url;
         });
       }
 
