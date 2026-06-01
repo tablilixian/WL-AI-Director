@@ -7,7 +7,6 @@ import { ImageModelDefinition, ImageGenerateOptions, AspectRatio } from '../../t
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProviderById } from '../modelRegistry';
 import { enhanceWithQualityTags } from '../ai/promptConstants';
 import { ApiKeyError } from './chatAdapter';
-import { storageApi } from '../../src/api/storage';
 import { useAuthStore } from '../../src/stores/authStore';
 import { imageStorageService, generateImageId } from '../imageStorageService';
 

@@ -1,4 +1,3 @@
-import { supabase } from '../src/api/supabase';
 import { useAuthStore } from '../src/stores/authStore';
 import { DB_NAME, DB_VERSION, STORE_NAMES } from './dbConfig';
 import { logger, LogCategory } from './logger';
@@ -89,44 +88,11 @@ export const imageStorageService = {
   },
 
   async uploadToCloud(id: string, blob: Blob, path: string): Promise<string> {
-    logger.debug(LogCategory.IMAGE, `☁️ 上传图片到云端: ${id}, 路径: ${path}`);
-    
-    const { user } = useAuthStore.getState();
-    if (!user) {
-      throw new Error('用户未登录');
-    }
-
-    const fileName = `${id}.png`;
-    const fullPath = `${path}/${fileName}`;
-    logger.debug(LogCategory.IMAGE, `📁 完整路径: ${fullPath}`);
-
-    // 添加超时机制，防止 upload 无限挂起
-    const TIMEOUT_MS = 30000;
-    const uploadPromise = supabase.storage
-      .from('projects')
-      .upload(fullPath, blob, {
-        upsert: true,
-        contentType: 'image/png'
-      });
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('图片上传超时（30秒），请检查网络连接')), TIMEOUT_MS)
-    );
-
-    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
-
-    if (uploadError) {
-      logger.error(LogCategory.IMAGE, '❌ 上传失败:', uploadError);
-      throw uploadError;
-    }
-
-    logger.debug(LogCategory.IMAGE, '✅ 上传成功，获取公共URL...');
-    const { data: { publicUrl } } = supabase.storage
-      .from('projects')
-      .getPublicUrl(fullPath);
-
-    logger.debug(LogCategory.IMAGE, `✅ 图片上传成功: ${publicUrl}`);
-    return publicUrl;
+    // 保存到 IndexedDB（如果还未保存）
+    await this.saveImage(id, blob)
+    // 返回 local: 引用，syncAssetToCloud 会将其上传到 PocketBase
+    logger.debug(LogCategory.IMAGE, `🏠 生成本地引用: local:${id}`)
+    return `local:${id}`
   },
 
   async cleanOldImages(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<number> {

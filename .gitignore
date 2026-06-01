@@ -28,3 +28,8 @@ dist-ssr
 *.sln
 *.sw?
 /.vs
+pb_data/
+pocketbase
+CHANGELOG.md
+LICENSE.md
+scripts/bin/

@@ -27,8 +27,6 @@ describe('项目流程测试', () => {
     
     useAuthStore.setState({
       user: null,
-      profile: null,
-      session: null,
       loading: false,
       error: null,
     });

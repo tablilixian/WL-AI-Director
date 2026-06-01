@@ -148,6 +148,13 @@ export class CanvasIntegrationService {
       await this.loadingPromise;
     }
     
+    // Clear any pending debounced save before switching project
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+      console.log('[CanvasIntegration] 清除待处理的自动保存');
+    }
+    
     this.isLoading = true;
     this.loadingPromise = (async () => {
       try {
@@ -564,6 +571,10 @@ export class CanvasIntegrationService {
    */
   async forceSync(): Promise<void> {
     console.log('[CanvasIntegration] 强制同步到云端');
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
     await canvasSyncService.forceSync();
   }
 

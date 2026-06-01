@@ -29,8 +29,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
       return
     }
 
-    if (password.length < 6) {
-      setValidationError('密码长度至少为 6 位')
+    if (password.length < 8) {
+      setValidationError('密码长度至少为 8 位')
       return
     }
 
@@ -109,7 +109,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="至少 6 位"
+                  placeholder="至少 8 位"
                   required
                   className="w-full bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg px-4 py-3 pr-12 text-sm outline-none focus:border-[var(--accent)] transition-colors"
                 />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Mail } from 'lucide-react'
 
 interface LoginPageProps {
   onSwitchToRegister: () => void
@@ -11,10 +11,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onSwitchToRegister,
   onLoginSuccess
 }) => {
-  const { signIn, loading, error, clearError } = useAuthStore()
+  const { signIn, resetPassword, loading, error, clearError } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +27,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       onLoginSuccess()
     } catch (err) {
       console.error('Login error:', err)
+    }
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    clearError()
+    try {
+      await resetPassword(email)
+      setResetSent(true)
+    } catch (err) {
+      // error is already set via authStore
     }
   }
 
@@ -87,12 +100,58 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             </div>
 
+            {/* Forgot password */}
+            <div className="text-right -mt-2">
+              <button
+                type="button"
+                onClick={() => { setShowReset(!showReset); setResetSent(false); clearError() }}
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+              >
+                忘记密码？
+              </button>
+            </div>
+
             {/* Error Message */}
             {error && (
               <div className="text-[var(--error)] text-sm bg-[var(--error-bg)] p-3 rounded-lg border border-[var(--error-border)]">
                 {error}
               </div>
             )}
+
+            {resetSent ? (
+              <div className="text-[var(--success)] text-sm bg-[var(--success-bg)] p-3 rounded-lg border border-[var(--success-border)]">
+                如果该邮箱已注册，重置密码的链接已发送。请检查您的邮箱或在本地 PocketBase 日志中查看重置链接。
+              </div>
+            ) : showReset ? (
+              <form onSubmit={handleResetPassword} className="space-y-3 p-3 bg-[var(--bg-base)] rounded-lg border border-[var(--border-secondary)]">
+                <p className="text-sm text-[var(--text-muted)]">输入邮箱地址获取密码重置链接：</p>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="w-full bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-2 bg-[var(--accent)] text-[var(--text-primary)] rounded-lg text-sm font-bold hover:bg-[var(--accent-hover)] disabled:opacity-50 flex items-center justify-center gap-1"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    发送重置链接
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReset(false); clearError() }}
+                    className="py-2 px-3 text-[var(--text-muted)] text-sm hover:text-[var(--text-primary)]"
+                  >
+                    取消
+                  </button>
+                </div>
+              </form>
+            ) : null}
 
             {/* Submit Button */}
             <button

@@ -98,6 +98,7 @@ class CanvasSyncService {
   private currentProjectId: string | null = null;
   private debouncedSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingSaveData: { layers: any[]; offset: { x: number; y: number }; scale: number } | null = null;
+  private loadPromise: Promise<CanvasData | null> | null = null;
 
   constructor() {
     this.config.cloudSyncEnabled = getStoredSyncConfig().enabled;
@@ -432,6 +433,21 @@ class CanvasSyncService {
       return null;
     }
 
+    // Dedup: return in-flight promise if load is already running
+    if (this.loadPromise) {
+      logger.debug(LogCategory.CANVAS, `[CanvasSync] 加载进行中，复用已有请求`);
+      return this.loadPromise;
+    }
+
+    this.loadPromise = this._doLoad().finally(() => {
+      this.loadPromise = null;
+    });
+    return this.loadPromise;
+  }
+
+  private async _doLoad(): Promise<CanvasData | null> {
+    if (!this.currentProjectId) return null;
+
     logger.debug(LogCategory.CANVAS, `[CanvasSync] 加载画布数据，项目: ${this.currentProjectId}`);
 
     // 1. 获取本地数据
@@ -588,6 +604,7 @@ class CanvasSyncService {
 
     this.currentProjectId = null;
     this.pendingSaveData = null;
+    this.loadPromise = null;
     this.state = {
       dirty: false,
       lastLocalSave: 0,

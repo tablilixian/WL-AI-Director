@@ -6,27 +6,23 @@ afterEach(() => {
   cleanup()
 })
 
-vi.mock('../src/api/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn(),
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-      signOut: vi.fn(),
-      onAuthStateChange: vi.fn(),
+vi.mock('../src/api/pocketbase', () => ({
+  pb: {
+    authStore: {
+      isValid: false,
+      model: null,
+      token: '',
+      clear: vi.fn(),
+      save: vi.fn(),
+      onChange: vi.fn(() => vi.fn()),
     },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-      upsert: vi.fn(() => Promise.resolve({ error: null })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ error: null })),
-      })),
+    collection: vi.fn(() => ({
+      getList: vi.fn(() => Promise.resolve({ items: [], totalItems: 0 })),
+      getFullList: vi.fn(() => Promise.resolve([])),
+      create: vi.fn(() => Promise.resolve({ id: 'mock-id' })),
+      update: vi.fn(() => Promise.resolve({ id: 'mock-id' })),
+      delete: vi.fn(() => Promise.resolve(true)),
+      authWithPassword: vi.fn(() => Promise.resolve({ token: 'mock-token', record: { id: 'mock-user' } })),
     })),
   },
 }))

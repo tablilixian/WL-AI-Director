@@ -240,6 +240,7 @@ export interface RenderLog {
 
 export interface ProjectState {
   id: string;
+  userId?: string;
   title: string;
   createdAt: number;
   lastModified: number;

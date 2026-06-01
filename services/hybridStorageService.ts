@@ -1,811 +1,400 @@
-/**
- * HybridStorageService - 混合存储服务
- * 
- * 优先从 Supabase 读取（云端同步）
- * 回退到 IndexedDB（本地缓存）
- * 写入时双写（保持一致性）
- */
+import { pb, ensureValidAuth } from '../src/api/pocketbase'
+import { useAuthStore } from '../src/stores/authStore'
+import { imageStorageService, videoStorageService } from './imageStorageService'
+import type { ProjectState, AssetLibraryItem, Character, Scene, Prop } from '../types'
 
-import { supabase } from '../src/api/supabase';
-import { useAuthStore } from '../src/stores/authStore';
-import { assetLibraryApi } from '../src/api/assetLibrary';
-import { storageApi } from '../src/api/storage';
-import type { ProjectState, AssetLibraryItem, Character, Scene, Prop } from '../types';
-import { logger, LogCategory } from './logger';
-
-// 复用现有的 IndexedDB 操作
-import { 
-  getAllProjectsMetadata, 
-  createNewProjectState, 
-  deleteProjectFromDB, 
-  getAllAssetLibraryItems as getAllAssetLibraryItemsFromDB,
-  deleteAssetFromLibrary as deleteAssetFromLibraryFromDB,
-  saveAssetToLibrary as saveAssetToLibraryToDB,
+import {
+  getAllProjectsMetadata,
+  createNewProjectState,
+  deleteProjectFromDB,
+  getAllAssetLibraryItems as getLocalAssetLibraryItems,
+  deleteAssetFromLibrary as deleteAssetFromDB,
+  saveAssetToLibrary as saveAssetToDB,
   loadProjectFromDB,
   saveProjectToDB,
-  deleteProjectStage
-} from './storageService';
-
-// 导入画布同步服务
-import { canvasSyncService } from './canvasSyncService';
-
-// ============================================================================
-// 历史遗留数据处理（已废弃）
-// ============================================================================
-// 用于处理旧格式 ID (proj_xxx) 到云端 UUID 的映射
-// 正式版本可删除此部分代码
-// ============================================================================
-/*
-// 本地存储的ID映射表（旧格式ID -> 云端UUID）
-const ID_MAPPING_KEY = 'bigbanana_id_mapping';
-const idMappingCache = new Map<string, string>();
-
-// 初始化ID映射缓存
-const initIdMapping = async () => {
-  if (idMappingCache.size > 0) return;
-  
-  try {
-    const mappingStr = localStorage.getItem(ID_MAPPING_KEY);
-    if (mappingStr) {
-      const mapping = JSON.parse(mappingStr) as Record<string, string>;
-      Object.entries(mapping).forEach(([oldId, newId]) => {
-        idMappingCache.set(oldId, newId);
-      });
-      logger.debug(LogCategory.STORAGE, `加载ID映射: ${idMappingCache.size} 条`);
-    }
-  } catch (error) {
-    logger.error(LogCategory.STORAGE, '加载ID映射失败:', error);
-  }
-};
-
-// 保存ID映射到本地存储
-const saveIdMapping = () => {
-  try {
-    const mapping = Object.fromEntries(idMappingCache);
-    localStorage.setItem(ID_MAPPING_KEY, JSON.stringify(mapping));
-  } catch (error) {
-    logger.error(LogCategory.STORAGE, '保存ID映射失败:', error);
-  }
-};
-
-// 获取云端ID（旧ID -> 新UUID）
-const getCloudId = (localId: string): string => {
-  if (idMappingCache.has(localId)) {
-    return idMappingCache.get(localId)!;
-  }
-  return localId;
-};
-
-// 设置ID映射
-const setIdMapping = (localId: string, cloudId: string) => {
-  if (localId !== cloudId) {
-    idMappingCache.set(localId, cloudId);
-    saveIdMapping();
-    logger.debug(LogCategory.STORAGE, `设置ID映射: ${localId} -> ${cloudId}`);
-  }
-};
-*/
-
-export interface CloudProject {
-  id: string;
-  user_id: string;
-  title: string;
-  description?: string;
-  status: string;
-  settings: ProjectState | null;  // 保留字段，暂时不使用，用于未来扩展
-  data: ProjectState | null;      // 主要存储字段，存储完整的项目数据
-  created_at: string;
-  updated_at: string;
-}
-
-
+  deleteProjectStage,
+} from './storageService'
 
 class HybridStorageService {
-  private locks = new Map<string, { locked: boolean, timestamp: number, version: number }>();
-  
-  private isOnline(): boolean {
-    return useAuthStore.getState().user !== null;
+  private async isOnline(): Promise<boolean> {
+    if (!pb.authStore.isValid) return false
+    // Verify the token is still fresh — refresh it silently
+    const refreshed = await ensureValidAuth()
+    console.log('[HybridStorage] isOnline:', { refreshed, hasToken: !!pb.authStore.token, hasModel: !!pb.authStore.model })
+    return refreshed
   }
 
-  /**
-   * 乐观锁：防止并发修改冲突
-   * key: projectId, value: { locked: boolean, timestamp: number, version: number }
-   */
-  private acquireLock(projectId: string, currentVersion: number): boolean {
-    const lock = this.locks.get(projectId);
-    const now = Date.now();
-    
-    // 锁已过期（超过10秒）
-    if (lock && now - lock.timestamp > 10000) {
-      this.locks.delete(projectId);
-      return true;
-    }
-    
-    // 没有锁或版本号匹配，可以获取锁
-    if (!lock || lock.version === currentVersion) {
-      this.locks.set(projectId, {
-        locked: true,
-        timestamp: now,
-        version: currentVersion
-      });
-      return true;
-    }
-    
-    // 版本号不匹配，有其他操作在进行
-    logger.warn(LogCategory.STORAGE, `项目 ${projectId} 版本冲突，当前版本: ${currentVersion}, 锁版本: ${lock.version}`);
-    return false;
-  }
-  
-  /**
-   * 释放乐观锁
-   */
-  private releaseLock(projectId: string): void {
-    this.locks.delete(projectId);
-  }
-  
-  /**
-   * 递增版本号
-   */
-  private incrementVersion(project: ProjectState): ProjectState {
-    return {
-      ...project,
-      version: (project.version || 0) + 1,
-      lastModified: Date.now()
-    };
+  private async currentUserId(): Promise<string | null> {
+    const id = pb.authStore.model?.id || null
+    console.log('[HybridStorage] currentUserId:', { id, modelId: pb.authStore.model?.id })
+    return id
   }
 
-  /**
-   * 获取所有项目（优先 Supabase，回退 IndexedDB）
-   */
+  // ─── 项目 ────────────────────────────────────────
+
   async getAllProjects(): Promise<ProjectState[]> {
-    const { user } = useAuthStore.getState();
-    
-    logger.debug(LogCategory.STORAGE, '📋 getAllProjects 开始执行');
-    logger.debug(LogCategory.STORAGE, '用户状态:', user ? '已登录' : '未登录');
-    
-    if (!user) {
-      // 未登录，使用本地 IndexedDB
-      logger.debug(LogCategory.STORAGE, '未登录，使用本地 IndexedDB');
-      return getAllProjectsMetadata();
-    }
-
-    try {
-      logger.debug(LogCategory.STORAGE, '检查 supabase 客户端...');
-
-      // 检查 supabase 客户端是否有效
-      if (!supabase || !supabase.from || typeof supabase.from !== 'function') {
-        logger.warn(LogCategory.STORAGE, 'Supabase 客户端无效 (from 不是函数)，回退到本地 IndexedDB');
-        return getAllProjectsMetadata();
-      }
-      
-      // 尝试调用 supabase.from 验证客户端
-      try {
-        const testQuery = supabase.from('projects');
-        if (!testQuery || typeof testQuery.select !== 'function') {
-          logger.warn(LogCategory.STORAGE, 'Supabase 客户端无效 (select 不是函数)，回退到本地 IndexedDB');
-          return getAllProjectsMetadata();
-        }
-      } catch (e) {
-        logger.warn(LogCategory.STORAGE, 'Supabase 客户端测试失败，回退到本地 IndexedDB:', e);
-        return getAllProjectsMetadata();
-      }
-      
-      logger.debug(LogCategory.STORAGE, '✅ Supabase 客户端有效，开始查询云端项目...');
-      
-      let data: CloudProject[] | null = null;
-      try {
-        // 添加超时机制：30秒超时
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('查询云端项目超时（30秒）')), 30000);
-        });
-        
-        const queryPromise = supabase
-          .from('projects')
-          .select('id, title, data, updated_at')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
-        
-        const result = await Promise.race([queryPromise, timeoutPromise]);
-        
-        if (result.error) throw result.error;
-        data = result.data as CloudProject[] | null;
-        logger.debug(LogCategory.STORAGE, `✅ 云端查询完成，返回数据: ${data?.length || 0} 条`);
-      } catch (queryError) {
-        logger.error(LogCategory.STORAGE, '查询云端项目失败:', queryError);
-        logger.debug(LogCategory.STORAGE, '回退到本地 IndexedDB');
-        return getAllProjectsMetadata();
-      }
-
-      if (data && data.length > 0) {
-        logger.debug(LogCategory.STORAGE, '开始转换云端数据...');
-        // 有云端数据，转换为 ProjectState
-        const cloudProjects = data
-          .filter(p => p.data !== null)
-          .map(p => this.cloudToProjectState(p));
-        
-        logger.debug(LogCategory.STORAGE, `转换后项目数: ${cloudProjects.length}`);
-        
-        // 去重：确保项目ID唯一
-        const uniqueProjects = Array.from(
-          new Map(cloudProjects.map(p => [p.id, p])).values()
-        );
-        
-        logger.debug(LogCategory.STORAGE, `从云端获取 ${cloudProjects.length} 个项目，去重后 ${uniqueProjects.length} 个`);
-        
-        // 同步云端项目到本地（静默同步，不触发重复创建）
-        // 不等待同步完成，直接返回云端数据
-        this.syncCloudToLocal(uniqueProjects).catch(err => {
-          logger.error(LogCategory.STORAGE, '静默同步失败:', err);
-        });
-        
-        logger.debug(LogCategory.STORAGE, '✅ getAllProjects 完成，返回云端数据');
-        return uniqueProjects;
-      }
-
-      // 云端没有数据，回退到本地
-      logger.debug(LogCategory.STORAGE, '云端无数据，回退到本地 IndexedDB');
-      return getAllProjectsMetadata();
-    } catch (error) {
-      logger.error(LogCategory.STORAGE, '获取云端项目失败:', error);
-      // 出错也回退到本地
-      return getAllProjectsMetadata();
-    }
+    const all = await getAllProjectsMetadata()
+    const userId = await this.currentUserId()
+    if (!userId) return []
+    return all.filter((p) => p.userId === userId)
   }
 
-  /**
-   * 静默同步云端项目到本地（避免重复创建）
-   * 使用版本号判断是否需要更新
-   */
-  private async syncCloudToLocal(cloudProjects: ProjectState[]): Promise<void> {
-    try {
-      const localProjects = await getAllProjectsMetadata();
-      const localIds = new Set(localProjects.map(p => p.id));
-      const localTitles = new Map(localProjects.map(p => [p.title, p.id]));
-
-      for (const cloudProject of cloudProjects) {
-        const existingId = localIds.has(cloudProject.id) 
-          ? cloudProject.id 
-          : localTitles.get(cloudProject.title);
-
-        if (!existingId) {
-          await saveProjectToDB(cloudProject);
-          logger.debug(LogCategory.STORAGE, `静默同步项目到本地: ${cloudProject.title} (版本 ${cloudProject.version})`);
-        } else {
-          const localProject = await loadProjectFromDB(existingId);
-          if (localProject) {
-            if ((cloudProject.version || 0) > (localProject.version || 0)) {
-              const updatedProject = { ...cloudProject, id: existingId };
-              await saveProjectToDB(updatedProject);
-              logger.debug(LogCategory.STORAGE, `静默更新本地项目: ${cloudProject.title} (版本 ${localProject.version} -> ${cloudProject.version})`);
-            } else if ((cloudProject.version || 0) === (localProject.version || 0) && cloudProject.lastModified > localProject.lastModified) {
-              const updatedProject = { ...cloudProject, id: existingId };
-              await saveProjectToDB(updatedProject);
-              logger.debug(LogCategory.STORAGE, `静默更新本地项目: ${cloudProject.title} (时间戳更新)`);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      logger.error(LogCategory.STORAGE, '静默同步失败:', error);
-    }
-  }
-
-  /**
-   * 获取单个项目详情
-   */
   async getProject(id: string): Promise<ProjectState | null> {
-    const { user } = useAuthStore.getState();
-    
-    if (!user) {
-      return loadProjectFromDB(id);
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data && data.data) {
-        return data.data as ProjectState;
-      }
-
-      return loadProjectFromDB(id);
-    } catch (error) {
-      logger.error(LogCategory.STORAGE, '获取云端项目详情失败:', error);
-      return loadProjectFromDB(id);
-    }
+    return loadProjectFromDB(id)
   }
 
-  /**
-   * 保存项目（双写：Supabase + IndexedDB）
-   * 使用乐观锁和版本号防止并发冲突
-   */
   async saveProject(project: ProjectState): Promise<void> {
-    logger.debug(LogCategory.STORAGE, '📝 saveProject 开始执行');
-    const { user } = useAuthStore.getState();
-    logger.debug(LogCategory.STORAGE, 'user:', user ? '已登录' : '未登录');
-
-    // 递增版本号
-    const updatedProject = this.incrementVersion(project);
-    logger.debug(LogCategory.STORAGE, `版本号: ${updatedProject.version}`);
-
-    // 先保存到本地 IndexedDB（保证离线可用）
-    logger.debug(LogCategory.STORAGE, '💾 开始保存到 IndexedDB...');
-    await saveProjectToDB(updatedProject);
-    logger.debug(LogCategory.STORAGE, '✅ IndexedDB 保存完成');
-
-    // 如果已登录，同时保存到云端
-    if (user) {
-      logger.debug(LogCategory.STORAGE, '☁️ 开始同步到云端...');
-      try {
-        /*
-        // 初始化ID映射
-        await initIdMapping();
-        logger.debug(LogCategory.STORAGE, '✅ ID映射初始化完成');
-        
-        // 检查是否是旧格式项目ID（proj_xxx）
-        const isOldFormat = project.id.startsWith('proj_');
-        logger.debug(LogCategory.STORAGE, `旧格式ID: ${isOldFormat}`);
-        
-        let cloudId = project.id;
-        
-        if (isOldFormat) {
-          // 使用ID映射获取云端ID（而不是通过标题匹配）
-          cloudId = getCloudId(project.id);
-          
-          // 如果映射表中没有，检查云端是否已有该项目的记录
-          if (cloudId === project.id) {
-            logger.debug(LogCategory.STORAGE, '🔍 检查云端是否存在项目...');
-            const { data: existing } = await supabase
-              .from('projects')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('title', project.title)
-              .maybeSingle();
-            
-            if (existing) {
-              // 云端已有该项目的记录，使用云端ID并保存映射
-              cloudId = existing.id;
-              setIdMapping(project.id, cloudId);
-              logger.debug(LogCategory.STORAGE, `旧格式项目 ${project.id} 已映射到云端ID ${cloudId}`);
-            } else {
-              // 云端没有该项目的记录，生成新的UUID并保存映射
-              cloudId = crypto.randomUUID();
-              setIdMapping(project.id, cloudId);
-              logger.debug(LogCategory.STORAGE, `旧格式项目 ${project.id} 已分配新云端ID ${cloudId}`);
-            }
-          }
-        }
-        */
-        
-        // 直接使用项目ID（不再处理旧格式）
-        const cloudId = project.id;
-        
-        // 获取乐观锁
-        if (!this.acquireLock(cloudId, project.version || 0)) {
-          logger.warn(LogCategory.STORAGE, `项目 ${cloudId} 版本冲突，放弃保存`);
-          return;
-        }
-        
-        logger.debug(LogCategory.STORAGE, '🔒 获取锁成功，开始 upsert...');
-        try {
-          const supabasePromise = supabase
-            .from('projects')
-            .upsert({
-              id: cloudId,
-              user_id: user.id,
-              title: project.title,
-              description: project.rawScript?.substring(0, 500) || null,
-              data: updatedProject,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id'
-            });
-
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Supabase 请求超时')), 60000);  // 60 秒超时
-          });
-
-          const { error } = await Promise.race([supabasePromise, timeoutPromise]) as any;
-
-          if (error) throw error;
-          logger.debug(LogCategory.STORAGE, `✅ 项目 ${project.id} (云端ID: ${cloudId}) 版本 ${updatedProject.version} 已同步到云端`);
-        } finally {
-          // 释放锁
-          this.releaseLock(cloudId);
-          logger.debug(LogCategory.STORAGE, '🔓 释放锁');
-        }
-      } catch (error) {
-        logger.error(LogCategory.STORAGE, '❌ 同步到云端失败:', error);
-        // 本地保存成功，云端失败不影响
-      }
+    const userId = await this.currentUserId()
+    const online = await this.isOnline()
+    console.log('[HybridStorage] saveProject:', { projectId: project.id, userId, isOnline: online, authModelId: pb.authStore.model?.id })
+    if (userId && !project.userId) {
+      project.userId = userId
+      console.log('[HybridStorage] set project.userId =', userId)
     }
-    
-    logger.debug(LogCategory.STORAGE, '✅ saveProject 执行完成');
+    await saveProjectToDB(project)
+    if (online) {
+      this.syncProjectToCloud(project).catch((err) =>
+        console.error('[HybridStorage] syncProjectToCloud failed:', err)
+      )
+    }
   }
 
-  /**
-   * 删除项目（双删）
-   */
   async deleteProject(id: string): Promise<void> {
-    const { user } = useAuthStore.getState();
-
-    // 先删除画布数据（本地和云端）
+    // 1. Load project to find local image/video references
+    let project: ProjectState | null = null
     try {
-      await canvasSyncService.deleteCanvasData(id);
-      logger.debug(LogCategory.STORAGE, `✅ 画布数据已删除: ${id}`);
-    } catch (error) {
-      logger.error(LogCategory.STORAGE, '❌ 删除画布数据失败:', error);
-      // 画布删除失败不影响项目删除
+      project = await loadProjectFromDB(id)
+    } catch {
+      console.warn('[HybridStorage] deleteProject: could not load project')
     }
 
-    // 先删除本地
-    await deleteProjectFromDB(id);
-    
-    // 删除 stage 记录
-    await deleteProjectStage(id);
+    // 2. Clear canvas in-memory state first (timers, pending saves, currentProjectId)
+    await canvasSyncService?.cleanup?.()
+    // 3. Delete canvas data from storage (local + cloud)
+    await canvasSyncService?.deleteCanvasData?.(id)
 
-    // 如果已登录，同时删除云端
-    if (user) {
+    // 4. Delete IndexedDB images and videos belonging to this project
+    if (project) {
+      const imageIds: string[] = []
+      const videoIds: string[] = []
+
+      const collectLocalId = (url?: string) => {
+        if (url?.startsWith('local:')) imageIds.push(url.substring(6))
+      }
+
+      project.scriptData?.characters?.forEach((c) => {
+        collectLocalId(c.imageUrl)
+        c.variations?.forEach((v) => collectLocalId(v.imageUrl))
+      })
+      project.scriptData?.scenes?.forEach((s) => collectLocalId(s.imageUrl))
+      project.scriptData?.props?.forEach((p) => collectLocalId(p.imageUrl))
+      project.shots?.forEach((s) => {
+        s.keyframes?.forEach((kf) => collectLocalId(kf.imageUrl))
+        if (s.interval?.videoUrl?.startsWith('local:')) {
+          videoIds.push(s.interval.videoUrl.substring(6))
+        }
+      })
+
+      await Promise.allSettled(imageIds.map((imgId) => imageStorageService.deleteImage(imgId)))
+      await Promise.allSettled(videoIds.map((vidId) => videoStorageService.deleteVideo(vidId)))
+    }
+
+    // 5. Delete associated asset library items (local)
+    const localAssets = await getLocalAssetLibraryItems()
+    const projectAssets = localAssets.filter((a) => a.projectId === id)
+    await Promise.allSettled(projectAssets.map((a) => deleteAssetFromDB(a.id)))
+
+    // 6. Delete project from IndexedDB
+    await deleteProjectFromDB(id)
+
+    // 7. Cloud cleanup
+    if (await this.isOnline()) {
+      const userId = await this.currentUserId()
+      if (!userId) return
       try {
-        /*
-        // 初始化ID映射
-        await initIdMapping();
-        
-        // 获取云端ID（处理旧格式ID）
-        let cloudId = id;
-        if (id.startsWith('proj_')) {
-          cloudId = getCloudId(id);
-          if (cloudId === id) {
-            // 映射表中没有，尝试通过标题查找云端项目
-            const project = await loadProjectFromDB(id);
-            if (project) {
-              const { data: cloudProject } = await supabase
-                .from('projects')
-                .select('id')
-                .eq('user_id', user.id)
-                .eq('title', project.title)
-                .maybeSingle();
-              
-              if (cloudProject) {
-                cloudId = cloudProject.id;
-                setIdMapping(id, cloudId);
-              }
-            }
+        // 7a. Delete project from PocketBase (FIXED: data.id instead of id)
+        const projectRecords = await pb.collection('projects').getList(1, 1, {
+          filter: `data.id = "${id}"`,
+        })
+        if (projectRecords.items.length > 0) {
+          await pb.collection('projects').delete(projectRecords.items[0].id)
+        }
+
+        // 7b. Delete associated cloud asset records (also removes uploaded images from file storage)
+        for (const asset of projectAssets) {
+          const assetRecords = await pb.collection('asset_library').getList(1, 1, {
+            filter: `data.id = "${(asset as any).data?.id || asset.id}"`,
+          })
+          if (assetRecords.items.length > 0) {
+            await pb.collection('asset_library').delete(assetRecords.items[0].id)
           }
         }
-        
-        // 如果找到了云端ID，则删除
-        if (cloudId !== id) {
-          const { error } = await supabase
-            .from('projects')
-            .delete()
-            .eq('id', cloudId)
-            .eq('user_id', user.id);
-
-          if (error) throw error;
-          logger.debug(LogCategory.STORAGE, `项目 ${id} (云端ID: ${cloudId}) 已从云端删除`);
-          
-          // 从映射表中删除该映射
-          idMappingCache.delete(id);
-          saveIdMapping();
-        } else {
-          logger.debug(LogCategory.STORAGE, `项目 ${id} 未找到云端记录，跳过云端删除`);
-        }
-        */
-        
-        // 直接使用项目ID删除（不再处理旧格式）
-        const { error } = await supabase
-          .from('projects')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-        logger.debug(LogCategory.STORAGE, `项目 ${id} 已从云端删除`);
-      } catch (error) {
-        logger.error(LogCategory.STORAGE, '从云端删除失败:', error);
+      } catch (err) {
+        console.error('[HybridStorage] deleteProject cloud failed:', err)
       }
     }
   }
 
+  // ─── 同步 ────────────────────────────────────────
 
-  /**
-   * 登录时双向同步
-   * - 本地新 → 推送到云端
-   * - 云端新 → 恢复到本地
-   * 根据 version 和 lastModified 时间戳进行数据取舍
-   */
-  async syncFromCloud(): Promise<{uploaded:number; downloaded:number; conflicts:number}> {
-    const { user } = useAuthStore.getState();
-    
-    if (!user) {
-      logger.warn(LogCategory.STORAGE, '未登录，无法执行登录同步');
-      return { uploaded: 0, downloaded: 0, conflicts: 0 };
-    }
+  async syncFromCloud(): Promise<{ uploaded: number; downloaded: number; conflicts: number }> {
+    const userId = await this.currentUserId()
+    if (!userId) return { uploaded: 0, downloaded: 0, conflicts: 0 }
 
-    logger.debug(LogCategory.STORAGE, '========== 登录时双向同步开始 ==========');
-    
-    const result = { uploaded: 0, downloaded: 0, conflicts: 0 };
-
+    const result = { uploaded: 0, downloaded: 0, conflicts: 0 }
     try {
-      logger.debug(LogCategory.STORAGE, '获取本地项目列表...');
-      const localProjects = await getAllProjectsMetadata();
-      logger.debug(LogCategory.STORAGE, `本地项目数量: ${localProjects.length}`);
-      logger.debug(LogCategory.STORAGE, '获取云端项目列表...');
-      const { data: cloudProjects, error: cloudError } = await supabase
-        .from('projects')
-        .select('id, title, version, updated_at, data')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+      const localProjects = await getAllProjectsMetadata()
+      const cloudProjects = await pb.collection('projects').getFullList({
+        filter: `user_id = "${userId}"`,
+      })
 
-      if (cloudError) {
-        logger.error(LogCategory.STORAGE, '获取云端项目失败:', cloudError);
-        throw cloudError;
-      }
-
-      const cloudProjectList = cloudProjects || [];
-      logger.debug(LogCategory.STORAGE, `云端项目数量: ${cloudProjectList.length}`);
-
-      const cloudMap = new Map<string, { id: string; title: string; version: number; lastModified: number; data: ProjectState }>();
-
-      for (const cp of cloudProjectList) {
-        // 使用 data 字段存储项目数据
-        const cloudData = cp.data;
-        if (cloudData) {
-          cloudMap.set(cp.title, {
-            id: cp.id,
-            title: cp.title,
-            version: cp.version || 1,
-            lastModified: new Date(cp.updated_at).getTime(),
-            data: cloudData
-          });
+      const cloudMap = new Map<string, any>()
+      for (const cp of cloudProjects) {
+        const item = cp as any
+        if (item.data && item.data.id) {
+          cloudMap.set(item.data.id, { cloudId: item.id, userId: item.user_id, data: item.data, updated: item.updated })
         }
       }
 
-      for (const localMeta of localProjects) {
-        const localFull = await loadProjectFromDB(localMeta.id);
-        if (!localFull) continue;
+      const localMap = new Map<string, ProjectState>()
+      for (const p of localProjects) {
+        localMap.set(p.id, p)
+      }
 
-        const cloudProject = cloudMap.get(localFull.title);
-
-        if (!cloudProject) {
-          logger.debug(LogCategory.STORAGE, `⬆️  云端无此项目，推送本地: ${localFull.title}`);
-          await this.saveProject(localFull);
-          result.uploaded++;
-        } else {
-          const localVersion = localFull.version || 1;
-          const cloudVersion = cloudProject.version || 1;
-          const localTime = localFull.lastModified;
-          const cloudTime = cloudProject.lastModified;
-
-          logger.debug(LogCategory.STORAGE, `🔄 比较项目: ${localFull.title}`);
-          logger.debug(LogCategory.STORAGE, `  本地: version=${localVersion}, time=${localTime}`);
-          logger.debug(LogCategory.STORAGE, `  云端: version=${cloudVersion}, time=${cloudTime}`);
-
-          if (localVersion > cloudVersion || (localVersion === cloudVersion && localTime > cloudTime)) {
-            logger.debug(LogCategory.STORAGE, `⬆️  本地比云端新，推送本地到云端`);
-            const localToCloud = { ...localFull, id: cloudProject.id };
-            await this.saveProject(localToCloud);
-            result.uploaded++;
-          } else if (cloudVersion > localVersion || (cloudVersion === localVersion && cloudTime > localTime)) {
-            logger.debug(LogCategory.STORAGE, `⬇️  云端比本地新，下载到本地`);
-            const cloudToLocal = { ...cloudProject.data, id: localMeta.id };
-            await saveProjectToDB(cloudToLocal);
-            result.downloaded++;
-          } else {
-            logger.debug(LogCategory.STORAGE, `✅ 版本相同，无需同步: ${localFull.title}`);
-          }
+      for (const [localId, cloud] of cloudMap) {
+        if (!localMap.has(localId)) {
+          const project = cloud.data as ProjectState
+          project.userId = project.userId || cloud.userId
+          await saveProjectToDB(project)
+          result.downloaded++
         }
-
-        cloudMap.delete(localFull.title);
       }
 
-      for (const [title, cloudProj] of cloudMap) {
-        logger.debug(LogCategory.STORAGE, `⬇️  本地无此项目，从云端下载: ${title}`);
-        await saveProjectToDB(cloudProj.data);
-        result.downloaded++;
+      for (const [localId, local] of localMap) {
+        if (!cloudMap.has(localId) && local.userId === userId) {
+          await this.syncProjectToCloud(local)
+          result.uploaded++
+        }
       }
 
-      logger.debug(LogCategory.STORAGE, `========== 登录同步完成 ==========`);
-      logger.debug(LogCategory.STORAGE, `上传: ${result.uploaded}, 下载: ${result.downloaded}, 冲突: ${result.conflicts}`);
-
-      return result;
+      return result
     } catch (error) {
-      logger.error(LogCategory.STORAGE, '登录同步失败:', error);
-      return result;
+      console.error('[HybridStorage] syncFromCloud failed:', error)
+      return result
     }
   }
 
-
-  /**
-   * 将本地所有数据导出到云端（手动触发）
-   */
   async exportToCloud(): Promise<number> {
-    const { user } = useAuthStore.getState();
-    
-    if (!user) {
-      logger.warn(LogCategory.STORAGE, '未登录，无法导出');
-      return 0;
-    }
+    const userId = await this.currentUserId()
+    if (!userId) return 0
 
-    const localProjects = await getAllProjectsMetadata();
-    let exportedCount = 0;
-
+    const localProjects = await getAllProjectsMetadata()
+    let count = 0
     for (const project of localProjects) {
-      const fullProject = await loadProjectFromDB(project.id);
-      if (fullProject) {
-        await this.saveProject(fullProject);
-        exportedCount++;
-      }
-    }
-
-    logger.debug(LogCategory.STORAGE, `导出完成: ${exportedCount} 个项目`);
-    return exportedCount;
-  }
-
-  /**
-   * 转换云端数据到 ProjectState
-   */
-  private cloudToProjectState(cloud: CloudProject): ProjectState {
-    // 使用 data 字段存储项目数据
-    if (cloud.data) {
-      return cloud.data;
-    }
-    
-    return {
-      id: cloud.id,
-      title: cloud.title,
-      createdAt: new Date(cloud.created_at).getTime(),
-      lastModified: new Date(cloud.updated_at).getTime(),
-      version: 1,
-      stage: 'script',
-      rawScript: '',
-      targetDuration: '60',
-      language: '中文',
-      visualStyle: 'anime',
-      shotGenerationModel: '',
-      scriptData: null,
-      shots: [],
-      isParsingScript: false,
-      renderLogs: []
-    };
-  }
-
-  /**
-   * 获取所有素材库项目（云端 + 本地 IndexedDB）
-   * 优先从云端获取，云端不可用时回退到本地
-   */
-  async getAllAssetLibraryItems(): Promise<AssetLibraryItem[]> {
-    logger.debug(LogCategory.STORAGE, '获取素材库项目...');
-    logger.debug(LogCategory.STORAGE, `用户登录状态: ${this.isOnline()}`);
-    
-    // 如果在线，优先从云端获取
-    if (this.isOnline()) {
+      if (project.userId !== userId) continue
       try {
-        logger.debug(LogCategory.STORAGE, '尝试从云端获取素材库...');
-        const cloudItems = await assetLibraryApi.list();
-        logger.debug(LogCategory.STORAGE, `✅ 从云端获取 ${cloudItems.length} 个素材库项目`);
-        
-        // 同步到本地 IndexedDB
-        logger.debug(LogCategory.STORAGE, '开始同步到本地 IndexedDB...');
-        for (const item of cloudItems) {
-          try {
-            await saveAssetToLibraryToDB(item);
-          } catch (error) {
-            logger.error(LogCategory.STORAGE, '同步素材库项目到本地失败:', { id: item.id, error });
-          }
-        }
-        logger.debug(LogCategory.STORAGE, '✅ 同步到本地 IndexedDB 完成');
-        
-        return cloudItems;
-      } catch (error) {
-        logger.error(LogCategory.STORAGE, '❌ 从云端获取素材库失败:', error);
-        logger.warn(LogCategory.STORAGE, '回退到本地 IndexedDB');
+        await this.syncProjectToCloud(project)
+        count++
+      } catch (err) {
+        console.error('[HybridStorage] exportToCloud failed for project:', project.id, err)
       }
-    } else {
-      logger.debug(LogCategory.STORAGE, '用户未登录，直接使用本地 IndexedDB');
     }
-    
-    // 回退到本地 IndexedDB
-    logger.debug(LogCategory.STORAGE, '从本地 IndexedDB 获取素材库项目...');
-    const localItems = await getAllAssetLibraryItemsFromDB();
-    logger.debug(LogCategory.STORAGE, `从本地 IndexedDB 获取 ${localItems.length} 个素材库项目`);
-    return localItems;
+    return count
   }
 
-  /**
-   * 保存素材库项目（云端 + 本地 IndexedDB）
-   * 双写策略：同时保存到云端和本地
-   * 注意：使用统一的 UUID，本地和云端 ID 一致
-   */
-  async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
-    logger.debug(LogCategory.STORAGE, '保存素材库项目:', item.name);
-    
-    // 先保存到本地 IndexedDB
+  private async syncProjectToCloud(project: ProjectState): Promise<void> {
+    const userId = project.userId || await this.currentUserId()
+    console.log('[HybridStorage] syncProjectToCloud:', { projectId: project.id, userId, hasUserField: !!project.userId })
+    if (!userId) {
+      console.warn('[HybridStorage] syncProjectToCloud: no userId, skipping')
+      return
+    }
     try {
-      await saveAssetToLibraryToDB(item);
-      logger.debug(LogCategory.STORAGE, '素材库项目已保存到本地 IndexedDB, ID:', item.id);
-    } catch (error) {
-      logger.error(LogCategory.STORAGE, '保存素材库项目到本地失败:', error);
-    }
-    
-    // 如果在线，同步到云端
-    if (this.isOnline()) {
-      try {
-        const cloudItem = await assetLibraryApi.create(item);
-        logger.debug(LogCategory.STORAGE, '素材库项目已同步到云端, ID:', cloudItem.id);
-        // 由于使用统一的 UUID，cloudItem.id 应该等于 item.id
-      } catch (error) {
-        logger.error(LogCategory.STORAGE, '同步素材库项目到云端失败:', error);
+      const existing = await pb.collection('projects').getList(1, 1, {
+        filter: `data.id = "${project.id}"`,
+      })
+      const body = {
+        user_id: userId,
+        title: project.title,
+        data: { ...project, userId },
+        description: project.title,
+        status: 'draft',
       }
+      console.log('[HybridStorage] syncProjectToCloud body:', { user_id: body.user_id, title: body.title, dataId: body.data.id })
+      if (existing.items.length > 0) {
+        console.log('[HybridStorage] updating existing project:', existing.items[0].id)
+        await pb.collection('projects').update(existing.items[0].id, body)
+      } else {
+        console.log('[HybridStorage] creating new project')
+        await pb.collection('projects').create(body)
+      }
+      console.log('[HybridStorage] syncProjectToCloud success')
+    } catch (error) {
+      console.error('[HybridStorage] syncProjectToCloud failed:', error)
+    }
+  }
+
+  // ─── 资产库 ──────────────────────────────────────
+
+  async getAllAssetLibraryItems(): Promise<AssetLibraryItem[]> {
+    let localItems = await getLocalAssetLibraryItems()
+    if (await this.isOnline()) {
+      await this.syncAssetLibraryFromCloud()
+      localItems = await getLocalAssetLibraryItems()
+    }
+    // Dedup by type + data.id to avoid mixing same-id across entity types
+    const seen = new Set<string>()
+    return localItems.filter((item: any) => {
+      const key = `${item.type || '?'}:${item.data?.id || item.id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
+  async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
+    await saveAssetToDB(item)
+    if (await this.isOnline()) {
+      this.syncAssetToCloud(item).catch((err) =>
+        console.error('[HybridStorage] syncAssetToCloud failed:', err)
+      )
     }
   }
 
   async deleteAssetFromLibrary(id: string): Promise<void> {
-    console.log('[Storage] 🗑️ 开始删除素材库项目:', id);
-    console.log('[Storage] 当前在线状态:', this.isOnline());
-    
-    let imageUrl: string | undefined;
-    
-    const item = await assetLibraryApi.get(id);
-    if (item) {
-      const data = item.data as Character | Scene | Prop;
-      imageUrl = data?.imageUrl;
-    }
-    
-    try {
-      console.log('[Storage] 开始从本地 IndexedDB 删除:', id);
-      await deleteAssetFromLibraryFromDB(id);
-      console.log('[Storage] ✅ 素材库项目已从本地 IndexedDB 删除');
-    } catch (error) {
-      console.error('[Storage] ❌ 从本地删除素材库项目失败:', error);
-    }
-    
-    if (this.isOnline()) {
-      console.log('[Storage] 尝试从云端删除:', id);
+    await deleteAssetFromDB(id)
+    if (await this.isOnline()) {
       try {
-        await assetLibraryApi.delete(id);
-        console.log('[Storage] ✅ 素材库项目已从云端删除');
-      } catch (error: any) {
-        console.error('[Storage] ❌ 从云端删除素材库项目失败:', {
-          id,
-          error: error.message,
-          details: error
-        });
-      }
-      
-      if (imageUrl) {
-        console.log('[Storage] 🗑️ 开始删除存储桶文件:', imageUrl);
-        try {
-          await storageApi.delete(imageUrl, 'projects');
-          console.log('[Storage] ✅ 存储桶文件已删除');
-        } catch (storageError: any) {
-          console.error('[Storage] ❌ 删除存储桶文件失败:', storageError.message);
+        const records = await pb.collection('asset_library').getList(1, 1, {
+          filter: `id = "${id}"`,
+        })
+        if (records.items.length > 0) {
+          await pb.collection('asset_library').delete(records.items[0].id)
         }
-      } else {
-        console.log('[Storage] ⚠️ 无 imageUrl，跳过存储桶删除');
+      } catch (err) {
+        console.error('[HybridStorage] deleteAssetFromLibrary cloud failed:', err)
       }
-    } else {
-      console.warn('[Storage] ⚠️ 用户未在线，仅删除本地数据');
+    }
+  }
+
+  private async syncAssetLibraryFromCloud(): Promise<void> {
+    const userId = await this.currentUserId()
+    if (!userId) return
+    try {
+      const cloudItems = await pb.collection('asset_library').getFullList({
+        filter: `user_id = "${userId}"`,
+      })
+      const localItems = await getLocalAssetLibraryItems()
+      for (const item of cloudItems) {
+        const raw = item as any
+        const dataId = raw.data?.id
+        const cloudType = raw.type || '?'
+        // Check if a local item already represents the same asset (same type + data.id)
+        const existing = dataId
+          ? localItems.find((a: any) => (a.type || '?') === cloudType && a.data?.id === dataId)
+          : null
+        if (existing) {
+          // Update existing local entry with latest cloud data, keeping local id
+          await saveAssetToDB({
+            ...existing,
+            name: raw.name || existing.name,
+            type: raw.type || existing.type,
+            data: raw.data || existing.data,
+            projectId: raw.project_id || existing.projectId || '',
+            projectName: raw.project_name || existing.projectName || '',
+            updatedAt: Date.now(),
+          } as any)
+        } else {
+          await saveAssetToDB({
+            id: raw.id,
+            type: raw.type,
+            name: raw.name,
+            data: raw.data,
+            projectId: raw.project_id || '',
+            projectName: raw.project_name || '',
+          } as any)
+        }
+      }
+    } catch (err) {
+      console.error('[HybridStorage] syncAssetLibraryFromCloud failed:', err)
+    }
+  }
+
+  private async syncAssetToCloud(item: AssetLibraryItem): Promise<void> {
+    const userId = await this.currentUserId()
+    if (!userId) return
+    try {
+      const itemData = item as any
+      const dataObj = { ...(itemData.data || {}) }
+      const imageUrl: string | undefined = dataObj.imageUrl
+      let blob: Blob | null = null
+
+      // Get image blob from IndexedDB if local reference
+      if (imageUrl && imageUrl.startsWith('local:')) {
+        const imageId = imageUrl.substring(6)
+        blob = await imageStorageService.getImage(imageId)
+      }
+
+      const assetType = itemData.type || 'character'
+      const existing = await pb.collection('asset_library').getList(1, 1, {
+        filter: `data.id = "${dataObj.id || item.id}" && type = "${assetType}"`,
+      })
+
+      const formData = new FormData()
+      formData.append('user_id', userId)
+      formData.append('type', assetType)
+      formData.append('name', item.name)
+      // Only include project_id if it looks like a valid PB record ID (15 alphanumeric chars)
+      // Local UUIDs (36 chars with hyphens) would cause 400 on relation fields
+      if (itemData.projectId && /^[a-z0-9]{15}$/.test(itemData.projectId)) {
+        formData.append('project_id', itemData.projectId)
+      }
+      formData.append('project_name', itemData.projectName || '')
+      formData.append('data', JSON.stringify(dataObj))
+
+      if (blob) {
+        const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : blob.type === 'image/gif' ? 'gif' : 'jpg'
+        formData.append('image', blob, `asset_${Date.now()}.${ext}`)
+      }
+
+      let result: any
+      if (existing.items.length > 0) {
+        result = await pb.collection('asset_library').update(existing.items[0].id, formData)
+      } else {
+        result = await pb.collection('asset_library').create(formData)
+      }
+
+      // Update local IndexedDB record with PocketBase file URL
+      if (blob && result?.image) {
+        const pbUrl = `${pb.baseUrl}/api/files/${result.collectionId}/${result.id}/${result.image}`
+        dataObj.imageUrl = pbUrl
+        itemData.data = dataObj
+        await saveAssetToDB(itemData as AssetLibraryItem)
+        console.log('[HybridStorage] syncAssetToCloud: updated local imageUrl to PocketBase URL')
+      }
+
+      console.log(`[HybridStorage] syncAssetToCloud success (${existing.items.length > 0 ? 'update' : 'create'})`)
+    } catch (error: any) {
+      // Log full error details including PocketBase response body
+      if (error?.response) {
+        console.error(`[HybridStorage] syncAssetToCloud failed: ${error.message}`, JSON.stringify(error.response))
+      } else {
+        console.error(`[HybridStorage] syncAssetToCloud failed:`, error?.message || error)
+      }
     }
   }
 }
 
-export const hybridStorage = new HybridStorageService();
+export const hybridStorage = new HybridStorageService()
 
-// 导出便捷方法
-export const getAllProjects = () => hybridStorage.getAllProjects();
-export const getProject = (id: string) => hybridStorage.getProject(id);
-export const saveProject = (project: ProjectState) => hybridStorage.saveProject(project);
-export const deleteProject = (id: string) => hybridStorage.deleteProject(id);
-export const syncFromCloud = () => hybridStorage.syncFromCloud();
-export const exportToCloud = () => hybridStorage.exportToCloud();
-export const getAllAssetLibraryItems = () => hybridStorage.getAllAssetLibraryItems();
-export const saveAssetToLibrary = (item: AssetLibraryItem) => hybridStorage.saveAssetToLibrary(item);
-export const deleteAssetFromLibrary = (id: string) => hybridStorage.deleteAssetFromLibrary(id);
+export const getAllProjects = () => hybridStorage.getAllProjects()
+export const getProject = (id: string) => hybridStorage.getProject(id)
+export const saveProject = (project: ProjectState) => hybridStorage.saveProject(project)
+export const deleteProject = (id: string) => hybridStorage.deleteProject(id)
+export const syncFromCloud = () => hybridStorage.syncFromCloud()
+export const exportToCloud = () => hybridStorage.exportToCloud()
+export const getAllAssetLibraryItems = () => hybridStorage.getAllAssetLibraryItems()
+export const saveAssetToLibrary = (item: AssetLibraryItem) => hybridStorage.saveAssetToLibrary(item)
+export const deleteAssetFromLibrary = (id: string) => hybridStorage.deleteAssetFromLibrary(id)
+
+import { canvasSyncService } from './canvasSyncService'

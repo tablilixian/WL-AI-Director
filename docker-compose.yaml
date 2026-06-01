@@ -1,23 +1,30 @@
-version: '3.8'
-
 services:
+  # PocketBase 后端服务（数据库 + 认证 + API）
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: wl-ai-director-pb
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
+      - ./pb_migrations:/pb_migrations
+    restart: unless-stopped
+    networks:
+      - cinegen-network
+
+  # 前端 Nginx 服务
   bigbanana-ai:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: bigbanana-ai-app
+    container_name: wl-ai-director-app
     ports:
       - "3005:80"
     environment:
-      # 如果需要 API Key,可以在这里配置或使用 .env 文件
-      # - ANTSK_API_KEY=${ANTSK_API_KEY}
       - NODE_ENV=production
     restart: unless-stopped
     networks:
       - cinegen-network
-    # 如果需要持久化数据,可以添加 volumes
-    # volumes:
-    #   - ./data:/app/data
 
 networks:
   cinegen-network:
