@@ -274,6 +274,43 @@ export interface ProjectState {
  */
 export type AspectRatio = '16:9' | '9:16' | '1:1';
 
+// ============================================
+// 视觉一致性检查类型
+// ============================================
+
+export type ConflictType =
+  | 'clothing_mismatch'
+  | 'hairstyle_mismatch'
+  | 'accessory_mismatch'
+  | 'feature_mismatch'
+  | 'color_temperature'
+  | 'prop_position';
+
+export type ConflictSeverity = 'error' | 'warning' | 'info';
+
+export interface ConsistencyConflict {
+  id: string;
+  type: ConflictType;
+  severity: ConflictSeverity;
+  characterId: string;
+  characterName: string;
+  shotIds: string[];
+  description: string;
+  isPlotDriven: boolean;
+  plotExplanation: string | null;
+  suggestion: string | null;
+  userDecision?: 'dismissed' | 'fixed' | 'pending';
+}
+
+export interface ConsistencyCheckResult {
+  characterId: string;
+  characterName: string;
+  totalShots: number;
+  consistencyScore: number;
+  conflicts: ConsistencyConflict[];
+  passed: boolean;
+}
+
 /**
  * 视频时长类型（仅异步视频模型支持）
  */

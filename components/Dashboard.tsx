@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Database, Settings, Sun, Moon, LogOut, User } from 'lucide-react';
+import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Database, Settings, Sun, Moon, LogOut, User, RefreshCw } from 'lucide-react';
 import { ProjectState, AssetLibraryItem } from '../types';
 import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB, exportIndexedDBData, importIndexedDBData, loadProjectFromDB, saveProjectToDB } from '../services/storageService';
 import { hybridStorage } from '../services/hybridStorageService';
@@ -13,6 +13,7 @@ import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 import DebugExportModal from './DebugExportModal';
 import logger, { LogCategory } from '@/services/logger';
+import { getPreferences, getPreferenceSummary, resetPreferences, UserPreferences } from '../services/userPreferencesService';
 
 interface Props {
   onOpenProject: (projectId: string | ProjectState) => void;
@@ -543,6 +544,41 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                 </div>
                 <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导出本地数据库用于调试</div>
               </button>
+            </div>
+
+            {/* Default Preferences Section */}
+            <div className="mt-6 pt-6 border-t border-[var(--border-subtle)]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-[var(--text-primary)] tracking-wide flex items-center gap-2">
+                  <Settings className="w-3.5 h-3.5 text-[var(--accent-text)]" />
+                  新建项目默认值
+                </h3>
+                <button
+                  onClick={() => {
+                    resetPreferences();
+                    showAlert('偏好设置已重置为默认值', { type: 'success' });
+                    setShowSettingsModal(false);
+                  }}
+                  className="px-3 py-1 bg-[var(--bg-hover)] hover:bg-[var(--border-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-[10px] font-bold rounded flex items-center gap-1 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  恢复默认
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {getPreferenceSummary().map((line, i) => {
+                  const [label, value] = line.split('：');
+                  return (
+                    <div key={i} className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded">
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest">{label}</div>
+                      <div className="text-xs text-[var(--text-primary)] font-mono mt-0.5">{value}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-[var(--text-muted)] mt-2">
+                在剧本阶段修改配置时会自动保存为新偏好
+              </p>
             </div>
           </div>
         </div>

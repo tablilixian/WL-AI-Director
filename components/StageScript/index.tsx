@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ProjectState, Shot } from '../../types';
+import { ProjectState, Shot, ConsistencyCheckResult, ConsistencyConflict } from '../../types';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
-import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from '../../services/aiService';
+import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency } from '../../services/aiService';
 import { getActiveChatModel } from '../../services/modelRegistry';
+import { savePreferences } from '../../services/userPreferencesService';
 import { getFinalValue, validateConfig } from './utils';
 import { DEFAULTS } from './constants';
 import ConfigPanel from './ConfigPanel';
@@ -50,6 +51,12 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const [error, setError] = useState<string | null>(null);
   const [processingMessage, setProcessingMessage] = useState('');
   const [processingLogs, setProcessingLogs] = useState<string[]>([]);
+
+  // Consistency check state
+  const [consistencyResults, setConsistencyResults] = useState<ConsistencyCheckResult[]>([]);
+  const [isConsistencyChecking, setIsConsistencyChecking] = useState(false);
+  const [isConsistencyRegenerating, setIsConsistencyRegenerating] = useState(false);
+  const [regeneratingConflictId, setRegeneratingConflictId] = useState<string | null>(null);
 
   // Editing state - unified
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
@@ -171,6 +178,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       }
       
       setActiveTab('script');
+
+      // 非阻塞启动视觉一致性检查
+      runConsistencyCheck(scriptData, shots, finalModel);
 
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
@@ -554,6 +564,84 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     return `SHOT ${String(fallbackIndex + 1).padStart(3, '0')}`;
   };
 
+  const consistencyConflicts: ConsistencyConflict[] = consistencyResults.flatMap(r => r.conflicts);
+
+  const runConsistencyCheck = async (scriptData: any, shots: Shot[], model: string) => {
+    if (!scriptData || shots.length === 0) return;
+    setConsistencyResults([]);
+    setIsConsistencyChecking(true);
+    try {
+      const results = await checkAllCharactersConsistency(scriptData, shots, scriptData.scenes, model);
+      setConsistencyResults(results);
+    } catch (err: any) {
+      logger.warn(LogCategory.AI, '一致性检查异常:', err);
+    } finally {
+      setIsConsistencyChecking(false);
+    }
+  };
+
+  const handleDismissConflict = (conflictId: string) => {
+    setConsistencyResults(prev => prev.map(r => ({
+      ...r,
+      conflicts: r.conflicts.map(c =>
+        c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c
+      ),
+    })));
+  };
+
+  const handleFixShot = (shotId: string) => {
+    const shot = project.shots.find(s => s.id === shotId);
+    if (!shot) return;
+    setEditingShotId(shotId);
+    setEditingShotPrompt(shot.keyframes[0]?.visualPrompt || '');
+    setTimeout(() => {
+      const el = document.getElementById(`shot-${shotId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const handleIgnoreConflict = (conflictId: string) => {
+    setConsistencyResults(prev => prev.map(r => ({
+      ...r,
+      conflicts: r.conflicts.map(c =>
+        c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c
+      ),
+    })));
+  };
+
+  const handleRegenerateWithFix = async (conflict: ConsistencyConflict) => {
+    if (!project.scriptData) return;
+    const shotId = conflict.shotIds[0];
+    const shot = project.shots.find(s => s.id === shotId);
+    if (!shot) return;
+
+    const finalModel = getFinalValue(localModel, customModelInput);
+    setRegeneratingConflictId(conflict.id);
+    setIsConsistencyRegenerating(true);
+    try {
+      const newPrompts = await fixKeyframeConsistency(shot, conflict, project.scriptData, finalModel);
+      const updatedShots = project.shots.map(s => {
+        if (s.id !== shotId) return s;
+        return {
+          ...s,
+          keyframes: s.keyframes.map(kf => {
+            if (kf.type === 'start') return { ...kf, visualPrompt: newPrompts.startPrompt };
+            if (kf.type === 'end') return { ...kf, visualPrompt: newPrompts.endPrompt };
+            return kf;
+          }),
+        };
+      });
+      updateProject({ shots: updatedShots });
+      handleDismissConflict(conflict.id);
+      showAlert(`${conflict.characterName} 在 ${shotId} 的视觉描述已修复`, { type: 'success' });
+    } catch (err: any) {
+      showAlert(`AI修复失败: ${err.message}`, { type: 'error' });
+    } finally {
+      setIsConsistencyRegenerating(false);
+      setRegeneratingConflictId(null);
+    }
+  };
+
   const handleDeleteShot = (shotId: string) => {
     const shotIndex = project.shots.findIndex(s => s.id === shotId);
     const shot = shotIndex >= 0 ? project.shots[shotIndex] : null;
@@ -616,10 +704,10 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
             error={error}
             onShowModelConfig={onShowModelConfig}
             onTitleChange={setLocalTitle}
-            onDurationChange={setLocalDuration}
-            onLanguageChange={setLocalLanguage}
-            onModelChange={setLocalModel}
-            onVisualStyleChange={setLocalVisualStyle}
+            onDurationChange={(val) => { setLocalDuration(val); savePreferences({ targetDuration: val }); }}
+            onLanguageChange={(val) => { setLocalLanguage(val); savePreferences({ language: val }); }}
+            onModelChange={(val) => { setLocalModel(val); savePreferences({ shotGenerationModel: val }); }}
+            onVisualStyleChange={(val) => { setLocalVisualStyle(val); savePreferences({ visualStyle: val }); }}
             onCustomDurationChange={setCustomDurationInput}
             onCustomModelChange={setCustomModelInput}
             onCustomStyleChange={setCustomStyleInput}
@@ -663,6 +751,15 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           onAddSubShot={handleAddSubShot}
           onDeleteShot={handleDeleteShot}
           onBackToStory={() => setActiveTab('story')}
+          consistencyResults={consistencyResults}
+          consistencyConflicts={consistencyConflicts}
+          isConsistencyChecking={isConsistencyChecking}
+          onDismissConflict={handleDismissConflict}
+          onFixShot={handleFixShot}
+          onIgnoreConflict={handleIgnoreConflict}
+          onRegenerateWithFix={handleRegenerateWithFix}
+          isConsistencyRegenerating={isConsistencyRegenerating}
+          regeneratingConflictId={regeneratingConflictId}
         />
       )}
     </div>

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Clock, List, ArrowLeft, TextQuote, Plus } from 'lucide-react';
-import { ProjectState, Shot } from '../../types';
+import { ProjectState, Shot, ConsistencyCheckResult, ConsistencyConflict } from '../../types';
 import { deduplicateScenes } from './utils';
 import CharacterList from './CharacterList';
 import SceneList from './SceneList';
 import ShotRow from './ShotRow';
 import ScriptQualityPanel from './ScriptQualityPanel';
+import VisualConsistencyPanel from './VisualConsistencyPanel';
 
 interface Props {
   project: ProjectState;
@@ -34,6 +35,16 @@ interface Props {
   onAddSubShot: (shotId: string) => void;
   onDeleteShot: (shotId: string) => void;
   onBackToStory: () => void;
+  // Visual consistency check
+  consistencyResults?: ConsistencyCheckResult[];
+  consistencyConflicts?: ConsistencyConflict[];
+  isConsistencyChecking?: boolean;
+  onDismissConflict?: (conflictId: string) => void;
+  onFixShot?: (shotId: string) => void;
+  onIgnoreConflict?: (conflictId: string) => void;
+  onRegenerateWithFix?: (conflict: ConsistencyConflict) => void;
+  isConsistencyRegenerating?: boolean;
+  regeneratingConflictId?: string | null;
 }
 
 const SceneBreakdown: React.FC<Props> = ({
@@ -62,7 +73,17 @@ const SceneBreakdown: React.FC<Props> = ({
   onAddShot,
   onAddSubShot,
   onDeleteShot,
-  onBackToStory
+  onBackToStory,
+  // Visual consistency check props
+  consistencyResults = [],
+  consistencyConflicts = [],
+  isConsistencyChecking = false,
+  onDismissConflict,
+  onFixShot,
+  onIgnoreConflict,
+  onRegenerateWithFix,
+  isConsistencyRegenerating = false,
+  regeneratingConflictId = null,
 }) => {
   const uniqueScenes = deduplicateScenes(project.scriptData?.scenes);
 
@@ -133,6 +154,21 @@ const SceneBreakdown: React.FC<Props> = ({
                 shots={project.shots}
                 collapsed={false}
               />
+              <div className="mt-2">
+                <VisualConsistencyPanel
+                  results={consistencyResults}
+                  conflicts={consistencyConflicts}
+                  isChecking={isConsistencyChecking}
+                  onDismissConflict={onDismissConflict || (() => {})}
+                  onFixShot={(shotId) => {
+                    onFixShot?.(shotId);
+                  }}
+                  onIgnore={onIgnoreConflict || (() => {})}
+                  onRegenerateWithFix={onRegenerateWithFix || (() => {})}
+                  isRegenerating={isConsistencyRegenerating}
+                  regeneratingConflictId={regeneratingConflictId}
+                />
+              </div>
             </div>
 
             {project.scriptData?.scenes.map((scene, index) => {

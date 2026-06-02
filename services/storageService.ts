@@ -1,4 +1,5 @@
 import { ProjectState, AssetLibraryItem } from '../types';
+import { getPreferences } from './userPreferencesService';
 import { DB_NAME, DB_VERSION, STORE_NAMES, storageConfig } from './dbConfig';
 import { logger, LogCategory } from './logger';
 import { migrateProject, needsMigration } from '../utils/dataMigration';
@@ -440,6 +441,7 @@ export const convertImageToBase64 = (file: File): Promise<string> => {
 // Initial template for new projects
 export const createNewProjectState = (): ProjectState => {
   const id = crypto.randomUUID();
+  const prefs = getPreferences();
   return {
     id,
     title: '未命名项目',
@@ -447,19 +449,11 @@ export const createNewProjectState = (): ProjectState => {
     lastModified: Date.now(),
     version: 1,
     stage: 'script',
-    targetDuration: '60s',
-    language: '中文',
-    visualStyle: 'live-action',
-    shotGenerationModel: 'glm-4-flash',
-    rawScript: `标题：示例剧本
-
-场景 1
-外景。夜晚街道 - 雨夜
-霓虹灯在水坑中反射出破碎的光芒。
-侦探（30岁,穿着风衣）站在街角,点燃了一支烟。
-
-侦探
-这雨什么时候才会停？`,
+    targetDuration: prefs.targetDuration,
+    language: prefs.language,
+    visualStyle: prefs.visualStyle,
+    shotGenerationModel: prefs.shotGenerationModel,
+    rawScript: '',
     scriptData: null,
     shots: [],
     isParsingScript: false,

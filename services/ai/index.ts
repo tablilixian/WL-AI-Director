@@ -89,3 +89,10 @@ export {
   generateNineGridPanels,
   generateNineGridImage,
 } from './shotService';
+
+// 视觉一致性检查服务
+export {
+  checkCharacterConsistency,
+  checkAllCharactersConsistency,
+  fixKeyframeConsistency,
+} from './consistencyService';
