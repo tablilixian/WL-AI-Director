@@ -186,7 +186,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       // 非阻塞启动视觉一致性检查
       runConsistencyCheck(scriptData, shots, finalModel);
       // 非阻塞启动道具提取
-      runPropsExtraction(scriptData);
+      runPropsExtraction(scriptData, true);
 
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
@@ -572,7 +572,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const consistencyConflicts: ConsistencyConflict[] = consistencyResults.flatMap(r => r.conflicts);
 
-  const runPropsExtraction = async (scriptData?: any) => {
+  const runPropsExtraction = async (scriptData?: any, silent?: boolean) => {
     const data = scriptData || project.scriptData;
     if (!data || !data.storyParagraphs?.length) return;
     setIsExtractingProps(true);
@@ -593,9 +593,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           visualPrompt: promptResults[i]?.visualPrompt || '',
           negativePrompt: promptResults[i]?.negativePrompt || '',
         }));
-        showAlert(`提取到 ${props.length} 个道具`, { type: 'success' });
+        if (!silent) showAlert(`提取到 ${props.length} 个道具`, { type: 'success' });
       } else {
-        showAlert('未从剧本中识别到关键道具', { type: 'info' });
+        if (!silent) showAlert('未从剧本中识别到关键道具', { type: 'info' });
       }
       const updatedScriptData = { ...data, props: propsWithPrompts };
       updateProject({ scriptData: updatedScriptData });
