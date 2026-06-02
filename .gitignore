@@ -29,6 +29,7 @@ dist-ssr
 *.sw?
 /.vs
 pb_data/
+pb_data_backup_*/
 pocketbase
 CHANGELOG.md
 LICENSE.md
