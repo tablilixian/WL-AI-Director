@@ -22,7 +22,17 @@ import { logger, LogCategory } from './logger';
 
 // localStorage 键名
 const STORAGE_KEY = 'bigbanana_model_registry';
-const API_KEY_STORAGE_KEY = 'antsk_api_key';
+const API_KEY_STORAGE_KEY = 'global_api_key';
+const OLD_API_KEY_STORAGE_KEY = 'antsk_api_key';
+
+// 迁移旧 antsk_api_key → global_api_key（一次性）
+const migrateOldApiKey = () => {
+  const oldKey = localStorage.getItem(OLD_API_KEY_STORAGE_KEY);
+  if (oldKey && !localStorage.getItem(API_KEY_STORAGE_KEY)) {
+    localStorage.setItem(API_KEY_STORAGE_KEY, oldKey);
+    localStorage.removeItem(OLD_API_KEY_STORAGE_KEY);
+  }
+};
 
 // 规范化 URL（去尾部斜杠、转小写）用于去重
 const normalizeBaseUrl = (url: string): string => url.trim().replace(/\/+$/, '').toLowerCase();
@@ -51,6 +61,9 @@ export const loadRegistry = (): ModelRegistryState => {
   if (registryState) {
     return registryState;
   }
+
+  // 迁移旧 localStorage key
+  migrateOldApiKey();
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -127,6 +140,16 @@ export const loadRegistry = (): ModelRegistryState => {
         return { ...m, apiModel: m.id };
       });
 
+      // 清理 antsk 提供商（已废弃）
+      const antskProviderIds = ['antsk'];
+      const removedAntskProviders = parsed.providers.filter(p => antskProviderIds.includes(p.id)).length;
+      parsed.providers = parsed.providers.filter(p => !antskProviderIds.includes(p.id));
+
+      // 清理所有 antsk 模型
+      const antskModelCountBefore = parsed.models.length;
+      parsed.models = parsed.models.filter(m => m.providerId !== 'antsk');
+      const antskModelsRemoved = antskModelCountBefore - parsed.models.length;
+
       // 清理旧的已废弃视频模型
       const modelCountBefore = parsed.models.length;
       parsed.models = parsed.models.filter(
@@ -134,14 +157,24 @@ export const loadRegistry = (): ModelRegistryState => {
       );
       const modelsRemoved = modelCountBefore - parsed.models.length;
 
-      // 迁移激活视频模型
+      // 迁移激活模型：若指向已删除的厂商模型，切换到替代模型
       let activeModelMigrated = false;
+      const antskModelIds = ['gpt-5.1', 'gpt-5.2', 'gpt-41', 'claude-sonnet-4-5-20250929', 'veo', 'veo_3_1-fast', 'sora-2', 'gemini-3-pro-image-preview'];
+      if (parsed.activeModels.chat && antskModelIds.includes(parsed.activeModels.chat)) {
+        parsed.activeModels.chat = 'glm-4-flash';
+        activeModelMigrated = true;
+      }
       if (
         deprecatedVideoModelIds.includes(parsed.activeModels.video) ||
         parsed.activeModels.video === 'veo_3_1' ||
-        parsed.activeModels.video?.startsWith('veo_3_1_')
+        parsed.activeModels.video?.startsWith('veo_3_1_') ||
+        antskModelIds.includes(parsed.activeModels.video)
       ) {
-        parsed.activeModels.video = 'veo';
+        parsed.activeModels.video = 'cogvideox-flash';
+        activeModelMigrated = true;
+      }
+      if (parsed.activeModels.image && antskModelIds.includes(parsed.activeModels.image)) {
+        parsed.activeModels.image = 'dramabackend';
         activeModelMigrated = true;
       }
       
@@ -151,10 +184,10 @@ export const loadRegistry = (): ModelRegistryState => {
       registryState = parsed;
 
       // 如果发生了迁移，立即回写 localStorage，避免每次加载都重复执行
-      if (modelsRemoved > 0 || activeModelMigrated) {
+      if (removedAntskProviders > 0 || antskModelsRemoved > 0 || modelsRemoved > 0 || activeModelMigrated) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-          logger.debug(LogCategory.MODEL, `🔄 模型注册中心迁移完成：清理 ${modelsRemoved} 个废弃模型`);
+          logger.debug(LogCategory.MODEL, `🔄 模型注册中心迁移完成：移除 ${removedAntskProviders} 个废弃厂商，${antskModelsRemoved} 个废弃模型`);
         } catch (e) {
           // 回写失败不影响运行，下次加载仍会重新迁移
         }
@@ -461,7 +494,10 @@ export const toggleModelEnabled = (id: string, enabled: boolean): boolean => {
  * 获取全局 API Key
  */
 export const getGlobalApiKey = (): string | undefined => {
-  return loadRegistry().globalApiKey || localStorage.getItem(API_KEY_STORAGE_KEY) || undefined;
+  return loadRegistry().globalApiKey
+    || localStorage.getItem(API_KEY_STORAGE_KEY)
+    || localStorage.getItem(OLD_API_KEY_STORAGE_KEY)
+    || undefined;
 };
 
 /**

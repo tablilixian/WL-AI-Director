@@ -15,7 +15,7 @@ import { ProjectState } from './types';
 import { Save, CheckCircle } from 'lucide-react';
 import { saveProjectToDB, loadProjectFromDB, saveCurrentStage, getCurrentStage } from './services/storageService';
 import { hybridStorage } from './services/hybridStorageService';
-import { setGlobalApiKey } from './services/aiService';
+
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
 // import { checkOldDatabaseExists, migrateDatabase, deleteOldDatabase } from './services/dbMigrationService';
 import { useAlert } from './components/GlobalAlert';
@@ -33,7 +33,7 @@ function App() {
   const { user, loading: authLoading, initialize } = useAuthStore();
   const [authView, setAuthView] = useState<AuthView>('app');
   const [project, setProject] = useState<ProjectState | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
+
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showSaveStatus, setShowSaveStatus] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
@@ -104,10 +104,13 @@ function App() {
   */
 
   // Redirect to login if not authenticated
+  // Debounce 300ms to avoid transient auth clears during token refresh
   useEffect(() => {
-    if (!authLoading && !user && authView === 'app') {
+    if (authLoading || authView !== 'app' || user) return
+    const timer = setTimeout(() => {
       setAuthView('login');
-    }
+    }, 300)
+    return () => clearTimeout(timer)
   }, [user, authLoading, authView]);
 
   // Detect mobile device on mount
@@ -123,13 +126,8 @@ function App() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Load API Key from localStorage on mount
+  // Show onboarding on first visit
   useEffect(() => {
-    const storedKey = localStorage.getItem('antsk_api_key');
-    if (storedKey) {
-      setApiKey(storedKey);
-      setGlobalApiKey(storedKey);
-    }
     if (shouldShowOnboarding()) {
       setShowOnboarding(true);
     }
@@ -150,19 +148,6 @@ function App() {
   const handleShowOnboarding = () => {
     resetOnboarding();
     setShowOnboarding(true);
-  };
-
-  // Save API Key
-  const handleSaveApiKey = (key: string) => {
-    if (key) {
-      setApiKey(key);
-      setGlobalApiKey(key);
-      localStorage.setItem('antsk_api_key', key);
-    } else {
-      setApiKey('');
-      setGlobalApiKey('');
-      localStorage.removeItem('antsk_api_key');
-    }
   };
 
   // Show model config
@@ -576,20 +561,18 @@ function App() {
            onShowOnboarding={handleShowOnboarding}
            onShowModelConfig={handleShowModelConfig}
          />
-         {showOnboarding && (
-           <Onboarding 
-             onComplete={handleOnboardingComplete}
-             onQuickStart={handleOnboardingQuickStart}
-             currentApiKey={apiKey}
-             onSaveApiKey={handleSaveApiKey}
-           />
-         )}
-         <ModelConfigModal
-           isOpen={showModelConfig}
-           onClose={() => setShowModelConfig(false)}
-         />
-       </>
-    );
+          {showOnboarding && (
+            <Onboarding
+              onComplete={handleOnboardingComplete}
+              onQuickStart={handleOnboardingQuickStart}
+            />
+          )}
+          <ModelConfigModal
+            isOpen={showModelConfig}
+            onClose={() => setShowModelConfig(false)}
+          />
+        </>
+     );
   }
 
   // Workspace view
@@ -626,11 +609,9 @@ function App() {
       </main>
 
       {showOnboarding && (
-        <Onboarding 
+        <Onboarding
           onComplete={handleOnboardingComplete}
           onQuickStart={handleOnboardingQuickStart}
-          currentApiKey={apiKey}
-          onSaveApiKey={handleSaveApiKey}
         />
       )}
 

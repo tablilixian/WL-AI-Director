@@ -37,10 +37,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       plugins: [react(), imageProxyPlugin()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.ANTSK_API_KEY),
-        'process.env.ANTSK_API_KEY': JSON.stringify(env.ANTSK_API_KEY)
-      },
+      define: {},
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),

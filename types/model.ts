@@ -256,17 +256,6 @@ export const DEFAULT_VIDEO_PARAMS_SORA: VideoModelParams = {
   supportedDurations: [4, 8, 12],
 };
 
-/**
- * 默认视频模型参数 (Veo 3.1 Fast)
- */
-export const DEFAULT_VIDEO_PARAMS_VEO_FAST: VideoModelParams = {
-  mode: 'async',
-  defaultAspectRatio: '16:9',
-  supportedAspectRatios: ['16:9', '9:16'],
-  defaultDuration: 8,
-  supportedDurations: [8],
-};
-
 // ============================================
 // 内置模型定义
 // ============================================
@@ -275,46 +264,6 @@ export const DEFAULT_VIDEO_PARAMS_VEO_FAST: VideoModelParams = {
  * 内置对话模型列表
  */
 export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
-  {
-    id: 'gpt-5.1',
-    name: 'GPT-5.1',
-    type: 'chat',
-    providerId: 'antsk',
-    description: '剧情脚本切分首选：结构化输出稳定，适合分场/分镜、提取人物与事件',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
-  },
-  {
-    id: 'gpt-5.2',
-    name: 'GPT-5.2',
-    type: 'chat',
-    providerId: 'antsk',
-    description: '创意增强型切分：更适合提供多种切分方案，改写节奏与镜头建议（一致性略弱）',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
-  },
-  {
-    id: 'gpt-41',
-    name: 'GPT-4.1',
-    type: 'chat',
-    providerId: 'antsk',
-    description: '严谨切分：对复杂叙事与长文本更稳，适合时间线梳理、因果关系与要点校对',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
-  },
-  {
-    id: 'claude-sonnet-4-5-20250929',
-    name: 'Claude Sonnet 4.5',
-    type: 'chat',
-    providerId: 'antsk',
-    description: '长文友好：适合长篇剧本的分段、摘要与角色弧线整理，文字表达更细腻',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
-  },
   // NewAPI Chat Models
   {
     id: 'newapi-laguna-xs',
@@ -395,17 +344,6 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
  * 内置图片模型列表
  */
 export const BUILTIN_IMAGE_MODELS: ImageModelDefinition[] = [
-  {
-    id: 'gemini-3-pro-image-preview',
-    name: 'Gemini 3 Pro Image(Nano Banana Pro)',
-    type: 'image',
-    providerId: 'antsk',
-    endpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent',
-    description: 'Google Nano Banana Pro 图片生成模型',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_IMAGE_PARAMS },
-  },
   // BigModel Image Models
   {
     id: 'cogview-3-flash',
@@ -475,39 +413,6 @@ export const BUILTIN_IMAGE_MODELS: ImageModelDefinition[] = [
  * 内置视频模型列表
  */
 export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
-  {
-    id: 'veo',
-    name: 'Veo 3.1 首尾帧',
-    type: 'video',
-    providerId: 'antsk',
-    endpoint: '/v1/chat/completions',
-    description: 'Veo 3.1 首尾帧模式，需要起始帧和结束帧',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_VIDEO_PARAMS_VEO },
-  },
-  {
-    id: 'veo_3_1-fast',
-    name: 'Veo 3.1 Fast',
-    type: 'video',
-    providerId: 'antsk',
-    endpoint: '/v1/videos',
-    description: '异步模式，支持横屏/竖屏、支持单图和首尾帧，固定 8 秒时长,价格便宜速度快',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_VIDEO_PARAMS_VEO_FAST },
-  },
-  {
-    id: 'sora-2',
-    name: 'Sora-2',
-    type: 'video',
-    providerId: 'antsk',
-    endpoint: '/v1/videos',
-    description: 'OpenAI Sora 视频生成，异步模式，支持多种时长',
-    isBuiltIn: true,
-    isEnabled: true,
-    params: { ...DEFAULT_VIDEO_PARAMS_SORA },
-  },
   // BigModel Video Models
   {
     id: 'vidu2',
@@ -588,18 +493,11 @@ export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
  */
 export const BUILTIN_PROVIDERS: ModelProvider[] = [
   {
-    id: 'antsk',
-    name: 'BigBanana API (api.antsk.cn)',
-    baseUrl: 'https://api.antsk.cn',
-    isBuiltIn: true,
-    isDefault: true,
-  },
-  {
     id: 'bigmodel',
     name: 'BigModel API (open.bigmodel.cn)',
     baseUrl: 'https://open.bigmodel.cn',
     isBuiltIn: true,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'newapi',
@@ -630,7 +528,7 @@ export const ALL_BUILTIN_MODELS: ModelDefinition[] = [
  * 默认激活模型
  */
 export const DEFAULT_ACTIVE_MODELS: ActiveModels = {
-  chat: 'gpt-5.1',
+  chat: 'glm-4-flash',
   image: 'dramabackend',
-  video: 'sora-2',
+  video: 'cogvideox-flash',
 };

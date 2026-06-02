@@ -18,8 +18,9 @@ export async function ensureValidAuth(): Promise<boolean> {
     await pb.collection('users').authRefresh()
     return true
   } catch {
-    // Token expired or network error — clear and return false
-    pb.authStore.clear()
+    // Don't clear auth store on transient network errors.
+    // Returning false falls back to offline save; the stale token
+    // will be retried next time and eventually cleared server-side.
     return false
   }
 }

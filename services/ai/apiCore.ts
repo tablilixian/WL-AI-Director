@@ -84,19 +84,15 @@ export class ApiKeyError extends Error {
   }
 }
 
-/** 运行时 API Key（向后兼容） */
-let runtimeApiKey: string = process.env.API_KEY || "";
-
 /**
  * 设置全局API密钥
  */
 export const setGlobalApiKey = (key: string) => {
-  runtimeApiKey = key;
   setRegistryApiKey(key);
 };
 
 /** 默认 API base URL（向后兼容） */
-const DEFAULT_API_BASE = 'https://api.antsk.cn';
+const DEFAULT_API_BASE = 'https://open.bigmodel.cn';
 
 /**
  * 解析模型：根据 type 和可选 modelId 找到对应的模型配置
@@ -104,7 +100,7 @@ const DEFAULT_API_BASE = 'https://api.antsk.cn';
 export const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string) => {
   if (modelId) {
     const normalizedModelId = modelId.toLowerCase();
-    const lookupId = normalizedModelId === 'veo_3_1-fast-4k' ? 'veo_3_1-fast' : modelId;
+    const lookupId = normalizedModelId;
     
     // 首先尝试通过 id 精确匹配
     const model = getModelById(lookupId);
@@ -138,9 +134,6 @@ export const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string)
  * 解析请求用的模型名称（apiModel 字段）
  */
 export const resolveRequestModel = (type: 'chat' | 'image' | 'video', modelId?: string): string => {
-  if (modelId && modelId.toLowerCase() === 'veo_3_1-fast-4k') {
-    return modelId;
-  }
   const resolved = resolveModel(type, modelId);
   return resolved?.apiModel || resolved?.id || modelId || '';
 };
@@ -171,9 +164,7 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
   logger.debug(LogCategory.AI, `[checkApiKey] registryKey found: ${!!registryKey}`);
   if (registryKey) return registryKey;
 
-  logger.debug(LogCategory.AI, `[checkApiKey] runtimeApiKey found: ${!!runtimeApiKey}`);
-  if (!runtimeApiKey) throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
-  return runtimeApiKey;
+  throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
 };
 
 /**
@@ -215,9 +206,9 @@ export const getDefaultChatModelId = (): string => {
     // 如果没有激活模型，返回第一个可用的模型
     const models = getModels('chat');
     const enabledModel = models.find(m => m.isEnabled);
-    return enabledModel?.id || models[0]?.id || 'gpt-5.1';
+    return enabledModel?.id || models[0]?.id || 'glm-4-flash';
   } catch (e) {
-    return 'gpt-5.1';
+    return 'glm-4-flash';
   }
 };
 

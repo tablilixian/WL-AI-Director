@@ -167,7 +167,7 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
   // 否则根据当前激活的模型自动判断
   const activeModel = getActiveChatModel();
   
-  let url = 'https://api.antsk.cn';
+  let url = 'https://open.bigmodel.cn';
   
   // 如果激活的是 BigModel 系列的模型，使用 BigModel 的端点
   if (activeModel?.providerId === 'bigmodel' || activeModel?.id.startsWith('glm-')) {

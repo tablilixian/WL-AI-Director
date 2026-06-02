@@ -202,7 +202,7 @@ export const callChatApi = async (
  */
 export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ success: boolean; message: string }> => {
   try {
-    let url = baseUrl || 'https://api.antsk.cn';
+    let url = baseUrl || 'https://open.bigmodel.cn';
     let endpoint = '/v1/chat/completions';
     
     // 如果是 BigModel URL，使用开发代理避免 CORS
@@ -217,10 +217,8 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
     }
     
     // 根据 URL 选择合适的测试模型
-    let testModel = 'gpt-5.1';
-    if (url === '/bigmodel') {
-      testModel = 'glm-4-flash';
-    } else if (url.includes('localhost') || url.includes('newapi.ai')) {
+    let testModel = 'glm-4-flash';
+    if (url.includes('localhost') || url.includes('newapi.ai')) {
       testModel = 'poolside/laguna-xs.2:free';
     }
     

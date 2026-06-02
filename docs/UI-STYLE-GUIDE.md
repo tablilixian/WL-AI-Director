@@ -587,7 +587,7 @@ className="text-[var(--warning)]"
     </div>
     <div className="flex-1">
       <h3 className="text-base font-bold text-[var(--text-primary)]">
-        推荐使用 BigBanana API
+         推荐使用智谱 AI BigModel
       </h3>
       <p className="text-xs text-[var(--text-tertiary)]">
         描述文字...

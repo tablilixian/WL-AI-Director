@@ -110,7 +110,7 @@ const ApiKeyPage: React.FC<ApiKeyPageProps> = ({
             setVerifyStatus('idle');
             setVerifyMessage('');
           }}
-          placeholder="输入你的 BigBanana API Key..."
+          placeholder="输入你的 API Key..."
           className="w-full bg-[var(--bg-surface)] border border-[var(--border-primary)] text-[var(--text-primary)] px-4 py-3 text-sm rounded-lg focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-hover)] transition-all font-mono placeholder:text-[var(--text-muted)] text-center"
           disabled={isVerifying}
           onKeyDown={(e) => {
@@ -138,12 +138,12 @@ const ApiKeyPage: React.FC<ApiKeyPageProps> = ({
       {/* 获取 Key 链接 */}
       <div className="flex items-center gap-4 mb-8">
         <a 
-          href="https://api.antsk.cn" 
+          href="https://open.bigmodel.cn" 
           target="_blank" 
           rel="noreferrer" 
           className="text-xs text-[var(--accent-text)] hover:underline inline-flex items-center gap-1"
         >
-          立即购买 <ExternalLink className="w-3 h-3" />
+          BigModel <ExternalLink className="w-3 h-3" />
         </a>
         <span className="text-[var(--text-muted)]">|</span>
         <a 

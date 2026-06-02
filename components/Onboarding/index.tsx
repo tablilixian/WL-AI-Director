@@ -5,17 +5,14 @@ import ProgressDots from './ProgressDots';
 import WelcomePage from './WelcomePage';
 import WorkflowPage from './WorkflowPage';
 import HighlightPage from './HighlightPage';
-import ApiKeyPage from './ApiKeyPage';
 import ActionPage from './ActionPage';
 
 interface OnboardingProps {
   onComplete: () => void;
   onQuickStart?: (option: 'script' | 'example') => void;
-  currentApiKey?: string;
-  onSaveApiKey?: (key: string) => void;
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart, currentApiKey = '', onSaveApiKey }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart }) => {
   const [currentPage, setCurrentPage] = useState(ONBOARDING_PAGES.WELCOME);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -55,16 +52,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart, curre
     localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
   };
 
-  // 处理 API Key 保存
-  const handleSaveApiKey = (key: string) => {
-    onSaveApiKey?.(key);
-  };
-
-  // 跳过 API Key 配置，直接进入最后一页
-  const handleSkipApiKey = () => {
-    handlePageChange(ONBOARDING_PAGES.ACTION);
-  };
-
   // 渲染当前页面
   const renderPage = () => {
     switch (currentPage) {
@@ -74,15 +61,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart, curre
         return <WorkflowPage onNext={handleNext} />;
       case ONBOARDING_PAGES.HIGHLIGHTS:
         return <HighlightPage onNext={handleNext} />;
-      case ONBOARDING_PAGES.API_KEY:
-        return (
-          <ApiKeyPage 
-            currentApiKey={currentApiKey} 
-            onSaveApiKey={handleSaveApiKey}
-            onNext={handleNext}
-            onSkip={handleSkipApiKey}
-          />
-        );
       case ONBOARDING_PAGES.ACTION:
         return <ActionPage onComplete={handleCompleteOnboarding} onQuickStart={handleQuickStart} />;
       default:

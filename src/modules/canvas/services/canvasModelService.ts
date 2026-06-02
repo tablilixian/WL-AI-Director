@@ -37,13 +37,13 @@ export class CanvasModelService {
     };
   }
 
-  private getProvider(): 'antsk' | 'bigmodel' {
+  private getProvider(): 'bigmodel' | 'other' {
     try {
       const { getActiveImageModel } = require('../../../../services/ai/apiCore');
       const model = getActiveImageModel();
-      return model?.providerId === 'bigmodel' ? 'bigmodel' : 'antsk';
+      return model?.providerId === 'bigmodel' ? 'bigmodel' : 'other';
     } catch {
-      return 'antsk';
+      return 'other';
     }
   }
 

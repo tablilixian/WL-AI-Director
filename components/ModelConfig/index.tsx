@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Settings, MessageSquare, Image, Video, Key, ExternalLink, Gift, Sparkles } from 'lucide-react';
+import { X, Settings, MessageSquare, Image, Video, Key } from 'lucide-react';
 import { ModelType, ModelDefinition } from '../../types/model';
 import {
   getRegistryState,
@@ -39,7 +39,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
   if (!isOpen) return null;
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'global', label: '全局配置', icon: <Key className="w-4 h-4" /> },
+    { id: 'global', label: '厂商配置', icon: <Key className="w-4 h-4" /> },
     { id: 'chat', label: '对话模型', icon: <MessageSquare className="w-4 h-4" /> },
     { id: 'image', label: '图片模型', icon: <Image className="w-4 h-4" /> },
     { id: 'video', label: '视频模型', icon: <Video className="w-4 h-4" /> },

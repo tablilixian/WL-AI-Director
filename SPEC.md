@@ -314,7 +314,7 @@ RenderLog {
 
 | 类型 | 模型示例 | 用途 |
 |------|----------|------|
-| **文本模型** | gpt-5.1, gpt-5.2, Claude 3.5 Sonnet | 剧本分析、提示词生成 |
+| **文本模型** | GLM-4-Plus, GLM-4-Air, GLM-4-Flash | 剧本分析、提示词生成 |
 | **视觉模型** | gemini-3-pro-image-preview, Nano Banana Pro | 图片生成 |
 | **视频模型** | sora-2, veo_3_1_i2v_s_fast_fl | 视频生成 |
 
