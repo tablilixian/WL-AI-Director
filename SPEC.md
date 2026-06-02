@@ -4,7 +4,7 @@
 
 **项目名称**: WL AI Director (AI 漫剧工场)  
 **项目类型**: AI 一站式短剧/漫剧生成平台  
-**技术栈**: React 19, TypeScript, Zustand (状态管理), IndexedDB (本地存储), Supabase (Edge Functions)  
+**技术栈**: React 19, TypeScript, Zustand (状态管理), IndexedDB (本地存储), PocketBase (云端备份)  
 **目标用户**: 短剧/漫剧创作者
 
 ### 核心理念
@@ -36,7 +36,7 @@ Dashboard (项目列表)
 
 | 模块 | 功能 |
 |------|------|
-| **Auth** | Supabase 认证 (登录/注册) |
+| **Auth** | PocketBase 认证 (登录/注册) |
 | **Dashboard** | 项目管理列表 |
 | **Onboarding** | 新用户引导、API Key 配置 |
 | **ModelConfig** | AI 模型配置管理 |
@@ -347,14 +347,12 @@ ModelConfig {
 - **storageService**: 基础存储抽象
 - 数据存储在浏览器本地 IndexedDB
 
-### 5.2 云端 (Supabase)
+### 5.2 云端 (PocketBase)
 
-- **Edge Functions**:
-  - `generate-video`: 视频生成
-  - `get-video-status`: 获取视频生成状态
-  - `webhook-video-complete`: 视频生成完成回调
-- **Auth**: 用户认证
-- **Storage**: 资产文件存储
+- **Auth**: 用户认证 (邮箱密码登录/注册/密码重置)
+- **Collections**: 项目、资产库、画布数据的云端备份
+- **File Storage**: 资产图片文件存储
+- **Token 自动刷新**: 每 30 分钟自动延长 token，保证在线状态
 
 ---
 

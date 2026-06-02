@@ -153,7 +153,7 @@ interface Character {
   visualPrompt?: string;
   negativePrompt?: string;       // 负面提示词
   coreFeatures?: string;         // 核心固定特征
-  referenceImage?: string;       // 参考图（Supabase URL 或 base64）
+  referenceImage?: string;       // 参考图（PocketBase URL 或 base64）
   referenceImageSource?: 'local' | 'cloud';  // 图片来源
   localImageId?: string;        // 本地图片ID
   turnaround?: CharacterTurnaroundData;  // 九宫格造型设计
@@ -348,17 +348,17 @@ interface ProjectStage {
 
 ### 图片存储
 - **本地存储**: IndexedDB `images` 表
-- **云端存储**: Supabase Storage
+- **云端存储**: PocketBase file storage
 - **引用方式**: 
   - 本地: `local:{imageId}`
-  - 云端: Supabase Storage URL
+  - 云端: PocketBase file URL
 
 ### 视频存储
 - **本地存储**: IndexedDB `videos` 表
-- **云端存储**: Supabase Storage
+- **云端存储**: PocketBase file storage
 - **引用方式**:
   - 本地: `local:{videoId}`
-  - 云端: Supabase Storage URL
+  - 云端: PocketBase file URL
 
 ---
 
@@ -370,8 +370,8 @@ interface ProjectStage {
 - 避免云端 URL 过期问题
 
 ### 云端备份
-- 项目数据同步到 Supabase
-- 资产库同步到 Supabase
+- 项目数据同步到 PocketBase
+- 资产库同步到 PocketBase
 - 支持多设备访问
 
 ### 阶段隔离

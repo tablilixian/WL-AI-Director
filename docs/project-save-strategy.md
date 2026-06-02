@@ -22,7 +22,7 @@
                                                     ↓
                                          2. 保存到 IndexedDB（本地）
                                                     ↓
-                                         3. 保存到 Supabase（云端）
+                                          3. 保存到 PocketBase（云端）
                                                     ↓
                                          4. 返回保存状态
 ```
@@ -100,8 +100,8 @@ async saveProject(project: ProjectState): Promise<void> {
       logger.warn('版本冲突，放弃保存');
       return;
     }
-    // upsert 到 Supabase
-    await supabase.from('projects').upsert({...});
+    // upsert 到 PocketBase
+    await pb.collection('projects').update(cloudId, {...});
     this.releaseLock(cloudId);
   }
 }
@@ -112,7 +112,7 @@ async saveProject(project: ProjectState): Promise<void> {
 | 存储位置 | 用途 | 同步方式 |
 |---------|------|---------|
 | IndexedDB | 本地缓存 | 自动 |
-| Supabase | 云端存储 | 实时（保存时） |
+| PocketBase | 云端备份 | 异步（保存后同步） |
 
 ---
 

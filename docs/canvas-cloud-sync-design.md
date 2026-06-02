@@ -52,62 +52,25 @@ interface CanvasData {
 **索引**：
 - `syncStatus`：用于查询待同步数据
 
-### 2.2 云端存储 (Supabase)
+### 2.2 云端存储 (PocketBase)
 
-**新增表**：`canvas_data`
+**新增 Collection**：`canvas_data`（PocketBase 中通过 Admin UI 或 migration 创建）
 
-```sql
--- =====================================================
--- 画布数据表
--- =====================================================
-CREATE TABLE IF NOT EXISTS public.canvas_data (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    layers JSONB NOT NULL DEFAULT '[]',
-    offset JSONB NOT NULL DEFAULT '{"x":0,"y":0}',
-    scale FLOAT DEFAULT 1,
-    version INT DEFAULT 1,
-    saved_at TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    CONSTRAINT canvas_data_project_unique UNIQUE(project_id)
-);
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| project_id | text (关联 projects) | 项目 ID |
+| layers | json | 图层数据 |
+| offset | json | 画布偏移 |
+| scale | number | 画布缩放 |
+| version | number | 版本号 |
+| saved_at | datetime | 保存时间 |
 
--- 索引
-CREATE INDEX IF NOT EXISTS idx_canvas_data_project_id ON canvas_data(project_id);
-CREATE INDEX IF NOT EXISTS idx_canvas_data_updated_at ON canvas_data(updated_at);
-
--- RLS
-ALTER TABLE canvas_data ENABLE ROW LEVEL SECURITY;
-
--- RLS 策略：用户只能操作自己项目的画布数据
-CREATE POLICY "Users can view own canvas data" ON canvas_data
-    FOR SELECT USING (
-        auth.uid() IN (SELECT user_id FROM projects WHERE id = canvas_data.project_id)
-    );
-
-CREATE POLICY "Users can insert own canvas data" ON canvas_data
-    FOR INSERT WITH CHECK (
-        auth.uid() IN (SELECT user_id FROM projects WHERE id = canvas_data.project_id)
-    );
-
-CREATE POLICY "Users can update own canvas data" ON canvas_data
-    FOR UPDATE USING (
-        auth.uid() IN (SELECT user_id FROM projects WHERE id = canvas_data.project_id)
-    );
-
-CREATE POLICY "Users can delete own canvas data" ON canvas_data
-    FOR DELETE USING (
-        auth.uid() IN (SELECT user_id FROM projects WHERE id = canvas_data.project_id)
-    );
-```
-
+**访问权限**：通过 PocketBase collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制，使用 `@request.auth.id` 校验用户归属。
 ### 2.3 数据结构对比
 
-| 字段 | 本地 (IndexedDB) | 云端 (Supabase) | 说明 |
-|------|-----------------|-----------------|------|
-| 主键 | projectId | id (UUID) | 云端额外有自增主键 |
+| 字段 | 本地 (IndexedDB) | 云端 (PocketBase) | 说明 |
+|------|-----------------|-------------------|------|
+| 主键 | projectId | id (PB 自动生成) | 云端额外有自增主键 |
 | 关联 | - | project_id | 云端关联项目表 |
 | layers | LayerData[] | JSONB | 图层数据 |
 | offset | {x, y} | JSONB | 画布偏移 |
@@ -481,58 +444,53 @@ export const canvasCloudApi = {
    * 获取画布数据
    */
   async get(projectId: string): Promise<CloudCanvasData | null> {
-    const { data, error } = await supabase
-      .from('canvas_data')
-      .select('*')
-      .eq('project_id', projectId)
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') return null; // 未找到
-      throw error;
+    try {
+      const records = await pb.collection('canvas_data').getList(1, 1, {
+        filter: `project_id = "${projectId}"`,
+      });
+      if (records.items.length === 0) return null;
+      const data = records.items[0];
+      return {
+        projectId: data.project_id,
+        layers: data.layers,
+        offset: data.offset,
+        scale: data.scale,
+        version: data.version,
+        savedAt: new Date(data.saved_at).getTime(),
+      };
+    } catch {
+      return null;
     }
-    
-    return {
-      projectId: data.project_id,
-      layers: data.layers,
-      offset: data.offset,
-      scale: data.scale,
-      version: data.version,
-      savedAt: new Date(data.saved_at).getTime(),
-    };
   },
   
   /**
    * 保存画布数据（upsert）
    */
   async save(data: CloudCanvasData): Promise<void> {
-    const { error } = await supabase
-      .from('canvas_data')
-      .upsert({
-        project_id: data.projectId,
-        layers: data.layers,
-        offset: data.offset,
-        scale: data.scale,
-        version: data.version,
-        saved_at: new Date(data.savedAt).toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'project_id',
-      });
-    
-    if (error) throw error;
+    const existing = await this.get(data.projectId);
+    const record = {
+      project_id: data.projectId,
+      layers: data.layers,
+      offset: data.offset,
+      scale: data.scale,
+      version: data.version,
+      saved_at: new Date(data.savedAt).toISOString(),
+    };
+    if (existing) {
+      await pb.collection('canvas_data').update(existing.id, record);
+    } else {
+      await pb.collection('canvas_data').create(record);
+    }
   },
   
   /**
    * 删除画布数据
    */
   async delete(projectId: string): Promise<void> {
-    const { error } = await supabase
-      .from('canvas_data')
-      .delete()
-      .eq('project_id', projectId);
-    
-    if (error) throw error;
+    const existing = await this.get(projectId);
+    if (existing) {
+      await pb.collection('canvas_data').delete(existing.id);
+    }
   },
 };
 ```
@@ -672,7 +630,7 @@ logger.error(LogCategory.CANVAS, `[CanvasSync] 本地保存失败: ${error}`);
 
 ### Phase 1：基础设施（1-2 天）
 
-1. 创建 Supabase `canvas_data` 表
+1. 在 PocketBase 中创建 `canvas_data` collection（通过 Admin UI 或 pb_migrations）
 2. 创建 `canvasCloudApi.ts`
 3. 扩展 `canvasStorageService.ts`
 
@@ -737,10 +695,10 @@ localStorage.setItem('wl-canvas-cloud-sync-config', JSON.stringify({ enabled: fa
 | `services/hybridStorageService.ts` | 项目混合存储（参考） |
 | `src/modules/canvas/services/canvasIntegrationService.ts` | 画布集成服务 |
 | `src/modules/canvas/hooks/useCanvasState.ts` | 画布状态管理 |
-| `docs/archive/supabase-init.sql` | Supabase 表结构 |
+| `pb_migrations/` | PocketBase 数据迁移 |
 
 ### B. 参考资料
 
 - [Zustand Persist Middleware](https://docs.pmnd.rs/zustand/integrations/persisting-store-data)
-- [Supabase Realtime](https://supabase.com/docs/guides/realtime)
 - [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+- [PocketBase JS SDK](https://github.com/pocketbase/js-sdk)
