@@ -3,7 +3,7 @@
  * 包含美术指导文档生成、角色/场景视觉提示词生成、图像生成
  */
 
-import { Character, Scene, AspectRatio, ArtDirection, CharacterTurnaroundPanel } from "../../types";
+import { Character, Scene, AspectRatio, ArtDirection, CharacterTurnaroundPanel, Prop } from "../../types";
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
@@ -1140,5 +1140,96 @@ Output ONLY valid JSON with this exact structure:
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 批量角色视觉提示词生成失败:', error);
     throw new Error(`批量角色视觉提示词生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 批量生成道具视觉提示词
+ */
+export const generateAllPropPrompts = async (
+  props: Prop[],
+  artDirection: ArtDirection | undefined,
+  visualStyle: string = 'anime',
+  language: string = '中文',
+  model?: string
+): Promise<Array<{ visualPrompt: string; negativePrompt: string }>> => {
+  if (!props.length) return [];
+  const resolvedModel = model || getDefaultChatModelId();
+  logger.debug(LogCategory.AI, `🎨 generateAllPropPrompts 调用 - 生成道具视觉提示词，使用模型: ${resolvedModel}`);
+  logScriptProgress('正在生成道具视觉提示词...');
+
+  const stylePrompt = getStylePrompt(visualStyle);
+
+  const prompt = `You are a world-class visual prompt engineer for ${visualStyle} productions.
+Your task is to create detailed visual prompts for key props/items in a production.
+
+## Visual Style
+${visualStyle} (${stylePrompt})
+
+${artDirection ? `
+## Art Direction Guidelines
+${artDirection.consistencyAnchors}
+
+## Color Palette Guidelines
+- Primary: ${artDirection.colorPalette.primary}
+- Secondary: ${artDirection.colorPalette.secondary}
+- Accent: ${artDirection.colorPalette.accent}
+- Saturation: ${artDirection.colorPalette.saturation}
+- Temperature: ${artDirection.colorPalette.temperature}
+
+## Lighting & Texture
+- Lighting Style: ${artDirection.lightingStyle}
+- Texture Style: ${artDirection.textureStyle}
+
+## Mood Keywords
+${artDirection.moodKeywords.join(', ')}` : ''}
+
+## Props
+${props.map((p, i) => `
+${i + 1}. ${p.name}
+   - Category: ${p.category}
+   - Description: ${p.description}
+`).join('\n')}
+
+## Your Task
+For EACH prop listed above, create a detailed visual prompt describing how it looks in the ${visualStyle} style.
+
+CRITICAL REQUIREMENTS:
+1. Describe the prop's appearance in detail (materials, colors, shape, size, texture)
+2. Apply the visual style and art direction guidelines
+3. Be specific and actionable for image generation AI
+4. Write prompts in ${language}
+
+Output ONLY valid JSON with this exact structure:
+{
+  "results": [
+    {
+      "propName": "prop name",
+      "visualPrompt": "detailed visual prompt describing the prop...",
+      "negativePrompt": "negative prompt describing what to avoid..."
+    },
+    ...
+  ]
+}`;
+
+  try {
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'));
+    const text = cleanJsonString(responseText);
+    const parsed = JSON.parse(text);
+
+    if (!parsed.results || !Array.isArray(parsed.results)) {
+      throw new Error('批量道具提示词生成结果格式不正确');
+    }
+
+    const results = parsed.results.map((r: any) => ({
+      visualPrompt: r.visualPrompt || '',
+      negativePrompt: r.negativePrompt || ''
+    }));
+
+    logger.debug(LogCategory.AI, '✅ 批量道具视觉提示词生成完成');
+    return results;
+  } catch (error: any) {
+    logger.error(LogCategory.AI, '❌ 批量道具视觉提示词生成失败:', error);
+    throw new Error(`批量道具视觉提示词生成失败: ${error.message}`);
   }
 };

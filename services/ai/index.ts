@@ -54,6 +54,7 @@ export {
   continueScriptStream,
   rewriteScript,
   rewriteScriptStream,
+  parsePropsFromStory,
 } from './scriptService';
 
 // 视觉资产生成服务
@@ -72,6 +73,7 @@ export {
   generateSpliteGridImage,
   generateInpaintImage,
   generateVisualLanguage,
+  generateAllPropPrompts,
 } from './visualService';
 
 // 视频生成服务

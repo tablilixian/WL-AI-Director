@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProjectState, Shot, ConsistencyCheckResult, ConsistencyConflict } from '../../types';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
-import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency } from '../../services/aiService';
+import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency, parsePropsFromStory, generateAllPropPrompts } from '../../services/aiService';
 import { getActiveChatModel } from '../../services/modelRegistry';
 import { savePreferences } from '../../services/userPreferencesService';
 import { getFinalValue, validateConfig } from './utils';
@@ -57,6 +57,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const [isConsistencyChecking, setIsConsistencyChecking] = useState(false);
   const [isConsistencyRegenerating, setIsConsistencyRegenerating] = useState(false);
   const [regeneratingConflictId, setRegeneratingConflictId] = useState<string | null>(null);
+
+  // Props extraction state
+  const [isExtractingProps, setIsExtractingProps] = useState(false);
 
   // Editing state - unified
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
@@ -160,6 +163,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
       const updatedProject: ProjectState = {
         ...project,
+        rawScript: localScript,
         visualStyle: finalVisualStyle,
         scriptData, 
         shots, 
@@ -181,6 +185,8 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
       // 非阻塞启动视觉一致性检查
       runConsistencyCheck(scriptData, shots, finalModel);
+      // 非阻塞启动道具提取
+      runPropsExtraction(scriptData);
 
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
@@ -566,6 +572,40 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const consistencyConflicts: ConsistencyConflict[] = consistencyResults.flatMap(r => r.conflicts);
 
+  const runPropsExtraction = async (scriptData?: any) => {
+    const data = scriptData || project.scriptData;
+    if (!data || !data.storyParagraphs?.length) return;
+    setIsExtractingProps(true);
+    try {
+      const finalModel = getFinalValue(localModel, customModelInput);
+      const props = await parsePropsFromStory(data, finalModel);
+      let propsWithPrompts = props;
+      if (props.length > 0) {
+        const promptResults = await generateAllPropPrompts(
+          props,
+          data.artDirection,
+          data.visualStyle || project.visualStyle,
+          data.language || '中文',
+          finalModel
+        );
+        propsWithPrompts = props.map((p, i) => ({
+          ...p,
+          visualPrompt: promptResults[i]?.visualPrompt || '',
+          negativePrompt: promptResults[i]?.negativePrompt || '',
+        }));
+        showAlert(`提取到 ${props.length} 个道具`, { type: 'success' });
+      } else {
+        showAlert('未从剧本中识别到关键道具', { type: 'info' });
+      }
+      const updatedScriptData = { ...data, props: propsWithPrompts };
+      updateProject({ scriptData: updatedScriptData });
+    } catch (err: any) {
+      logger.warn(LogCategory.AI, '道具提取异常:', err);
+    } finally {
+      setIsExtractingProps(false);
+    }
+  };
+
   const runConsistencyCheck = async (scriptData: any, shots: Shot[], model: string) => {
     if (!scriptData || shots.length === 0) return;
     setConsistencyResults([]);
@@ -718,8 +758,10 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
             onChange={setLocalScript}
             onContinue={handleContinueScript}
             onRewrite={handleRewriteScript}
+            onExtractProps={runPropsExtraction}
             isContinuing={isContinuing}
             isRewriting={isRewriting}
+            isExtractingProps={isExtractingProps}
             lastModified={project.lastModified}
           />
         </div>

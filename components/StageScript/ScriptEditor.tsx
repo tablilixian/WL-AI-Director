@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, RotateCw, BrainCircuit } from 'lucide-react';
+import { Plus, RotateCw, BrainCircuit, Package } from 'lucide-react';
 import { STYLES } from './constants';
 
 interface Props {
@@ -7,8 +7,10 @@ interface Props {
   onChange: (value: string) => void;
   onContinue: () => void;
   onRewrite: () => void;
+  onExtractProps: () => void;
   isContinuing: boolean;
   isRewriting: boolean;
+  isExtractingProps: boolean;
   lastModified?: string;
 }
 
@@ -17,8 +19,10 @@ const ScriptEditor: React.FC<Props> = ({
   onChange,
   onContinue,
   onRewrite,
+  onExtractProps,
   isContinuing,
   isRewriting,
+  isExtractingProps,
   lastModified
 }) => {
   const stats = {
@@ -27,6 +31,7 @@ const ScriptEditor: React.FC<Props> = ({
   };
 
   const isDisabled = isContinuing || isRewriting || !script.trim();
+  const isPropsDisabled = isExtractingProps || !script.trim();
 
   return (
     <div className="flex-1 flex flex-col bg-[var(--bg-base)] relative">
@@ -76,6 +81,28 @@ const ScriptEditor: React.FC<Props> = ({
               <>
                 <RotateCw className="w-3.5 h-3.5" />
                 AI改写
+              </>
+            )}
+          </button>
+          <button
+            onClick={onExtractProps}
+            disabled={isPropsDisabled}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 transition-all shadow-sm ${
+              isPropsDisabled
+                ? STYLES.button.disabled
+                : STYLES.button.secondary
+            }`}
+            title="从剧本中提取关键道具/物品"
+          >
+            {isExtractingProps ? (
+              <>
+                <BrainCircuit className="w-3.5 h-3.5 animate-spin" />
+                提取中...
+              </>
+            ) : (
+              <>
+                <Package className="w-3.5 h-3.5" />
+                提取道具
               </>
             )}
           </button>

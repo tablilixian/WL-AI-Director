@@ -3,7 +3,7 @@
  * 包含剧本解析、分镜生成、续写、改写等功能
  */
 
-import { ScriptData, Shot, Scene, ArtDirection } from "../../types";
+import { ScriptData, Shot, Scene, ArtDirection, Prop } from "../../types";
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
@@ -229,6 +229,105 @@ export const parseScriptToData = async (
       duration: Date.now() - startTime
     });
     throw error;
+  }
+};
+
+// ============================================
+// 道具提取
+// ============================================
+
+/**
+ * 从剧本故事段落中提取关键道具/物品
+ * 独立轻量调用，不稀释主解析 prompt
+ * 道具指在多个镜头中重复出现、对视觉一致性重要的物品
+ * （如武器、信件、地图、钥匙、照片、特殊饰品等）
+ */
+export const parsePropsFromStory = async (
+  scriptData: ScriptData,
+  model?: string
+): Promise<Prop[]> => {
+  const resolvedModel = model || getDefaultChatModelId();
+  logger.debug(LogCategory.AI, `📦 parsePropsFromStory 调用 - 使用模型: ${resolvedModel}`);
+  logScriptProgress('正在提取剧本中的关键道具...');
+
+  const paragraphsText = scriptData.storyParagraphs
+    .map(p => p.text)
+    .join('\n')
+    .slice(0, 15000);
+
+  if (!paragraphsText.trim()) return [];
+
+  const charactersContext = scriptData.characters
+    .map(c => `${c.name}（${c.gender}，${c.age}，${c.personality}）`)
+    .join('、');
+
+  const scenesContext = scriptData.scenes
+    .map(s => `${s.location}（${s.time}，${s.atmosphere}）`)
+    .join('、');
+
+  const prompt = `从以下剧本故事中，提取对视觉一致性重要的关键道具/物品。
+
+"道具/物品"指在多个镜头中重复出现、外观需要保持一致的重要物品。
+包括但不限于：武器、信件/文件、地图、钥匙、饰品、特殊服装、交通工具、重要摆件等。
+排除：临时性物品（一次性的杯子、纸巾）、背景装饰品（墙上的画）、角色本身。
+
+## 剧本上下文
+角色：${charactersContext}
+场景：${scenesContext}
+
+## 故事段落
+${paragraphsText}
+
+## 要求
+1. 只提取"在多个场景/镜头中出现、外观一致性重要"的物品
+2. 描述要具体（如"银色左轮手枪"而非"枪"）
+3. 给出物品属于哪个角色（所有者和使用频率最高的角色ID）
+4. 推测该物品最可能出现在哪些场景中（sceneId列表）
+
+## 输出格式
+{
+  "props": [
+    {
+      "name": "物品名称",
+      "category": "武器|文件|饰品|工具|交通工具|衣物|其他",
+      "description": "外观描述（20-50字，具体到颜色/材质/特征）",
+      "ownerCharacterId": "主要使用者的角色ID（如不明确则为null）",
+      "sceneIds": ["常出现的场景ID列表"]
+    }
+  ]
+}
+
+如果没有符合条件的物品，返回 {"props": []}`;
+
+  try {
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object')
+    );
+    const text = cleanJsonString(responseText);
+    const parsed = JSON.parse(text);
+
+    const rawProps = Array.isArray(parsed.props) ? parsed.props : [];
+    const sceneIdSet = new Set(scriptData.scenes.map(s => s.id));
+
+    const props: Prop[] = rawProps
+      .filter((p: any) => p && p.name && p.name.trim())
+      .map((p: any, idx: number) => ({
+        id: `prop-${Date.now()}-${idx}`,
+        name: p.name.trim(),
+        category: ['武器', '文件', '饰品', '工具', '交通工具', '衣物', '其他'].includes(p.category) ? p.category : '其他',
+        description: (p.description || '').trim(),
+        visualPrompt: '',
+        negativePrompt: '',
+        imageUrl: undefined,
+        status: 'pending' as const,
+      }));
+
+    logger.debug(LogCategory.AI, `✅ 道具提取完成：共 ${props.length} 项`);
+    logScriptProgress(`提取到 ${props.length} 个道具`);
+    return props;
+  } catch (error: any) {
+    logger.warn(LogCategory.AI, '⚠️ 道具提取失败，将使用空列表:', error?.message);
+    return [];
   }
 };
 
