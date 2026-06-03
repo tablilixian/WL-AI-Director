@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Loader2, Database, X, FileArchive, FileJson, Trash2, AlertTriangle } from 'lucide-react';
 import { openDB } from '../services/storageService';
+import { clearAllAssets } from '../src/modules/canvas/services/assetStore';
 
 interface DebugExportModalProps {
   isOpen: boolean;
@@ -193,7 +194,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       console.log('[DebugExportModal] 📋 数据库中的所有数据表:', allStoreNames);
 
       const tablesToClear = allStoreNames.filter(storeName => {
-        const shouldClear = ['projects', 'assetLibrary', 'images', 'videos', 'projectStages'].includes(storeName);
+        const shouldClear = ['projects', 'assetLibrary', 'images', 'videos', 'projectStages', 'canvasData'].includes(storeName);
         console.log(`[DebugExportModal] 🔍 数据表 ${storeName}: ${shouldClear ? '✅ 将清空' : '⏭️  跳过'}`);
         return shouldClear;
       });
@@ -236,6 +237,14 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
       db.close();
       console.log('[DebugExportModal] 🔒 关闭数据库连接');
+
+      // 清空画布独立数据库 wl-canvas-assets 中的图片 Blob
+      try {
+        await clearAllAssets();
+        console.log('[DebugExportModal] ✅ 画布资产 Blob 已清空');
+      } catch (e) {
+        console.warn('[DebugExportModal] ⚠️ 画布资产清空失败（可能未使用画布功能）:', e);
+      }
 
       console.log('[DebugExportModal] ✅ 数据库清空完成！');
       console.log('[DebugExportModal] 📊 清空统计:', results);
@@ -438,6 +447,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
                 <li>images（图片）</li>
                 <li>videos（视频）</li>
                 <li>projectStages（项目阶段）</li>
+                <li>canvasData（画布图层数据）</li>
               </ul>
             </div>
 

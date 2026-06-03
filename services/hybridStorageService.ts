@@ -99,35 +99,19 @@ class HybridStorageService {
       await Promise.allSettled(videoIds.map((vidId) => videoStorageService.deleteVideo(vidId)))
     }
 
-    // 5. Delete associated asset library items (local)
-    const localAssets = await getLocalAssetLibraryItems()
-    const projectAssets = localAssets.filter((a) => a.projectId === id)
-    await Promise.allSettled(projectAssets.map((a) => deleteAssetFromDB(a.id)))
-
-    // 6. Delete project from IndexedDB
+    // 5. Delete project from IndexedDB
     await deleteProjectFromDB(id)
 
-    // 7. Cloud cleanup
+    // 7. Cloud cleanup — 只删项目记录，保留资产库（资产可跨项目共享）
     if (await this.isOnline()) {
       const userId = await this.currentUserId()
       if (!userId) return
       try {
-        // 7a. Delete project from PocketBase (FIXED: data.id instead of id)
         const projectRecords = await pb.collection('projects').getList(1, 1, {
           filter: `data.id = "${id}"`,
         })
         if (projectRecords.items.length > 0) {
           await pb.collection('projects').delete(projectRecords.items[0].id)
-        }
-
-        // 7b. Delete associated cloud asset records (also removes uploaded images from file storage)
-        for (const asset of projectAssets) {
-          const assetRecords = await pb.collection('asset_library').getList(1, 1, {
-            filter: `data.id = "${(asset as any).data?.id || asset.id}"`,
-          })
-          if (assetRecords.items.length > 0) {
-            await pb.collection('asset_library').delete(assetRecords.items[0].id)
-          }
         }
       } catch (err) {
         console.error('[HybridStorage] deleteProject cloud failed:', err)
@@ -252,24 +236,38 @@ class HybridStorageService {
     })
   }
 
-  async saveAssetToLibrary(item: AssetLibraryItem): Promise<void> {
+  /**
+   * 保存资产到本地 + 同步到云端
+   * 返回保存后的 AssetLibraryItem（含云端 PB URL，如果同步成功）
+   */
+  async saveAssetToLibrary(item: AssetLibraryItem): Promise<AssetLibraryItem> {
     await saveAssetToDB(item)
     if (await this.isOnline()) {
-      this.syncAssetToCloud(item).catch((err) =>
+      try {
+        await this.syncAssetToCloud(item)
+        // syncAssetToCloud 已更新本地记录中的 PB URL，重新读取
+        const items = await getLocalAssetLibraryItems()
+        const updated = items.find((i: any) => i.id === item.id)
+        return updated || item
+      } catch (err) {
         console.error('[HybridStorage] syncAssetToCloud failed:', err)
-      )
+      }
     }
+    return item
   }
 
   async deleteAssetFromLibrary(id: string): Promise<void> {
+    // 先取本地记录获取 cloudId，用于 PB 删除
+    const localItems = await getLocalAssetLibraryItems()
+    const localItem = localItems.find((i: any) => i.id === id)
+    const cloudId = localItem?.cloudId
+
     await deleteAssetFromDB(id)
     if (await this.isOnline()) {
       try {
-        const records = await pb.collection('asset_library').getList(1, 1, {
-          filter: `id = "${id}"`,
-        })
-        if (records.items.length > 0) {
-          await pb.collection('asset_library').delete(records.items[0].id)
+        if (cloudId) {
+          await pb.collection('asset_library').delete(cloudId)
+          console.log('[HybridStorage] deleteAssetFromLibrary: deleted cloud by cloudId:', cloudId)
         }
       } catch (err) {
         console.error('[HybridStorage] deleteAssetFromLibrary cloud failed:', err)
@@ -287,12 +285,16 @@ class HybridStorageService {
       const localItems = await getLocalAssetLibraryItems()
       for (const item of cloudItems) {
         const raw = item as any
-        const dataId = raw.data?.id
-        const cloudType = raw.type || '?'
-        // Check if a local item already represents the same asset (same type + data.id)
-        const existing = dataId
-          ? localItems.find((a: any) => (a.type || '?') === cloudType && a.data?.id === dataId)
-          : null
+        // 优先用 cloudId（PB 记录 ID）匹配
+        let existing = localItems.find((a: any) => a.cloudId === raw.id)
+        // 降级：无 cloudId 的老记录用 data.id + type 匹配
+        if (!existing) {
+          const dataId = raw.data?.id
+          const cloudType = raw.type || '?'
+          existing = dataId
+            ? localItems.find((a: any) => (a.type || '?') === cloudType && a.data?.id === dataId)
+            : null
+        }
         if (existing) {
           // Update existing local entry with latest cloud data, keeping local id
           await saveAssetToDB({
@@ -302,6 +304,7 @@ class HybridStorageService {
             data: raw.data || existing.data,
             projectId: raw.project_id || existing.projectId || '',
             projectName: raw.project_name || existing.projectName || '',
+            cloudId: raw.id, // 补齐 cloudId
             updatedAt: Date.now(),
           } as any)
         } else {
@@ -312,6 +315,7 @@ class HybridStorageService {
             data: raw.data,
             projectId: raw.project_id || '',
             projectName: raw.project_name || '',
+            cloudId: raw.id,
           } as any)
         }
       }
@@ -320,68 +324,173 @@ class HybridStorageService {
     }
   }
 
+  /**
+   * 遍历 dataObj，收集所有 local: 图片引用及其对象路径
+   * 支持字段：
+   *   imageUrl, threeViewImageUrl,
+   *   variations[].imageUrl,
+   *   turnaround.imageUrl,
+   *   signaturePose.previewImageUrl,
+   *   microAction.previewImageUrl
+   */
+  // PB file field → data JSON path 映射（每个字段独立，互不覆盖）
+  private readonly IMAGE_FIELD_MAP: { field: string; path: string }[] = [
+    { field: 'image',  path: 'imageUrl' },
+    { field: 'image2', path: 'threeViewImageUrl' },
+    { field: 'image3', path: 'turnaround.imageUrl' },
+    { field: 'image4', path: 'signaturePose.previewImageUrl' },
+    { field: 'image5', path: 'microAction.previewImageUrl' },
+    { field: 'image6', path: 'variations.0.imageUrl' },
+    { field: 'image7', path: 'variations.1.imageUrl' },
+    { field: 'image8', path: 'variations.2.imageUrl' },
+    { field: 'image9', path: 'variations.3.imageUrl' },
+  ]
+
+  /**
+   * 根据 . 分隔的路径字符串设置嵌套对象的值
+   * 如 setNestedValue(obj, 'variations.0.imageUrl', url)
+   */
+  private setNestedValue(obj: any, path: string, value: any): void {
+    const parts = path.split('.')
+    let current = obj
+    for (let i = 0; i < parts.length - 1; i++) {
+      const key = parts[i]
+      if (key.match(/^\d+$/)) {
+        current = current[parseInt(key, 10)]
+      } else {
+        current = current[key]
+      }
+      if (!current) return
+    }
+    const lastKey = parts[parts.length - 1]
+    if (lastKey.match(/^\d+$/)) {
+      current[parseInt(lastKey, 10)] = value
+    } else {
+      current[lastKey] = value
+    }
+  }
+
+  /**
+   * 同步资产到 PocketBase 云端
+   * 
+   * 每个图片对应一个独立的 PB 单文件字段（image / image2 ~ image9），
+   * 只上传当前为 local: 的图片，已有 PB 文件的字段不传 → PB 保留原文件。
+   */
   private async syncAssetToCloud(item: AssetLibraryItem): Promise<void> {
     const userId = await this.currentUserId()
     if (!userId) return
+
     try {
       const itemData = item as any
-      const dataObj = { ...(itemData.data || {}) }
-      const imageUrl: string | undefined = dataObj.imageUrl
-      let blob: Blob | null = null
+      const dataObj = JSON.parse(JSON.stringify(itemData.data || {}))
+      const assetType = itemData.type || 'character'
 
-      // Get image blob from IndexedDB if local reference
-      if (imageUrl && imageUrl.startsWith('local:')) {
-        const imageId = imageUrl.substring(6)
-        blob = await imageStorageService.getImage(imageId)
+      // 1. 解析每个映射位置的图片：收集 local: URL 并解析 blob
+      const uploadEntries: { field: string; path: string; blob: Blob }[] = []
+      for (const entry of this.IMAGE_FIELD_MAP) {
+        const val = this.getNestedValue(dataObj, entry.path)
+        if (typeof val === 'string' && val.startsWith('local:')) {
+          const blob = await imageStorageService.getImage(val.substring(6))
+          if (blob) {
+            uploadEntries.push({ field: entry.field, path: entry.path, blob })
+          } else {
+            console.warn(`[HybridStorage] syncAssetToCloud: cannot read blob for ${entry.path}`)
+          }
+        }
       }
 
-      const assetType = itemData.type || 'character'
-      const existing = await pb.collection('asset_library').getList(1, 1, {
-        filter: `data.id = "${dataObj.id || item.id}" && type = "${assetType}"`,
-      })
+      // 2. 查找/创建 PB 记录
+      //    优先用 cloudId（PB 记录 ID）精确匹配，避免跨项目 data.id 重复误匹配
+      let existingId: string | null = null
+      if (itemData.cloudId) {
+        try {
+          const existingRecord = await pb.collection('asset_library').getOne(itemData.cloudId)
+          if (existingRecord?.id) {
+            existingId = existingRecord.id
+          }
+        } catch { /* record no longer exists → will create new */ }
+      }
+      if (!existingId) {
+        const escapedName = (itemData.name || '').replace(/"/g, '\\"')
+        const existing = await pb.collection('asset_library').getList(1, 1, {
+          filter: `data.id = "${dataObj.id || item.id}" && data.name = "${escapedName}" && type = "${assetType}"`,
+        })
+        if (existing.items.length > 0) {
+          existingId = existing.items[0].id
+        }
+      }
 
+      // 3. 构建 FormData（只 append 有 local: 图片的字段，已有 PB 文件的字段不传 → PB 保留原文件）
       const formData = new FormData()
       formData.append('user_id', userId)
       formData.append('type', assetType)
       formData.append('name', item.name)
-      // Only include project_id if it looks like a valid PB record ID (15 alphanumeric chars)
-      // Local UUIDs (36 chars with hyphens) would cause 400 on relation fields
-      if (itemData.projectId && /^[a-z0-9]{15}$/.test(itemData.projectId)) {
-        formData.append('project_id', itemData.projectId)
-      }
       formData.append('project_name', itemData.projectName || '')
       formData.append('data', JSON.stringify(dataObj))
 
-      if (blob) {
-        const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : blob.type === 'image/gif' ? 'gif' : 'jpg'
-        formData.append('image', blob, `asset_${Date.now()}.${ext}`)
+      const ts = Date.now()
+      for (const entry of uploadEntries) {
+        const ext = this.blobExt(entry.blob)
+        formData.append(entry.field, entry.blob, `asset_${ts}_${entry.field}.${ext}`)
       }
 
+      // 4. 发送到 PB
       let result: any
-      if (existing.items.length > 0) {
-        result = await pb.collection('asset_library').update(existing.items[0].id, formData)
+      if (existingId) {
+        result = await pb.collection('asset_library').update(existingId, formData)
       } else {
         result = await pb.collection('asset_library').create(formData)
       }
 
-      // Update local IndexedDB record with PocketBase file URL
-      if (blob && result?.image) {
-        const pbUrl = `${pb.baseUrl}/api/files/${result.collectionId}/${result.id}/${result.image}`
-        dataObj.imageUrl = pbUrl
-        itemData.data = dataObj
-        await saveAssetToDB(itemData as AssetLibraryItem)
-        console.log('[HybridStorage] syncAssetToCloud: updated local imageUrl to PocketBase URL')
+      // 5. 将 PB 返回的文件名写回 dataObj
+      const baseFileUrl = `${pb.baseUrl}/api/files/${result.collectionId}/${result.id}`
+      for (const entry of uploadEntries) {
+        const filename = this.getNestedValue(result, entry.field)
+        if (filename) {
+          const pbUrl = `${baseFileUrl}/${filename}`
+          this.setNestedValue(dataObj, entry.path, pbUrl)
+          console.log(`[HybridStorage] syncAssetToCloud: ${entry.path} -> ${pbUrl}`)
+        }
       }
 
-      console.log(`[HybridStorage] syncAssetToCloud success (${existing.items.length > 0 ? 'update' : 'create'})`)
+      // 6. 更新 PB 记录中的 data JSON（带 PB URL）
+      const dataFormData = new FormData()
+      dataFormData.append('data', JSON.stringify(dataObj))
+      await pb.collection('asset_library').update(result.id, dataFormData)
+
+      // 7. 回存 cloudId 到本地 + 更新 data 中的 PB URL
+      itemData.cloudId = result.id
+      itemData.data = dataObj
+      await saveAssetToDB(itemData as AssetLibraryItem)
+      console.log(`[HybridStorage] syncAssetToCloud success (${existingId ? 'update' : 'create'})`)
     } catch (error: any) {
-      // Log full error details including PocketBase response body
       if (error?.response) {
         console.error(`[HybridStorage] syncAssetToCloud failed: ${error.message}`, JSON.stringify(error.response))
       } else {
         console.error(`[HybridStorage] syncAssetToCloud failed:`, error?.message || error)
       }
     }
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    const parts = path.split('.')
+    let current = obj
+    for (const key of parts) {
+      if (current == null) return undefined
+      if (key.match(/^\d+$/)) {
+        current = current[parseInt(key, 10)]
+      } else {
+        current = current[key]
+      }
+    }
+    return current
+  }
+
+  private blobExt(blob: Blob): string {
+    return blob.type === 'image/png' ? 'png'
+      : blob.type === 'image/webp' ? 'webp'
+      : blob.type === 'image/gif' ? 'gif'
+      : 'jpg'
   }
 }
 
@@ -394,7 +503,7 @@ export const deleteProject = (id: string) => hybridStorage.deleteProject(id)
 export const syncFromCloud = () => hybridStorage.syncFromCloud()
 export const exportToCloud = () => hybridStorage.exportToCloud()
 export const getAllAssetLibraryItems = () => hybridStorage.getAllAssetLibraryItems()
-export const saveAssetToLibrary = (item: AssetLibraryItem) => hybridStorage.saveAssetToLibrary(item)
+export const saveAssetToLibrary = (item: AssetLibraryItem): Promise<AssetLibraryItem> => hybridStorage.saveAssetToLibrary(item)
 export const deleteAssetFromLibrary = (id: string) => hybridStorage.deleteAssetFromLibrary(id)
 
 import { canvasSyncService } from './canvasSyncService'

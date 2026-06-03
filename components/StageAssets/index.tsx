@@ -37,8 +37,6 @@ import { hybridStorage } from '../../services/hybridStorageService';
 import { AssetLibraryModal } from '../../src/components/AssetLibrary';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
-import { useAuthStore } from '../../src/stores/authStore';
-
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
@@ -76,7 +74,6 @@ const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; t
 
 const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, onGeneratingChange }) => {
   const { showAlert } = useAlert();
-  const { user } = useAuthStore();
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -473,37 +470,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleAddCharacterToLibrary = async (char: Character) => {
     const saveItem = async () => {
       try {
-        let charToSave = { ...char };
-        
-        if (char.imageUrl?.startsWith('local:')) {
-          console.log('[StageAssets] ☁️ 上传本地图片到云端:', char.imageUrl);
-          const blob = await imageStorageService.getImage(char.imageUrl.substring(6));
-          if (!blob) {
-            console.warn('[StageAssets] ⚠️ 本地图片读取失败，将仅保存到本地');
-          } else {
-            try {
-              const cloudUrl = await imageStorageService.uploadToCloud(
-                char.imageUrl.substring(6),
-                blob,
-                `${user?.id || 'anonymous'}/asset_library/character/${char.id}`
-              );
-              charToSave.imageUrl = cloudUrl;
-              
-              const newData = { ...project.scriptData! };
-              const c = newData.characters.find(c => c.id === char.id);
-              if (c) {
-                c.imageUrl = cloudUrl;
-              }
-              updateProject({ scriptData: newData });
-            } catch (uploadError: any) {
-              console.error('[StageAssets] ❌ 上传到云端失败，仅保存到本地:', uploadError);
-              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
-            }
-          }
-        }
+        const charToSave = { ...char };
         
         const item = createLibraryItemFromCharacter(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
+        
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -526,37 +497,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleAddSceneToLibrary = async (scene: Scene) => {
     const saveItem = async () => {
       try {
-        let sceneToSave = { ...scene };
-        
-        if (scene.imageUrl?.startsWith('local:')) {
-          console.log('[StageAssets] ☁️ 上传本地场景图片到云端:', scene.imageUrl);
-          const blob = await imageStorageService.getImage(scene.imageUrl.substring(6));
-          if (!blob) {
-            console.warn('[StageAssets] ⚠️ 本地场景图片读取失败，将仅保存到本地');
-          } else {
-            try {
-              const cloudUrl = await imageStorageService.uploadToCloud(
-                scene.imageUrl.substring(6),
-                blob,
-                `${user?.id || 'anonymous'}/asset_library/scene/${scene.id}`
-              );
-              sceneToSave.imageUrl = cloudUrl;
-              
-              const newData = { ...project.scriptData! };
-              const s = newData.scenes.find(s => s.id === scene.id);
-              if (s) {
-                s.imageUrl = cloudUrl;
-              }
-              updateProject({ scriptData: newData });
-            } catch (uploadError: any) {
-              console.error('[StageAssets] ❌ 场景图片上传到云端失败，仅保存到本地:', uploadError);
-              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
-            }
-          }
-        }
+        const sceneToSave = { ...scene };
         
         const item = createLibraryItemFromScene(sceneToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
+        
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -1118,37 +1063,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleAddPropToLibrary = async (prop: Prop) => {
     const saveItem = async () => {
       try {
-        let propToSave = { ...prop };
-        
-        if (prop.imageUrl?.startsWith('local:')) {
-          console.log('[StageAssets] ☁️ 上传本地道具图片到云端:', prop.imageUrl);
-          const blob = await imageStorageService.getImage(prop.imageUrl.substring(6));
-          if (!blob) {
-            console.warn('[StageAssets] ⚠️ 本地道具图片读取失败，将仅保存到本地');
-          } else {
-            try {
-              const cloudUrl = await imageStorageService.uploadToCloud(
-                prop.imageUrl.substring(6),
-                blob,
-                `${user?.id || 'anonymous'}/asset_library/prop/${prop.id}`
-              );
-              propToSave.imageUrl = cloudUrl;
-              
-              const newData = { ...project.scriptData! };
-              const p = (newData.props || []).find(p => p.id === prop.id);
-              if (p) {
-                p.imageUrl = cloudUrl;
-              }
-              updateProject({ scriptData: newData });
-            } catch (uploadError: any) {
-              console.error('[StageAssets] ❌ 道具图片上传到云端失败，仅保存到本地:', uploadError);
-              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
-            }
-          }
-        }
+        const propToSave = { ...prop };
         
         const item = createLibraryItemFromProp(propToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
+        
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -1488,43 +1407,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       try {
         const charToSave = { ...char };
         
-        if (char.turnaround.imageUrl?.startsWith('local:')) {
-          console.log('[StageAssets] ☁️ 上传本地九宫格图片到云端:', char.turnaround.imageUrl);
-          const localBlob = await imageStorageService.getImage(char.turnaround.imageUrl.substring(6));
-          if (!localBlob) {
-            console.warn('[StageAssets] ⚠️ 本地九宫格图片读取失败，将仅保存到本地');
-          } else {
-            try {
-              const cloudUrl = await imageStorageService.uploadToCloud(
-                char.turnaround.imageUrl.substring(6),
-                localBlob,
-                `${user?.id || 'anonymous'}/asset_library/turnaround/${char.id}`
-              );
-              if (cloudUrl) {
-                charToSave.turnaround = {
-                  ...charToSave.turnaround,
-                  imageUrl: cloudUrl
-                };
-                
-                updateProject((prev) => {
-                  if (!prev.scriptData) return prev;
-                  const newData = { ...prev.scriptData };
-                  const c = newData.characters.find(c => compareIds(c.id, charId));
-                  if (c && c.turnaround) {
-                    c.turnaround.imageUrl = cloudUrl;
-                  }
-                  return { ...prev, scriptData: newData };
-                });
-              }
-            } catch (uploadError: any) {
-              console.error('[StageAssets] ❌ 九宫格图片上传到云端失败，仅保存到本地:', uploadError);
-              showAlert('云端上传失败，将仅保存到本地', { type: 'warning' });
-            }
-          }
-        }
-        
         const item = createLibraryItemFromTurnaround(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
+        
         showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);

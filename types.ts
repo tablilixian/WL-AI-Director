@@ -111,6 +111,11 @@ export interface AssetLibraryItem {
   createdAt: number;
   updatedAt: number;
   data: Character | Scene | Prop;
+  /** 
+   * PB 记录 ID（首次同步后回存），
+   * 用于跨项目去重和删除，避免依赖 data.id 误匹配。
+   */
+  cloudId?: string;
 }
 
 export interface Keyframe {

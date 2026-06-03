@@ -14,8 +14,6 @@ import { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
 import { createLibraryItemFromLayer } from '../../../../services/assetLibraryService';
 import { hybridStorage } from '../../../../services/hybridStorageService';
-import { imageStorageService } from '../../../../services/imageStorageService';
-import { useAuthStore } from '../../../../src/stores/authStore';
 
 interface SaveToLibraryDialogProps {
   layer: LayerData;           // 要保存的图层
@@ -68,45 +66,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
 
     setIsSaving(true);
     try {
-      const { user } = useAuthStore.getState();
-      let layerToSave = { ...layer };
-      
-      if (layer.src.startsWith('data:') || layer.src.startsWith('local:')) {
-        console.log('[SaveToLibrary] ☁️ 上传画布图片到云端:', layer.src.substring(0, 50));
-        
-        let blob: Blob | null = null;
-        
-        if (layer.src.startsWith('data:')) {
-          const response = await fetch(layer.src);
-          blob = await response.blob();
-        } else if (layer.src.startsWith('local:')) {
-          blob = await imageStorageService.getImage(layer.src.substring(6));
-        }
-        
-        if (!blob) {
-          console.warn('[SaveToLibrary] ⚠️ 图片读取失败，将仅保存到本地');
-        } else {
-          try {
-            const imageId = layer.imageId || `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const cloudUrl = await imageStorageService.uploadToCloud(
-              imageId,
-              blob,
-              `${user?.id || 'anonymous'}/asset_library/canvas/${imageId}`
-            );
-            
-            layerToSave = {
-              ...layerToSave,
-              src: cloudUrl,
-              imageId: imageId
-            };
-            
-            console.log('[SaveToLibrary] ✅ 图片上传成功:', cloudUrl);
-          } catch (uploadError: any) {
-            console.error('[SaveToLibrary] ❌ 上传到云端失败，仅保存到本地:', uploadError);
-            alert('云端上传失败，将仅保存到本地');
-          }
-        }
-      }
+      const layerToSave = { ...layer };
       
       const item = await createLibraryItemFromLayer(layerToSave, project, assetType, assetName.trim());
       await hybridStorage.saveAssetToLibrary(item);
