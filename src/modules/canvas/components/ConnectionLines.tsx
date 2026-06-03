@@ -13,6 +13,8 @@ const operationColors: Record<string, string> = {
   'text-to-video': '#06b6d4',
   'image-to-video': '#8b5cf6',
   'style-transfer': '#f59e0b',
+  'direct-style-transfer': '#f59e0b',
+  'ipa-style-transfer': '#a855f7',
   'background-replace': '#f97316',
   'expand': '#ec4899',
   'background-remove': '#14b8a6',
@@ -35,6 +37,8 @@ const operationLabels: Record<string, string> = {
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
   'style-transfer': '风格迁移',
+  'direct-style-transfer': '风格迁移',
+  'ipa-style-transfer': 'IPA风格迁移',
   'background-replace': '背景替换',
   'expand': '图片扩展',
   'background-remove': '智能抠图',
@@ -49,6 +53,16 @@ const operationLabels: Record<string, string> = {
   '9grid': '九宫格',
   '4grid': '四宫格',
   '25grid': '25宫格'
+};
+
+const sourceRoleLabels: Record<string, string[]> = {
+  'direct-style-transfer': ['目标图', '风格参考'],
+  'ipa-style-transfer': ['目标图', '风格参考', '参考图', '参考图'],
+};
+
+const getSourceLabel = (opType: string, index: number): string | null => {
+  const roles = sourceRoleLabels[opType];
+  return roles ? roles[index] ?? null : null;
 };
 
 export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale }) => {
@@ -144,50 +158,106 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
       </defs>
 
       {layersWithSource.map((layer, index) => {
-        const sourceLayer = layers.find(l => l.id === layer.sourceLayerId);
-        if (!sourceLayer) return null;
+        const isMultiSource = layer.sourceLayerIds && layer.sourceLayerIds.length > 1;
+        const sourceIds = isMultiSource ? layer.sourceLayerIds! : (layer.sourceLayerId ? [layer.sourceLayerId] : []);
+        if (sourceIds.length === 0) return null;
 
-        const from = getLayerRightCenter(sourceLayer);
         const to = getLayerLeftCenter(layer);
         const color = operationColors[layer.operationType || 'import'] || '#6b7280';
-        const isSelected = selectedLayerId === layer.id || selectedLayerId === layer.sourceLayerId;
+        const opType = layer.operationType || 'import';
 
-        const midX = (from.x + to.x) / 2;
-        const midY = (from.y + to.y) / 2;
+        const connections = sourceIds.map((sourceId, ci) => {
+          const sourceLayer = layers.find(l => l.id === sourceId);
+          if (!sourceLayer) return null;
+          return {
+            from: getLayerRightCenter(sourceLayer),
+            isSelected: selectedLayerId === layer.id || selectedLayerId === sourceId,
+            label: isMultiSource ? getSourceLabel(opType, ci) : null,
+          };
+        }).filter(Boolean) as { from: { x: number; y: number }; isSelected: boolean; label: string | null }[];
+
+        if (connections.length === 0) return null;
+
+        const isAnySelected = connections.some(c => c.isSelected);
+        const label = operationLabels[opType] || '操作';
 
         return (
           <g key={`connection-${layer.id}-${index}`}>
-            <path
-              d={calculateCurvePath(from, to)}
-              fill="none"
-              stroke={color}
-              strokeWidth={isSelected ? 3 : 2}
-              opacity={isSelected ? 1 : 0.5}
-              markerEnd={`url(#arrow-${layer.operationType || 'import'})`}
-            />
-            <g>
-              <rect
-                x={midX - 25}
-                y={midY - 10}
-                width={50}
-                height={20}
-                fill="#1f2937"
-                stroke={color}
-                strokeWidth={1}
-                rx={4}
-                opacity={0.9}
-              />
-              <text
-                x={midX}
-                y={midY + 4}
-                fill={color}
-                fontSize={10}
-                textAnchor="middle"
-                className="select-none"
-              >
-                {operationLabels[layer.operationType || 'import'] || '操作'}
-              </text>
-            </g>
+            {connections.map((conn, ci) => {
+              const midX = (conn.from.x + to.x) / 2;
+              const midY = (conn.from.y + to.y) / 2;
+              return (
+                <g key={`conn-${ci}`}>
+                  <path
+                    d={calculateCurvePath(conn.from, to)}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={isAnySelected ? 3 : 2}
+                    opacity={isAnySelected ? 1 : 0.5}
+                    markerEnd={`url(#arrow-${opType})`}
+                  />
+                  {conn.label && (
+                    <g>
+                      <rect
+                        x={midX - 24}
+                        y={midY - 10}
+                        width={48}
+                        height={20}
+                        fill="#1f2937"
+                        stroke={color}
+                        strokeWidth={1}
+                        rx={4}
+                        opacity={0.9}
+                      />
+                      <text
+                        x={midX}
+                        y={midY + 4}
+                        fill={color}
+                        fontSize={10}
+                        textAnchor="middle"
+                        className="select-none"
+                      >
+                        {conn.label}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+            {!isMultiSource && (
+              <g>
+                {(() => {
+                  const midX = (connections[0].from.x + to.x) / 2;
+                  const midY = (connections[0].from.y + to.y) / 2;
+                  const labelW = Math.max(label.length * 8 + 16, 50);
+                  return (
+                    <>
+                      <rect
+                        x={midX - labelW / 2}
+                        y={midY - 10}
+                        width={labelW}
+                        height={20}
+                        fill="#1f2937"
+                        stroke={color}
+                        strokeWidth={1}
+                        rx={4}
+                        opacity={0.9}
+                      />
+                      <text
+                        x={midX}
+                        y={midY + 4}
+                        fill={color}
+                        fontSize={10}
+                        textAnchor="middle"
+                        className="select-none"
+                      >
+                        {label}
+                      </text>
+                    </>
+                  );
+                })()}
+              </g>
+            )}
           </g>
         );
       })}

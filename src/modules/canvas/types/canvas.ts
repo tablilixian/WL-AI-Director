@@ -90,8 +90,9 @@ export interface LayerData {
   opacity?: number; // 透明度 0-1
   zIndex?: number; // 图层顺序
   // 来源追踪
-  sourceLayerId?: string; // 来源图层 ID
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint'; // 操作类型
+  sourceLayerId?: string; // 来源图层 ID（单来源）
+  sourceLayerIds?: string[]; // 来源图层 ID 列表（多来源，如风格迁移需要目标图+风格参考图）
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint'; // 操作类型
   // 宫格生成数据（用于后续宫格拆分）
   gridData?: GridGenerationData;
   // 关联信息（用于与主项目联动）

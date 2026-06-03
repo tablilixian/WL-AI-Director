@@ -23,7 +23,7 @@ import {
   getNegativePrompt,
   getSceneNegativePrompt,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -938,6 +938,115 @@ export const generateInpaintImage = async (
     });
 
     throw new Error(`图像修复失败: ${error.message}`);
+  }
+};
+
+/**
+ * 风格迁移生成
+ * 调用 Drama Backend image2styletransfer API，将风格参考图的风格迁移到目标图像上
+ * 返回风格迁移后的图片 local: 引用
+ */
+export const generateStyleTransferImage = async (
+  targetImageUrl: string,
+  styleImageUrl: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎨 generateStyleTransferImage 调用 - 风格迁移`);
+    logger.debug(LogCategory.AI, `🖼️ 目标图像: ${targetImageUrl}`);
+    logger.debug(LogCategory.AI, `🎯 风格参考图: ${styleImageUrl}`);
+
+    const localUrl = await callDramaBackendStyleTransferApi(
+      targetImageUrl,
+      styleImageUrl,
+    );
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'styletransfer-' + Date.now(),
+      resourceName: '风格迁移',
+      status: 'success',
+      model: imageModelId,
+      prompt: 'style transfer',
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 风格迁移完成: ${localUrl}`);
+    return localUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'styletransfer-' + Date.now(),
+      resourceName: '风格迁移',
+      status: 'failed',
+      model: imageModelId,
+      prompt: 'style transfer',
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`风格迁移失败: ${error.message}`);
+  }
+};
+
+/**
+ * IPA 风格迁移生成
+ * 调用 Drama Backend image2ipastyletransfer API，基于参考图像进行 IPA 风格迁移
+ * 返回风格迁移后的图片 local: 引用
+ */
+export const generateIPAStyleTransferImage = async (
+  prompt: string,
+  referenceImages: string[],
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎨 generateIPAStyleTransferImage 调用 - IPA 风格迁移`);
+    logger.debug(LogCategory.AI, `📝 提示词: ${prompt}`);
+    logger.debug(LogCategory.AI, `🖼️ 参考图数量: ${referenceImages.length}`);
+
+    const localUrl = await callImageApi({
+      prompt,
+      referenceImages,
+      isIPAStyleTransfer: true,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'ipastyletransfer-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ IPA 风格迁移完成: ${localUrl}`);
+    return localUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'ipastyletransfer-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`IPA 风格迁移失败: ${error.message}`);
   }
 };
 

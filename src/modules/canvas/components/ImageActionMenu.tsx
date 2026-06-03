@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Scissors, Palette, ImagePlus, Maximize2, Copy, Grid3x3, ChevronDown } from 'lucide-react';
 import { StyleTransferPanel } from './StyleTransferPanel';
+import { DirectStyleTransferPanel } from './DirectStyleTransferPanel';
+import { IPAStyleTransferPanel } from './IPAStyleTransferPanel';
 import { ImageEditPanel } from './ImageEditPanel';
 import { RemoveBackgroundPanel } from './RemoveBackgroundPanel';
 import { VariantPanel } from './VariantPanel';
@@ -16,6 +18,8 @@ import type { LayerData, GridGenerationType } from '../types/canvas';
 export type ImageAction =
   | 'remove-bg'
   | 'style-transfer'
+  | 'direct-style-transfer'
+  | 'ipa-style-transfer'
   | 'background-replace'
   | 'expand'
   | 'inpaint'
@@ -95,6 +99,8 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       icon: <Palette className="w-3.5 h-3.5" />,
       items: [
         { id: 'style-transfer', label: '风格切换' },
+        { id: 'direct-style-transfer', label: '风格参考迁移' },
+        { id: 'ipa-style-transfer', label: 'IPA风格迁移' },
         { id: 'lighting', label: '光影校正' },
       ],
     },
@@ -194,6 +200,8 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       {activePanel && createPortal(
         <>
           {activePanel === 'style-transfer' && <StyleTransferPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'direct-style-transfer' && <DirectStyleTransferPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'ipa-style-transfer' && <IPAStyleTransferPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'background-replace' && <ImageEditPanel selectedLayerId={layer.id} editMode="background" onClose={handleClosePanel} />}
           {activePanel === 'expand' && <ImageEditPanel selectedLayerId={layer.id} editMode="expand" onClose={handleClosePanel} />}
           {activePanel === 'remove-bg' && <RemoveBackgroundPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}

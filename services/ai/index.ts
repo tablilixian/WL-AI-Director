@@ -72,6 +72,8 @@ export {
   generateStoryboardImage,
   generateSpliteGridImage,
   generateInpaintImage,
+  generateStyleTransferImage,
+  generateIPAStyleTransferImage,
   generateVisualLanguage,
   generateAllPropPrompts,
 } from './visualService';

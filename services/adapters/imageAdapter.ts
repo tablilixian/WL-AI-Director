@@ -1007,6 +1007,182 @@ export const callDramaBackendInpaintApi = async (
 };
 
 /**
+ * 调用 Drama Backend 风格迁移 API (image2styletransfer)
+ * 基于参考图像进行风格迁移，将 image2 的风格迁移到 image1 上
+ */
+export const callDramaBackendStyleTransferApi = async (
+  targetImageUrl: string,
+  styleImageUrl: string,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `st_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[ST:${tid}] 调用风格迁移 API`);
+  console.log(`[ST:${tid}] 端点: /api/v1/generate/image2styletransfer`);
+  console.log(`[ST:${tid}] API基础地址: ${apiBase}`);
+
+  const targetFilename = await uploadImageToDramaBackend(targetImageUrl, baseUrl, tid);
+  console.log(`[ST:${tid}] 目标图像上传成功 -> filename: ${targetFilename}`);
+
+  const styleFilename = await uploadImageToDramaBackend(styleImageUrl, baseUrl, tid);
+  console.log(`[ST:${tid}] 风格参考图上传成功 -> filename: ${styleFilename}`);
+
+  const requestBody: any = {
+    image1: targetFilename,
+    image2: styleFilename,
+  };
+
+  console.log(`[ST:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2styletransfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error(`风格迁移失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[ST:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const imageBlob = await fetch(downloadUrl).then(r => {
+    if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+    return r.blob();
+  });
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[ST:${tid}] 风格迁移图片已保存: ${localImageId}`);
+  return `local:${localImageId}`;
+};
+
+/**
+ * 调用 Drama Backend IPA 风格迁移 API (image2ipastyletransfer)
+ * 基于参考图像进行 IPA 风格迁移，支持多个参考图像的融合
+ */
+export const callDramaBackendIPAStyleTransferApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `ipa_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[IPA:${tid}] 调用 IPA 风格迁移 API`);
+  console.log(`[IPA:${tid}] 端点: /api/v1/generate/image2ipastyletransfer`);
+  console.log(`[IPA:${tid}] API基础地址: ${apiBase}`);
+
+  const aspectRatio = options.aspectRatio || '16:9';
+  const sizeMap: Record<string, { width: number; height: number }> = {
+    '16:9': { width: 1024, height: 576 },
+    '9:16': { width: 576, height: 1024 },
+    '1:1': { width: 768, height: 768 },
+  };
+  const size = sizeMap[aspectRatio] || { width: 1024, height: 720 };
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    width: size.width,
+    height: size.height,
+  };
+
+  if (options.referenceImages) {
+    for (let i = 0; i < Math.min(options.referenceImages.length, 3); i++) {
+      const imgKey = `image${i + 1}`;
+      const imageUrl = options.referenceImages[i];
+      const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+      requestBody[imgKey] = filename;
+      console.log(`[IPA:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+    }
+  }
+
+  console.log(`[IPA:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2ipastyletransfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error(`IPA 风格迁移失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[IPA:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const imageBlob = await fetch(downloadUrl).then(r => {
+    if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+    return r.blob();
+  });
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[IPA:${tid}] IPA 风格迁移图片已保存: ${localImageId}`);
+  return `local:${localImageId}`;
+};
+
+/**
  * 调用 Drama Backend 视觉语言推理 API (image2vl)
  * 基于图像和文本提示进行视觉语言模型推理，返回文本输出
  */
@@ -1122,6 +1298,11 @@ export const callImageApi = async (
     if (options.isStoryboard) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (分镜生成 image2storyboard 端点)`);
       return callDramaBackendStoryboardApi(options, activeModel, baseUrl, tid);
+    }
+
+    if (options.isIPAStyleTransfer) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`);
+      return callDramaBackendIPAStyleTransferApi(options, tid);
     }
 
     console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);

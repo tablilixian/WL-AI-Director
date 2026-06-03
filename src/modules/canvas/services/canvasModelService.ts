@@ -345,6 +345,64 @@ export class CanvasModelService {
     });
   }
 
+  async directStyleTransfer(
+    targetImageUrl: string,
+    styleImageUrl: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    console.log('=== 直接风格迁移请求 (image2styletransfer) ===');
+    console.log('[目标图]', targetImageUrl);
+    console.log('[风格参考图]', styleImageUrl);
+
+    onProgress?.(10);
+
+    try {
+      const { callDramaBackendStyleTransferApi } = await import('../../../../services/adapters/imageAdapter');
+      const traceId = this.generateTraceId();
+
+      const result = await callDramaBackendStyleTransferApi(
+        targetImageUrl,
+        styleImageUrl,
+        traceId,
+      );
+
+      onProgress?.(100);
+      return result;
+    } catch (error) {
+      console.error('直接风格迁移失败:', error);
+      throw error;
+    }
+  }
+
+  async ipaStyleTransfer(
+    prompt: string,
+    referenceImages: string[],
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    console.log('=== IPA 风格迁移请求 (image2ipastyletransfer) ===');
+    console.log('[提示词]', prompt);
+    console.log('[参考图数量]', referenceImages.length);
+
+    onProgress?.(10);
+
+    try {
+      const { callImageApi } = await import('../../../../services/adapters/imageAdapter');
+      const traceId = this.generateTraceId();
+
+      const result = await callImageApi({
+        prompt,
+        referenceImages,
+        isIPAStyleTransfer: true,
+      }, undefined, traceId);
+
+      onProgress?.(100);
+      return result;
+    } catch (error) {
+      console.error('IPA 风格迁移失败:', error);
+      throw error;
+    }
+  }
+
   async inpaint(
     imageUrl: string,
     prompt: string,

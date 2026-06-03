@@ -8,6 +8,8 @@
 - [根端点](#根端点)
 - [健康检查](#健康检查)
 - [图像生成](#图像生成)
+- [风格迁移](#风格迁移)
+- [IPA 风格迁移](#ipa-风格迁移)
 - [图像上传](#图像上传)
 - [图像查看](#图像查看)
 - [分镜生成](#分镜生成)
@@ -60,14 +62,14 @@
 |------|------|------|--------|------|
 | `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
 | `width` | integer | 否 | 1024 | 图像宽度 |
-| `height` | integer | 否 | 720 | 图像高度 |
+| `height` | integer | 否 | 768 | 图像高度 |
 
 **请求示例:**
 ```json
 {
   "prompt": "A beautiful sunset over the ocean",
   "width": 1024,
-  "height": 720
+  "height": 768
 }
 ```
 
@@ -92,7 +94,7 @@
 |------|------|------|--------|------|
 | `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
 | `width` | integer | 否 | 1024 | 图像宽度 |
-| `height` | integer | 否 | 720 | 图像高度 |
+| `height` | integer | 否 | 768 | 图像高度 |
 | `image1` | string | 是 | "" | 参考图像1（文件名） |
 | `image2` | string | 否 | "" | 参考图像2（文件名） |
 | `image3` | string | 否 | "" | 参考图像3（文件名） |
@@ -102,7 +104,7 @@
 {
   "prompt": "Transform this landscape to autumn style",
   "width": 1024,
-  "height": 720,
+  "height": 768,
   "image1": "image1.png"
 }
 ```
@@ -173,6 +175,94 @@
 - 包含正面特写、侧面全身、背面全身三个视角
 - 背景为纯白色
 
+---
+
+## 风格迁移
+
+### POST /api/v1/generate/image2styletransfer
+
+基于参考图像进行风格迁移
+
+**请求体 (Image2StyleTransferRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `image1` | string | 是 | - | 目标图像（需要进行风格迁移的图像） |
+| `image2` | string | 是 | - | 参考图像（提供风格参考的图像） |
+
+**请求示例:**
+```json
+{
+  "image1": "target_image.png",
+  "image2": "style_reference.png"
+}
+```
+
+**响应:** 返回风格迁移后的图像
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "styletransfer_00001_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=styletransfer_00001_.png",
+    "duration": 4.55
+}
+```
+
+**说明:**
+- 该端点将 image2 的风格迁移到 image1 上
+- image1 是目标图像，image2 是风格参考图像
+- 适用于将一幅图像的风格应用到另一幅图像上
+
+---
+
+## IPA 风格迁移
+
+### POST /api/v1/generate/image2ipastyletransfer
+
+基于参考图像进行 IPA 风格迁移
+
+**请求体 (Image2IPAStyleTransferRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述 |
+| `width` | integer | 否 | 1024 | 图像宽度 |
+| `height` | integer | 否 | 768 | 图像高度 |
+| `image1` | string | 否 | "" | 风格参考图像 |
+| `image2` | string | 否 | "" | 参考图像1 |
+| `image3` | string | 否 | "" | 参考图像2 |
+
+**请求示例:**
+```json
+{
+  "prompt": "画面是1个男人参考(图2三视图)手指前方和他的龙，画面4k，高清",
+  "width": 1024,
+  "height": 768,
+  "image1": "style_reference.png",
+  "image2": "reference.png",
+}
+```
+
+**响应:** 返回风格迁移后的图像
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "ipastyletransfer_00001_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=ipastyletransfer_00001_.png",
+    "duration": 4.55
+}
+```
+
+**说明:**
+- 该端点使用 IPA (Instant Pose and Appearance) 技术进行风格迁移
+- 支持多个参考图像的融合
+- 适用于更精细的风格和姿态控制
+
+---
 
 ## 图像上传
 
@@ -192,6 +282,20 @@
 {
   "success": true,
   "filename": "uploaded_image.png"
+}
+```
+
+### POST /api/v1/generate/upload
+
+手动上传文件（流式接收，不会触发 Starlette 的 1MB 自动溢写）
+
+**请求体:**
+采用form-data形式或直接流式上传
+
+**响应示例:**
+```json
+{
+  "status": "success"
 }
 ```
 
@@ -265,7 +369,7 @@
 | `row` | integer | 否 | 2 | 网格行数 |
 | `column` | integer | 否 | 2 | 网格列数 |
 | `target_width` | integer | 否 | 1024 | 目标图像宽度 |
-| `target_height` | integer | 否 | 720 | 目标图像高度 |
+| `target_height` | integer | 否 | 768 | 目标图像高度 |
 | `image` | string | 是 | - | 要分割的图像（文件名） |
 
 **请求示例:**
@@ -274,7 +378,7 @@
   "row": 2,
   "column": 2,
   "target_width": 1024,
-  "target_height": 720,
+  "target_height": 768,
   "image": "input_image.png"
 }
 ```

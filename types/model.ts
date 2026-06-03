@@ -186,6 +186,7 @@ export interface ImageGenerateOptions {
   isVisualLanguage?: boolean;  // 是否为视觉语言推理
   systemPrompt?: string;       // 视觉语言的系统提示词
   isInpaint?: boolean;         // 是否为图像修复（Inpainting）
+  isIPAStyleTransfer?: boolean;  // 是否为 IPA 风格迁移
   isSpliteGrid?: boolean;      // 是否为图像分割网格
   spliteGridRow?: number;      // 网格行数（默认 2）
   spliteGridColumn?: number;   // 网格列数（默认 2）
