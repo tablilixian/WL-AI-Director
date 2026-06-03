@@ -57,7 +57,7 @@ const operationLabels: Record<string, string> = {
 
 const sourceRoleLabels: Record<string, string[]> = {
   'direct-style-transfer': ['目标图', '风格参考'],
-  'ipa-style-transfer': ['目标图', '风格参考', '参考图', '参考图'],
+  'ipa-style-transfer': ['风格参考', '内容参考1', '内容参考2'],
 };
 
 const getSourceLabel = (opType: string, index: number): string | null => {

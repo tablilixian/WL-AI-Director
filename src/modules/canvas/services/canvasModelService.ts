@@ -377,11 +377,13 @@ export class CanvasModelService {
   async ipaStyleTransfer(
     prompt: string,
     referenceImages: string[],
+    aspectRatio: AspectRatio = '16:9',
     onProgress?: (progress: number) => void,
   ): Promise<string> {
     console.log('=== IPA 风格迁移请求 (image2ipastyletransfer) ===');
     console.log('[提示词]', prompt);
     console.log('[参考图数量]', referenceImages.length);
+    console.log('[宽高比]', aspectRatio);
 
     onProgress?.(10);
 
@@ -392,6 +394,7 @@ export class CanvasModelService {
       const result = await callImageApi({
         prompt,
         referenceImages,
+        aspectRatio,
         isIPAStyleTransfer: true,
       }, undefined, traceId);
 
