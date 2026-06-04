@@ -95,6 +95,8 @@ export interface LayerData {
   operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint'; // 操作类型
   // 宫格生成数据（用于后续宫格拆分）
   gridData?: GridGenerationData;
+  // 生成信息
+  generationPrompt?: string; // 生成时使用的提示词，用于操作历史回溯
   // 关联信息（用于与主项目联动）
   linkedResourceId?: string; // 关联的角色/场景 ID
   linkedResourceType?: 'character' | 'scene' | 'keyframe'; // 关联的资源类型

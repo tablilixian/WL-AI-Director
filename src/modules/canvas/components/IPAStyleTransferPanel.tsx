@@ -88,6 +88,7 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
         sourceLayerId: styleLayer.id,
         sourceLayerIds: [styleLayer.id, ...selectedRefIds],
         operationType: 'ipa-style-transfer',
+        generationPrompt: prompt,
       });
 
       onClose();

@@ -12,6 +12,8 @@ const operationLabels: Record<string, string> = {
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
   'style-transfer': '风格迁移',
+  'direct-style-transfer': '直接风格迁移',
+  'ipa-style-transfer': 'IPA风格迁移',
   'background-replace': '背景替换',
   'expand': '图片扩展',
   'background-remove': '智能抠图',
@@ -26,6 +28,8 @@ const operationIcons: Record<string, string> = {
   'text-to-video': '🎬',
   'image-to-video': '📹',
   'style-transfer': '🎨',
+  'direct-style-transfer': '🎨',
+  'ipa-style-transfer': '✨',
   'background-replace': '🌅',
   'expand': '↔️',
   'background-remove': '✂️',
@@ -176,19 +180,26 @@ export const LayerDetailPanel: React.FC<LayerDetailPanelProps> = ({ onClose }) =
                 {operationHistory.map((item, index) => (
                   <div 
                     key={item.layer.id}
-                    className="flex items-center gap-2 p-2 bg-gray-700 rounded"
+                    className="p-2 bg-gray-700 rounded"
                   >
-                    <span className="text-lg">{operationIcons[item.operation]}</span>
-                    <div className="flex-1">
-                      <div className="text-sm text-white">{item.layer.title}</div>
-                      <div className="text-xs text-gray-400">
-                        {operationLabels[item.operation] || item.operation}
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg shrink-0">{operationIcons[item.operation]}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-white truncate">{item.layer.title}</div>
+                        <div className="text-xs text-gray-400">
+                          {operationLabels[item.operation] || item.operation}
+                        </div>
                       </div>
+                      {index < operationHistory.length - 1 && (
+                        <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      )}
                     </div>
-                    {index < operationHistory.length - 1 && (
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                      </svg>
+                    {item.layer.generationPrompt && (
+                      <div className="mt-1.5 text-[11px] text-gray-500 leading-relaxed line-clamp-2 pl-7">
+                        提示词: {item.layer.generationPrompt}
+                      </div>
                     )}
                   </div>
                 ))}
