@@ -119,24 +119,90 @@ export const CAMERA_MOVEMENT_GUIDES: Record<string, CameraMovementGuide> = {
   }
 };
 
+// 获取所有已知的 key 列表，用于 LLM 分类提示词
+const KNOWN_KEYS = Object.keys(CAMERA_MOVEMENT_GUIDES);
+
+// 内存缓存：cameraMovement → matchedKey
+const movementKeyCache = new Map<string, string>();
+
+/**
+ * 用 LLM 将任意镜头运动描述映射到预定义的 key
+ */
+async function mapToKnownMovement(
+  movement: string,
+  chatCompletion: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
+  model?: string
+): Promise<string | null> {
+  const classifierPrompt = `You are a camera movement classifier. Given a description, pick the SINGLE best match from the predefined list below. Return ONLY the matched key string, nothing else.
+
+Predefined list:
+${KNOWN_KEYS.map(k => `- ${k}`).join('\n')}
+
+Input: "${movement}"
+Output:`;
+
+  try {
+    const result = await chatCompletion(classifierPrompt, model, 0.3, 100);
+    const cleaned = result.trim().toLowerCase().replace(/[^a-z0-9\s'-]/g, '');
+    if (KNOWN_KEYS.includes(cleaned)) {
+      return cleaned;
+    }
+    // 模糊兜底：如果 LLM 返回的不完全匹配，做 string includes 再匹配一次
+    for (const key of KNOWN_KEYS) {
+      if (cleaned.includes(key) || key.includes(cleaned)) {
+        return key;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 根据镜头运动类型返回构图指导
+ * 先尝试字符串匹配（快速路径），失败后用 LLM 兜底（带缓存）
  */
-export const getCameraMovementCompositionGuide = (
+export const getCameraMovementCompositionGuide = async (
   cameraMovement: string,
-  frameType: 'start' | 'end'
-): string => {
+  frameType: 'start' | 'end',
+  chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
+  model?: string
+): Promise<string> => {
   const movement = cameraMovement.toLowerCase();
   
-  // 查找匹配的镜头运动类型
-  for (const [key, value] of Object.entries(CAMERA_MOVEMENT_GUIDES)) {
-    if (movement.includes(key) || key.includes(movement)) {
-      return frameType === 'start' ? value.start : value.end;
-    }
+  // 1. 快速路径：精确匹配（LLM 输出本身就是规范值时，零延迟）
+  const exactMatch = KNOWN_KEYS.find(k => movement === k);
+  if (exactMatch) {
+    console.log(`📐 [cameraGuide] 精确匹配 → "${exactMatch}" (${frameType})`);
+    const guide = CAMERA_MOVEMENT_GUIDES[exactMatch];
+    return frameType === 'start' ? guide.start : guide.end;
   }
-  
-  // 默认通用指导
-  return frameType === 'start' 
+
+  // 2. 检查缓存（之前用 LLM 映射过的变体名称）
+  if (movementKeyCache.has(movement)) {
+    const key = movementKeyCache.get(movement)!;
+    console.log(`📐 [cameraGuide] 缓存命中 → "${movement}" → "${key}" (${frameType})`);
+    const guide = CAMERA_MOVEMENT_GUIDES[key];
+    return frameType === 'start' ? guide.start : guide.end;
+  }
+
+  // 3. LLM 分类（仅在提供了 chatCompletion 时启用）
+  if (chatCompletion) {
+    console.log(`📐 [cameraGuide] 字符串未匹配，调用 LLM 分类 → "${movement}"`);
+    const matchedKey = await mapToKnownMovement(movement, chatCompletion, model);
+    if (matchedKey) {
+      movementKeyCache.set(movement, matchedKey);
+      console.log(`📐 [cameraGuide] LLM 映射 → "${movement}" → "${matchedKey}" (${frameType})`);
+      const guide = CAMERA_MOVEMENT_GUIDES[matchedKey];
+      return frameType === 'start' ? guide.start : guide.end;
+    }
+    console.warn(`📐 [cameraGuide] LLM 映射失败，回退通用指导`);
+  }
+
+  // 4. 最终兜底
+  console.log(`📐 [cameraGuide] 通用指导兜底 → "${movement}" (${frameType})`);
+  return frameType === 'start'
     ? 'Composition: Initial frame composition suited for the camera movement.'
     : 'Composition: Final frame composition showing the result of camera movement.';
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LayoutGrid, Sparkles, Loader2, AlertCircle, Edit2, Film, Video as VideoIcon } from 'lucide-react';
 import { ProjectState, Shot, Keyframe, AspectRatio, VideoDuration, NineGridPanel, NineGridData } from '../../types';
 import { logger, LogCategory } from '../../services/logger';
-import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId } from '../../services/aiService';
+import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId, chatCompletion } from '../../services/aiService';
 import { 
   getRefImagesForShot, 
   getPropsInfoForShot,
@@ -212,15 +212,16 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     
     // 根据开关选择是否使用AI增强
     let prompt: string;
+    const guideModel = getActiveChatModel()?.id || getDefaultChatModelId();
     if (useAIEnhancement) {
       try {
         prompt = await buildKeyframePromptWithAI(basePrompt, visualStyle, shot.cameraMovement, type, true, propsInfo);
       } catch (error) {
         logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-        prompt = buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo);
+        prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel);
       }
     } else {
-      prompt = buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo);
+      prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel);
     }
     
     try {
@@ -971,7 +972,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       }));
 
       const refResult = getRefImagesForShot(shot, project.scriptData);
-      const styleFramePrompt = buildKeyframePrompt(shot.actionSummary, visualStyle, shot.cameraMovement, 'start');
+      const styleFramePrompt = await buildKeyframePrompt(shot.actionSummary, visualStyle, shot.cameraMovement, 'start');
       const styleFrameUrl = await generateImage(
         styleFramePrompt,
         refResult.images,
@@ -1114,12 +1115,15 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     
     // 1. 构建首帧提示词（保留视角信息，方便后续重新生成）
     const shotPropsInfo = getPropsInfoForShot(activeShot, project.scriptData);
-    const prompt = buildPromptFromNineGridPanel(
+    const guideModel = getActiveChatModel()?.id || getDefaultChatModelId();
+    const prompt = await buildPromptFromNineGridPanel(
       panel,
       activeShot.actionSummary,
       visualStyle,
       activeShot.cameraMovement,
-      shotPropsInfo
+      shotPropsInfo,
+      chatCompletion,
+      guideModel
     );
     
     const existingKf = activeShot.keyframes?.find(k => k.type === 'start');

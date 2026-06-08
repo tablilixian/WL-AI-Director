@@ -102,17 +102,20 @@ export const getPropsInfoForShot = (shot: Shot, scriptData: ProjectState['script
  * 为起始帧和结束帧生成基础的视觉描述
  * @param propsInfo - 可选，镜头关联的道具信息列表
  */
-export const buildKeyframePrompt = (
+export const buildKeyframePrompt = async (
   basePrompt: string,
   visualStyle: string,
   cameraMovement: string,
   frameType: 'start' | 'end',
-  propsInfo?: { name: string; description: string; hasImage: boolean }[]
-): string => {
+  propsInfo?: { name: string; description: string; hasImage: boolean }[],
+  chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
+  model?: string
+): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   console.log('🎨 [buildKeyframePrompt] visualStyle key:', visualStyle, '→ resolved style:', stylePrompt.substring(0, 60));
-  // 仅记录镜头运动作为上下文，不附加模板构图指令（避免与场景描述冲突）
-  const compositionNote = `帧类型: ${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}`;
+  const cameraGuide = await getCameraMovementCompositionGuide(cameraMovement, frameType, chatCompletion, model);
+  const compositionNote = `帧类型: ${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}
+构图指导: ${cameraGuide}`;
 
   // 角色一致性要求
   const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
@@ -177,7 +180,7 @@ export const buildKeyframePromptWithAI = async (
 ): Promise<string> => {
   // 如果不需要AI增强,直接使用模板构建
   if (!enhanceWithAI) {
-    return buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
+    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
   }
   
   // 动态导入aiService以避免循环依赖
@@ -187,7 +190,7 @@ export const buildKeyframePromptWithAI = async (
     return enhanced;
   } catch (error) {
     logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-    return buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
+    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
   }
 };
 
@@ -444,13 +447,15 @@ export const replaceShotWithSubShots = (
  * @param cameraMovement - 原始镜头运动
  * @returns 构建好的首帧提示词
  */
-export const buildPromptFromNineGridPanel = (
+export const buildPromptFromNineGridPanel = async (
   panel: NineGridPanel,
   actionSummary: string,
   visualStyle: string,
   cameraMovement: string,
-  propsInfo?: { name: string; description: string; hasImage: boolean }[]
-): string => {
+  propsInfo?: { name: string; description: string; hasImage: boolean }[],
+  chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
+  model?: string
+): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   
   // 角色一致性要求
@@ -484,6 +489,8 @@ ${list}`);
     propConsistencyGuide = '\n\n' + sections.join('\n\n');
   }
 
+  const startGuide = await getCameraMovementCompositionGuide(cameraMovement, 'start', chatCompletion, model);
+
   return `${panel.description}
 
 【来源】九宫格分镜预览 - ${NINE_GRID.positionLabels[panel.index]}
@@ -495,7 +502,8 @@ ${list}`);
 ${stylePrompt}
 
 【构图】Composition
-${cameraMovement}
+帧类型: 起始帧，镜头运动: ${cameraMovement}
+构图指导: ${startGuide}
 
 ${characterConsistencyGuide}${propConsistencyGuide}`;
 };
