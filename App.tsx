@@ -475,7 +475,7 @@ function App() {
       case 'director':
         return <StageDirector project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
       case 'editor':
-        return <VideoEditor project={project} />;
+        return <VideoEditor key={project.id} project={project} />;
       case 'export':
         return <StageExport project={project} />;
       case 'prompts':

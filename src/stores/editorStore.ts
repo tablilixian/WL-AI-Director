@@ -31,7 +31,7 @@ import { clampTime } from '../utils/timeFormat';
 import { indexedDBService } from '../services/indexedDB';
 import { unifiedImageService } from '../../services/unifiedImageService';
 
-const PERSIST_KEY = 'video-editor-persist';
+const getPersistKey = (projectId: string) => `video-editor-persist-${projectId}`;
 
 // ============================================================
 // Store 接口
@@ -79,7 +79,7 @@ interface EditorStore extends EditorState {
   pushHistory: (description?: string) => void;
 
   save: () => Promise<void>;
-  load: () => Promise<boolean>;
+  load: (projectId?: string) => Promise<boolean>;
   clear: () => void;
   reset: () => Promise<void>;
 
@@ -546,22 +546,22 @@ export const useEditorStore = create<EditorStore>()(
       };
 
       try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
+        const key = getPersistKey(state.projectId || 'default');
+        localStorage.setItem(key, JSON.stringify(data));
       } catch (error) {
         console.error('[EditorStore] 保存失败:', error);
       }
     },
 
-    load: async () => {
-      const state = get();
-      const hasExistingClips = state.tracks.some(t => t.clips.length > 0);
-      if (hasExistingClips) {
-        return false;
-      }
+    load: async (projectId?: string) => {
+      const pid = projectId || get().projectId || 'default';
 
       try {
-        const saved = localStorage.getItem(PERSIST_KEY);
+        const saved = localStorage.getItem(getPersistKey(pid));
         if (!saved) {
+          if (projectId) {
+            set({ projectId });
+          }
           return false;
         }
 
@@ -599,7 +599,7 @@ export const useEditorStore = create<EditorStore>()(
         }, 0);
 
         set({
-          projectId: data.projectId || 'default',
+          projectId: data.projectId || pid,
           createdAt: data.createdAt || Date.now(),
           updatedAt: data.updatedAt || Date.now(),
           tracks: data.tracks,
@@ -647,7 +647,8 @@ export const useEditorStore = create<EditorStore>()(
       historyIndex = -1;
 
       try {
-        localStorage.removeItem(PERSIST_KEY);
+        const key = getPersistKey(get().projectId || 'default');
+        localStorage.removeItem(key);
       } catch (error) {
         console.error('[EditorStore] 清除 localStorage 失败:', error);
       }

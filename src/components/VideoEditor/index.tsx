@@ -14,6 +14,7 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { useTimelineSplit } from '../../hooks/useTimelineSplit';
 import { useHistoryCommands } from '../../hooks/useHistoryCommands';
 import { formatTime } from '../../utils/timeFormat';
+import { isTextClip } from '../../types/editor';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
 import { ExportDialog } from './ExportDialog';
@@ -48,6 +49,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     load,
     save,
     reset,
+    clear,
   } = useEditorStore();
 
   const { undo, redo, canUndo, canRedo } = useHistoryCommands();
@@ -133,8 +135,13 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     initializingRef.current = true;
 
     const init = async () => {
-      const hasSaved = await load();
+      clear();
+      const hasSaved = await load(project?.id);
       console.log('[VideoEditor] 加载状态:', hasSaved ? '已恢复' : '无保存状态');
+
+      if (!hasSaved && project?.id) {
+        useEditorStore.setState({ projectId: project.id });
+      }
 
       // Always ensure 3 default track types exist (video/audio/text)
       const tracksAfterLoad = useEditorStore.getState().tracks;
@@ -150,7 +157,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     };
 
     init();
-  }, [load, addTrack, initVersion]);
+  }, [load, addTrack, clear, project?.id, initVersion]);
 
   useEffect(() => {
     const hasClips = tracks.some(t => t.clips.length > 0);
@@ -458,7 +465,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
           </div>
         </div>
 
-        {editingClip && editingClip.type === 'text' && (
+        {editingClip && isTextClip(editingClip) && (
           <div className="w-80 overflow-y-auto border-l border-[var(--border-subtle)] bg-[var(--bg-base)]">
             <TextEditor
               clip={editingClip as any}

@@ -11,7 +11,6 @@ import {
   TRACK_HEADER_WIDTH,
 } from '../types/editor';
 import { clampTime } from '../utils/timeFormat';
-import { EditorTool } from '../types/editor';
 
 let idCounter = 0;
 function uniqueId(prefix: string): string {
