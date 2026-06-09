@@ -68,7 +68,7 @@ export function useProjectImporter() {
           fontWeight: 400,
           color: '#ffffff',
           x: 50,
-          y: 80,
+          y: 85,
           align: 'center',
           animation: 'fade',
         };

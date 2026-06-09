@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { AlignLeft, AlignCenter, AlignRight, Bold } from 'lucide-react';
-import { TextClip, TextAnimation } from '../../../types/editor';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AlignLeft, AlignCenter, AlignRight, Volume2, FileAudio, Loader2, Check, AlertCircle } from 'lucide-react';
+import { TextClip, TextAnimation, AudioClip } from '../../../types/editor';
+import { getTTSProvider, TTSVoice } from '../../../services/tts';
+import { useTimelineStore } from '../../../stores/timelineStore';
+import { indexedDBService } from '../../../services/indexedDB';
+import { nanoid } from 'nanoid';
 
 interface TextEditorProps {
   clip: TextClip;
@@ -28,6 +32,93 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   onUpdate,
   onClose,
 }) => {
+  const [voices, setVoices] = useState<TTSVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState('');
+  const [speaking, setSpeaking] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const provider = getTTSProvider();
+
+  useEffect(() => {
+    provider.getVoices().then(setVoices).catch(() => {});
+  }, [provider]);
+
+  const handleTextChange = useCallback((text: string) => {
+    if (clip.ttsStatus === 'done' && clip.text !== text) {
+      onUpdate({ text, ttsStatus: 'none', ttsAudioClipId: undefined });
+    } else {
+      onUpdate({ text });
+    }
+  }, [clip, onUpdate]);
+
+  const handleSpeak = useCallback(async () => {
+    if (!clip.text || speaking) return;
+    setSpeaking(true);
+    try {
+      await provider.speak(clip.text, selectedVoice || undefined);
+    } catch (e) {
+      console.warn('[TTS] 试听失败:', e);
+    } finally {
+      setSpeaking(false);
+    }
+  }, [clip.text, selectedVoice, speaking, provider]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!clip.text || generating) return;
+    setGenerating(true);
+    onUpdate({ ttsStatus: 'generating' });
+    try {
+      const blob = await provider.generate(clip.text, selectedVoice);
+
+      const sourceId = `audio-${nanoid()}`;
+      const audioFile = new File([blob], `${sourceId}.mp3`, { type: 'audio/mpeg' });
+      await indexedDBService.saveFile(sourceId, audioFile);
+
+      const url = URL.createObjectURL(blob);
+
+      const addClip = useTimelineStore.getState().addClip;
+      const tracks = useTimelineStore.getState().tracks;
+      const audioTrack = tracks.find(t => t.type === 'audio');
+      if (!audioTrack) {
+        throw new Error('未找到音频轨道');
+      }
+
+      const audioClip: AudioClip = {
+        id: `tts-${clip.id}-${Date.now()}`,
+        trackId: audioTrack.id,
+        sourceId,
+        sourceType: 'audio',
+        sourceUrl: url,
+        name: `${clip.text.slice(0, 20)}配音`,
+        startTime: clip.startTime,
+        duration: clip.duration,
+        inPoint: 0,
+        outPoint: clip.duration,
+        type: 'audio',
+        volume: 1,
+        speed: 1,
+        opacity: 1,
+        fadeIn: 0,
+        fadeOut: 100,
+      };
+
+      addClip(audioTrack.id, audioClip);
+
+      onUpdate({
+        ttsStatus: 'done',
+        ttsVoiceId: selectedVoice,
+        ttsVoiceName: voices.find(v => v.id === selectedVoice)?.name,
+        ttsAudioClipId: audioClip.id,
+      });
+    } catch (e: any) {
+      console.error('[TTS] 生成配音失败:', e);
+      onUpdate({ ttsStatus: 'error' });
+      alert(`配音生成失败: ${e.message}`);
+    } finally {
+      setGenerating(false);
+    }
+  }, [clip.text, clip.startTime, clip.duration, clip.id, selectedVoice, generating, voices, onUpdate]);
+
   return (
     <div className="bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -47,7 +138,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           <label className="block text-xs text-[var(--text-tertiary)] mb-1">文字内容</label>
           <textarea
             value={clip.text}
-            onChange={(e) => onUpdate({ text: e.target.value })}
+            onChange={(e) => handleTextChange(e.target.value)}
             className="w-full h-20 px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] resize-none"
             placeholder="输入字幕内容..."
           />
@@ -103,7 +194,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             <label className="block text-xs text-[var(--text-tertiary)] mb-1">背景</label>
             <input
               type="color"
-              value={clip.backgroundColor || '#000000'}
+              value={(clip.backgroundColor || '#000000').slice(0, 7)}
               onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
               className="w-full h-8 rounded cursor-pointer"
             />
@@ -168,6 +259,66 @@ export const TextEditor: React.FC<TextEditorProps> = ({
               <option key={a.value} value={a.value}>{a.label}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* ─── TTS 配音 ─── */}
+      <div className="border-t border-[var(--border-subtle)] pt-4 space-y-3">
+        <h4 className="text-xs font-medium text-[var(--text-primary)]">AI 配音</h4>
+
+        <div>
+          <label className="block text-xs text-[var(--text-tertiary)] mb-1">语音</label>
+          <select
+            value={selectedVoice}
+            onChange={(e) => setSelectedVoice(e.target.value)}
+            className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] focus:outline-none"
+          >
+            <option value="">选择语音...</option>
+            {voices.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSpeak}
+            disabled={!clip.text || !selectedVoice || speaking}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {speaking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Volume2 className="w-3.5 h-3.5" />}
+            试听
+          </button>
+
+          {provider.supportsGenerate && (
+            <button
+              onClick={handleGenerate}
+              disabled={!clip.text || !selectedVoice || generating}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded text-xs font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileAudio className="w-3.5 h-3.5" />}
+              生成配音
+            </button>
+          )}
+        </div>
+
+        {clip.ttsStatus && clip.ttsStatus !== 'none' && (
+          <div className="flex items-center gap-1.5 text-xs">
+            {clip.ttsStatus === 'generating' && (
+              <><Loader2 className="w-3 h-3 animate-spin text-[var(--text-muted)]" /><span className="text-[var(--text-muted)]">生成中...</span></>
+            )}
+            {clip.ttsStatus === 'done' && (
+              <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">配音已生成</span></>
+            )}
+            {clip.ttsStatus === 'error' && (
+              <><AlertCircle className="w-3 h-3 text-red-500" /><span className="text-red-500">生成失败</span></>
+            )}
+          </div>
+        )}
+
+        <div className="text-[10px] text-[var(--text-tertiary)]">
+          引擎: {provider.name}
+          {!provider.supportsGenerate && <span className="ml-1">（仅试听，不生成音频文件）</span>}
         </div>
       </div>
     </div>

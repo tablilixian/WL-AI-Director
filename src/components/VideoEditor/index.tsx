@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Scissors,
-  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson
+  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson, Sparkles
 } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useTimelineStore } from '../../stores/timelineStore';
@@ -17,6 +17,8 @@ import { formatTime } from '../../utils/timeFormat';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
 import { ExportDialog } from './ExportDialog';
+import { GenerateSubtitleDialog } from './GenerateSubtitleDialog';
+import { TextEditor } from './Preview/TextEditor';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -53,6 +55,42 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const initializingRef = useRef(false);
   const [initVersion, setInitVersion] = useState(0);
   const [showExport, setShowExport] = useState(false);
+  const [showSubtitleGen, setShowSubtitleGen] = useState(false);
+  const audioUnlockedRef = useRef(false);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
+  const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = previewWrapperRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width: cw, height: ch } = entry.contentRect;
+      const p = 4; // p-4 = 16px padding each side
+      const availW = Math.max(0, cw - p * 2);
+      const availH = Math.max(0, ch - p * 2);
+      const ratio = 16 / 9;
+      let w: number, h: number;
+      if (availW / availH > ratio) {
+        h = availH;
+        w = h * ratio;
+      } else {
+        w = availW;
+        h = w / ratio;
+      }
+      setPreviewSize({ width: Math.floor(w), height: Math.floor(h) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    ctx.resume().then(() => {
+      audioUnlockedRef.current = true;
+      console.log('[Audio] 已解锁');
+    }).catch(() => {});
+  }, []);
 
   // ── Sync editorStore → timelineStore + playbackStore ──
   // (import, init, load, usePlayback animation all write to editorStore)
@@ -146,6 +184,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
       if (e.code === 'Space') {
         e.preventDefault();
+        if (playState !== 'playing') unlockAudio();
         playState === 'playing' ? pause() : play();
         return;
       }
@@ -217,6 +256,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     console.log('[VideoEditor] 导出 JSON:', exportData);
   }, []);
 
+  const editingClipId = useTimelineStore(s => s.editingClipId);
+  const setEditingClipId = useTimelineStore(s => s.setEditingClipId);
+  const editingClip = tracks.flatMap(t => t.clips).find(c => c.id === editingClipId);
+
   const handleOpenExport = useCallback(() => {
     setShowExport(true);
   }, []);
@@ -251,7 +294,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
           </button>
 
           <button
-            onClick={() => playState === 'playing' ? pause() : play()}
+            onClick={() => {
+              if (playState !== 'playing') unlockAudio();
+              playState === 'playing' ? pause() : play();
+            }}
             className="p-2 rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
             title={playState === 'playing' ? '暂停' : '播放'}
           >
@@ -361,6 +407,15 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             <Redo2 className="w-4 h-4" />
           </button>
 
+          <button
+            onClick={() => setShowSubtitleGen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors"
+            title="AI 生成字幕"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            AI 字幕
+          </button>
+
           <div className="w-px h-5 bg-[var(--border-subtle)] mx-1" />
 
           <button
@@ -395,11 +450,25 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 bg-[var(--bg-secondary)]">
-            <PreviewCanvas />
+        <div className="flex-1 flex flex-col min-h-0">
+          <div ref={previewWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black overflow-hidden min-h-0">
+            {previewSize.width > 0 && (
+              <PreviewCanvas width={previewSize.width} height={previewSize.height} />
+            )}
           </div>
         </div>
+
+        {editingClip && editingClip.type === 'text' && (
+          <div className="w-80 overflow-y-auto border-l border-[var(--border-subtle)] bg-[var(--bg-base)]">
+            <TextEditor
+              clip={editingClip as any}
+              onUpdate={(updates) => {
+                useTimelineStore.getState().updateClip(editingClip.id, updates);
+              }}
+              onClose={() => setEditingClipId(null)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="h-80 border-t border-[var(--border-primary)]">
@@ -409,6 +478,12 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       <ExportDialog
         isOpen={showExport}
         onClose={() => setShowExport(false)}
+      />
+
+      <GenerateSubtitleDialog
+        isOpen={showSubtitleGen}
+        onClose={() => setShowSubtitleGen(false)}
+        shots={project?.shots}
       />
     </div>
   );

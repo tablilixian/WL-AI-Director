@@ -577,7 +577,7 @@ export const useEditorStore = create<EditorStore>()(
                 if (resolvedUrl) {
                   clip.sourceUrl = resolvedUrl;
                 }
-              } else if (source.type === 'local') {
+              } else if (source.type === 'local' || clip.sourceId.startsWith('audio-')) {
                 const file = await indexedDBService.getFile(clip.sourceId);
                 if (file) {
                   clip.sourceUrl = URL.createObjectURL(file);

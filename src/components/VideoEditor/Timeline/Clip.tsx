@@ -19,6 +19,7 @@ export const Clip: React.FC<{
 }> = ({ clip, track, height, zoom, isSelected }) => {
   const selectClip = useTimelineStore(s => s.selectClip);
   const removeClips = useTimelineStore(s => s.removeClips);
+  const setEditingClipId = useTimelineStore(s => s.setEditingClipId);
   const left = timeToPixels(clip.startTime, zoom);
   const width = Math.max(40, timeToPixels(clip.duration || 100, zoom));
 
@@ -71,6 +72,9 @@ export const Clip: React.FC<{
         if (!isDragging && !isTrimming) {
           selectClip(clip.id, e.shiftKey || e.metaKey);
         }
+      }}
+      onDoubleClick={() => {
+        if (track.type === 'text') setEditingClipId(clip.id);
       }}
       onPointerDown={isInteractive ? handleDragStart : undefined}
       onPointerMove={isInteractive ? handleDragMove : undefined}

@@ -30,7 +30,10 @@ interface TimelineStore {
   _batchDepth: number;
   _pendingEpochIncrement: boolean;
 
+  editingClipId: string | null;
+
   setActiveTool: (tool: EditorTool) => void;
+  setEditingClipId: (id: string | null) => void;
 
   addTrack: (type: TrackType, name?: string) => string;
   removeTrack: (trackId: string) => void;
@@ -73,8 +76,10 @@ export const useTimelineStore = create<TimelineStore>()(
     epoch: 0,
     _batchDepth: 0,
     _pendingEpochIncrement: false,
+    editingClipId: null,
 
     setActiveTool: (tool) => set({ activeTool: tool }),
+    setEditingClipId: (id) => set({ editingClipId: id }),
 
     withBatch: (fn) => {
       set((state) => ({ _batchDepth: state._batchDepth + 1 }));

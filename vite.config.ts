@@ -28,6 +28,12 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/bigmodel/, ''),
           },
+          // 本地 Edge-TTS 代理 (解决 CORS)
+          '/edge-tts': {
+            target: 'http://localhost:5050',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/edge-tts/, ''),
+          },
           // UCloud 视频下载代理 (解决 CORS)
           '/video-proxy': {
             target: 'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',

@@ -113,6 +113,19 @@ export interface TextClip extends Clip {
   align: 'left' | 'center' | 'right';
   /** 动画类型 */
   animation?: TextAnimation;
+
+  // ── TTS 配音 ──
+
+  /** 是否启用了 TTS 配音 */
+  ttsEnabled?: boolean;
+  /** 使用的 TTS 语音 ID */
+  ttsVoiceId?: string;
+  /** 使用的 TTS 语音名称（可读） */
+  ttsVoiceName?: string;
+  /** TTS 状态 */
+  ttsStatus?: 'none' | 'generating' | 'done' | 'error';
+  /** 生成的 AudioClip 的 id */
+  ttsAudioClipId?: string;
 }
 
 /** 文字动画类型 */

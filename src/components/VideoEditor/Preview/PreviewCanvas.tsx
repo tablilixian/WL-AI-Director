@@ -7,10 +7,14 @@ import { isTextClip, isAudioClip } from '../../../types/editor';
 
 interface PreviewCanvasProps {
   aspectRatio?: '16:9' | '9:16' | '4:3' | '1:1';
+  width?: number;
+  height?: number;
 }
 
 export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
   aspectRatio = '16:9',
+  width,
+  height,
 }) => {
   const { tracks, currentTime } = useEditorStore();
 
@@ -39,7 +43,7 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
   const hasContent = videoTracks.length > 0 || audioTracks.length > 0 || textTracks.length > 0;
 
   return (
-    <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: `${aspectRatioValue}` }}>
+    <div className="relative bg-black rounded-lg overflow-hidden" style={{ width: width || '100%', height: height || 'auto', aspectRatio: width && height ? undefined : `${aspectRatioValue}` }}>
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
         {!hasContent ? (
           <div className="text-center text-gray-500">

@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { AudioClip } from '../../../types/editor';
+import { useEditorStore } from '../../../stores/editorStore';
 
 interface AudioLayerProps {
   clip: AudioClip;
@@ -19,47 +20,56 @@ export const AudioLayer: React.FC<AudioLayerProps> = ({
   muted = false,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [isActive, setIsActive] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-
   const clipEnd = startTime + duration;
+  const isActive = currentTime >= startTime && currentTime < clipEnd;
+  const playState = useEditorStore(s => s.playState);
 
+  // ── 播放/暂停（playState + isActive 触发，确保用户手势链） ──
   useEffect(() => {
-    const active = currentTime >= startTime && currentTime < clipEnd;
-    setIsActive(active);
+    const el = audioRef.current;
+    if (!el) return;
 
-    if (audioRef.current) {
-      if (active && !muted) {
-        const localTime = currentTime - startTime + clip.inPoint / 1000;
-        if (Math.abs(audioRef.current.currentTime - localTime) > 0.1) {
-          audioRef.current.currentTime = localTime;
-        }
-        if (audioRef.current.paused) {
-          audioRef.current.play().catch(() => {});
-          setIsPlaying(true);
-        }
-      } else {
-        if (!audioRef.current.paused) {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        }
+    if (playState === 'playing' && isActive && !muted) {
+      const promise = el.play();
+      if (promise) {
+        promise.catch(e => console.warn(`[Audio] play() failed:`, e.message));
       }
+    } else if (!isActive || muted || playState !== 'playing') {
+      el.pause();
     }
-  }, [currentTime, startTime, duration, clip.inPoint, muted]);
+  }, [playState, isActive, muted]);
 
+  // ── 时间同步 ──
+  // 只在非播放状态（用户手动拖动）或播放中偏差极大时 seek，避免与音频自有时钟冲突
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !isActive || muted) return;
+    const localTime = (currentTime - startTime + clip.inPoint) / 1000;
+    if (playState !== 'playing') {
+      el.currentTime = localTime;
+    } else if (Math.abs(el.currentTime - localTime) > 0.5) {
+      el.currentTime = localTime;
+    }
+  }, [currentTime, startTime, clip.inPoint, isActive, muted, playState]);
+
+  // ── 音量 ──
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
 
+  // ── 静音 ──
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.muted = muted;
     }
   }, [muted]);
 
-  if (!clip.sourceUrl) return null;
+  if (!clip.sourceUrl) {
+    console.warn('[Audio] 无 sourceUrl，不渲染');
+    return null;
+  }
 
   return (
     <audio
