@@ -361,6 +361,9 @@ export function isAudioClip(clip: AnyClip): clip is AudioClip {
   return 'fadeIn' in clip && 'fadeOut' in clip;
 }
 
+/** 编辑器工具类型 */
+export type EditorTool = 'select' | 'trim' | 'split';
+
 /** 默认吸附配置 */
 export const DEFAULT_SNAP_CONFIG: SnapConfig = {
   enabled: true,

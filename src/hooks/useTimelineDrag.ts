@@ -1,13 +1,10 @@
-/**
- * 时间线拖拽 Hook
- * 处理片段的拖拽移动
- */
-
 import React, { useCallback, useState, useRef } from 'react';
-import { useEditorStore } from '../stores/editorStore';
+import { useTimelineStore } from '../stores/timelineStore';
+import { useHistoryStore } from '../stores/historyStore';
 import { useSnapCalculation, useSnapStore } from '../stores/snapStore';
 import { SnapPoint } from '../types/editor';
 import { pixelsToTime } from '../utils/timeCalculation';
+import { normalizeTrack } from '../lib/gapEngine';
 
 export function useTimelineDrag(clipId: string) {
   const [isDragging, setIsDragging] = useState(false);
@@ -17,7 +14,12 @@ export function useTimelineDrag(clipId: string) {
     trackId: '',
   });
 
-  const { zoom, tracks, moveClip, findClip, findTrackByClip, pushHistory } = useEditorStore();
+  const zoom = useTimelineStore(s => s.zoom);
+  const tracks = useTimelineStore(s => s.tracks);
+  const moveClip = useTimelineStore(s => s.moveClip);
+  const findClip = useTimelineStore(s => s.findClip);
+  const findTrackByClip = useTimelineStore(s => s.findTrackByClip);
+  const pushHistory = useHistoryStore(s => s.pushHistory);
   const { calculateClipSnap, getSnapPoints } = useSnapCalculation();
   const setActiveSnap = useSnapStore(s => s.setActiveSnap);
   const clearActiveSnap = useSnapStore(s => s.clearActiveSnap);
@@ -50,16 +52,14 @@ export function useTimelineDrag(clipId: string) {
     const deltaTime = pixelsToTime(deltaX, zoom);
     let newStartTime = dragState.current.startTime + deltaTime;
 
-    // 边界限制
     newStartTime = Math.max(0, newStartTime);
 
-    // 吸附处理：不过滤当前轨道，允许同轨道内片段互相吸附
     const clip = findClip(clipId);
     if (clip) {
       const snapPoints = getSnapPoints(clipId);
       const { finalTime, snapInfo: snap } = calculateClipSnap(newStartTime, clip.duration, snapPoints);
       newStartTime = finalTime;
-      
+
       if (snap?.snapped) {
         setActiveSnap({ snapped: true, snapTime: snap.snappedTime, snapPoint: snap.snapPoint });
       } else {
@@ -67,7 +67,6 @@ export function useTimelineDrag(clipId: string) {
       }
     }
 
-    // 实时更新位置
     moveClip(clipId, dragState.current.trackId, newStartTime);
   }, [isDragging, zoom, clipId, findClip, getSnapPoints, calculateClipSnap, moveClip, setActiveSnap, clearActiveSnap]);
 
@@ -77,7 +76,11 @@ export function useTimelineDrag(clipId: string) {
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     setIsDragging(false);
     clearActiveSnap();
-    pushHistory('移动片段');
+
+    normalizeTrack(dragState.current.trackId);
+
+    const { tracks: tlTracks } = useTimelineStore.getState();
+    pushHistory(tlTracks, '移动片段');
   }, [isDragging, pushHistory, clearActiveSnap]);
 
   return {

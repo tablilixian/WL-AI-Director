@@ -1,6 +1,15 @@
 /**
- * 视频编辑器 Zustand Store
- * 管理编辑器所有的状态和操作
+ * 视频编辑器 Zustand Store — 兼容层
+ *
+ * 保持与旧代码完全兼容的 API 签名。
+ * 内部实现独立维护状态，新 store (timelineStore, playbackStore, historyStore)
+ * 供 Phase 2+ 的新代码直接使用。
+ *
+ * ── 数据流 ──
+ * 旧代码 (所有现有 hooks / 组件)  →  editorStore (兼容层)
+ * 新代码 (Phase 2+ 的 gap engine 等) → timelineStore / playbackStore / historyStore
+ *
+ * 两者最终会通过公共类型定义保持数据模型一致。
  */
 
 import { create } from 'zustand';
@@ -11,11 +20,14 @@ import {
   TrackType,
   PlayState,
   EditorState,
+  EditorTool,
   HistoryEntry,
   DEFAULT_ZOOM,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  TRACK_HEADER_WIDTH,
 } from '../types/editor';
 import { clampTime } from '../utils/timeFormat';
-import { MIN_ZOOM, MAX_ZOOM, TRACK_HEADER_WIDTH } from '../types/editor';
 import { indexedDBService } from '../services/indexedDB';
 import { unifiedImageService } from '../../services/unifiedImageService';
 
@@ -25,27 +37,20 @@ const PERSIST_KEY = 'video-editor-persist';
 // Store 接口
 // ============================================================
 
-type EditorTool = 'select' | 'trim' | 'split';
-
 interface EditorStore extends EditorState {
-  // ---------- 工具 ----------
   activeTool: EditorTool;
   setActiveTool: (tool: EditorTool) => void;
 
-  // ---------- 历史记录 ----------
   canUndo: boolean;
   canRedo: boolean;
 
-  // ---------- 初始化 ----------
   initialize: (projectId: string, initialClips?: Partial<Clip>[]) => void;
 
-  // ---------- 轨道操作 ----------
   addTrack: (type: TrackType, name?: string) => string;
   removeTrack: (trackId: string) => void;
   updateTrack: (trackId: string, updates: Partial<Track>) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
 
-  // ---------- 片段操作 ----------
   addClip: (trackId: string, clip: Clip) => void;
   removeClips: (clipIds: string[]) => void;
   updateClip: (clipId: string, updates: Partial<Clip>) => void;
@@ -53,7 +58,6 @@ interface EditorStore extends EditorState {
   splitClip: (clipId: string, splitTime: number) => void;
   duplicateClip: (clipId: string) => void;
 
-  // ---------- 播放控制 ----------
   play: () => void;
   pause: () => void;
   stop: () => void;
@@ -62,28 +66,23 @@ interface EditorStore extends EditorState {
   toggleLoop: () => void;
   setDuration: (duration: number) => void;
 
-  // ---------- 选择 ----------
   selectClip: (clipId: string, multi?: boolean) => void;
   deselectAll: () => void;
   selectAll: () => void;
 
-  // ---------- 视图 ----------
   setZoom: (zoom: number) => void;
   setScrollPosition: (position: number) => void;
   scrollToTime: (time: number, viewportWidth?: number) => void;
 
-  // ---------- 历史 ----------
   undo: () => void;
   redo: () => void;
   pushHistory: (description?: string) => void;
 
-  // ---------- 持久化 ----------
   save: () => Promise<void>;
   load: () => Promise<boolean>;
   clear: () => void;
   reset: () => Promise<void>;
 
-  // ---------- 内部方法 ----------
   calculateDuration: () => number;
   findClip: (clipId: string) => Clip | undefined;
   findTrack: (trackId: string) => Track | undefined;
@@ -167,7 +166,6 @@ export const useEditorStore = create<EditorStore>()(
         },
       ];
 
-      // 添加初始片段到视频轨道
       if (initialClips.length > 0) {
         const videoTrack = tracks.find(t => t.type === 'video');
         if (videoTrack) {
@@ -189,7 +187,6 @@ export const useEditorStore = create<EditorStore>()(
         }
       }
 
-      // 重置历史记录
       history = [snapshotTracks(tracks, '初始化')];
       historyIndex = 0;
 
@@ -290,14 +287,12 @@ export const useEditorStore = create<EditorStore>()(
             if (clipEnd > maxEnd) maxEnd = clipEnd;
           }
         }
-        console.log('[EditorStore] addClip 计算', { newDuration: maxEnd, clipCount: newTracks.flatMap(t => t.clips).length });
         return {
           tracks: newTracks,
           duration: maxEnd,
           updatedAt: Date.now(),
         };
       });
-      console.log('[EditorStore] addClip 完成', { track: get().tracks.find(t => t.id === trackId)?.clips.length, duration: get().duration });
       get().pushHistory('添加片段');
     },
 
@@ -377,7 +372,6 @@ export const useEditorStore = create<EditorStore>()(
       const clipStart = clip.startTime;
       const clipEnd = clip.startTime + clip.duration;
 
-      // 检查分割点是否有效
       if (splitTime <= clipStart || splitTime >= clipEnd) return;
 
       const splitPosition = splitTime - clipStart;
@@ -445,7 +439,6 @@ export const useEditorStore = create<EditorStore>()(
 
     setPlaybackRate: (rate) => set({ playbackRate: rate }),
     toggleLoop: () => set(state => ({ loop: !state.loop })),
-
     setDuration: (duration) => set({ duration }),
 
     // ---------- 选择 ----------
@@ -515,14 +508,12 @@ export const useEditorStore = create<EditorStore>()(
       const tracks = get().tracks;
       const entry = snapshotTracks(tracks, description);
 
-      // 如果当前不在最新位置，删除后面的历史
       if (historyIndex < history.length - 1) {
         history = history.slice(0, historyIndex + 1);
       }
 
       history.push(entry);
 
-      // 限制历史长度
       if (history.length > MAX_HISTORY) {
         history.shift();
       } else {
@@ -539,7 +530,6 @@ export const useEditorStore = create<EditorStore>()(
     save: async () => {
       const state = get();
       const clipCount = state.tracks.reduce((sum, t) => sum + t.clips.length, 0);
-      console.log('[EditorStore] 开始保存，片段数:', clipCount);
 
       const data = {
         projectId: state.projectId || 'default',
@@ -557,7 +547,6 @@ export const useEditorStore = create<EditorStore>()(
 
       try {
         localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
-        console.log('[EditorStore] 已保存到 localStorage，数据大小:', JSON.stringify(data).length);
       } catch (error) {
         console.error('[EditorStore] 保存失败:', error);
       }
@@ -566,45 +555,33 @@ export const useEditorStore = create<EditorStore>()(
     load: async () => {
       const state = get();
       const hasExistingClips = state.tracks.some(t => t.clips.length > 0);
-      console.log('[EditorStore] load() 被调用，当前片段数:', state.tracks.reduce((sum, t) => sum + t.clips.length, 0));
       if (hasExistingClips) {
-        console.log('[EditorStore] 已有片段数据，跳过加载');
         return false;
       }
 
       try {
         const saved = localStorage.getItem(PERSIST_KEY);
         if (!saved) {
-          console.log('[EditorStore] localStorage 中没有保存的数据');
           return false;
         }
 
         const data = JSON.parse(saved);
-        console.log('[EditorStore] 找到保存的数据，轨道数:', data.tracks?.length);
-        
+
         for (const track of data.tracks) {
           for (const clip of track.clips) {
             if (clip.sourceId) {
               const source = unifiedImageService.parseUrl(clip.sourceId);
-              
+
               if (source.type === 'video') {
                 const resolvedUrl = await unifiedImageService.resolveForDisplay(clip.sourceId);
                 if (resolvedUrl) {
                   clip.sourceUrl = resolvedUrl;
-                  console.log('[EditorStore] 恢复本地视频 URL:', clip.sourceId);
-                } else {
-                  console.log('[EditorStore] 本地视频不存在:', clip.sourceId);
                 }
               } else if (source.type === 'local') {
                 const file = await indexedDBService.getFile(clip.sourceId);
                 if (file) {
                   clip.sourceUrl = URL.createObjectURL(file);
-                  console.log('[EditorStore] 恢复 blob URL:', clip.sourceId);
-                } else {
-                  console.log('[EditorStore] IndexedDB 中未找到文件:', clip.sourceId);
                 }
-              } else {
-                console.log('[EditorStore] 保留已有 sourceUrl:', clip.sourceId, clip.sourceUrl);
               }
             }
           }
@@ -636,7 +613,6 @@ export const useEditorStore = create<EditorStore>()(
           canRedo: false,
         });
 
-        console.log('[EditorStore] 从 localStorage 加载成功，片段数:', data.tracks.reduce((sum: number, t: Track) => sum + t.clips.length, 0));
         return true;
       } catch (error) {
         console.error('[EditorStore] 加载失败:', error);
@@ -669,16 +645,14 @@ export const useEditorStore = create<EditorStore>()(
       }
       history = [];
       historyIndex = -1;
-      
+
       try {
         localStorage.removeItem(PERSIST_KEY);
-        console.log('[EditorStore] 已清除 localStorage');
       } catch (error) {
         console.error('[EditorStore] 清除 localStorage 失败:', error);
       }
-      
+
       set({ ...initialState });
-      console.log('[EditorStore] 已重置编辑器状态');
     },
 
     // ---------- 内部方法 ----------

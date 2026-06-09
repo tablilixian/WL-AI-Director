@@ -1,11 +1,12 @@
 import React from 'react';
-import { Film, Music, Type, X } from 'lucide-react';
+import { Film, Music, Type, X, ChevronsLeftRight } from 'lucide-react';
 import { Clip as ClipType, Track as TrackType } from '../../../types/editor';
 import { timeToPixels } from '../../../utils/timeCalculation';
 import { formatTime } from '../../../utils/timeFormat';
-import { useEditorStore } from '../../../stores/editorStore';
+import { useTimelineStore } from '../../../stores/timelineStore';
 import { useTimelineDrag } from '../../../hooks/useTimelineDrag';
 import { useTimelineTrim } from '../../../hooks/useTimelineTrim';
+import { removeClipWithRipple } from '../../../lib/gapEngine';
 
 const TRIM_HANDLE_WIDTH = 6;
 
@@ -16,8 +17,8 @@ export const Clip: React.FC<{
   zoom: number;
   isSelected: boolean;
 }> = ({ clip, track, height, zoom, isSelected }) => {
-  const selectClip = useEditorStore(s => s.selectClip);
-  const removeClips = useEditorStore(s => s.removeClips);
+  const selectClip = useTimelineStore(s => s.selectClip);
+  const removeClips = useTimelineStore(s => s.removeClips);
   const left = timeToPixels(clip.startTime, zoom);
   const width = Math.max(40, timeToPixels(clip.duration || 100, zoom));
 
@@ -55,6 +56,11 @@ export const Clip: React.FC<{
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     removeClips([clip.id]);
+  };
+
+  const handleRippleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeClipWithRipple(clip.id);
   };
 
   return (
@@ -100,15 +106,24 @@ export const Clip: React.FC<{
         </div>
       </div>
 
-      {/* 删除按钮 */}
+      {/* 删除按钮组 */}
       {isSelected && !track.locked && width > 80 && (
-        <button
-          onClick={handleDelete}
-          className="absolute top-1 right-1 p-0.5 rounded bg-black/40 hover:bg-black/60 text-white/80 hover:text-white transition-colors pointer-events-auto z-20"
-          title="删除片段"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="absolute top-1 right-1 flex gap-0.5 z-20">
+          <button
+            onClick={handleDelete}
+            className="p-0.5 rounded bg-black/40 hover:bg-black/60 text-white/80 hover:text-white transition-colors pointer-events-auto"
+            title="删除片段（留空）"
+          >
+            <X className="w-3 h-3" />
+          </button>
+          <button
+            onClick={handleRippleDelete}
+            className="p-0.5 rounded bg-black/40 hover:bg-amber-600/60 text-white/80 hover:text-white transition-colors pointer-events-auto"
+            title="删除片段并闭合间隙"
+          >
+            <ChevronsLeftRight className="w-3 h-3" />
+          </button>
+        </div>
       )}
 
       {/* 右侧裁剪手柄 */}

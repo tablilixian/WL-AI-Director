@@ -6,7 +6,7 @@
 import React from 'react';
 import { Lock, Unlock, Eye, EyeOff, Film, Music, Type, GripVertical } from 'lucide-react';
 import { Track } from '../../../types/editor';
-import { useEditorStore } from '../../../stores/editorStore';
+import { useTimelineStore } from '../../../stores/timelineStore';
 
 interface TrackHeaderProps {
   track: Track;
@@ -14,7 +14,7 @@ interface TrackHeaderProps {
 }
 
 export const TrackHeader: React.FC<TrackHeaderProps> = ({ track, height }) => {
-  const { updateTrack } = useEditorStore();
+  const updateTrack = useTimelineStore(s => s.updateTrack);
 
   const toggleLock = () => {
     updateTrack(track.id, { locked: !track.locked });

@@ -3,8 +3,10 @@
  * 渲染多轨时间线，支持滚动和缩放
  */
 
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect } from 'react';
 import { useEditorStore } from '../../../stores/editorStore';
+import { useTimelineStore } from '../../../stores/timelineStore';
+import { usePlaybackStore } from '../../../stores/playbackStore';
 import { useSnapStore } from '../../../stores/snapStore';
 import { TRACK_HEIGHT, TRACK_HEADER_WIDTH, DEFAULT_ZOOM } from '../../../types/editor';
 import { timeToPixels, pixelsToTime, calculateTimelineWidth } from '../../../utils/timeCalculation';
@@ -33,20 +35,37 @@ export const Timeline: React.FC<TimelineProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const {
-    tracks,
-    currentTime,
-    duration,
-    zoom,
-    scrollPosition,
-    playState,
-    selectedClipIds,
-    seek,
-    setZoom,
-    setScrollPosition,
-  } = useEditorStore();
+  const tracks = useTimelineStore(s => s.tracks);
+  const zoom = useTimelineStore(s => s.zoom);
+  const scrollPosition = useTimelineStore(s => s.scrollPosition);
+  const selectedClipIds = useTimelineStore(s => s.selectedClipIds);
+  const setZoom = useTimelineStore(s => s.setZoom);
+  const setScrollPosition = useTimelineStore(s => s.setScrollPosition);
+
+  const currentTime = usePlaybackStore(s => s.currentTime);
+  const duration = usePlaybackStore(s => s.duration);
+  const playState = usePlaybackStore(s => s.playState);
+  const seek = usePlaybackStore(s => s.seek);
 
   const activeSnap = useSnapStore(s => s.activeSnap);
+
+  // Sync timelineStore → editorStore for backward compat (auto-save, export)
+  const timelineTrackHashRef = useRef('');
+  useEffect(() => {
+    const hash = JSON.stringify(tracks);
+    if (hash === timelineTrackHashRef.current) return;
+    timelineTrackHashRef.current = hash;
+    useEditorStore.setState({ tracks: JSON.parse(JSON.stringify(tracks)), updatedAt: Date.now() });
+  }, [tracks]);
+
+  const prevPbRef = useRef({ currentTime, duration });
+  useEffect(() => {
+    const prev = prevPbRef.current;
+    if (currentTime !== prev.currentTime || duration !== prev.duration) {
+      prevPbRef.current = { currentTime, duration };
+      useEditorStore.setState({ currentTime, duration });
+    }
+  }, [currentTime, duration]);
 
   // 计算时间线总宽度
   const totalWidth = useMemo(() => {

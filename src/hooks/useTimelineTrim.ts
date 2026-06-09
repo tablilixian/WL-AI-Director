@@ -1,11 +1,7 @@
-/**
- * 时间线裁剪 Hook
- * 处理片段边缘的裁剪操作
- */
-
 import React, { useCallback, useState, useRef } from 'react';
-import { useEditorStore } from '../stores/editorStore';
-import { pixelsToTime, timeToPixels } from '../utils/timeCalculation';
+import { useTimelineStore } from '../stores/timelineStore';
+import { useHistoryStore } from '../stores/historyStore';
+import { pixelsToTime } from '../utils/timeCalculation';
 
 export function useTimelineTrim(clipId: string) {
   const [isTrimming, setIsTrimming] = useState<'start' | 'end' | null>(null);
@@ -17,7 +13,11 @@ export function useTimelineTrim(clipId: string) {
     originalOutPoint: 0,
   });
 
-  const { zoom, updateClip, findClip, findTrackByClip, pushHistory } = useEditorStore();
+  const zoom = useTimelineStore(s => s.zoom);
+  const updateClip = useTimelineStore(s => s.updateClip);
+  const findClip = useTimelineStore(s => s.findClip);
+  const findTrackByClip = useTimelineStore(s => s.findTrackByClip);
+  const pushHistory = useHistoryStore(s => s.pushHistory);
 
   const handleTrimStart = useCallback((e: React.PointerEvent) => {
     const clip = findClip(clipId);
@@ -69,15 +69,13 @@ export function useTimelineTrim(clipId: string) {
     const deltaX = e.clientX - trimState.current.startX;
     const deltaTime = pixelsToTime(deltaX, zoom);
 
-    const minDuration = 100; // 最小片段时长 100ms
+    const minDuration = 100;
 
     if (isTrimming === 'start') {
-      // 左侧裁剪：调整起始时间和入点
       let newStartTime = trimState.current.originalStartTime + deltaTime;
       let newDuration = trimState.current.originalDuration - deltaTime;
       let newInPoint = trimState.current.originalInPoint + deltaTime;
 
-      // 边界检查
       if (newDuration < minDuration) {
         const adjustment = minDuration - newDuration;
         newStartTime -= adjustment;
@@ -91,7 +89,6 @@ export function useTimelineTrim(clipId: string) {
         newInPoint -= adjustment;
       }
 
-      // 确保不裁剪超出素材范围
       if (newInPoint < 0) return;
 
       updateClip(clipId, {
@@ -100,17 +97,14 @@ export function useTimelineTrim(clipId: string) {
         inPoint: Math.max(0, newInPoint),
       });
     } else if (isTrimming === 'end') {
-      // 右侧裁剪：调整时长和出点
       let newDuration = trimState.current.originalDuration + deltaTime;
       let newOutPoint = trimState.current.originalOutPoint + deltaTime;
 
-      // 边界检查
       if (newDuration < minDuration) {
         newDuration = minDuration;
         newOutPoint = trimState.current.originalInPoint + minDuration;
       }
 
-      // 确保不裁剪超出素材范围
       if (newOutPoint > trimState.current.originalOutPoint + (trimState.current.originalDuration - minDuration) + 10000) return;
 
       updateClip(clipId, {
@@ -125,7 +119,9 @@ export function useTimelineTrim(clipId: string) {
 
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     setIsTrimming(null);
-    pushHistory('裁剪片段');
+
+    const { tracks } = useTimelineStore.getState();
+    pushHistory(tracks, '裁剪片段');
   }, [isTrimming, pushHistory]);
 
   return {

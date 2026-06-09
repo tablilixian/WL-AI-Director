@@ -24,7 +24,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
   onImport,
   project,
 }) => {
-  const { tracks, addTrack, addClip, clear, save } = useEditorStore();
+  const { tracks, addClip, clear, save } = useEditorStore();
   const [showPanel, setShowPanel] = useState(false);
   const [importing, setImporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'file' | 'project'>('file');
@@ -50,14 +50,9 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
     });
   };
 
-  const getOrCreateTrack = useCallback((type: 'video' | 'audio' | 'text', name: string) => {
-    let track = tracks.find(t => t.type === type);
-    if (!track) {
-      const trackId = addTrack(type, name);
-      track = useEditorStore.getState().tracks.find(t => t.id === trackId);
-    }
-    return track;
-  }, [tracks, addTrack]);
+  const findTrackByType = useCallback((type: 'video' | 'audio' | 'text') => {
+    return tracks.find(t => t.type === type) || null;
+  }, [tracks]);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -72,7 +67,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const trackType = type === 'audio' ? 'audio' : 'video';
       const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
-      const track = getOrCreateTrack(trackType, trackName);
+      const track = findTrackByType(trackType);
       if (!track) continue;
 
       const duration = await getMediaDuration(url, file.type);
@@ -109,7 +104,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [getOrCreateTrack, addClip, save]);
+  }, [findTrackByType, addClip, save]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -130,7 +125,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
       const trackType = type === 'audio' ? 'audio' : 'video';
       const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
-      const track = getOrCreateTrack(trackType, trackName);
+      const track = findTrackByType(trackType);
       if (!track) continue;
 
       const duration = await getMediaDuration(url, file.type);
@@ -164,7 +159,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
     await save();
     setImporting(false);
-  }, [getOrCreateTrack, addClip, save]);
+  }, [findTrackByType, addClip, save]);
 
   const handleClearAll = async () => {
     clear();
@@ -176,8 +171,9 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
 
     setImporting(true);
 
-    const videoTrack = getOrCreateTrack('video', '视频轨道');
+    const videoTrack = findTrackByType('video');
     if (!videoTrack) {
+      console.warn('[ImportMedia] 未找到视频轨道，跳过导入');
       setImporting(false);
       return;
     }
@@ -210,7 +206,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
     await save();
     setImporting(false);
     setShowPanel(false);
-  }, [getOrCreateTrack, addClip, save]);
+  }, [findTrackByType, addClip, save]);
 
   const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
 
