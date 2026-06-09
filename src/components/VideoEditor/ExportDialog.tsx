@@ -2,8 +2,10 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { X, Loader2, Check, AlertCircle, Download } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { isAudioClip } from '../../types/editor';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
+import { FFmpegWorker } from '../../lib/ffmpegWorker';
+
+const FFMPEG_LOAD_TIMEOUT = 60_000;
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -12,7 +14,7 @@ interface ExportDialogProps {
 
 type Stage = 'rendering' | 'transcoding' | 'done' | 'error';
 
-const FFMPEG_CORE_URL = '/ffmpeg';
+const FFMPEG_LOCAL = '/ffmpeg';
 
 function formatDuration(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -262,11 +264,14 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       if (cancelRef.current) return;
 
       const webmBlob = new Blob(chunks, { type: mimeType });
+      console.log('[Export] WebM 生成完成, 大小:', webmBlob.size, 'bytes');
       setStage('transcoding');
       setProgress(65);
 
       // Transcode to MP4 via ffmpeg.wasm
-      transcodeToMp4(webmBlob, (p) => {
+      console.log('[Export] 开始调用 transcodeToMp4');
+      transcodeToMp4(webmBlob, dur, (p) => {
+        console.log('[Export] transcodeToMp4 进度回调:', (p * 100).toFixed(1) + '%');
         if (!cancelRef.current) setProgress(65 + p * 30);
       }).then(mp4Blob => {
         if (cancelRef.current) return;
@@ -382,7 +387,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
             <div className="text-xs text-[var(--text-muted)] text-right">{progressPct}%</div>
             {progress < 68 && (
               <div className="text-[10px] text-[var(--text-tertiary)] text-center">
-                首次需下载约 30MB 转换引擎，请稍候
+                正在加载转换引擎...
               </div>
             )}
           </div>
@@ -429,31 +434,73 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
 
 async function transcodeToMp4(
   webmBlob: Blob,
+  totalDurationMs: number,
   onProgress?: (pct: number) => void,
 ): Promise<Blob> {
-  const ffmpeg = new FFmpeg();
+  console.log('[ffmpeg] 开始转码');
+  const ffmpeg = new FFmpegWorker();
 
-  // Load ffmpeg WASM (first time ~30MB download)
+  console.log('[ffmpeg] 开始加载 ffmpeg WASM...');
   onProgress?.(0);
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${FFMPEG_CORE_URL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${FFMPEG_CORE_URL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      console.error('[ffmpeg] load timed out after 60s');
+    }, FFMPEG_LOAD_TIMEOUT);
+    try {
+      await ffmpeg.load({
+        coreURL: `${FFMPEG_LOCAL}/ffmpeg-core-umd.js`,
+        wasmURL: `${FFMPEG_LOCAL}/ffmpeg-core.wasm`,
+      }, controller.signal);
+      console.log('[ffmpeg] WASM 加载完成');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (e) {
+    console.error('[ffmpeg] WASM 加载失败:', e);
+    throw e;
+  }
 
-  // Write input
+  console.log('[ffmpeg] 开始写入输入文件...');
   onProgress?.(0.1);
-  await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+  try {
+    const data = await fetchFile(webmBlob);
+    await ffmpeg.writeFile('input.webm', data as Uint8Array);
+    console.log('[ffmpeg] 输入文件写入完成');
+  } catch (e) {
+    console.error('[ffmpeg] 写入输入文件失败:', e);
+    throw e;
+  }
 
-  // Start transcoding
-  ffmpeg.on('progress', ({ progress }) => {
-    onProgress?.(0.1 + progress * 0.85);
+  console.log('[ffmpeg] 开始转码命令...');
+  ffmpeg.onProgress((p) => {
+    console.log('[ffmpeg] 转码进度原始数据:', JSON.stringify(p));
+    const totalUsec = totalDurationMs * 1000;
+    const elapsed = typeof p.time === 'number' ? p.time : 0;
+    const ratio = totalUsec > 0 ? elapsed / totalUsec : 0;
+    const clamped = Math.min(1, Math.max(0, ratio));
+    onProgress?.(0.1 + clamped * 0.85);
   });
-  await ffmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-y', 'output.mp4']);
+  try {
+    await ffmpeg.exec('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-y', 'output.mp4');
+    console.log('[ffmpeg] 转码命令完成');
+  } catch (e) {
+    console.error('[ffmpeg] 转码失败:', e);
+    throw e;
+  }
 
+  console.log('[ffmpeg] 开始读取输出文件...');
   onProgress?.(0.95);
-  const data = await ffmpeg.readFile('output.mp4');
-  onProgress?.(1);
-  return new Blob([data], { type: 'video/mp4' });
+  try {
+    const data = await ffmpeg.readFile('output.mp4');
+    console.log('[ffmpeg] 读取完成, 大小:', (data as any).length || 'unknown');
+    onProgress?.(1);
+    return new Blob([data], { type: 'video/mp4' });
+  } catch (e) {
+    console.error('[ffmpeg] 读取输出文件失败:', e);
+    throw e;
+  }
 }
 
 async function downloadFile(blob: Blob, name: string) {
