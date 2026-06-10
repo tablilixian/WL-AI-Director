@@ -8,7 +8,7 @@ interface IPAStyleTransferPanelProps {
   onClose: () => void;
 }
 
-const HINT = '画面是1个男人参考(图2三视图)手指前方和他的龙，画面4k，高清';
+const HINT = '画面是1个男人参考(图1三视图)手指前方和他的龙，画面4k，高清';
 
 const aspectRatios: { value: AspectRatio; label: string }[] = [
   { value: '16:9', label: '16:9 横屏' },
@@ -22,6 +22,7 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [enhance, setEnhance] = useState(false);
   const { layers, addLayer } = useCanvasStore();
 
   const styleLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
@@ -33,7 +34,7 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
 
   const toggleRef = (id: string) => {
     setSelectedRefIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : prev.length >= 2 ? prev : [...prev, id]
+      prev.includes(id) ? prev.filter(i => i !== id) : prev.length >= 3 ? prev : [...prev, id]
     );
   };
 
@@ -43,10 +44,10 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
     setIsProcessing(true);
     setProgress(0);
 
-    const refImages = [styleLayer.src, ...selectedRefIds.map(id => {
+    const refImages = selectedRefIds.map(id => {
       const l = layers.find(ly => ly.id === id);
       return l?.src || '';
-    }).filter(Boolean)];
+    }).filter(Boolean);
 
     try {
       const resultUrl = await canvasModelService.ipaStyleTransfer(
@@ -54,6 +55,8 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
         refImages,
         aspectRatio,
         (p) => setProgress(p),
+        styleLayer.src,
+        enhance,
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -125,16 +128,16 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
         </div>
 
         <p className="text-xs text-[var(--text-muted)] mb-4 leading-relaxed">
-          基于多张参考图生成新图像。选中图片作为<strong className="text-amber-400">风格参考（图1）</strong>，
-          再选 1~2 张作为<strong className="text-blue-400">内容参考（图2/图3）</strong>。
-          在提示词中用「图2」「图3」引用各参考图。
+          选中图片作为<strong className="text-purple-400">风格参考（ref_image）</strong>，
+          再选 1~3 张作为<strong className="text-blue-400">内容参考（图1/图2/图3）</strong>。
+          在提示词中用「图1」「图2」「图3」引用各参考图。
         </p>
 
         <div className="space-y-5">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-[var(--text-primary)]">场景描述</span>
-              <span className="text-[10px] text-[var(--text-muted)]">在提示词中引用「图2」「图3」指定参考图</span>
+              <span className="text-[10px] text-[var(--text-muted)]">在提示词中引用「图1」「图2」「图3」指定参考图</span>
             </div>
             <textarea
               value={prompt}
@@ -144,19 +147,19 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
             />
           </div>
 
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-amber-500/20">
+          <div className="bg-gray-800/50 rounded-lg p-4 border border-purple-500/20">
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400">image1</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">ref_image</span>
               <span className="text-sm font-medium text-[var(--text-primary)]">风格参考图</span>
               <span className="text-[10px] text-[var(--text-muted)]">— 色彩、纹理、整体风格走向</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-amber-500/30 shrink-0">
+              <div className="w-16 h-16 rounded-lg overflow-hidden border border-purple-500/30 shrink-0">
                 <img src={styleLayer?.src} alt={styleLayer?.title} className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">{styleLayer?.title}</p>
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">此图作为风格依据，提示词中引用为「图1」</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">此图作为风格依据</p>
               </div>
             </div>
           </div>
@@ -164,22 +167,23 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">image2</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">image3</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">图1</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">图2</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400">图3</span>
                 <span className="text-sm font-medium text-[var(--text-primary)]">内容参考图</span>
                 <span className="text-[10px] text-[var(--text-muted)]">— 构图、姿态、角色细节</span>
               </div>
-              <span className="text-[10px] text-[var(--text-muted)]">已选 {selectedRefIds.length}/2</span>
+              <span className="text-[10px] text-[var(--text-muted)]">已选 {selectedRefIds.length}/3</span>
             </div>
             {imageLayers.length === 0 ? (
               <p className="text-xs text-yellow-400 bg-gray-800/50 rounded-lg px-3 py-2">画布上没有其他可用图片作为内容参考。</p>
             ) : (
               <div className="grid grid-cols-6 gap-2">
-                {imageLayers.map((l, idx) => {
+                {imageLayers.map((l) => {
                   const selIndex = selectedRefIds.indexOf(l.id);
                   const isSelected = selIndex !== -1;
-                  const tagLabel = selIndex === 0 ? 'image2' : 'image3';
-                  const tagColor = selIndex === 0 ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+                  const tagLabels = ['图1', '图2', '图3'];
+                  const tagColors = ['bg-blue-500/20 text-blue-400 border-blue-500/40', 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40', 'bg-orange-500/20 text-orange-400 border-orange-500/40'];
                   return (
                     <button
                       key={l.id}
@@ -193,13 +197,10 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
                     >
                       <img src={l.src} alt={l.title} className="w-full h-full object-cover" />
                       {isSelected && (
-                        <span className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${tagColor}`}>
-                          {tagLabel}
+                        <span className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${tagColors[selIndex]}`}>
+                          {tagLabels[selIndex]}
                         </span>
                       )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[9px] text-white truncate px-1 py-0.5 text-center">
-                        图{idx + 2}
-                      </div>
                     </button>
                   );
                 })}
@@ -227,6 +228,17 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
               ))}
             </div>
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={enhance}
+              onChange={e => setEnhance(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-500 bg-gray-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
+            />
+            <span className="text-sm text-[var(--text-primary)]">增强风格迁移效果</span>
+            <span className="text-[10px] text-[var(--text-muted)]">— 开启后风格迁移强度更高</span>
+          </label>
         </div>
 
         {isProcessing ? (
@@ -249,7 +261,7 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
                 : 'bg-gray-700 text-gray-400 cursor-not-allowed'
             }`}
           >
-            开始生成 {selectedRefIds.length > 0 ? `(图1 + 图${selectedRefIds.map((_, i) => i + 2).join(' + 图')})` : ''}
+            开始生成 {selectedRefIds.length > 0 ? `(ref + 图${selectedRefIds.map((_, i) => i + 1).join(' + 图')})` : ''}
           </button>
         )}
 

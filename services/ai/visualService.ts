@@ -1051,6 +1051,59 @@ export const generateIPAStyleTransferImage = async (
 };
 
 /**
+ * 动漫风格图像生成
+ * 调用 Drama Backend txt2imageanime API，生成动漫风格图像
+ * 返回生成的图片 local: 引用
+ */
+export const generateAnimeImage = async (
+  prompt: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎨 generateAnimeImage 调用 - 动漫风格生成`);
+    logger.debug(LogCategory.AI, `📝 提示词: ${prompt}`);
+
+    const localUrl = await callImageApi({
+      prompt,
+      isAnime: true,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'anime-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 动漫风格生成完成: ${localUrl}`);
+    return localUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'anime-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`动漫风格生成失败: ${error.message}`);
+  }
+};
+
+/**
  * 视觉语言模型推理
  * 调用 Drama Backend image2vl API，基于图像和文本进行视觉语言推理
  */

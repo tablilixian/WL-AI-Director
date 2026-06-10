@@ -192,6 +192,9 @@ export interface ImageGenerateOptions {
   spliteGridColumn?: number;   // 网格列数（默认 2）
   spliteGridTargetWidth?: number;  // 目标图像宽度（默认 1024）
   spliteGridTargetHeight?: number; // 目标图像高度（默认 720）
+  isAnime?: boolean;           // 是否为动漫风格生成（txt2imageanime）
+  refImage?: string;           // IPA 风格迁移参考图像
+  enhance?: boolean;           // 是否增强 IPA 风格迁移效果
 }
 
 /**

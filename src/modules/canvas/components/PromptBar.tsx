@@ -53,6 +53,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [mode, setMode] = useState<Mode>('generate');
+  const [isAnime, setIsAnime] = useState(false);
   const { layers, addLayer, updateLayer, suggestedPrompt, setSuggestedPrompt } = useCanvasStore();
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
         const imageUrl = await canvasModelService.generateImage({
           prompt,
           aspectRatio: '16:9',
+          isAnime,
           onProgress: (p) => {
             updateLayer(placeholderId, { progress: p });
           }
@@ -372,6 +374,19 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
               图生视频
             </button>
           </div>
+          {mode === 'generate' && (
+            <button
+              onClick={() => setIsAnime(!isAnime)}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                isAnime
+                  ? 'bg-pink-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              title="使用动漫风格模型生成图像"
+            >
+              {isAnime ? '🎨 动漫' : '🎨 写实'}
+            </button>
+          )}
           {(mode === 'edit' || mode === 'video-edit') && selectedLayer && (
             <span className="text-xs text-gray-400">
               参考: {selectedLayer.title}

@@ -17,6 +17,7 @@
 - [图像修复](#图像修复)
 - [视觉语言模型](#视觉语言模型)
 - [视频生成](#视频生成)
+- [错误响应](#错误响应)
 
 ---
 
@@ -83,6 +84,44 @@
     "full_url": "http://117.50.108.73:8082/view?filename=z-image_00039_.png",
     "duration": 3.63
 }
+```
+
+### POST /api/v1/generate/txt2imageanime
+
+生成动漫风格图像
+
+**请求体 (Text2ImageRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
+| `width` | integer | 否 | 1024 | 图像宽度 |
+| `height` | integer | 否 | 768 | 图像高度 |
+
+**请求示例:**
+```json
+{
+  "prompt": "An anime girl with long pink hair in a cherry blossom garden",
+  "width": 1024,
+  "height": 768
+}
+```
+
+**响应:** 返回生成的动漫风格图像数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "anime_image_00001_.png",
+    "full_url": "http://117.50.108.73:8082/view?filename=anime_image_00001_.png",
+    "duration": 4.20
+}
+```
+
+**说明:**
+- 使用动漫风格模型生成图像
+- 适用于生成日式动漫风格的角色和场景
 
 ### POST /api/v1/generate/image2image
 
@@ -230,9 +269,11 @@
 | `prompt` | string | 是 | - | 场景描述 |
 | `width` | integer | 否 | 1024 | 图像宽度 |
 | `height` | integer | 否 | 768 | 图像高度 |
-| `image1` | string | 否 | "" | 风格参考图像 |
-| `image2` | string | 否 | "" | 参考图像1 |
-| `image3` | string | 否 | "" | 参考图像2 |
+| `image1` | string | 否 | "" | 参考图像1 |
+| `image2` | string | 否 | "" | 参考图像2 |
+| `image3` | string | 否 | "" | 参考图像3 |
+| `ref_image` | string | 否 | "" | 风格迁移参考图像 |
+| `enhance` | boolean | 否 | false | 是否增强风格迁移效果 |
 
 **请求示例:**
 ```json
@@ -242,6 +283,8 @@
   "height": 768,
   "image1": "style_reference.png",
   "image2": "reference.png",
+  "ref_image": "style_guide.png",
+  "enhance": true
 }
 ```
 

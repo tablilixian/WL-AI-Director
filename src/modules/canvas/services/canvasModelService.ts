@@ -12,6 +12,7 @@ interface GenerateImageOptions {
   aspectRatio?: AspectRatio;
   onProgress?: (progress: number) => void;
   isCharacterTurnaround?: boolean;
+  isAnime?: boolean;
 }
 
 interface GenerateVideoOptions {
@@ -52,7 +53,7 @@ export class CanvasModelService {
   }
 
   async generateImage(options: GenerateImageOptions): Promise<string> {
-    const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround } = options;
+    const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround, isAnime } = options;
     const provider = this.getProvider();
     const traceId = this.generateTraceId();
     const startTime = Date.now();
@@ -61,6 +62,7 @@ export class CanvasModelService {
     console.log(`\n========== [I2I:${traceId}] 图生图流程启动 ==========`);
     console.log(`[I2I:${traceId}] 阶段 1/5 - 发起请求`);
     console.log(`[I2I:${traceId}] 请求类型: ${isImageToImage ? '图生图 (Image-to-Image)' : '文生图 (Text-to-Image)'}`);
+    console.log(`[I2I:${traceId}] 动漫模式: ${isAnime ? '是 (txt2imageanime)' : '否'}`);
     console.log(`[I2I:${traceId}] 当前提供商: ${provider}`);
     console.log(`[I2I:${traceId}] 提示词: ${prompt}`);
     console.log(`[I2I:${traceId}] 宽高比: ${aspectRatio}`);
@@ -91,7 +93,8 @@ export class CanvasModelService {
         aspectRatio,
         resourceType: 'canvas',
         resourceId: traceId,
-        isCharacterTurnaround
+        isCharacterTurnaround,
+        isAnime,
       }, undefined, traceId);
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -379,11 +382,15 @@ export class CanvasModelService {
     referenceImages: string[],
     aspectRatio: AspectRatio = '16:9',
     onProgress?: (progress: number) => void,
+    refImage?: string,
+    enhance?: boolean,
   ): Promise<string> {
     console.log('=== IPA 风格迁移请求 (image2ipastyletransfer) ===');
     console.log('[提示词]', prompt);
     console.log('[参考图数量]', referenceImages.length);
     console.log('[宽高比]', aspectRatio);
+    if (refImage) console.log('[风格迁移参考图]', refImage.substring(0, 50));
+    if (enhance !== undefined) console.log('[增强效果]', enhance);
 
     onProgress?.(10);
 
@@ -396,12 +403,43 @@ export class CanvasModelService {
         referenceImages,
         aspectRatio,
         isIPAStyleTransfer: true,
+        refImage,
+        enhance,
       }, undefined, traceId);
 
       onProgress?.(100);
       return result;
     } catch (error) {
       console.error('IPA 风格迁移失败:', error);
+      throw error;
+    }
+  }
+
+  async generateAnimeImage(
+    prompt: string,
+    aspectRatio: AspectRatio = '16:9',
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    console.log('=== 动漫风格生成请求 (txt2imageanime) ===');
+    console.log('[提示词]', prompt);
+    console.log('[宽高比]', aspectRatio);
+
+    onProgress?.(10);
+
+    try {
+      const { callImageApi } = await import('../../../../services/adapters/imageAdapter');
+      const traceId = this.generateTraceId();
+
+      const result = await callImageApi({
+        prompt,
+        aspectRatio,
+        isAnime: true,
+      }, undefined, traceId);
+
+      onProgress?.(100);
+      return result;
+    } catch (error) {
+      console.error('动漫风格生成失败:', error);
       throw error;
     }
   }

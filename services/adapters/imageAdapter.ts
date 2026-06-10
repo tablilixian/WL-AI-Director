@@ -1134,6 +1134,17 @@ export const callDramaBackendIPAStyleTransferApi = async (
     }
   }
 
+  if (options.refImage) {
+    const filename = await uploadImageToDramaBackend(options.refImage, baseUrl, tid);
+    requestBody.ref_image = filename;
+    console.log(`[IPA:${tid}] 风格迁移参考图(ref_image)上传成功 -> filename: ${filename}`);
+  }
+
+  if (options.enhance !== undefined) {
+    requestBody.enhance = options.enhance;
+    console.log(`[IPA:${tid}] 增强风格迁移: ${options.enhance}`);
+  }
+
   console.log(`[IPA:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
@@ -1179,6 +1190,90 @@ export const callDramaBackendIPAStyleTransferApi = async (
   await imageStorageService.saveImage(localImageId, imageBlob);
 
   console.log(`[IPA:${tid}] IPA 风格迁移图片已保存: ${localImageId}`);
+  return `local:${localImageId}`;
+};
+
+/**
+ * 调用 Drama Backend 动漫风格生成 API (txt2imageanime)
+ * 生成动漫风格图像
+ */
+export const callDramaBackendAnimeApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `anime_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[ANIME:${tid}] 调用动漫风格生成 API`);
+  console.log(`[ANIME:${tid}] 端点: /api/v1/generate/txt2imageanime`);
+  console.log(`[ANIME:${tid}] API基础地址: ${apiBase}`);
+
+  const aspectRatio = options.aspectRatio || '16:9';
+  const sizeMap: Record<string, { width: number; height: number }> = {
+    '16:9': { width: 1024, height: 576 },
+    '9:16': { width: 576, height: 1024 },
+    '1:1': { width: 768, height: 768 },
+  };
+  const size = sizeMap[aspectRatio] || { width: 1024, height: 720 };
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    width: size.width,
+    height: size.height,
+  };
+
+  console.log(`[ANIME:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/txt2imageanime`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const imageUrl = response.full_url;
+  if (!imageUrl) {
+    throw new Error(`动漫风格生成失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[ANIME:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+
+  let downloadUrl = imageUrl;
+  if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const imageBlob = await fetch(downloadUrl).then(r => {
+    if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+    return r.blob();
+  });
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[ANIME:${tid}] 动漫风格图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1303,6 +1398,11 @@ export const callImageApi = async (
     if (options.isIPAStyleTransfer) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`);
       return callDramaBackendIPAStyleTransferApi(options, tid);
+    }
+
+    if (options.isAnime) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (动漫风格生成 txt2imageanime 端点)`);
+      return callDramaBackendAnimeApi(options, tid);
     }
 
     console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);
