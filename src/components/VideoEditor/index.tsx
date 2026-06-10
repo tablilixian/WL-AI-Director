@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Scissors,
-  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson, Sparkles
+  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson, Sparkles, Volume2
 } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useTimelineStore } from '../../stores/timelineStore';
@@ -19,6 +19,7 @@ import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
 import { ExportDialog } from './ExportDialog';
 import { GenerateSubtitleDialog } from './GenerateSubtitleDialog';
+import { BatchTTSDialog } from './BatchTTSDialog';
 import { TextEditor } from './Preview/TextEditor';
 
 interface VideoEditorProps {
@@ -58,6 +59,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const [initVersion, setInitVersion] = useState(0);
   const [showExport, setShowExport] = useState(false);
   const [showSubtitleGen, setShowSubtitleGen] = useState(false);
+  const [showBatchTTS, setShowBatchTTS] = useState(false);
   const audioUnlockedRef = useRef(false);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -423,6 +425,15 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             AI 字幕
           </button>
 
+          <button
+            onClick={() => setShowBatchTTS(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+            title="批量生成配音"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            批量配音
+          </button>
+
           <div className="w-px h-5 bg-[var(--border-subtle)] mx-1" />
 
           <button
@@ -491,6 +502,11 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         isOpen={showSubtitleGen}
         onClose={() => setShowSubtitleGen(false)}
         shots={project?.shots}
+      />
+
+      <BatchTTSDialog
+        isOpen={showBatchTTS}
+        onClose={() => setShowBatchTTS(false)}
       />
     </div>
   );

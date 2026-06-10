@@ -105,6 +105,27 @@ export const Timeline: React.FC<TimelineProps> = ({
     seek(Math.min(clickTime, duration));
   }, [scrollPosition, zoom, seek, duration]);
 
+  // 对齐选中片段到最早的位置
+  const handleAlignClips = useCallback(() => {
+    if (selectedClipIds.length < 2) return;
+    const { tracks, updateClip, withBatch } = useTimelineStore.getState();
+    const clipTimes: { id: string; time: number }[] = [];
+    for (const track of tracks) {
+      for (const clip of track.clips) {
+        if (selectedClipIds.includes(clip.id)) {
+          clipTimes.push({ id: clip.id, time: clip.startTime });
+        }
+      }
+    }
+    if (clipTimes.length < 2) return;
+    const earliest = Math.min(...clipTimes.map(c => c.time));
+    withBatch(() => {
+      for (const { id } of clipTimes) {
+        updateClip(id, { startTime: earliest });
+      }
+    });
+  }, [selectedClipIds]);
+
   // 处理键盘快捷键
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -170,6 +191,19 @@ export const Timeline: React.FC<TimelineProps> = ({
           </div>
 
           <SnapControls />
+
+          <button
+            onClick={handleAlignClips}
+            disabled={selectedClipIds.length < 2}
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              selectedClipIds.length >= 2
+                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                : 'bg-[var(--bg-hover)] text-[var(--text-muted)] cursor-not-allowed'
+            }`}
+            title="选中 2+ 片段后对齐到最早的时间位置"
+          >
+            对齐
+          </button>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">

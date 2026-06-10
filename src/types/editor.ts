@@ -114,6 +114,9 @@ export interface TextClip extends Clip {
   /** 动画类型 */
   animation?: TextAnimation;
 
+  /** 角色名称（从 dialogue 解析所得，用于分组配音） */
+  character?: string;
+
   // ── TTS 配音 ──
 
   /** 是否启用了 TTS 配音 */

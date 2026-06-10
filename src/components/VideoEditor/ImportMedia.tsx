@@ -4,6 +4,8 @@ import { useEditorStore } from '../../stores/editorStore';
 import { indexedDBService } from '../../services/indexedDB';
 import { nanoid } from 'nanoid';
 import { ProjectState } from '../../../types';
+import { TextClip } from '../../types/editor';
+import { parseDialogueLines } from '../../utils/textUtils';
 import { ImportFromProject } from './ImportFromProject';
 
 interface MediaAsset {
@@ -178,12 +180,14 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
       return;
     }
 
+    const textTrack = findTrackByType('text');
+
     let currentTime = 0;
 
     for (const shot of shots) {
       const clipDuration = shot.duration * 1000;
 
-      const clip: any = {
+      const videoClip: any = {
         id: nanoid(),
         type: 'video',
         sourceType: 'video',
@@ -199,7 +203,47 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
         opacity: 1,
       };
 
-      addClip(videoTrack.id, clip);
+      addClip(videoTrack.id, videoClip);
+
+      // 如果有对白，按角色拆分为多条字幕
+      if (shot.dialogue && textTrack) {
+        const lines = parseDialogueLines(shot.dialogue);
+        if (lines.length > 0) {
+          const segDuration = clipDuration / lines.length;
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const textClip: TextClip = {
+              id: `sub-${shot.id}-${Date.now()}-${i}`,
+              trackId: textTrack.id,
+              sourceId: `subtitle-${shot.id}`,
+              sourceType: 'text',
+              sourceUrl: '',
+              name: line.text.slice(0, 20),
+              startTime: currentTime + i * segDuration,
+              duration: segDuration,
+              inPoint: 0,
+              outPoint: segDuration,
+              type: 'text',
+              text: line.text,
+              character: line.character || undefined,
+              fontFamily: 'Arial, sans-serif',
+              fontSize: 24,
+              fontWeight: 400,
+              color: '#ffffff',
+              backgroundColor: '#00000080',
+              x: 50,
+              y: 85,
+              align: 'center',
+              animation: 'fade',
+              volume: 1,
+              speed: 1,
+              opacity: 1,
+            };
+            addClip(textTrack.id, textClip);
+          }
+        }
+      }
+
       currentTime += clipDuration;
     }
 

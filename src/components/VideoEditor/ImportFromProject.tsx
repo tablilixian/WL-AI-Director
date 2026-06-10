@@ -9,6 +9,7 @@ interface ProjectShot {
   videoUrl: string;
   duration: number;
   thumbnail?: string;
+  dialogue?: string;
 }
 
 interface ImportFromProjectProps {
@@ -80,6 +81,7 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
             videoUrl: resolvedUrl,
             duration: shot.interval.duration || 3,
             thumbnail: shot.interval.thumbnailUrl,
+            dialogue: shot.dialogue,
           });
         }
       }

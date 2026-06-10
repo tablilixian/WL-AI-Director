@@ -269,7 +269,7 @@ export const useEditorStore = create<EditorStore>()(
         if (!track) return state;
 
         let startTime = clip.startTime;
-        if (track.clips.length > 0) {
+        if (track.type !== 'text' && track.clips.length > 0) {
           const lastClip = track.clips[track.clips.length - 1];
           startTime = lastClip.startTime + lastClip.duration;
         }

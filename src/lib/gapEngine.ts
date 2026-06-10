@@ -11,6 +11,7 @@ export function normalizeTrack(trackId: string): void {
   const tl = useTimelineStore.getState();
   const track = tl.tracks.find(t => t.id === trackId);
   if (!track || track.clips.length === 0) return;
+  if (track.type !== 'video') return;
 
   const sorted = [...track.clips].sort((a, b) => a.startTime - b.startTime);
 

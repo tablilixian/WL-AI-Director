@@ -56,7 +56,11 @@ export function useTimelineDrag(clipId: string) {
 
     const clip = findClip(clipId);
     if (clip) {
-      const snapPoints = getSnapPoints(clipId);
+      const currentTrack = findTrackByClip(clipId);
+      const snapPoints = getSnapPoints(
+        clipId,
+        currentTrack?.type !== 'video' ? currentTrack?.id : undefined,
+      );
       const { finalTime, snapInfo: snap } = calculateClipSnap(newStartTime, clip.duration, snapPoints);
       newStartTime = finalTime;
 
@@ -68,7 +72,7 @@ export function useTimelineDrag(clipId: string) {
     }
 
     moveClip(clipId, dragState.current.trackId, newStartTime);
-  }, [isDragging, zoom, clipId, findClip, getSnapPoints, calculateClipSnap, moveClip, setActiveSnap, clearActiveSnap]);
+  }, [isDragging, zoom, clipId, findClip, findTrackByClip, getSnapPoints, calculateClipSnap, moveClip, setActiveSnap, clearActiveSnap]);
 
   const handleDragEnd = useCallback((e: React.PointerEvent) => {
     if (!isDragging) return;
