@@ -15,6 +15,7 @@ export { CanvasSettingsPanel } from './components/CanvasSettingsPanel';
 export { PromptBar } from './components/PromptBar';
 export { StyleTransferPanel } from './components/StyleTransferPanel';
 export { TemplateApplyDialog } from './components/TemplateApplyDialog';
+export { CustomTemplateForm } from './components/CustomTemplateForm';
 export { ImageEditPanel } from './components/ImageEditPanel';
 export { PromptLayer } from './components/PromptLayer';
 export { PromptLinkPanel } from './components/PromptLinkPanel';
