@@ -175,6 +175,7 @@ export interface ChatOptions {
  */
 export interface ImageGenerateOptions {
   prompt: string;
+  negativePrompt?: string;
   referenceImages?: string[];
   aspectRatio?: AspectRatio;
   resourceType?: string;  // 资源类型：character, scene, prop, keyframe等

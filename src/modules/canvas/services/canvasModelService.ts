@@ -8,6 +8,7 @@ import { AspectRatio } from '../../../../types/model';
 
 interface GenerateImageOptions {
   prompt: string;
+  negativePrompt?: string;
   referenceImages?: string[];
   aspectRatio?: AspectRatio;
   onProgress?: (progress: number) => void;
@@ -53,7 +54,7 @@ export class CanvasModelService {
   }
 
   async generateImage(options: GenerateImageOptions): Promise<string> {
-    const { prompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround, isAnime } = options;
+    const { prompt, negativePrompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround, isAnime } = options;
     const provider = this.getProvider();
     const traceId = this.generateTraceId();
     const startTime = Date.now();
@@ -89,6 +90,7 @@ export class CanvasModelService {
 
       const imageUrl = await callImageApi({
         prompt,
+        negativePrompt,
         referenceImages,
         aspectRatio,
         resourceType: 'canvas',

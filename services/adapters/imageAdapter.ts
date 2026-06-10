@@ -116,6 +116,10 @@ const callCogViewApi = async (
     prompt: finalPrompt,
     size,
   };
+
+  if (options.negativePrompt) {
+    requestBody.negative_prompt = options.negativePrompt;
+  }
   
   const response = await measureTime('CogView API 调用', traceId, () =>
     retryOperation(async () => {
@@ -210,6 +214,10 @@ const callDramaBackendApi = async (
     width: size.width,
     height: size.height,
   };
+
+  if (options.negativePrompt) {
+    requestBody.negative_prompt = options.negativePrompt;
+  }
   
   console.log(`[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
   console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
@@ -1228,6 +1236,10 @@ export const callDramaBackendAnimeApi = async (
     width: size.width,
     height: size.height,
   };
+
+  if (options.negativePrompt) {
+    requestBody.negative_prompt = options.negativePrompt;
+  }
 
   console.log(`[ANIME:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
