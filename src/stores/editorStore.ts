@@ -31,8 +31,6 @@ import { clampTime } from '../utils/timeFormat';
 import { indexedDBService } from '../services/indexedDB';
 import { unifiedImageService } from '../../services/unifiedImageService';
 
-const getPersistKey = (projectId: string) => `video-editor-persist-${projectId}`;
-
 // ============================================================
 // Store 接口
 // ============================================================
@@ -529,10 +527,11 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 持久化 ----------
     save: async () => {
       const state = get();
-      const clipCount = state.tracks.reduce((sum, t) => sum + t.clips.length, 0);
+      const pid = state.projectId;
+      if (!pid) return;
 
       const data = {
-        projectId: state.projectId || 'default',
+        projectId: pid,
         createdAt: state.createdAt,
         updatedAt: state.updatedAt,
         tracks: state.tracks.map(t => ({
@@ -543,29 +542,28 @@ export const useEditorStore = create<EditorStore>()(
           })),
         })),
         zoom: state.zoom,
+        version: 1,
       };
 
       try {
-        const key = getPersistKey(state.projectId || 'default');
-        localStorage.setItem(key, JSON.stringify(data));
+        await indexedDBService.saveState(pid, data);
       } catch (error) {
         console.error('[EditorStore] 保存失败:', error);
       }
     },
 
     load: async (projectId?: string) => {
-      const pid = projectId || get().projectId || 'default';
+      const pid = projectId || get().projectId;
+      if (!pid) return false;
 
       try {
-        const saved = localStorage.getItem(getPersistKey(pid));
-        if (!saved) {
+        const data = await indexedDBService.loadState(pid);
+        if (!data) {
           if (projectId) {
             set({ projectId });
           }
           return false;
         }
-
-        const data = JSON.parse(saved);
 
         for (const track of data.tracks) {
           for (const clip of track.clips) {
@@ -647,10 +645,11 @@ export const useEditorStore = create<EditorStore>()(
       historyIndex = -1;
 
       try {
-        const key = getPersistKey(get().projectId || 'default');
-        localStorage.removeItem(key);
+        const pid = get().projectId;
+        if (!pid) return;
+        await indexedDBService.deleteState(pid);
       } catch (error) {
-        console.error('[EditorStore] 清除 localStorage 失败:', error);
+        console.error('[EditorStore] 清除 IndexedDB 失败:', error);
       }
 
       set({ ...initialState });

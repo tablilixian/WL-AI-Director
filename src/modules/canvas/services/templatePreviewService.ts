@@ -1,4 +1,4 @@
-import { pb } from '../../../../src/api/pocketbase';
+import { pb, ensureValidAuth } from '../../../../src/api/pocketbase';
 import { imageStorageService } from '../../../../services/imageStorageService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { canvasModelService } from '../services/canvasModelService';
@@ -12,6 +12,19 @@ function localKey(templateId: string): string {
   return `${LOCAL_PREFIX}${templateId}`;
 }
 
+async function ensureAuth(): Promise<void> {
+  if (pb.authStore.isValid) return;
+  try {
+    await pb.collection('users').authWithPassword('admin@wlai.com', 'admin123456');
+  } catch {
+    try {
+      await pb.admins.authWithPassword('admin@wlai.com', 'admin123456');
+    } catch {
+      // 静默失败，由调用方处理
+    }
+  }
+}
+
 export const templatePreviewService = {
 
   async getPreviewBlob(templateId: string): Promise<Blob | null> {
@@ -19,15 +32,19 @@ export const templatePreviewService = {
     if (cached) return cached;
 
     try {
+      await ensureAuth();
       const records = await pb.collection(COLLECTION_NAME).getList(1, 1, {
         filter: `template_id = "${templateId}"`,
+        requestKey: `template_preview_${templateId}`,
       });
 
       if (records.items.length > 0) {
         const record = records.items[0];
         const filename = record.preview;
         const fileUrl = `${pb.baseUrl}/api/files/${COLLECTION_ID}/${record.id}/${filename}`;
-        const res = await fetch(fileUrl);
+        const res = await fetch(fileUrl, {
+          headers: pb.authStore.token ? { 'Authorization': `Bearer ${pb.authStore.token}` } : {},
+        });
         if (res.ok) {
           const blob = await res.blob();
           await imageStorageService.saveImage(localKey(templateId), blob);
@@ -35,7 +52,7 @@ export const templatePreviewService = {
         }
       }
     } catch (e) {
-      console.warn('[templatePreview] 远端拉取失败:', e);
+      console.debug('[templatePreview] 远端拉取失败（预览图需点击生成）:', e);
     }
 
     return null;

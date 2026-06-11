@@ -1,11 +1,10 @@
 /**
  * IndexedDB 存储服务
- * 用于存储视频文件等大对象
+ * 基于 WLDB 统一数据库，存储视频媒体文件及编辑器状态
  */
 
-const DB_NAME = 'video-editor-files';
-const DB_VERSION = 1;
-const STORE_NAME = 'media-files';
+import { openDB } from '../../services/storageService';
+import { STORE_NAMES } from '../../services/dbConfig';
 
 interface StoredFile {
   id: string;
@@ -16,44 +15,21 @@ interface StoredFile {
   createdAt: number;
 }
 
+export interface EditorStateData {
+  projectId: string;
+  tracks: any[];
+  zoom: number;
+  createdAt: number;
+  updatedAt: number;
+  version: number;
+}
+
 class IndexedDBService {
-  private db: IDBDatabase | null = null;
-  private initPromise: Promise<void> | null = null;
-
-  async init(): Promise<void> {
-    if (this.initPromise) return this.initPromise;
-    
-    this.initPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = () => {
-        console.error('[IndexedDB] 打开数据库失败');
-        reject(request.error);
-      };
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        }
-      };
-    });
-
-    return this.initPromise;
-  }
-
   async saveFile(id: string, file: File): Promise<void> {
-    await this.init();
-    if (!this.db) throw new Error('数据库未初始化');
-
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      const transaction = db.transaction(STORE_NAMES.MEDIA_FILES, 'readwrite');
+      const store = transaction.objectStore(STORE_NAMES.MEDIA_FILES);
 
       const storedFile: StoredFile = {
         id,
@@ -71,32 +47,24 @@ class IndexedDBService {
   }
 
   async getFile(id: string): Promise<File | null> {
-    await this.init();
-    if (!this.db) return null;
-
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
+      const transaction = db.transaction(STORE_NAMES.MEDIA_FILES, 'readonly');
+      const store = transaction.objectStore(STORE_NAMES.MEDIA_FILES);
       const request = store.get(id);
 
       request.onsuccess = () => {
-        if (request.result) {
-          resolve(request.result.file as File);
-        } else {
-          resolve(null);
-        }
+        resolve(request.result?.file ?? null);
       };
       request.onerror = () => reject(request.error);
     });
   }
 
   async deleteFile(id: string): Promise<void> {
-    await this.init();
-    if (!this.db) return;
-
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      const transaction = db.transaction(STORE_NAMES.MEDIA_FILES, 'readwrite');
+      const store = transaction.objectStore(STORE_NAMES.MEDIA_FILES);
       const request = store.delete(id);
 
       request.onsuccess = () => resolve();
@@ -105,12 +73,79 @@ class IndexedDBService {
   }
 
   async clearAll(): Promise<void> {
-    await this.init();
-    if (!this.db) return;
-
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      const transaction = db.transaction([STORE_NAMES.MEDIA_FILES, STORE_NAMES.EDITOR_STATES], 'readwrite');
+      transaction.objectStore(STORE_NAMES.MEDIA_FILES).clear();
+      transaction.objectStore(STORE_NAMES.EDITOR_STATES).clear();
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async saveState(projectId: string, data: Omit<EditorStateData, 'updatedAt'>): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAMES.EDITOR_STATES, 'readwrite');
+      const store = transaction.objectStore(STORE_NAMES.EDITOR_STATES);
+
+      const stateData: EditorStateData = {
+        ...data,
+        projectId,
+        updatedAt: Date.now(),
+      };
+
+      const request = store.put(stateData);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async loadState(projectId: string): Promise<EditorStateData | null> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAMES.EDITOR_STATES, 'readonly');
+      const store = transaction.objectStore(STORE_NAMES.EDITOR_STATES);
+      const request = store.get(projectId);
+
+      request.onsuccess = () => {
+        resolve(request.result || null);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteState(projectId: string): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAMES.EDITOR_STATES, 'readwrite');
+      const store = transaction.objectStore(STORE_NAMES.EDITOR_STATES);
+      const request = store.delete(projectId);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async listStateProjects(): Promise<string[]> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAMES.EDITOR_STATES, 'readonly');
+      const store = transaction.objectStore(STORE_NAMES.EDITOR_STATES);
+      const request = store.getAllKeys();
+
+      request.onsuccess = () => {
+        resolve(request.result as string[]);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clearAllStates(): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAMES.EDITOR_STATES, 'readwrite');
+      const store = transaction.objectStore(STORE_NAMES.EDITOR_STATES);
       const request = store.clear();
 
       request.onsuccess = () => resolve();

@@ -49,6 +49,12 @@ export const openDB = (): Promise<IDBDatabase> => {
         store.createIndex('version', 'version', { unique: false });
         store.createIndex('syncStatus', 'syncStatus', { unique: false });
       }
+      if (!db.objectStoreNames.contains(STORE_NAMES.EDITOR_STATES)) {
+        db.createObjectStore(STORE_NAMES.EDITOR_STATES, { keyPath: 'projectId' });
+      }
+      if (!db.objectStoreNames.contains(STORE_NAMES.MEDIA_FILES)) {
+        db.createObjectStore(STORE_NAMES.MEDIA_FILES, { keyPath: 'id' });
+      }
     };
   });
 };

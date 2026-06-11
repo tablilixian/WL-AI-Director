@@ -1,18 +1,13 @@
 /**
  * 编辑器存储服务
- * 使用 localStorage 存储编辑器状态
- * 
- * 后续可升级为 IndexedDB 以支持更大的数据量
+ * 使用 IndexedDB 存储编辑器状态（大对象）
+ * 偏好设置仍保留在 localStorage（微型数据）
  */
 
-import { Track, EditorPreferences } from '../types/editor';
+import { Track } from '../types/editor';
+import { indexedDBService } from './indexedDB';
 
-const STORAGE_PREFIX = 'video-editor-';
 const PREFERENCES_KEY = 'video-editor-preferences';
-
-// ============================================================
-// 类型定义
-// ============================================================
 
 interface StoredEditorState {
   projectId: string;
@@ -29,65 +24,20 @@ interface StoredPreferences {
   snapThreshold: number;
 }
 
-// ============================================================
-// 存储键
-// ============================================================
-
-function getProjectKey(projectId: string): string {
-  return `${STORAGE_PREFIX}${projectId}`;
-}
-
-// ============================================================
-// 存储服务类
-// ============================================================
-
 class EditorStorageService {
-  private isAvailable: boolean;
-
-  constructor() {
-    this.isAvailable = this.checkAvailability();
-  }
-
-  /**
-   * 检查 localStorage 是否可用
-   */
-  private checkAvailability(): boolean {
-    try {
-      const test = '__storage_test__';
-      localStorage.setItem(test, test);
-      localStorage.removeItem(test);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * 保存编辑器状态
-   */
   async save(projectId: string, data: Partial<StoredEditorState>): Promise<boolean> {
-    if (!this.isAvailable) {
-      console.warn('[EditorStorage] localStorage 不可用');
-      return false;
-    }
-
     try {
-      const key = getProjectKey(projectId);
-      const existing = this.loadRaw(key);
-
+      const existing = await indexedDBService.loadState(projectId);
       const state: StoredEditorState = {
         projectId,
-        createdAt: data.createdAt || Date.now(),
+        createdAt: data.createdAt || existing?.createdAt || Date.now(),
         updatedAt: Date.now(),
-        tracks: data.tracks || [],
-        zoom: data.zoom || 50,
+        tracks: data.tracks || existing?.tracks || [],
+        zoom: data.zoom ?? existing?.zoom ?? 50,
         version: 1,
-        ...existing,
-        ...data,
       };
 
-      localStorage.setItem(key, JSON.stringify(state));
-      console.log('[EditorStorage] 已保存:', projectId);
+      await indexedDBService.saveState(projectId, state);
       return true;
     } catch (error) {
       console.error('[EditorStorage] 保存失败:', error);
@@ -95,35 +45,27 @@ class EditorStorageService {
     }
   }
 
-  /**
-   * 加载编辑器状态
-   */
   async load(projectId: string): Promise<StoredEditorState | null> {
-    if (!this.isAvailable) {
-      return null;
-    }
-
     try {
-      const key = getProjectKey(projectId);
-      return this.loadRaw(key);
+      const state = await indexedDBService.loadState(projectId);
+      if (!state) return null;
+      return {
+        projectId: state.projectId,
+        createdAt: state.createdAt,
+        updatedAt: state.updatedAt,
+        tracks: state.tracks,
+        zoom: state.zoom,
+        version: state.version,
+      };
     } catch (error) {
       console.error('[EditorStorage] 加载失败:', error);
       return null;
     }
   }
 
-  /**
-   * 删除编辑器状态
-   */
   async delete(projectId: string): Promise<boolean> {
-    if (!this.isAvailable) {
-      return false;
-    }
-
     try {
-      const key = getProjectKey(projectId);
-      localStorage.removeItem(key);
-      console.log('[EditorStorage] 已删除:', projectId);
+      await indexedDBService.deleteState(projectId);
       return true;
     } catch (error) {
       console.error('[EditorStorage] 删除失败:', error);
@@ -131,43 +73,21 @@ class EditorStorageService {
     }
   }
 
-  /**
-   * 列出所有已保存的项目
-   */
   async listProjects(): Promise<string[]> {
-    if (!this.isAvailable) {
+    try {
+      return await indexedDBService.listStateProjects();
+    } catch (error) {
+      console.error('[EditorStorage] 列出项目失败:', error);
       return [];
     }
-
-    const projects: string[] = [];
-    const prefix = STORAGE_PREFIX;
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        projects.push(key.replace(prefix, ''));
-      }
-    }
-
-    return projects;
   }
 
-  /**
-   * 获取项目最后更新时间
-   */
   async getLastUpdated(projectId: string): Promise<number | null> {
     const state = await this.load(projectId);
     return state?.updatedAt || null;
   }
 
-  /**
-   * 保存用户偏好设置
-   */
   async savePreferences(prefs: Partial<StoredPreferences>): Promise<boolean> {
-    if (!this.isAvailable) {
-      return false;
-    }
-
     try {
       const existing = this.loadPreferences();
       const merged = { ...existing, ...prefs };
@@ -178,14 +98,7 @@ class EditorStorageService {
     }
   }
 
-  /**
-   * 加载用户偏好设置
-   */
   async loadPreferences(): Promise<StoredPreferences> {
-    if (!this.isAvailable) {
-      return this.getDefaultPreferences();
-    }
-
     try {
       const raw = localStorage.getItem(PREFERENCES_KEY);
       if (raw) {
@@ -194,13 +107,9 @@ class EditorStorageService {
     } catch {
       // ignore
     }
-
     return this.getDefaultPreferences();
   }
 
-  /**
-   * 获取默认偏好设置
-   */
   private getDefaultPreferences(): StoredPreferences {
     return {
       theme: 'dark',
@@ -209,75 +118,20 @@ class EditorStorageService {
     };
   }
 
-  /**
-   * 清空所有编辑器数据
-   */
   async clearAll(): Promise<void> {
-    if (!this.isAvailable) {
-      return;
-    }
-
-    const keysToRemove: string[] = [];
-    const prefix = STORAGE_PREFIX;
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith(prefix) || key === PREFERENCES_KEY)) {
-        keysToRemove.push(key);
-      }
-    }
-
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log('[EditorStorage] 已清空所有数据');
-  }
-
-  /**
-   * 获取存储使用情况
-   */
-  getStorageInfo(): { used: number; available: boolean } {
-    if (!this.isAvailable) {
-      return { used: 0, available: false };
-    }
-
-    let used = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_PREFIX)) {
-        const value = localStorage.getItem(key);
-        if (value) {
-          used += value.length;
-        }
-      }
-    }
-
-    return { used, available: true };
-  }
-
-  /**
-   * 内部方法：加载原始数据
-   */
-  private loadRaw(key: string): StoredEditorState | null {
     try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        return JSON.parse(raw);
-      }
-    } catch {
-      // ignore
+      await indexedDBService.clearAllStates();
+    } catch (error) {
+      console.error('[EditorStorage] 清空失败:', error);
     }
-    return null;
+  }
+
+  getStorageInfo(): { used: number; available: boolean } {
+    return { used: 0, available: true };
   }
 }
 
-// ============================================================
-// 导出单例
-// ============================================================
-
 export const editorStorage = new EditorStorageService();
-
-// ============================================================
-// 便捷函数
-// ============================================================
 
 export async function saveEditorState(
   projectId: string,

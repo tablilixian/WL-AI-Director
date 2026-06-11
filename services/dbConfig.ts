@@ -18,8 +18,9 @@ export const DB_NAME = 'WLDB';
  * - 7: 修复 VIDEOS store 缺失问题，自动检测并创建缺失的 store
  * - 8: 添加 canvasData store（画布数据独立存储，按项目ID关联）
  * - 9: 确保 videos store 正确创建
+ * - 10: 添加 editorStates、mediaFiles store（原 video-editor-files 合并至 WLDB）
  */
-export const DB_VERSION = 9;
+export const DB_VERSION = 10;
 
 export const STORE_NAMES = {
   PROJECTS: 'projects',
@@ -27,7 +28,9 @@ export const STORE_NAMES = {
   IMAGES: 'images',
   VIDEOS: 'videos',
   PROJECT_STAGES: 'projectStages',
-  CANVAS_DATA: 'canvasData'  // 新增：画布数据存储
+  CANVAS_DATA: 'canvasData',
+  EDITOR_STATES: 'editorStates',
+  MEDIA_FILES: 'mediaFiles',
 } as const;
 
 /**
