@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Loader2, Database, X, FileArchive, FileJson, Trash2, AlertTriangle } from 'lucide-react';
 import { openDB } from '../services/storageService';
-import { clearAllAssets } from '../src/modules/canvas/services/assetStore';
 
 interface DebugExportModalProps {
   isOpen: boolean;
@@ -237,14 +236,6 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
       db.close();
       console.log('[DebugExportModal] 🔒 关闭数据库连接');
-
-      // 清空画布独立数据库 wl-canvas-assets 中的图片 Blob
-      try {
-        await clearAllAssets();
-        console.log('[DebugExportModal] ✅ 画布资产 Blob 已清空');
-      } catch (e) {
-        console.warn('[DebugExportModal] ⚠️ 画布资产清空失败（可能未使用画布功能）:', e);
-      }
 
       console.log('[DebugExportModal] ✅ 数据库清空完成！');
       console.log('[DebugExportModal] 📊 清空统计:', results);

@@ -3,6 +3,7 @@ import { getPreferences } from './userPreferencesService';
 import { DB_NAME, DB_VERSION, STORE_NAMES, storageConfig } from './dbConfig';
 import { logger, LogCategory } from './logger';
 import { migrateProject, needsMigration } from '../utils/dataMigration';
+import { DEFAULT_SCRIPT } from '../components/StageScript/constants';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -453,7 +454,7 @@ export const createNewProjectState = (): ProjectState => {
     language: prefs.language,
     visualStyle: prefs.visualStyle,
     shotGenerationModel: prefs.shotGenerationModel,
-    rawScript: '',
+    rawScript: DEFAULT_SCRIPT,
     scriptData: null,
     shots: [],
     isParsingScript: false,

@@ -216,20 +216,11 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
       endpoint = '/v1/chat/completions';
     }
     
-    // 如果是 DashScope，使用兼容模式 endpoint
-    if (url.includes('dashscope')) {
-      endpoint = '/compatible-mode/v1/chat/completions';
-    }
-
     // 根据 URL 选择合适的测试模型
     let testModel = 'glm-4-flash';
     if (url.includes('localhost') || url.includes('newapi.ai')) {
       testModel = 'poolside/laguna-xs.2:free';
     }
-    if (url.includes('dashscope')) {
-      testModel = 'qwen-turbo';
-    }
-    
     const response = await fetch(`${url}${endpoint}`, {
       method: 'POST',
       headers: {

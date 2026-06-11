@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
-import { assetStore } from '../services/assetStore';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 
 interface PromptBarProps {

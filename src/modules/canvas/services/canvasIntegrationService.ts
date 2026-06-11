@@ -20,8 +20,6 @@ import {
   CanvasData
 } from '../../../../services/canvasStorageService';
 import { canvasSyncService } from '../../../../services/canvasSyncService';
-import { assetStore } from '../services/assetStore';
-
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
   columns?: number;
@@ -663,15 +661,6 @@ export class CanvasIntegrationService {
           }
         }
 
-        store.layers.forEach(layer => {
-          if (layer.imageId) {
-            assetStore.deleteAsset(layer.imageId).catch(console.error);
-          }
-          if (layer.thumbnailId) {
-            assetStore.deleteAsset(layer.thumbnailId).catch(console.error);
-          }
-        });
-        
         const { importLayers, setOffset, setScale, setProjectId } = store;
         importLayers([], true);
         setOffset({ x: 0, y: 0 });

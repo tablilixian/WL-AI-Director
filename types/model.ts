@@ -518,13 +518,6 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     isBuiltIn: true,
     isDefault: false,
   },
-  {
-    id: 'dashscope',
-    name: 'DashScope (阿里云百炼)',
-    baseUrl: 'https://dashscope.aliyuncs.com',
-    isBuiltIn: true,
-    isDefault: false,
-  },
 ];
 
 /**

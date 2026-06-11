@@ -32,7 +32,6 @@ export { useSnapAlignment } from './hooks/useSnapAlignment';
 
 export { CanvasModelService } from './services/canvasModelService';
 export { canvasIntegrationService, CanvasIntegrationService } from './services/canvasIntegrationService';
-export { assetStore } from './services/assetStore';
 export { thumbnailService } from './services/thumbnailService';
 
 export type {

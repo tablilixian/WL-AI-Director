@@ -26,7 +26,6 @@ import {
   PromptMode,
   PROMPT_MODE_COLORS 
 } from '../types/canvas';
-import { assetStore } from '../services/assetStore';
 import { autoLayout } from '../utils/autoLayout';
 
 const MAX_HISTORY = 20;
@@ -147,15 +146,6 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       deleteLayer: (id) => {
         const state = get();
-        const layer = state.layers.find(l => l.id === id);
-        
-        if (layer?.imageId) {
-          assetStore.deleteAsset(layer.imageId).catch(console.error);
-        }
-        if (layer?.thumbnailId) {
-          assetStore.deleteAsset(layer.thumbnailId).catch(console.error);
-        }
-
         const newLayers = state.layers.filter(l => l.id !== id);
         set({
           layers: newLayers,
@@ -363,14 +353,6 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       clearCanvas: () => {
         const state = get();
-        state.layers.forEach(layer => {
-          if (layer.imageId) {
-            assetStore.deleteAsset(layer.imageId).catch(console.error);
-          }
-          if (layer.thumbnailId) {
-            assetStore.deleteAsset(layer.thumbnailId).catch(console.error);
-          }
-        });
         set({
           layers: [],
           selectedLayerId: null,
