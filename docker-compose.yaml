@@ -5,10 +5,14 @@ services:
     container_name: wl-ai-director-pb
     ports:
       - "8090:8090"
+    environment:
+      # 自动创建管理员（由 entrypoint 读取）
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@wlai.com}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-admin123456}
     volumes:
       - ./pb_data:/pb_data
       - ./pb_migrations:/pb_data/pb_migrations
-    command: serve --http=0.0.0.0:8090 --dir=/pb_data --publicDir=/pb_public --hooksDir=/pb_hooks --migrationsDir=/pb_data/pb_migrations
+      - ./pb_hooks:/pb_hooks
     restart: unless-stopped
     networks:
       - cinegen-network
@@ -24,6 +28,8 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    depends_on:
+      - pocketbase
     networks:
       - cinegen-network
 
