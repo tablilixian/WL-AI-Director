@@ -11,7 +11,7 @@ import { Minimap } from './Minimap';
 import { CanvasToolbar } from './CanvasToolbar';
 import { LayerPanel } from './LayerPanel';
 import { PromptBar } from './PromptBar';
-import { DrawingToolbar, DrawingTool } from './DrawingToolbar';
+
 import { ConnectionLines } from './ConnectionLines';
 import { LayerDetailPanel } from './LayerDetailPanel';
 import { CanvasSettingsPanel } from './CanvasSettingsPanel';
@@ -55,16 +55,19 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     duplicateLayer,
     undo, 
     redo,
-    templatePanelOpen
+    templatePanelOpen,
+    activeTool,
+    strokeColor,
+    strokeWidth,
+    setActiveTool,
+    setStrokeColor,
+    setStrokeWidth
   } = useCanvasStore();
   const { canvasRef, handleMouseDown } = useCanvasControls();
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
   
-  const [activeTool, setActiveTool] = useState<DrawingTool>('select');
-  const [strokeColor, setStrokeColor] = useState('#ffffff');
-  const [strokeWidth, setStrokeWidth] = useState(4);
   const [showLayerDetail, setShowLayerDetail] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
@@ -437,15 +440,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   return (
     <div className={`relative w-full h-full overflow-hidden bg-gray-900 ${className}`}>
-      <DrawingToolbar
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        strokeColor={strokeColor}
-        onStrokeColorChange={setStrokeColor}
-        strokeWidth={strokeWidth}
-        onStrokeWidthChange={setStrokeWidth}
-      />
-
       <CanvasToolbar />
 
       <div

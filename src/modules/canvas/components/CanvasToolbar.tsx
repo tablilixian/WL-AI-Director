@@ -3,11 +3,10 @@
  * 提供画布操作工具栏
  */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
-import { PromptMode } from '../types/canvas';
-import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { DrawingTool } from '../types/canvas';
 
 export const CanvasToolbar: React.FC = () => {
   const { 
@@ -27,17 +26,68 @@ export const CanvasToolbar: React.FC = () => {
     bringForward,
     sendBackward,
     alignLayers,
+    distributeLayers,
     groupSelectedLayers,
     ungroupLayers,
     mergeSelectedLayers,
-    createPromptLayer,
-    setScale
+    setScale,
+    activeTool,
+    strokeColor,
+    strokeWidth,
+    setActiveTool,
+    setStrokeColor,
+    setStrokeWidth
   } = useCanvasStore();
   const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
   const autoArrangeLayers = useCanvasStore((s) => s.autoArrangeLayers);
   const scale = useCanvasStore((s) => s.scale);
   const templatePanelOpen = useCanvasStore((s) => s.templatePanelOpen);
   const setTemplatePanelOpen = useCanvasStore((s) => s.setTemplatePanelOpen);
+
+  const [isToolOpen, setIsToolOpen] = useState(false);
+  const toolRef = useRef<HTMLDivElement>(null);
+  const [isLayerOpen, setIsLayerOpen] = useState(false);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const [isArrangeOpen, setIsArrangeOpen] = useState(false);
+  const arrangeRef = useRef<HTMLDivElement>(null);
+  const [showToolColor, setShowToolColor] = useState(false);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (arrangeRef.current && !arrangeRef.current.contains(e.target as Node)) {
+        setIsArrangeOpen(false);
+      }
+    };
+    if (isArrangeOpen) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isArrangeOpen]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (layerRef.current && !layerRef.current.contains(e.target as Node)) {
+        setIsLayerOpen(false);
+      }
+    };
+    if (isLayerOpen) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isLayerOpen]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (toolRef.current && !toolRef.current.contains(e.target as Node)) {
+        setIsToolOpen(false);
+        setShowToolColor(false);
+      }
+    };
+    if (isToolOpen || showToolColor) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isToolOpen, showToolColor]);
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
   const hasMultipleSelection = selectedLayerIds.length > 1;
@@ -46,357 +96,233 @@ export const CanvasToolbar: React.FC = () => {
     return layer?.type === 'image';
   }).length >= 2;
 
-  const handleAddImage = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        const img = new Image();
-        img.onload = async () => {
-          let imageId: string | undefined;
-          try {
-            const id = unifiedImageService.generateImageId();
-            const blob = await (await fetch(base64)).blob();
-            await unifiedImageService.saveImage(id, blob);
-            imageId = id;
-          } catch (e) {
-            console.warn('[CanvasToolbar] 保存图片到 IndexedDB 失败:', e);
-          }
-
-          useCanvasStore.getState().addLayer({
-            id: crypto.randomUUID(),
-            type: 'image',
-            x: 100,
-            y: 100,
-            width: img.width,
-            height: img.height,
-            src: base64,
-            imageId,
-            title: file.name,
-            createdAt: Date.now()
-          });
-        };
-        img.src = base64;
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
+  const toolIcons: Record<DrawingTool, { icon: React.ReactNode; label: string }> = {
+    select: {
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>,
+      label: '选择'
+    },
+    pencil: {
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
+      label: '画笔'
+    },
+    rectangle: {
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
+      label: '矩形'
+    },
+    arrow: {
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>,
+      label: '箭头'
+    }
   };
 
-  const handleAddSticky = () => {
-    useCanvasStore.getState().addLayer({
-      id: crypto.randomUUID(),
-      type: 'sticky',
-      x: 100,
-      y: 100,
-      width: 200,
-      height: 200,
-      src: '',
-      title: 'New Sticky',
-      color: '#fef3c7',
-      text: '',
-      createdAt: Date.now()
-    });
-  };
-
-  const handleAddText = () => {
-    useCanvasStore.getState().addLayer({
-      id: crypto.randomUUID(),
-      type: 'text',
-      x: 100,
-      y: 100,
-      width: 200,
-      height: 50,
-      src: '',
-      title: 'New Text',
-      color: '#ffffff',
-      text: 'Text',
-      fontSize: 24,
-      createdAt: Date.now()
-    });
-  };
-
-  const handleAddPrompt = (mode: PromptMode = 'image-to-image') => {
-    createPromptLayer(100, 100, mode);
-  };
+  const toolColors = ['#ffffff', '#000000', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
+  const toolStrokeWidths = [2, 4, 6, 8, 12];
+  const isDrawingTool = activeTool !== 'select';
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-gray-800/90 backdrop-blur-sm rounded-lg p-1.5 shadow-lg border border-gray-700">
-      <button
-        onClick={handleAddImage}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Add Image"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      </button>
+      <div className="relative" ref={toolRef}>
+        <button
+          onClick={() => setIsToolOpen(!isToolOpen)}
+          className={`flex items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+            isToolOpen
+              ? 'bg-gray-700 text-white'
+              : 'hover:bg-gray-700 text-gray-300 hover:text-white'
+          }`}
+          title="绘图工具"
+        >
+          {toolIcons[activeTool].icon}
+          <span>{toolIcons[activeTool].label}</span>
+          <svg className={`w-3 h-3 transition-transform ${isToolOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
 
-      <button
-        onClick={handleAddSticky}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Add Sticky"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </button>
+        {isToolOpen && (
+          <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
+            {(Object.keys(toolIcons) as DrawingTool[]).map(tool => (
+              <button
+                key={tool}
+                onClick={() => { setActiveTool(tool); setIsToolOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
+                  activeTool === tool
+                    ? 'bg-blue-600/20 text-blue-400'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                {toolIcons[tool].icon}
+                {toolIcons[tool].label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <button
-        onClick={handleAddText}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Add Text"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      </button>
+      {isDrawingTool && (
+        <>
+          <div className="relative">
+            <button
+              onClick={() => setShowToolColor(!showToolColor)}
+              className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+              title="颜色选择"
+            >
+              <div className="w-4 h-4 rounded-full border border-gray-500" style={{ backgroundColor: strokeColor }} />
+            </button>
+            {showToolColor && (
+              <div className="absolute top-full left-0 mt-1.5 p-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex gap-1">
+                {toolColors.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => { setStrokeColor(color); setShowToolColor(false); }}
+                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                      strokeColor === color ? 'border-white' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
-      <button
-        onClick={() => handleAddPrompt()}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Add AI Prompt"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      </button>
+          <select
+            value={strokeWidth}
+            onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+            className="bg-gray-700 text-white text-xs rounded px-1 py-1.5 border border-gray-600 focus:outline-none focus:border-blue-500 w-10"
+            title="线条粗细"
+          >
+            {toolStrokeWidths.map(w => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+
+          <div className="w-px h-6 bg-gray-600 mx-1" />
+        </>
+      )}
+
 
       <div className="w-px h-6 bg-gray-600 mx-1" />
 
       {selectedLayerId && (
         <>
-          <button
-            onClick={() => toggleLayerLock(selectedLayerId)}
-            className={`p-2 rounded-md transition-colors ${
-              selectedLayer?.locked 
-                ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-                : 'hover:bg-gray-700 text-gray-300 hover:text-white'
-            }`}
-            title={selectedLayer?.locked ? 'Unlock Layer' : 'Lock Layer'}
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              {selectedLayer?.locked ? (
-                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-              ) : (
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              )}
-            </svg>
-          </button>
+          <div className="relative" ref={layerRef}>
+            <button
+              onClick={() => setIsLayerOpen(!isLayerOpen)}
+              className={`flex items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                isLayerOpen
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300 hover:text-white'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              <span>图层</span>
+              <svg className={`w-3 h-3 transition-transform ${isLayerOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-          <button
-            onClick={() => duplicateLayer(selectedLayerId)}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Duplicate Layer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </button>
+            {isLayerOpen && (
+              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
+                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">属性</div>
+                <button onClick={() => { toggleLayerVisibility(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  {selectedLayer?.visible === false ? '显示' : '隐藏'}
+                </button>
+                <button onClick={() => { toggleLayerLock(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  {selectedLayer?.locked ? '解锁' : '锁定'}
+                </button>
+                <div className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={Math.round((selectedLayer?.opacity ?? 1) * 100)}
+                      onChange={(e) => setLayerOpacity(selectedLayerId, parseInt(e.target.value) / 100)}
+                      className="flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                    <span className="text-xs text-gray-400 w-8 text-right tabular-nums">{Math.round((selectedLayer?.opacity ?? 1) * 100)}%</span>
+                  </div>
+                </div>
 
-          <button
-            onClick={() => {
-              if (selectedLayerIds.length > 1) {
-                selectedLayerIds.forEach(id => deleteLayer(id));
-              } else {
-                deleteLayer(selectedLayerId);
-              }
-            }}
-            className="p-2 hover:bg-red-600 rounded-md text-gray-300 hover:text-white transition-colors"
-            title={selectedLayerIds.length > 1 ? `Delete ${selectedLayerIds.length} Layers` : 'Delete Layer'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
+                <div className="border-t border-gray-700 my-1" />
 
-          <div className="w-px h-6 bg-gray-600 mx-1" />
+                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">操作</div>
+                <button onClick={() => { duplicateLayer(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  复制
+                </button>
+                <button onClick={() => { if (selectedLayerIds.length > 1) { selectedLayerIds.forEach(id => deleteLayer(id)); } else { deleteLayer(selectedLayerId); } setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  删除
+                </button>
 
-          <button
-            onClick={() => bringToFront(selectedLayerId)}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Bring to Front"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11l7-7 7 7M5 19l7-7 7 7" />
-            </svg>
-          </button>
+                <div className="border-t border-gray-700 my-1" />
 
-          <button
-            onClick={() => sendToBack(selectedLayerId)}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Send to Back"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 13l-7 7-7-7m14-8l-7 7-7-7" />
-            </svg>
-          </button>
+                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">排序</div>
+                <button onClick={() => { bringToFront(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11l7-7 7 7M5 19l7-7 7 7" /></svg>
+                  置顶
+                </button>
+                <button onClick={() => { sendToBack(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 13l-7 7-7-7m14-8l-7 7-7-7" /></svg>
+                  置底
+                </button>
+                <button onClick={() => { bringForward(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                  前移一层
+                </button>
+                <button onClick={() => { sendBackward(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  后移一层
+                </button>
 
-          <button
-            onClick={() => bringForward(selectedLayerId)}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Bring Forward"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-            </svg>
-          </button>
+                <div className="border-t border-gray-700 my-1" />
 
-          <button
-            onClick={() => sendBackward(selectedLayerId)}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-            title="Send Backward"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          <div className="w-px h-6 bg-gray-600 mx-1" />
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'left')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title={hasMultipleSelection ? 'Align Left (Multiple)' : 'Align Left'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h14" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'center')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title={hasMultipleSelection ? 'Align Center (Multiple)' : 'Align Center'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M7 12h10M5 18h14" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'right')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title={hasMultipleSelection ? 'Align Right (Multiple)' : 'Align Right'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M10 12h10M6 18h14" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'top')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title="Align Top"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h4M14 10h4M8 14h8" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'middle')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title="Align Middle"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h4M14 10h4M6 14h12M8 18h8" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'bottom')}
-            disabled={!hasMultipleSelection && !selectedLayerId}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title="Align Bottom"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M6 10h12M8 14h4M14 14h4M10 18h4" />
-            </svg>
-          </button>
-
-          <div className="w-px h-6 bg-gray-600 mx-1" />
-
-          <button
-            onClick={() => toggleLayerVisibility(selectedLayerId)}
-            className={`p-2 rounded-md transition-colors ${
-              selectedLayer?.visible === false 
-                ? 'bg-gray-600 text-gray-400 hover:bg-gray-500' 
-                : 'hover:bg-gray-700 text-gray-300 hover:text-white'
-            }`}
-            title={selectedLayer?.visible === false ? 'Show Layer' : 'Hide Layer'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {selectedLayer?.visible === false ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              )}
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-1 px-2">
-            <span className="text-xs text-gray-400">Opacity:</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round((selectedLayer?.opacity ?? 1) * 100)}
-              onChange={(e) => setLayerOpacity(selectedLayerId, parseInt(e.target.value) / 100)}
-              className="w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-              disabled={!selectedLayerId}
-            />
-            <span className="text-xs text-gray-400 w-8">{Math.round((selectedLayer?.opacity ?? 1) * 100)}%</span>
+                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">组合</div>
+                <button onClick={() => { groupSelectedLayers(); setIsLayerOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">编组</button>
+                {selectedLayer?.type === 'group' && (
+                  <button onClick={() => { ungroupLayers(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">解组</button>
+                )}
+                <button onClick={() => { mergeSelectedLayers(); setIsLayerOpen(false); }} disabled={!hasMultipleImageSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">合并图层</button>
+              </div>
+            )}
           </div>
 
           <div className="w-px h-6 bg-gray-600 mx-1" />
 
-          <button
-            onClick={groupSelectedLayers}
-            disabled={!hasMultipleSelection}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title="Group Layers (Ctrl+G)"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          </button>
-
-          {selectedLayer?.type === 'group' && (
+          <div className="relative" ref={arrangeRef}>
             <button
-              onClick={() => ungroupLayers(selectedLayerId)}
-              className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-              title="Ungroup Layers (Ctrl+Shift+G)"
+              onClick={() => setIsArrangeOpen(!isArrangeOpen)}
+              className={`flex items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                isArrangeOpen
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300 hover:text-white'
+              }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span>对齐</span>
+              <svg className={`w-3 h-3 transition-transform ${isArrangeOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-          )}
 
-          <button
-            onClick={mergeSelectedLayers}
-            disabled={!hasMultipleImageSelection}
-            className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors disabled:opacity-30"
-            title="Merge Layers"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </button>
-
-          <div className="w-px h-6 bg-gray-600 mx-1" />
+            {isArrangeOpen && (
+              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
+                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">对齐</div>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'left'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">左对齐</button>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'center'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">水平居中</button>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'right'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">右对齐</button>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'top'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">顶部对齐</button>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'middle'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">垂直居中</button>
+                <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'bottom'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">底部对齐</button>
+              </div>
+            )}
+          </div>
         </>
       )}
 

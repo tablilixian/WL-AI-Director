@@ -13,6 +13,7 @@ import { ImageEditPanel } from '../src/modules/canvas/components/ImageEditPanel'
 import { RemoveBackgroundPanel } from '../src/modules/canvas/components/RemoveBackgroundPanel';
 import { VariantPanel } from '../src/modules/canvas/components/VariantPanel';
 import { getCanvasDataFromLocal } from '../services/canvasStorageService';
+import { unifiedImageService } from '../services/unifiedImageService';
 
 interface StageCanvasProps {
   project: ProjectState;
@@ -27,6 +28,11 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   const [showVariant, setShowVariant] = useState(false);
   const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
+
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [isProjectOpen, setIsProjectOpen] = useState(false);
+  const projectRef = useRef<HTMLDivElement>(null);
 
   const isMountedRef = useRef(false);
   const isRestoringRef = useRef(false);
@@ -70,6 +76,30 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setIsExportOpen(false);
+      }
+    };
+    if (isExportOpen) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isExportOpen]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (projectRef.current && !projectRef.current.contains(e.target as Node)) {
+        setIsProjectOpen(false);
+      }
+    };
+    if (isProjectOpen) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isProjectOpen]);
 
   const getAllKeyframes = (): Keyframe[] => {
     if (!project.shots) return [];
@@ -568,6 +598,49 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     }
   };
 
+  const handleUploadImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const img = new Image();
+        img.onload = async () => {
+          let imageId: string | undefined;
+          try {
+            const id = unifiedImageService.generateImageId();
+            const blob = await (await fetch(base64)).blob();
+            await unifiedImageService.saveImage(id, blob);
+            imageId = id;
+          } catch (e) {
+            console.warn('[StageCanvas] 保存图片到 IndexedDB 失败:', e);
+          }
+
+          useCanvasStore.getState().addLayer({
+            id: crypto.randomUUID(),
+            type: 'image',
+            x: 100,
+            y: 100,
+            width: img.width,
+            height: img.height,
+            src: base64,
+            imageId,
+            title: file.name,
+            createdAt: Date.now()
+          });
+        };
+        img.src = base64;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 p-4 border-b border-[var(--border-primary)] bg-[var(--bg-base)]">
@@ -587,73 +660,60 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             </button>
 
             <button
-              onClick={handleExportImages}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+              onClick={handleUploadImage}
+              className="px-3 py-1.5 bg-[var(--accent)] text-[var(--text-primary)] text-xs rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
             >
-              导出图片
+              上传图片
             </button>
-            <button
-              onClick={handleExportVideos}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              导出视频
-            </button>
-            <button
-              onClick={handleExportSelected}
-              disabled={!selectedLayerId}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              导出选中
-            </button>
-            <button
-              onClick={handleTakeScreenshot}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              画布截图
-            </button>
-            <button
-              onClick={handleExportToKeyframes}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              导出分镜
-            </button>
-            <button
-              onClick={handleExportAsZip}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              打包下载
-            </button>
-            <button
-              onClick={handleSaveCanvas}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              保存画布
-            </button>
-            <button
-              onClick={handleExportJson}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              导出JSON
-            </button>
-            <button
-              onClick={handleRestoreCanvas}
-              className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
-            >
-              恢复画布
-            </button>
+
+            <div className="relative" ref={exportRef}>
+              <button
+                onClick={() => setIsExportOpen(!isExportOpen)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+              >
+                导出
+                <svg className={`w-3 h-3 transition-transform ${isExportOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isExportOpen && (
+                <div className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => { handleExportImages(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出图片</button>
+                  <button onClick={() => { handleExportVideos(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出视频</button>
+                  <button onClick={() => { handleExportSelected(); setIsExportOpen(false); }} disabled={!selectedLayerId} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed">导出选中</button>
+                  <button onClick={() => { handleTakeScreenshot(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">画布截图</button>
+                  <button onClick={() => { handleExportToKeyframes(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出分镜</button>
+                  <button onClick={() => { handleExportAsZip(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">打包下载</button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative" ref={projectRef}>
+              <button
+                onClick={() => setIsProjectOpen(!isProjectOpen)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
+              >
+                项目
+                <svg className={`w-3 h-3 transition-transform ${isProjectOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isProjectOpen && (
+                <div className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => { handleSaveCanvas(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">保存画布</button>
+                  <button onClick={() => { handleExportJson(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出JSON</button>
+                  <button onClick={() => { handleRestoreCanvas(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">恢复画布</button>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleClearCanvas}
               className="px-3 py-1.5 bg-[var(--error)]/10 text-[var(--error)] text-xs rounded-lg hover:bg-[var(--error)]/20 transition-colors"
             >
               清空画布
             </button>
-            <span className="px-2 py-1 bg-[var(--bg-hover)] rounded text-xs text-[var(--text-muted)]">
-              Beta
-            </span>
           </div>
-        </div>
-        <div className="mt-2 text-xs text-[var(--text-muted)]">
-          Shift+拖拽平移 | Ctrl+滚轮缩放 | 支持图片/视频/文字/便签 | 文生图/图生图/文生视频/图生视频/风格迁移
         </div>
       </div>
       <div className="flex-1 overflow-hidden">

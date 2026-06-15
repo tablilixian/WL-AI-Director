@@ -24,6 +24,7 @@ import {
   PromptLayerData, 
   PromptLayerConfig, 
   PromptMode,
+  DrawingTool,
   PROMPT_MODE_COLORS 
 } from '../types/canvas';
 import { autoLayout } from '../utils/autoLayout';
@@ -47,6 +48,9 @@ interface CanvasState {
   clipboard: LayerData[];
   suggestedPrompt: string;
   templatePanelOpen: boolean;
+  activeTool: DrawingTool;
+  strokeColor: string;
+  strokeWidth: number;
 }
 
 interface CanvasActions {
@@ -92,6 +96,9 @@ interface CanvasActions {
   getPromptLinkedLayers: (promptId: string) => LayerData[];
   setSuggestedPrompt: (prompt: string) => void;
   setTemplatePanelOpen: (open: boolean) => void;
+  setActiveTool: (tool: DrawingTool) => void;
+  setStrokeColor: (color: string) => void;
+  setStrokeWidth: (width: number) => void;
 }
 
 const initialState: CanvasState = {
@@ -105,7 +112,10 @@ const initialState: CanvasState = {
   historyIndex: -1,
   clipboard: [],
   suggestedPrompt: '',
-  templatePanelOpen: false
+  templatePanelOpen: false,
+  activeTool: 'select',
+  strokeColor: '#ffffff',
+  strokeWidth: 4
 };
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
@@ -461,34 +471,45 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       distributeLayers: (layerIds, direction) => {
         const state = get();
-        const layers = state.layers.filter(l => layerIds.includes(l.id));
-        if (layers.length < 3) return;
+        const targets = state.layers.filter(l => layerIds.includes(l.id));
+        if (targets.length < 3) return;
+
+        // 先记录一次历史（而不是每层各记一次）
+        state.pushHistory();
 
         if (direction === 'horizontal') {
-          const sorted = [...layers].sort((a, b) => a.x - b.x);
+          const sorted = [...targets].sort((a, b) => a.x - b.x);
+          const firstX = sorted[0].x;
+          const lastRight = sorted[sorted.length - 1].x + sorted[sorted.length - 1].width;
           const totalWidth = sorted.reduce((sum, l) => sum + l.width, 0);
-          const totalSpace = sorted[sorted.length - 1].x + sorted[sorted.length - 1].width - sorted[0].x;
-          const gap = (totalSpace - totalWidth) / (sorted.length - 1);
-          
-          let currentX = sorted[0].x;
-          sorted.forEach((l, i) => {
-            if (i > 0) {
-              state.updateLayer(l.id, { x: currentX });
-            }
+          const gap = (lastRight - firstX - totalWidth) / (sorted.length - 1);
+
+          const updates: Record<string, { x: number }> = {};
+          let currentX = firstX;
+          sorted.forEach(l => {
+            updates[l.id] = { x: Math.round(currentX) };
             currentX += l.width + gap;
           });
+
+          set({
+            layers: state.layers.map(l => (updates[l.id] ? { ...l, ...updates[l.id] } : l))
+          });
         } else {
-          const sorted = [...layers].sort((a, b) => a.y - b.y);
+          const sorted = [...targets].sort((a, b) => a.y - b.y);
+          const firstY = sorted[0].y;
+          const lastBottom = sorted[sorted.length - 1].y + sorted[sorted.length - 1].height;
           const totalHeight = sorted.reduce((sum, l) => sum + l.height, 0);
-          const totalSpace = sorted[sorted.length - 1].y + sorted[sorted.length - 1].height - sorted[0].y;
-          const gap = (totalSpace - totalHeight) / (sorted.length - 1);
-          
-          let currentY = sorted[0].y;
-          sorted.forEach((l, i) => {
-            if (i > 0) {
-              state.updateLayer(l.id, { y: currentY });
-            }
+          const gap = (lastBottom - firstY - totalHeight) / (sorted.length - 1);
+
+          const updates: Record<string, { y: number }> = {};
+          let currentY = firstY;
+          sorted.forEach(l => {
+            updates[l.id] = { y: Math.round(currentY) };
             currentY += l.height + gap;
+          });
+
+          set({
+            layers: state.layers.map(l => (updates[l.id] ? { ...l, ...updates[l.id] } : l))
           });
         }
       },
@@ -776,6 +797,18 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       setTemplatePanelOpen: (open) => {
         set({ templatePanelOpen: open });
+      },
+
+      setActiveTool: (tool) => {
+        set({ activeTool: tool });
+      },
+
+      setStrokeColor: (color) => {
+        set({ strokeColor: color });
+      },
+
+      setStrokeWidth: (width) => {
+        set({ strokeWidth: width });
       }
     })
   );
