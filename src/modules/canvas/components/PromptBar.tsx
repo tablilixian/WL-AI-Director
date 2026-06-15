@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { styleTemplates } from '../data/styleTemplates';
+import { TemplateApplyDialog } from './TemplateApplyDialog';
+import type { StyleTemplate } from '../data/styleTemplates';
 
 interface PromptBarProps {
   selectedLayerId: string | null;
 }
 
-type Mode = 'generate' | 'edit' | 'video' | 'video-edit';
+type Mode = 'generate' | 'video';
 
 function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -53,7 +56,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [mode, setMode] = useState<Mode>('generate');
   const [isAnime, setIsAnime] = useState(false);
-  const { layers, addLayer, updateLayer, suggestedPrompt, setSuggestedPrompt } = useCanvasStore();
+  const [selectedTemplate, setSelectedTemplate] = useState<StyleTemplate | null>(null);
+  const { layers, addLayer, updateLayer, suggestedPrompt, setSuggestedPrompt, setTemplatePanelOpen } = useCanvasStore();
 
   useEffect(() => {
     if (suggestedPrompt) {
@@ -61,9 +65,6 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
       setSuggestedPrompt('');
     }
   }, [suggestedPrompt, setSuggestedPrompt]);
-
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -128,69 +129,6 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           isLoading: false,
           progress: 100
         });
-      } else if (mode === 'edit' && hasSelectedImage && selectedLayer) {
-        const traceId = `promptbar_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        console.log(`\n========== [I2I:${traceId}] PromptBar 图生图启动 ==========`);
-        console.log(`[I2I:${traceId}] 源图层: ${selectedLayer.title} (${selectedLayer.id})`);
-        console.log(`[I2I:${traceId}] 源图层位置: (${selectedLayer.x}, ${selectedLayer.y})`);
-        console.log(`[I2I:${traceId}] 源图层尺寸: ${selectedLayer.width}x${selectedLayer.height}`);
-        console.log(`[I2I:${traceId}] 源图层图片: ${selectedLayer.src ? selectedLayer.src.substring(0, 60) + '...' : '无'}`);
-        console.log(`[I2I:${traceId}] 编辑提示词: ${prompt}`);
-
-        updateLayer(selectedLayer.id, {
-          isLoading: true,
-          progress: 0
-        });
-
-        const editedUrl = await canvasModelService.generateImage({
-          prompt: `Edit this image: ${prompt}`,
-          referenceImages: [selectedLayer.src],
-          aspectRatio: '16:9',
-          onProgress: (p) => {
-            updateLayer(selectedLayer.id, { progress: p });
-          }
-        });
-
-        const resolvedUrl = await resolveImageUrl(editedUrl);
-        let imageId: string | undefined;
-
-        if (resolvedUrl.startsWith('data:')) {
-          try {
-            const imgId = unifiedImageService.generateImageId();
-            const response = await fetch(resolvedUrl);
-            const blob = await response.blob();
-            await unifiedImageService.saveImage(imgId, blob);
-            imageId = imgId;
-            console.log('[PromptBar] 图生图已保存到 IndexedDB:', imgId);
-          } catch (e) {
-            console.warn('[PromptBar] 保存图片到 IndexedDB 失败:', e);
-          }
-        } else if (resolvedUrl.startsWith('local:')) {
-          imageId = resolvedUrl.replace('local:', '');
-        }
-
-        console.log(`[I2I:${traceId}] 图生图完成, 结果: ${resolvedUrl.substring(0, 60)}...`);
-        console.log(`[I2I:${traceId}] 新图层位置: (${selectedLayer.x + selectedLayer.width + 20}, ${selectedLayer.y})`);
-        console.log(`========== [I2I:${traceId}] PromptBar 图生图结束 ==========\n`);
-
-        const newLayerId = crypto.randomUUID();
-        addLayer({
-          id: newLayerId,
-          type: 'image',
-          x: selectedLayer.x + selectedLayer.width + 20,
-          y: selectedLayer.y,
-          width: selectedLayer.width,
-          height: selectedLayer.height,
-          src: resolvedUrl,
-          imageId,
-          title: prompt.slice(0, 30),
-          isLoading: false,
-          createdAt: Date.now(),
-          sourceLayerId: selectedLayer.id,
-          operationType: 'image-to-image'
-        });
-
-        updateLayer(selectedLayer.id, { isLoading: false, progress: 100 });
       } else if (mode === 'video') {
         const placeholderId = crypto.randomUUID();
 
@@ -221,71 +159,12 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
 
         const resolvedUrl = await resolveVideoUrl(videoUrl);
         
-        // 提取 videoId 并保存到图层
         let videoId: string | undefined;
         if (videoUrl.startsWith('video:')) {
           videoId = videoUrl.replace('video:', '');
           console.log('[PromptBar] 视频已保存到本地:', videoId);
         }
 
-        // 获取视频实际尺寸，替代占位的 640x360
-        let videoWidth = 640;
-        let videoHeight = 360;
-        try {
-          const dims = await getVideoDimensions(resolvedUrl);
-          videoWidth = dims.width;
-          videoHeight = dims.height;
-        } catch (e) {
-          console.warn('[PromptBar] 获取视频尺寸失败，使用默认值:', e);
-        }
-
-        updateLayer(placeholderId, {
-          src: resolvedUrl,
-          imageId: videoId,
-          width: videoWidth,
-          height: videoHeight,
-          title: prompt.slice(0, 30),
-          isLoading: false,
-          progress: 100
-        });
-      } else if (mode === 'video-edit' && hasSelectedImage && selectedLayer) {
-        const placeholderId = crypto.randomUUID();
-
-        addLayer({
-          id: placeholderId,
-          type: 'video',
-          x: selectedLayer.x + selectedLayer.width + 20,
-          y: selectedLayer.y,
-          width: 640,
-          height: 360,
-          src: '',
-          title: '生成视频中...',
-          isLoading: true,
-          createdAt: Date.now(),
-          sourceLayerId: selectedLayer.id,
-          operationType: 'image-to-video'
-        });
-
-        const videoUrl = await canvasModelService.generateVideo({
-          prompt,
-          startImage: selectedLayer.src,
-          aspectRatio: '16:9',
-          duration: 5,
-          onProgress: (p) => {
-            updateLayer(placeholderId, { progress: p });
-          }
-        });
-
-        const resolvedUrl = await resolveVideoUrl(videoUrl);
-        
-        // 提取 videoId 并保存到图层
-        let videoId: string | undefined;
-        if (videoUrl.startsWith('video:')) {
-          videoId = videoUrl.replace('video:', '');
-          console.log('[PromptBar] 视频已保存到本地:', videoId);
-        }
-
-        // 获取视频实际尺寸，替代占位的 640x360
         let videoWidth = 640;
         let videoHeight = 360;
         try {
@@ -316,16 +195,15 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
     }
   };
 
-  const isVideoMode = mode === 'video' || mode === 'video-edit';
-  const isImageMode = mode === 'generate' || mode === 'edit';
-  const needsImage = mode === 'edit' || mode === 'video-edit';
-  const canGenerate = !isGenerating && prompt.trim() && (!needsImage || hasSelectedImage);
+  const isVideoMode = mode === 'video';
+  const canGenerate = !isGenerating && prompt.trim();
 
   return (
+    <>
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[700px]">
       <div className="bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700 p-3">
         <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center gap-1 border-r border-gray-600 pr-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setMode('generate')}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${
@@ -337,20 +215,6 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
               文生图
             </button>
             <button
-              onClick={() => setMode('edit')}
-              disabled={!hasSelectedImage}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                mode === 'edit'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-              title={!hasSelectedImage ? '请先选中一张图片' : '编辑选中的图片'}
-            >
-              图生图
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
               onClick={() => setMode('video')}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${
                 mode === 'video'
@@ -359,18 +223,6 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
               }`}
             >
               文生视频
-            </button>
-            <button
-              onClick={() => setMode('video-edit')}
-              disabled={!hasSelectedImage}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                mode === 'video-edit'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-              title={!hasSelectedImage ? '请先选中一张图片' : '用选中的图片生成视频'}
-            >
-              图生视频
             </button>
           </div>
           {mode === 'generate' && (
@@ -386,17 +238,28 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
               {isAnime ? '🎨 动漫' : '🎨 写实'}
             </button>
           )}
-          {(mode === 'edit' || mode === 'video-edit') && selectedLayer && (
-            <span className="text-xs text-gray-400">
-              参考: {selectedLayer.title}
-            </span>
-          )}
-          {!hasSelectedImage && isImageMode && (
-            <span className="text-xs text-gray-500">
-              💡 选中图片后可使用图生图/图生视频
-            </span>
-          )}
         </div>
+
+        {mode === 'generate' && (
+          <div className="flex items-center gap-1.5 mb-2 overflow-x-auto scrollbar-none">
+            {styleTemplates.filter(t => ['realistic-portrait', 'anime-ghibli', 'illustration-watercolor', 'artistic-oil', '3d-pixar', 'cinematic-blockbuster'].includes(t.id)).map(template => (
+              <button
+                key={template.id}
+                onClick={() => setSelectedTemplate(template)}
+                className="shrink-0 px-2.5 py-1 text-[11px] bg-gray-700/60 text-gray-400 rounded-lg hover:bg-gray-600 hover:text-white transition-colors whitespace-nowrap"
+                title={template.name}
+              >
+                {template.name}
+              </button>
+            ))}
+            <button
+              onClick={() => setTemplatePanelOpen(true)}
+              className="shrink-0 px-2.5 py-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors whitespace-nowrap"
+            >
+              更多▸
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <input
@@ -406,9 +269,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
             placeholder={
               mode === 'generate' ? '描述你想生成的图片...' :
-              mode === 'edit' ? '描述你想对图片进行的修改...' :
-              mode === 'video' ? '描述你想生成的视频...' :
-              '描述视频内容...'
+              '描述你想生成的视频...'
             }
             className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             disabled={isGenerating}
@@ -438,12 +299,18 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
 
         <div className="mt-2 text-xs text-gray-500">
           {mode === 'generate' && '输入描述，AI 将生成新图片'}
-          {mode === 'edit' && (hasSelectedImage ? `编辑图片: ${selectedLayer?.title}` : '请先选中一张图片')}
           {mode === 'video' && '输入描述，AI 将生成视频（约需1-3分钟）'}
-          {mode === 'video-edit' && (hasSelectedImage ? `用图片生成视频: ${selectedLayer?.title}` : '请先选中一张图片')}
         </div>
       </div>
     </div>
+
+    {selectedTemplate && (
+      <TemplateApplyDialog
+        template={selectedTemplate}
+        onClose={() => setSelectedTemplate(null)}
+      />
+    )}
+    </>
   );
 };
 

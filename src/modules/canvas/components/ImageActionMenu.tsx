@@ -13,6 +13,8 @@ import { StoryboardDeductionPanel } from './StoryboardDeductionPanel';
 import { LightingControlPanel } from './LightingControlPanel';
 import { InpaintPanel } from './InpaintPanel';
 import { GridSplitPanel } from './GridSplitPanel';
+import { ImageToImagePanel } from './ImageToImagePanel';
+import { ImageToVideoPanel } from './ImageToVideoPanel';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
 export type ImageAction =
@@ -30,7 +32,9 @@ export type ImageAction =
   | 'lighting'
   | 'split-9grid'
   | 'split-4grid'
-  | 'split-25grid';
+  | 'split-25grid'
+  | 'image-to-image'
+  | 'image-to-video';
 
 interface ActionItem {
   id: ImageAction;
@@ -85,6 +89,14 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
 
   const groups: ActionGroup[] = [
     {
+      label: '基于此图生成',
+      icon: <ImagePlus className="w-3.5 h-3.5" />,
+      items: [
+        { id: 'image-to-image', label: '图生图' },
+        { id: 'image-to-video', label: '图生视频' },
+      ],
+    },
+    {
       label: '图像处理',
       icon: <Scissors className="w-3.5 h-3.5" />,
       items: [
@@ -117,11 +129,11 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       icon: <Grid3x3 className="w-3.5 h-3.5" />,
       single: { id: 'storyboard-deduction', label: '剧情推演' },
     },
-    {
-      label: '变体生成',
-      icon: <Copy className="w-3.5 h-3.5" />,
-      single: { id: 'variant', label: '变体生成' },
-    },
+    // {
+    //   label: '变体生成',
+    //   icon: <Copy className="w-3.5 h-3.5" />,
+    //   single: { id: 'variant', label: '变体生成' },
+    // },
     {
       label: '宫格切分',
       icon: <Grid3x3 className="w-3.5 h-3.5" />,
@@ -205,12 +217,14 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {activePanel === 'background-replace' && <ImageEditPanel selectedLayerId={layer.id} editMode="background" onClose={handleClosePanel} />}
           {activePanel === 'expand' && <ImageEditPanel selectedLayerId={layer.id} editMode="expand" onClose={handleClosePanel} />}
           {activePanel === 'remove-bg' && <RemoveBackgroundPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
-          {activePanel === 'variant' && <VariantPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {/* activePanel === 'variant' && <VariantPanel selectedLayerId={layer.id} onClose={handleClosePanel} /> */}
           {activePanel === 'multi-angle' && <MultiAnglePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'three-view' && <ThreeViewPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'storyboard-deduction' && <StoryboardDeductionPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'inpaint' && <InpaintPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'lighting' && <LightingControlPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'image-to-image' && <ImageToImagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'image-to-video' && <ImageToVideoPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
         </>,
         document.body
       )}
