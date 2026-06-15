@@ -1,5 +1,6 @@
 import { AssetLibraryItem, Character, ProjectState, Prop, Scene } from '../types';
 import type { LayerData } from '../src/modules/canvas/types/canvas';
+import { unifiedImageService } from '../services/unifiedImageService';
 
 /**
  * 生成统一的 UUID（本地和云端共用）
@@ -17,6 +18,36 @@ const generateId = (): string => {
     return v.toString(16);
   });
 };
+
+/**
+ * 确保图片已保存到 IndexedDB 并返回 local: 引用
+ * 优先使用 layer.imageId，否则从 layer.src (data: URL) 保存并生成新 ID
+ */
+async function ensureImageSavedToLocal(layer: LayerData): Promise<string> {
+  // 情况 1：已有 imageId，直接返回 local: 引用
+  if (layer.imageId) {
+    return `local:${layer.imageId}`;
+  }
+
+  // 情况 2：src 是 data: URL，需要保存到 IndexedDB
+  if (layer.src && layer.src.startsWith('data:')) {
+    try {
+      const imageId = unifiedImageService.generateImageId();
+      const response = await fetch(layer.src);
+      const blob = await response.blob();
+      await unifiedImageService.saveImage(imageId, blob);
+      console.log('[AssetLibrary] 图片已保存到 IndexedDB:', imageId);
+      return `local:${imageId}`;
+    } catch (e) {
+      console.warn('[AssetLibrary] 保存图片到 IndexedDB 失败:', e);
+      // 降级：直接使用 data: URL（虽然云端同步可能不工作）
+      return layer.src;
+    }
+  }
+
+  // 情况 3：其他情况（网络 URL、blob: 等），直接返回原 URL
+  return layer.src;
+}
 
 const cloneCharacterVariation = (variation: Character['variations'][number]): Character['variations'][number] => ({
   ...variation,
@@ -207,9 +238,10 @@ export const createLibraryItemFromLayer = async (
   
   // 如果图层没有关联资源 ID 或关联的是关键帧，则从图层图片创建新资产
   // 这种情况适用于：AI 生成的图片、导入的本地图片等
-  const imageUrl = layer.src;
+  // 优先使用 imageId 创建 local: 引用，确保云端同步能工作
+  const imageUrl = await ensureImageSavedToLocal(layer);
   
-  console.log('[AssetLibrary] 从图层图片创建新资产，类型:', assetType, '图层标题:', layer.title);
+  console.log('[AssetLibrary] 从图层图片创建新资产，类型:', assetType, '图层标题:', layer.title, 'imageUrl:', imageUrl?.substring(0, 50));
   
   if (assetType === 'character') {
     // 创建新的角色资产
