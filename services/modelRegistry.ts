@@ -196,7 +196,8 @@ export const loadRegistry = (): ModelRegistryState => {
       return parsed;
     }
   } catch (e) {
-    logger.error(LogCategory.MODEL, '加载模型注册中心失败:', e);
+    logger.error(LogCategory.MODEL, '加载模型注册中心失败，将重置为默认配置:', e);
+    localStorage.removeItem(STORAGE_KEY);
   }
 
   registryState = getDefaultState();

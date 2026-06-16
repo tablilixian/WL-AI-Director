@@ -19,8 +19,9 @@ export const DB_NAME = 'WLDB';
  * - 8: 添加 canvasData store（画布数据独立存储，按项目ID关联）
  * - 9: 确保 videos store 正确创建
  * - 10: 添加 editorStates、mediaFiles store（原 video-editor-files 合并至 WLDB）
+ * - 11: 添加 novelAnalyses store（小说分析数据独立存储）
  */
-export const DB_VERSION = 10;
+export const DB_VERSION = 11;
 
 export const STORE_NAMES = {
   PROJECTS: 'projects',
@@ -31,6 +32,7 @@ export const STORE_NAMES = {
   CANVAS_DATA: 'canvasData',
   EDITOR_STATES: 'editorStates',
   MEDIA_FILES: 'mediaFiles',
+  NOVEL_ANALYSES: 'novelAnalyses',
 } as const;
 
 /**

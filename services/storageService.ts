@@ -55,6 +55,11 @@ export const openDB = (): Promise<IDBDatabase> => {
       if (!db.objectStoreNames.contains(STORE_NAMES.MEDIA_FILES)) {
         db.createObjectStore(STORE_NAMES.MEDIA_FILES, { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains(STORE_NAMES.NOVEL_ANALYSES)) {
+        const store = db.createObjectStore(STORE_NAMES.NOVEL_ANALYSES, { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+        store.createIndex('title', 'title', { unique: false });
+      }
     };
   });
 };

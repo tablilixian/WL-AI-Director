@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Database, Settings, Sun, Moon, LogOut, User, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Database, Settings, Sun, Moon, LogOut, User, RefreshCw, BookOpen } from 'lucide-react';
 import { ProjectState, AssetLibraryItem } from '../types';
 import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB, exportIndexedDBData, importIndexedDBData, loadProjectFromDB, saveProjectToDB } from '../services/storageService';
 import { hybridStorage } from '../services/hybridStorageService';
@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 import DebugExportModal from './DebugExportModal';
+import NovelAnalysisModal from './StageNovel/index';
 import logger, { LogCategory } from '@/services/logger';
 import { getPreferences, getPreferenceSummary, resetPreferences, UserPreferences } from '../services/userPreferencesService';
 
@@ -33,6 +34,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
+  const [showNovelModal, setShowNovelModal] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isDataImporting, setIsDataImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -308,6 +310,13 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               <span className="font-medium text-xs tracking-widest uppercase">{theme === 'dark' ? '亮色' : '暗色'}</span>
             </button>
             <LanguageSwitcher />
+            <button 
+              onClick={() => setShowNovelModal(true)}
+              className="group flex items-center gap-3 px-5 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="font-bold text-xs tracking-widest uppercase">小说导入</span>
+            </button>
             <button 
               onClick={handleCreate}
               className="group flex items-center gap-3 px-6 py-3 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors"
@@ -602,6 +611,14 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
 
       {/* Debug Export Modal */}
       <DebugExportModal isOpen={showDebugModal} onClose={() => setShowDebugModal(false)} />
+      <NovelAnalysisModal
+        isOpen={showNovelModal}
+        onClose={() => setShowNovelModal(false)}
+        onCreateProject={(project) => {
+          setShowNovelModal(false);
+          onOpenProject(project);
+        }}
+      />
     </div>
   );
 };
