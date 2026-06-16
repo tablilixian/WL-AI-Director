@@ -205,9 +205,22 @@ const callDramaBackendApi = async (
     ? '/api/v1/generate/image2image' 
     : '/api/v1/generate/txt2image';
   
-  const finalPrompt = hasReferenceImages
+  let finalPrompt = hasReferenceImages
     ? options.prompt
     : enhanceWithQualityTags(options.prompt);
+
+  if (options.autoEnhancePrompt) {
+    try {
+      console.log(`[I2I:${traceId}] 自动增强提示词...`);
+      const enhanced = await callDramaBackendPromptEnhanceApi(options.prompt, traceId);
+      if (enhanced) {
+        finalPrompt = enhanced;
+        console.log(`[I2I:${traceId}] 提示词已自动增强`);
+      }
+    } catch (e) {
+      console.warn(`[I2I:${traceId}] 自动增强失败，使用原始提示词:`, e);
+    }
+  }
 
   const requestBody: any = {
     prompt: finalPrompt,
@@ -1021,7 +1034,9 @@ export const callDramaBackendInpaintApi = async (
 export const callDramaBackendStyleTransferApi = async (
   targetImageUrl: string,
   styleImageUrl: string,
-  traceId?: string
+  traceId?: string,
+  prompt?: string,
+  enhance?: boolean,
 ): Promise<string> => {
   const tid = traceId || `st_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1047,6 +1062,16 @@ export const callDramaBackendStyleTransferApi = async (
     image1: targetFilename,
     image2: styleFilename,
   };
+
+  if (prompt) {
+    requestBody.prompt = prompt;
+    console.log(`[ST:${tid}] 增强提示词: ${prompt}`);
+  }
+
+  if (enhance !== undefined) {
+    requestBody.enhance = enhance;
+    console.log(`[ST:${tid}] 增强风格迁移效果: ${enhance}`);
+  }
 
   console.log(`[ST:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
@@ -1362,6 +1387,64 @@ export const callDramaBackendVLApi = async (
 };
 
 /**
+ * 调用 Drama Backend 提示词增强 API (image2promptenhance)
+ * 根据输入提示词生成更丰富的提示词
+ */
+export const callDramaBackendPromptEnhanceApi = async (
+  prompt: string,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `pe_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[PE:${tid}] 调用提示词增强 API`);
+  console.log(`[PE:${tid}] 端点: /api/v1/generate/image2promptenhance`);
+  console.log(`[PE:${tid}] API基础地址: ${apiBase}`);
+
+  const requestBody: any = { prompt };
+
+  console.log(`[PE:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2promptenhance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  if (!response.output) {
+    throw new Error(`提示词增强失败：响应中未找到 output 字段: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[PE:${tid}] 增强完成，输出长度: ${response.output.length} 字符`);
+  console.log(`[PE:${tid}] 增强结果: ${response.output}`);
+
+  return response.output;
+};
+
+/**
  * 调用图片生成 API
  */
 export const callImageApi = async (
@@ -1396,6 +1479,11 @@ export const callImageApi = async (
   if (isDramaBackendProvider(activeModel)) {
     // 开发环境使用 Vite 代理解决 CORS，生产环境直接使用服务端地址
     const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+    if (options.isPromptEnhance) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (提示词增强 image2promptenhance 端点)`);
+      return callDramaBackendPromptEnhanceApi(options.prompt, tid);
+    }
 
     if (options.isCharacterTurnaround) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2character 端点)`);

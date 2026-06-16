@@ -194,8 +194,10 @@ export interface ImageGenerateOptions {
   spliteGridTargetWidth?: number;  // 目标图像宽度（默认 1024）
   spliteGridTargetHeight?: number; // 目标图像高度（默认 720）
   isAnime?: boolean;           // 是否为动漫风格生成（txt2imageanime）
+  isPromptEnhance?: boolean;   // 是否为提示词增强（image2promptenhance）
+  autoEnhancePrompt?: boolean; // 是否在生成前自动增强提示词（仅 Drama Backend）
   refImage?: string;           // IPA 风格迁移参考图像
-  enhance?: boolean;           // 是否增强 IPA 风格迁移效果
+  enhance?: boolean;           // 是否增强风格迁移效果（image2styletransfer / image2ipastyletransfer）
 }
 
 /**

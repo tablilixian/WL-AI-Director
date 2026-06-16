@@ -17,6 +17,7 @@ updated: 2026-06-01
 - [根端点](#根端点)
 - [健康检查](#健康检查)
 - [图像生成](#图像生成)
+- [提示词增强](#提示词增强)
 - [风格迁移](#风格迁移)
 - [IPA 风格迁移](#ipa-风格迁移)
 - [图像上传](#图像上传)
@@ -190,6 +191,43 @@ updated: 2026-06-01
 - 该端点使用内部预置的提示词生成图像
 - 适用于快速测试或生成默认风格图像
 
+---
+
+## 提示词增强
+
+### POST /api/v1/generate/image2promptenhance
+
+提示词增强（根据输入提示词生成更丰富的提示词）
+
+**请求体 (Image2PromptEnhanceRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 原始提示词 |
+
+**请求示例:**
+```json
+{
+  "prompt": "a beautiful landscape"
+}
+```
+
+**响应:** 返回增强后的提示词
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "output": "A stunningly beautiful landscape with rolling green hills, majestic mountains in the distance, vibrant wildflowers blooming in the foreground, a serene lake reflecting the golden sunset sky, fluffy white clouds drifting lazily overhead, and a gentle breeze rustling through the tall grass, creating a peaceful and idyllic scene.",
+    "duration": 1.23
+}
+```
+
+**说明:**
+- 该端点使用AI模型对输入提示词进行扩展和增强
+- 生成更详细、更具描述性的提示词
+- 适用于提升图像生成质量
+
 ### POST /api/v1/generate/image2character
 
 基于角色设计图生成角色立绘图（三视图）
@@ -237,12 +275,16 @@ updated: 2026-06-01
 |------|------|------|--------|------|
 | `image1` | string | 是 | - | 目标图像（需要进行风格迁移的图像） |
 | `image2` | string | 是 | - | 参考图像（提供风格参考的图像） |
+| `prompt` | string | 否 | "" | 增强提示词 |
+| `enhance` | boolean | 否 | false | 是否增强风格迁移效果 |
 
 **请求示例:**
 ```json
 {
   "image1": "target_image.png",
-  "image2": "style_reference.png"
+  "image2": "style_reference.png",
+  "prompt": "Make it more vibrant",
+  "enhance": true
 }
 ```
 
@@ -355,7 +397,7 @@ updated: 2026-06-01
 
 ## 图像查看
 
-### GET /api/v1/view
+### GET /view
 
 从 ComfyUI 服务器获取图像
 

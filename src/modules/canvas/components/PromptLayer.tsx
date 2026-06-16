@@ -62,6 +62,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isApiEnhancing, setIsApiEnhancing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
   const { 
@@ -118,6 +119,23 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
     }
   };
   
+  const handleApiEnhance = async () => {
+    if (!promptConfig.prompt.trim() || isApiEnhancing) return;
+
+    setIsApiEnhancing(true);
+    try {
+      const enhanced = await canvasModelService.apiPromptEnhance(promptConfig.prompt);
+      updatePromptConfig(layer.id, {
+        enhancedPrompt: enhanced,
+        isEnhanced: true
+      });
+    } catch (error) {
+      console.error('API Enhance failed:', error);
+    } finally {
+      setIsApiEnhancing(false);
+    }
+  };
+
   const handleExecute = async () => {
     if (!promptConfig.prompt.trim() || isExecuting || linkedLayers.length === 0) return;
     
@@ -367,6 +385,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
             onClick={handleEnhance}
             disabled={!promptConfig.prompt.trim() || isEnhancing}
             className="flex-1 px-2 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+            title="调用 LLM 增强提示词"
           >
             {isEnhancing ? (
               <>
@@ -375,6 +394,22 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
               </>
             ) : (
               <>✨ 增强</>
+            )}
+          </button>
+
+          <button
+            onClick={handleApiEnhance}
+            disabled={!promptConfig.prompt.trim() || isApiEnhancing}
+            className="flex-1 px-2 py-1.5 text-xs bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+            title="调用 Drama Backend API 增强提示词"
+          >
+            {isApiEnhancing ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                API增强
+              </>
+            ) : (
+              <>🚀 API增强</>
             )}
           </button>
           

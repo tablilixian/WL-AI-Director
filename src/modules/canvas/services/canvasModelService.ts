@@ -14,6 +14,8 @@ interface GenerateImageOptions {
   onProgress?: (progress: number) => void;
   isCharacterTurnaround?: boolean;
   isAnime?: boolean;
+  isPromptEnhance?: boolean;
+  autoEnhancePrompt?: boolean;
 }
 
 interface GenerateVideoOptions {
@@ -54,7 +56,7 @@ export class CanvasModelService {
   }
 
   async generateImage(options: GenerateImageOptions): Promise<string> {
-    const { prompt, negativePrompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround, isAnime } = options;
+    const { prompt, negativePrompt, referenceImages = [], aspectRatio = '16:9', onProgress, isCharacterTurnaround, isAnime, isPromptEnhance, autoEnhancePrompt } = options;
     const provider = this.getProvider();
     const traceId = this.generateTraceId();
     const startTime = Date.now();
@@ -97,6 +99,8 @@ export class CanvasModelService {
         resourceId: traceId,
         isCharacterTurnaround,
         isAnime,
+        isPromptEnhance,
+        autoEnhancePrompt,
       }, undefined, traceId);
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -246,6 +250,21 @@ export class CanvasModelService {
     }
   }
 
+  async apiPromptEnhance(prompt: string): Promise<string> {
+    console.log('=== API 提示词增强请求 (image2promptenhance) ===');
+    console.log('[原始提示词]', prompt);
+
+    try {
+      const { generatePromptEnhanceImage } = await import('../../../../services/ai/visualService');
+      const result = await generatePromptEnhanceImage(prompt);
+      console.log('[增强结果]', result);
+      return result;
+    } catch (error: any) {
+      console.error('API 提示词增强失败:', error);
+      throw error;
+    }
+  }
+
   async generateTitle(prompt: string): Promise<string> {
     try {
       const { chatCompletion } = await import('../../../../services/ai/apiCore');
@@ -354,6 +373,8 @@ export class CanvasModelService {
     targetImageUrl: string,
     styleImageUrl: string,
     onProgress?: (progress: number) => void,
+    prompt?: string,
+    enhance?: boolean,
   ): Promise<string> {
     console.log('=== 直接风格迁移请求 (image2styletransfer) ===');
     console.log('[目标图]', targetImageUrl);
@@ -369,6 +390,8 @@ export class CanvasModelService {
         targetImageUrl,
         styleImageUrl,
         traceId,
+        prompt,
+        enhance,
       );
 
       onProgress?.(100);

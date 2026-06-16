@@ -14,6 +14,7 @@ interface Props {
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   onPromptChange: (value: string) => void;
+  onApiEnhance?: (value: string) => Promise<string>;
 }
 
 const CharacterSection: React.FC<Props> = ({
@@ -24,7 +25,8 @@ const CharacterSection: React.FC<Props> = ({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
-  onPromptChange
+  onPromptChange,
+  onApiEnhance
 }) => {
   if (characters.length === 0) return null;
 
@@ -60,6 +62,7 @@ const CharacterSection: React.FC<Props> = ({
               onSave={onSaveEdit}
               onCancel={onCancelEdit}
               size="large"
+              onApiEnhance={onApiEnhance}
             />
           ) : (
             <p className={STYLES.display.base}>
@@ -92,6 +95,7 @@ const CharacterSection: React.FC<Props> = ({
                       onSave={onSaveEdit}
                       onCancel={onCancelEdit}
                       size="small"
+                      onApiEnhance={onApiEnhance}
                     />
                   ) : (
                     <p className={STYLES.display.small}>

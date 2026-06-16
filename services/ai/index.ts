@@ -75,6 +75,7 @@ export {
   generateStyleTransferImage,
   generateIPAStyleTransferImage,
   generateVisualLanguage,
+  generatePromptEnhanceImage,
   generateAllPropPrompts,
 } from './visualService';
 

@@ -54,6 +54,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [mode, setMode] = useState<Mode>('generate');
   const [isAnime, setIsAnime] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<StyleTemplate | null>(null);
@@ -195,6 +196,23 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
     }
   };
 
+  const handleEnhance = async () => {
+    if (!prompt.trim() || isEnhancing) return;
+
+    setIsEnhancing(true);
+    try {
+      const enhanced = await canvasModelService.apiPromptEnhance(prompt);
+      if (enhanced) {
+        setPrompt(enhanced);
+      }
+    } catch (error: any) {
+      console.error('Prompt enhance failed:', error);
+      alert(`增强失败: ${error.message}`);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const isVideoMode = mode === 'video';
   const canGenerate = !isGenerating && prompt.trim();
 
@@ -274,6 +292,21 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
             className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             disabled={isGenerating}
           />
+          <button
+            onClick={handleEnhance}
+            disabled={!prompt.trim() || isEnhancing}
+            className="shrink-0 px-2.5 py-2 text-xs bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            title="调用 API 增强提示词"
+          >
+            {isEnhancing ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                增强
+              </>
+            ) : (
+              <>✨ 增强</>
+            )}
+          </button>
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}

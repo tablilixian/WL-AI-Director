@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Search, Film } from 'lucide-react';
 import { ProjectState } from '../../types';
 import { PromptCategory, EditingPrompt } from './constants';
@@ -63,6 +63,17 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
       setEditingPrompt({ ...editingPrompt, value });
     }
   };
+
+  const handleApiEnhance = useCallback(async (currentValue: string): Promise<string> => {
+    try {
+      const { generatePromptEnhanceImage } = await import('../../services/ai/visualService');
+      const enhanced = await generatePromptEnhanceImage(currentValue);
+      return enhanced;
+    } catch (error: any) {
+      console.error('API 提示词增强失败:', error);
+      throw error;
+    }
+  }, []);
 
   // Filter data
   const filteredCharacters = category === 'all' || category === 'characters'
@@ -136,6 +147,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
                 onSaveEdit={handleSaveEdit}
                 onCancelEdit={handleCancelEdit}
                 onPromptChange={handlePromptChange}
+                onApiEnhance={handleApiEnhance}
               />
 
               <SceneSection
@@ -147,6 +159,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
                 onSaveEdit={handleSaveEdit}
                 onCancelEdit={handleCancelEdit}
                 onPromptChange={handlePromptChange}
+                onApiEnhance={handleApiEnhance}
               />
 
               <PropSection
@@ -158,6 +171,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
                 onSaveEdit={handleSaveEdit}
                 onCancelEdit={handleCancelEdit}
                 onPromptChange={handlePromptChange}
+                onApiEnhance={handleApiEnhance}
               />
             </>
           )}
@@ -173,6 +187,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
               onSaveEdit={handleSaveEdit}
               onCancelEdit={handleCancelEdit}
               onPromptChange={handlePromptChange}
+              onApiEnhance={handleApiEnhance}
             />
           )}
 

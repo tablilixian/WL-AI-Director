@@ -23,7 +23,7 @@ import {
   getNegativePrompt,
   getSceneNegativePrompt,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -950,7 +950,9 @@ export const generateStyleTransferImage = async (
   targetImageUrl: string,
   styleImageUrl: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
+  prompt?: string,
+  enhance?: boolean,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -964,6 +966,9 @@ export const generateStyleTransferImage = async (
     const localUrl = await callDramaBackendStyleTransferApi(
       targetImageUrl,
       styleImageUrl,
+      undefined,
+      prompt,
+      enhance,
     );
 
     addRenderLogWithTokens({
@@ -1157,6 +1162,53 @@ export const generateVisualLanguage = async (
     });
 
     throw new Error(`视觉语言推理失败: ${error.message}`);
+  }
+};
+
+/**
+ * 提示词增强
+ * 调用 Drama Backend image2promptenhance API，根据输入提示词生成更丰富的提示词
+ */
+export const generatePromptEnhanceImage = async (
+  prompt: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `✨ generatePromptEnhanceImage 调用 - 提示词增强`);
+    logger.debug(LogCategory.AI, `📝 原始提示词: ${prompt}`);
+
+    const enhancedPrompt = await callDramaBackendPromptEnhanceApi(prompt);
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'promptenhance-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 提示词增强完成，长度: ${enhancedPrompt.length} 字符`);
+    return enhancedPrompt;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'promptenhance-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`提示词增强失败: ${error.message}`);
   }
 };
 

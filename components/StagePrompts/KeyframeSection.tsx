@@ -18,6 +18,7 @@ interface Props {
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   onPromptChange: (value: string) => void;
+  onApiEnhance?: (value: string) => Promise<string>;
 }
 
 const KeyframeSection: React.FC<Props> = ({
@@ -29,7 +30,8 @@ const KeyframeSection: React.FC<Props> = ({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
-  onPromptChange
+  onPromptChange,
+  onApiEnhance
 }) => {
   if (shots.length === 0) return null;
 
@@ -93,6 +95,7 @@ const KeyframeSection: React.FC<Props> = ({
                       onSave={onSaveEdit}
                       onCancel={onCancelEdit}
                       size="small"
+                      onApiEnhance={onApiEnhance}
                     />
                   ) : (
                     <p className={STYLES.display.small}>
@@ -136,6 +139,7 @@ const KeyframeSection: React.FC<Props> = ({
                         onCancel={onCancelEdit}
                         size="video"
                         isVideo={true}
+                        onApiEnhance={onApiEnhance}
                       />
                     ) : (
                       <div className="space-y-2">

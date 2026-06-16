@@ -11,6 +11,8 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
   const [selectedStyleLayerId, setSelectedStyleLayerId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [enhancePrompt, setEnhancePrompt] = useState('');
+  const [enhanceEnabled, setEnhanceEnabled] = useState(false);
   const { layers, addLayer } = useCanvasStore();
 
   const targetLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
@@ -32,6 +34,8 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
         targetLayer.src,
         selectedStyleLayer.src,
         (p) => setProgress(p),
+        enhancePrompt || undefined,
+        enhanceEnabled || undefined,
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -163,6 +167,33 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
               ))}
             </div>
           )}
+        </div>
+
+        <div className="mb-4 p-3 bg-gray-800/50 rounded-lg space-y-3">
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            高级选项 <span className="text-xs text-gray-500 font-normal">（可选）</span>
+          </p>
+          <div>
+            <label className="text-xs text-[var(--text-muted)] block mb-1">
+              增强提示词
+            </label>
+            <input
+              type="text"
+              value={enhancePrompt}
+              onChange={(e) => setEnhancePrompt(e.target.value)}
+              placeholder="例如：让色彩更鲜艳..."
+              className="w-full px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enhanceEnabled}
+              onChange={(e) => setEnhanceEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-[var(--text-muted)]">增强风格迁移效果</span>
+          </label>
         </div>
 
         {isProcessing ? (
