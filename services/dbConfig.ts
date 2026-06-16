@@ -19,8 +19,9 @@ export const DB_NAME = 'WLDB';
  * - 8: 添加 canvasData store（画布数据独立存储，按项目ID关联）
  * - 9: 确保 videos store 正确创建
  * - 10: 添加 editorStates、mediaFiles store（原 video-editor-files 合并至 WLDB）
+ * - 11: 同步现有数据库版本，修复版本冲突
  */
-export const DB_VERSION = 10;
+export const DB_VERSION = 11;
 
 export const STORE_NAMES = {
   PROJECTS: 'projects',
