@@ -557,12 +557,24 @@ export const getActiveModelsConfig = (): ActiveModels => {
 };
 
 /**
- * 检查模型是否可用（已启用且有 API Key）
+ * 检查是否为本地部署的提供商（如 Ollama），不需要 API Key
+ */
+export const isLocalProvider = (providerId: string): boolean => {
+  const provider = getProviderById(providerId);
+  if (!provider) return false;
+  const hostname = new URL(provider.baseUrl).hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+/**
+ * 检查模型是否可用（已启用且有 API Key，本地模型无需 Key）
  */
 export const isModelAvailable = (modelId: string): boolean => {
   const model = getModelById(modelId);
   if (!model || !model.isEnabled) return false;
-  
+
+  if (isLocalProvider(model.providerId)) return true;
+
   const apiKey = getApiKeyForModel(modelId);
   return !!apiKey;
 };

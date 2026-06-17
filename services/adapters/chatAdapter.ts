@@ -4,7 +4,7 @@
  */
 
 import { ChatModelDefinition, ChatOptions, ChatModelParams } from '../../types/model';
-import { getApiKeyForModel, getApiBaseUrlForModel, getActiveChatModel } from '../modelRegistry';
+import { getApiKeyForModel, getApiBaseUrlForModel, getActiveChatModel, isLocalProvider } from '../modelRegistry';
 
 /**
  * API Key 错误类
@@ -95,8 +95,9 @@ export const callChatApi = async (
   }
 
   // 获取 API 配置
+  const isLocal = isLocalProvider(activeModel.providerId);
   const apiKey = getApiKeyForModel(activeModel.id);
-  if (!apiKey) {
+  if (!apiKey && !isLocal) {
     throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
   }
   
@@ -150,12 +151,15 @@ export const callChatApi = async (
   
   try {
     const response = await retryOperation(async () => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
       const res = await fetch(`${apiBase}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -201,6 +205,11 @@ export const callChatApi = async (
  * 验证 API Key
  */
 export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ success: boolean; message: string }> => {
+  // Ollama 本地服务无需验证 API Key
+  if (baseUrl && (baseUrl.includes('localhost:11434') || baseUrl.includes('127.0.0.1:11434'))) {
+    return { success: true, message: 'Ollama 本地服务无需 API Key' };
+  }
+
   try {
     let url = baseUrl || 'https://open.bigmodel.cn';
     let endpoint = '/v1/chat/completions';
@@ -221,12 +230,15 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
     if (url.includes('localhost') || url.includes('newapi.ai')) {
       testModel = 'poolside/laguna-xs.2:free';
     }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
     const response = await fetch(`${url}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         model: testModel,
         messages: [{ role: 'user', content: '1' }],

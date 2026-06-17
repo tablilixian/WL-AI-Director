@@ -17,6 +17,7 @@ import { callVideoApi } from './adapters/videoAdapter';
 import {
   getGlobalApiKey,
   setGlobalApiKey as setRegistryApiKey,
+  getApiBaseUrlForModel,
   getActiveVideoModel,
   getActiveChatModel,
 } from './modelRegistry';
@@ -169,9 +170,12 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
   
   let url = 'https://open.bigmodel.cn';
   
-  // 如果激活的是 BigModel 系列的模型，使用 BigModel 的端点
-  if (activeModel?.providerId === 'bigmodel' || activeModel?.id.startsWith('glm-')) {
-    url = 'https://open.bigmodel.cn';
+  if (activeModel) {
+    if (activeModel.providerId === 'bigmodel' || activeModel?.id.startsWith('glm-')) {
+      url = 'https://open.bigmodel.cn';
+    } else {
+      url = getApiBaseUrlForModel(activeModel.id);
+    }
   }
   
   return verifyChatApiKey(apiKey, url);

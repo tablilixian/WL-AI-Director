@@ -18,6 +18,7 @@ import {
   getActiveChatModel,
   getActiveVideoModel,
   getActiveImageModel,
+  isLocalProvider,
 } from '../modelRegistry';
 
 /**
@@ -147,6 +148,11 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
   logger.debug(LogCategory.AI, `[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=${resolvedModel?.id} ${resolvedModel?.providerId}`);
 
   if (resolvedModel) {
+    // 本地部署的模型（如 Ollama）无需 API Key
+    if (isLocalProvider(resolvedModel.providerId)) {
+      return '';
+    }
+
     const modelApiKey = getApiKeyForModel(resolvedModel.id);
     const apiKeySource = getApiKeySource(resolvedModel.id);
     logger.debug(LogCategory.AI, `[checkApiKey] modelApiKey found: ${!!modelApiKey}, source: ${apiKeySource}`);
@@ -339,12 +345,15 @@ export const chatCompletion = async (
     const apiBase = getApiBase('chat', resolvedModel);
     const resolved = resolveModel('chat', resolvedModel);
     const endpoint = resolved?.endpoint || '/v1/chat/completions';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
     const response = await fetch(`${apiBase}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify(requestBody),
       signal: controller.signal
     });
@@ -396,12 +405,15 @@ export const chatCompletionStream = async (
     const apiBase = getApiBase('chat', model);
     const resolved = resolveModel('chat', model);
     const endpoint = resolved?.endpoint || '/v1/chat/completions';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
     const response = await fetch(`${apiBase}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify(requestBody),
       signal: controller.signal
     });
@@ -479,12 +491,15 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
     const resolvedModel = getDefaultChatModelId();
     const requestModel = resolveRequestModel('chat', resolvedModel);
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (key) {
+      headers['Authorization'] = `Bearer ${key}`;
+    }
     const response = await fetch(`${apiBase}/v1/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`
-      },
+      headers,
       body: JSON.stringify({
         model: requestModel,
         messages: [{ role: 'user', content: '仅返回1' }],
