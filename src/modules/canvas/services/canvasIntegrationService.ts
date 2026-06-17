@@ -61,14 +61,317 @@ export class CanvasIntegrationService {
   private loadingPromise: Promise<void> | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private unsubscribe: (() => void) | null = null;
+  private exitPromise: Promise<void> | null = null;
 
-  constructor(projectId?: string) {
-    if (projectId) {
-      this.currentProjectId = projectId;
-    }
-    this.setupAutoSave();
-    this.setupBeforeUnload();
+  /**
+   * 保存队列：将所有写操作串行化，消除竞态
+   * 
+   * 核心思路：每个新的写操作都 chain 在上一个操作的 Promise 之后，
+   * 保证后一个操作必须等前一个完成才执行。
+   * 
+   * 不受单个操作失败影响：如果前一个 reject，后一个仍会执行。
+   */
+  private pendingSave: Promise<void> = Promise.resolve();
+
+  /**
+   * 将写操作加入队列，返回执行完成的 Promise
+   * 所有写操作（auto-save、saveImmediately、clearCanvas、forceSync）都通过此方法串行化
+   */
+  private enqueueSave<T>(fn: () => Promise<T>): Promise<T> {
+    const prev = this.pendingSave;
+    const next = prev.then(() => fn(), () => fn());
+    // Keep the chain alive regardless of individual failures
+    this.pendingSave = next.then(() => {}, () => {});
+    return next;
+  }
+
+  /**
+   * sessionStorage 备份的 key 前缀
+   */
+  private readonly STORAGE_KEY_PREFIX = 'canvas-backup:';
+
+  constructor() {
     this.cleanupLegacyLocalStorage();
+  }
+
+  // =================================================================
+  //  生命周期：enter / exit
+  //  所有项目进入/退出操作通过此两方法统一管理，确保 setup 与 teardown 配对
+  // =================================================================
+
+  /**
+   * 进入项目 - 设置自动保存、加载画布数据
+   * 
+   * 安全边界：
+   * - 如果已有活动项目且不同，先自动 exit()
+   * - 如果 projectId 相同，跳过（防止重复加载）
+   * - 先检查 sessionStorage 同步备份（beforeunload 时的兜底），再从 IndexedDB/云端恢复
+   * - isLoading 标志阻止自动保存写入空数据
+   */
+  async enter(projectId: string): Promise<void> {
+    if (!projectId) {
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] enter 失败：projectId 为空');
+      return;
+    }
+    if (this.currentProjectId === projectId) {
+      console.log('[CanvasIntegration] 已在项目中，跳过 enter:', projectId);
+      return;
+    }
+
+    // 等待正在执行的 exit() 完成，防止"退出中又进入"的竞态
+    if (this.exitPromise) {
+      console.log('[CanvasIntegration] enter 等待 exit 完成...');
+      await this.exitPromise;
+    }
+
+    if (this.currentProjectId) {
+      console.log('[CanvasIntegration] enter 检测到活动项目，先退出:', this.currentProjectId);
+      await this.exit();
+    }
+
+    console.log('[CanvasIntegration] ========== 进入项目 ==========');
+    console.log('[CanvasIntegration] 项目ID:', projectId);
+    this.currentProjectId = projectId;
+    this.isLoading = true;
+    this.loadingPromise = (async () => {
+      try {
+        // 在加载新数据前清空旧画布，防止新项目没有画布数据时显示旧项目的图层
+        const { importLayers, setOffset, setScale, setProjectId: setStoreProjectId } = useCanvasStore.getState();
+        importLayers([], true);
+        setOffset({ x: 0, y: 0 });
+        setScale(1);
+
+        this.setupAutoSave();
+        this.setupBeforeUnload();
+        await canvasSyncService.init(projectId);
+        setStoreProjectId(projectId);
+
+        // 优先检查 sessionStorage 同步备份
+        // 场景：用户关闭页面前 beforeunload 写入了 sessionStorage，
+        // 但 IndexedDB 写入未完成（浏览器终止了事务）
+        const backup = this.restoreSessionBackup(projectId);
+        if (backup) {
+          console.log('[CanvasIntegration] 从 sessionStorage 备份恢复画布');
+          await this.importCanvasData(backup);
+          return;
+        }
+
+        // 正常路径：从 IndexedDB 加载（可能触发云端冲突解决）
+        await this._restoreCanvasState();
+      } finally {
+        this.isLoading = false;
+      }
+    })();
+
+    await this.loadingPromise;
+  }
+
+  /**
+   * 退出项目 - 保存、清理、释放资源
+   * 
+   * 执行顺序（防止任何竞态）：
+   * 1. 立即清除 currentProjectId → 后续 auto-save 调用变为 no-op
+   * 2. 同步写入 sessionStorage 备份 → 即使页面关闭也不丢
+   * 3. 取消 Zustand 订阅和 beforeunload 监听
+   * 4. 等待保存队列排空 → 所有暂存的写操作按序完成
+   * 5. 清理 canvasSyncService
+   */
+  async exit(): Promise<void> {
+    if (!this.currentProjectId) {
+      console.log('[CanvasIntegration] 无活动项目，跳过 exit');
+      return;
+    }
+    // Dedup：如果 exit 已在执行，复用其 Promise（防止并发 exit）
+    if (this.exitPromise) return this.exitPromise;
+
+    const projectId = this.currentProjectId;
+    console.log('[CanvasIntegration] ========== 退出项目 ==========');
+    console.log('[CanvasIntegration] 项目ID:', projectId);
+
+    this.exitPromise = (async () => {
+      // 1. 立即切断 projectId → 此后所有 auto-save/saveImmediately 变为 no-op
+      this.currentProjectId = '';
+
+      // 2. 同步备份到 sessionStorage（必须在清空 store 之前，否则备份为空）
+      this.backupToSessionStorage(projectId);
+
+      // 3. 清空 Zustand store，防止残留图层显示
+      const { importLayers, setOffset, setScale } = useCanvasStore.getState();
+      importLayers([], true);
+      setOffset({ x: 0, y: 0 });
+      setScale(1);
+
+      // 3. 取消定时器，避免残留的 auto-save 在退出后意外执行
+      if (this.saveTimer) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+      }
+
+      // 4. 取消订阅和监听（不再接收 Zustand 变化和页面关闭事件）
+      this.teardownAutoSave();
+      this.teardownBeforeUnload();
+
+      // 5. 等待保存队列排空（逐个执行完所有已入队的保存）
+      await this.enqueueSave(async () => {
+        try {
+          await canvasSyncService.forceSync();
+        } catch (e) {
+          console.warn('[CanvasIntegration] 退出时同步失败:', e);
+        }
+        // forceSync 失败后仍执行 cleanup，确保定时器/状态被重置
+        await canvasSyncService.cleanup();
+      });
+    })();
+
+    await this.exitPromise;
+    this.exitPromise = null;
+  }
+
+  /**
+   * 设置当前项目ID（兼容旧接口，内部委托给 enter）
+   */
+  async setProjectId(projectId: string): Promise<void> {
+    await this.enter(projectId);
+  }
+
+  // =================================================================
+  //  自动保存（Zustand 订阅 → timer → 保存队列）
+  // =================================================================
+
+  private setupAutoSave(): void {
+    let prevLayers = useCanvasStore.getState().layers;
+    let prevOffset = useCanvasStore.getState().offset;
+    let prevScale = useCanvasStore.getState().scale;
+
+    this.unsubscribe = useCanvasStore.subscribe((state) => {
+      if (state.layers !== prevLayers || state.offset !== prevOffset || state.scale !== prevScale) {
+        prevLayers = state.layers;
+        prevOffset = state.offset;
+        prevScale = state.scale;
+        this.scheduleSave();
+      }
+    });
+  }
+
+  private teardownAutoSave(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+  }
+
+  private scheduleSave(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      if (this.currentProjectId) {
+        // 通过保存队列串行化，避免与 saveImmediately / clearCanvas 竞态
+        this.enqueueSave(() => this.saveCanvasState());
+      }
+    }, 1000);
+  }
+
+  // =================================================================
+  //  beforeunload 处理 + sessionStorage 同步备份
+  // =================================================================
+
+  private handleBeforeUnload = (event: BeforeUnloadEvent): void => {
+    if (!this.currentProjectId) return;
+
+    // 同步备份：写入 sessionStorage（浏览器关闭时不丢失，不受 async 影响）
+    this.backupToSessionStorage(this.currentProjectId);
+
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+
+    // 最佳努力异步保存（现代浏览器会给正在执行的 IndexedDB 事务一定的完成时间）
+    this.enqueueSave(() => this.doImmediateSave()).catch(() => {});
+
+    // 触发浏览器的"离开确认"对话框，为异步保存争取时间
+    event.preventDefault();
+    event.returnValue = '';
+  };
+
+  private setupBeforeUnload(): void {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', this.handleBeforeUnload);
+    }
+  }
+
+  private teardownBeforeUnload(): void {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    }
+  }
+
+  // =================================================================
+  //  sessionStorage 同步备份
+  //  作为 beforeunload 的最后一道防线，保证在 IndexedDB 写入被中断时
+  //  仍能通过同步的 sessionStorage 恢复画布数据
+  // =================================================================
+
+  private backupToSessionStorage(projectId: string): void {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
+
+    const state = useCanvasStore.getState();
+    if (!state.layers || state.layers.length === 0) return;
+
+    const backupData: CanvasData = {
+      version: 2,
+      projectId,
+      layers: state.layers.map(l => {
+        const { src, ...rest } = l;
+        // blob URLs（URL.createObjectURL）在页面关闭后失效，不保存
+        // data: URI 和 http(s) URL 可以保存，但 data: URI 可能非常大
+        // 最佳实践：保留 imageId 用于 IndexedDB 恢复，保留非 blob 的 src
+        const safeSrc = (src && !src.startsWith('blob:')) ? src : undefined;
+        return { ...rest, src: safeSrc } as any;
+      }),
+      offset: state.offset,
+      scale: state.scale,
+      savedAt: Date.now(),
+      syncStatus: 'synced' as const,
+    };
+
+    const key = `${this.STORAGE_KEY_PREFIX}${projectId}`;
+    try {
+      sessionStorage.setItem(key, JSON.stringify(backupData));
+      console.log(`[CanvasIntegration] sessionStorage 备份完成: ${state.layers.length} layers`);
+    } catch (e) {
+      // sessionStorage 配额不足（通常 5MB），静默放弃
+      console.warn('[CanvasIntegration] sessionStorage 备份失败（可能超出配额）:', e);
+    }
+  }
+
+  private restoreSessionBackup(projectId: string): CanvasData | null {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return null;
+
+    const key = `${this.STORAGE_KEY_PREFIX}${projectId}`;
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+
+      // 读取后立即清除，避免下次再恢复
+      sessionStorage.removeItem(key);
+
+      const data: CanvasData = JSON.parse(raw);
+
+      // 校验：备份超过 10 分钟视为过期（正常流程中备份写入后应在数秒内被加载）
+      if (data.savedAt && Date.now() - data.savedAt > 10 * 60 * 1000) {
+        console.log('[CanvasIntegration] sessionStorage 备份已过期（>10分钟），忽略');
+        return null;
+      }
+
+      console.log(`[CanvasIntegration] 从 sessionStorage 恢复备份: ${data.layers?.length || 0} layers`);
+      return data;
+    } catch (e) {
+      console.warn('[CanvasIntegration] sessionStorage 恢复失败:', e);
+      return null;
+    }
   }
 
   /**
@@ -85,102 +388,34 @@ export class CanvasIntegrationService {
   }
 
   /**
-   * 通过 Zustand subscribe 自动检测画布变化并触发保存
+   * 安全地将图层序列化为可保存的格式
+   * 
+   * 核心原则：先持久化，后移除 src。
+   * - 图片保存到 IndexedDB IMAGES store 成功 → 用 imageId 替代 src
+   * - 图片保存失败 → 保留原始 src，下次保存可重试
+   * - 不修改原始 layer 对象
    */
-  private setupAutoSave(): void {
-    let prevLayers = useCanvasStore.getState().layers;
-    let prevOffset = useCanvasStore.getState().offset;
-    let prevScale = useCanvasStore.getState().scale;
+  private async serializeLayerForSave(layer: LayerData): Promise<any> {
+    const src = layer.src;
+    let imageId = layer.imageId;
 
-    this.unsubscribe = useCanvasStore.subscribe((state) => {
-      if (state.layers !== prevLayers || state.offset !== prevOffset || state.scale !== prevScale) {
-        prevLayers = state.layers;
-        prevOffset = state.offset;
-        prevScale = state.scale;
-        this.scheduleSave();
-      }
-    });
-  }
-
-  private scheduleSave(): void {
-    if (this.saveTimer) {
-      clearTimeout(this.saveTimer);
-    }
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null;
-      if (this.currentProjectId) {
-        this.saveCanvasState();
-      }
-    }, 1000);
-  }
-
-  private setupBeforeUnload(): void {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        if (this.saveTimer) {
-          clearTimeout(this.saveTimer);
-          this.saveTimer = null;
-        }
-        this.doImmediateSave();
-      });
-    }
-  }
-
-  /**
-   * 设置当前项目ID
-   * 在加载项目时调用
-   * 同时初始化 canvasSyncService
-   */
-  async setProjectId(projectId: string): Promise<void> {
-    console.log('[CanvasIntegration] ========== 设置项目ID ==========');
-    console.log('[CanvasIntegration] 旧项目ID:', this.currentProjectId);
-    console.log('[CanvasIntegration] 新项目ID:', projectId);
-    
-    if (this.currentProjectId === projectId) {
-      console.log('[CanvasIntegration] 项目ID相同，跳过设置');
-      return;
-    }
-    
-    if (this.isLoading) {
-      console.log('[CanvasIntegration] 正在加载，等待完成...');
-      await this.loadingPromise;
-    }
-    
-    // Clear any pending debounced save before switching project
-    if (this.saveTimer) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
-      console.log('[CanvasIntegration] 清除待处理的自动保存');
-    }
-    
-    this.isLoading = true;
-    this.loadingPromise = (async () => {
+    if (src && src.startsWith('data:') && !imageId) {
       try {
-        if (this.currentProjectId && this.currentProjectId !== projectId) {
-          console.log('[CanvasIntegration] 切换项目，先保存旧项目数据');
-          await this.forceSync();
-          
-          console.log('[CanvasIntegration] 清空旧画布状态');
-          const { importLayers, setOffset, setScale } = useCanvasStore.getState();
-          importLayers([], true);
-          setOffset({ x: 0, y: 0 });
-          setScale(1);
-        }
-        
-        this.currentProjectId = projectId;
-        
-        const { setProjectId } = useCanvasStore.getState();
-        setProjectId(projectId);
-        
-        logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 设置项目ID: ${projectId}`);
-        
-        await canvasSyncService.init(projectId);
-      } finally {
-        this.isLoading = false;
+        const imgId = unifiedImageService.generateImageId();
+        const response = await fetch(src);
+        const blob = await response.blob();
+        await unifiedImageService.saveImage(imgId, blob);
+        imageId = imgId;
+      } catch (e) {
+        console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败，保留原始 src:`, e);
+        // 保存失败，保留原始 layer（含 src），下次保存可重试
+        return layer;
       }
-    })();
-    
-    await this.loadingPromise;
+    }
+
+    // 图片已保存成功，安全地移除 src 以减小存储
+    const { src: _, ...rest } = layer;
+    return { ...rest, imageId } as any;
   }
 
   /**
@@ -189,7 +424,7 @@ export class CanvasIntegrationService {
    * @returns 保存完成的 Promise（可用于退出前等待保存完成）
    */
   saveImmediately(_force?: boolean): Promise<void> {
-    return this.doImmediateSave().catch(e => {
+    return this.enqueueSave(() => this.doImmediateSave()).catch(e => {
       console.warn('[CanvasIntegration] 即时保存失败:', e);
     });
   }
@@ -200,24 +435,15 @@ export class CanvasIntegrationService {
       return;
     }
 
+    // 防止在加载过程中保存空数据
+    if (this.isLoading) {
+      logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 正在加载画布，跳过即时保存');
+      return;
+    }
+
     const { layers, offset, scale } = useCanvasStore.getState();
 
-    const layersToSave = await Promise.all(layers.map(async (layer) => {
-      const { src, ...rest } = layer;
-      let imageId = layer.imageId;
-      if (src && src.startsWith('data:') && !imageId) {
-        try {
-          const imgId = unifiedImageService.generateImageId();
-          const response = await fetch(src);
-          const blob = await response.blob();
-          await unifiedImageService.saveImage(imgId, blob);
-          imageId = imgId;
-        } catch (e) {
-          console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败:`, e);
-        }
-      }
-      return { ...rest, imageId };
-    }));
+    const layersToSave = await Promise.all(layers.map(l => this.serializeLayerForSave(l)));
 
     try {
       await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
@@ -229,6 +455,13 @@ export class CanvasIntegrationService {
 
   private async saveCanvasState(): Promise<void> {
     // console.log('[CanvasIntegration] 保存画布');
+    
+    // 防止在加载过程中自动保存空数据
+    if (this.isLoading) {
+      logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 正在加载画布，跳过自动保存');
+      return;
+    }
+    
     const { layers, offset, scale } = useCanvasStore.getState();
 
     if (!this.currentProjectId) {
@@ -236,22 +469,7 @@ export class CanvasIntegrationService {
       return;
     }
 
-    const layersToSave = await Promise.all(layers.map(async (layer) => {
-      const { src, ...rest } = layer;
-      let imageId = layer.imageId;
-      if (src && src.startsWith('data:') && !imageId) {
-        try {
-          const imgId = unifiedImageService.generateImageId();
-          const response = await fetch(src);
-          const blob = await response.blob();
-          await unifiedImageService.saveImage(imgId, blob);
-          imageId = imgId;
-        } catch (e) {
-          console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败:`, e);
-        }
-      }
-      return { ...rest, imageId };
-    }));
+    const layersToSave = await Promise.all(layers.map(l => this.serializeLayerForSave(l)));
 
     try {
       await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
@@ -550,14 +768,19 @@ export class CanvasIntegrationService {
   /**
    * 清空画布（会保存空状态到 IndexedDB，确保刷新后保持为空）
    */
-  clearCanvas(): void {
+  async clearCanvas(): Promise<void> {
     const { clearCanvas, offset, scale } = useCanvasStore.getState();
     clearCanvas();
     
+    // 清除因清空画布触发的自动保存定时器
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    
     if (this.currentProjectId) {
-      canvasSyncService.saveNow(this.currentProjectId, [], offset, scale).catch(e => {
-        console.warn('[CanvasIntegration] 保存空画布失败:', e);
-      });
+      // 通过保存队列串行化：清空操作会等待之前的 auto-save 完成，undo 触发的 auto-save 会等待清空完成
+      await this.enqueueSave(() => canvasSyncService.saveNow(this.currentProjectId!, [], offset, scale));
     }
     
     logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布已清空');
@@ -573,7 +796,7 @@ export class CanvasIntegrationService {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    await canvasSyncService.forceSync();
+    await this.enqueueSave(() => canvasSyncService.forceSync());
   }
 
   /**
@@ -608,162 +831,31 @@ export class CanvasIntegrationService {
    * 注意：不再检查 localStorage 数据
    * 原因：已移除 Zustand persist 中间件，画布数据完全由 IndexedDB 管理
    */
-  async restoreCanvasState(): Promise<boolean> {
+  /**
+   * 加载并恢复画布数据到 Zustand store（内部实现）
+   * 由 enter() 和 restoreCanvasState() 调用
+   */
+  private async _restoreCanvasState(): Promise<boolean> {
     try {
-      if (this.isLoading && this.loadingPromise) {
-        console.log('[CanvasIntegration] 等待 setProjectId 完成...');
-        await this.loadingPromise;
-      }
-      
-      const store = useCanvasStore.getState();
-      
+      // 注意：此方法仅从 enter() 内部的 loadingPromise 调用，
+      // 或在 restoreCanvasState() 中调用。从 loadingPromise 内部
+      // 调用时不应检查 isLoading/loadingPromise（否则会造成自引用死锁）。
+
       if (!this.currentProjectId) {
-        if (store.projectId) {
-          console.log('[CanvasIntegration] currentProjectId 为空，从 store 恢复:', store.projectId);
-          this.currentProjectId = store.projectId;
-          await canvasSyncService.init(store.projectId);
-        } else {
-          logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
-          return false;
-        }
-      }
-
-      if (store.projectId && store.projectId !== this.currentProjectId) {
-        console.log('[CanvasIntegration] 项目ID不匹配，先保存旧数据再清空');
-        console.log('[CanvasIntegration] store 中的项目ID:', store.projectId);
-        console.log('[CanvasIntegration] 当前项目ID:', this.currentProjectId);
-
-        // 先保存旧项目的数据，防止丢失
-        const oldProjectId = store.projectId;
-        const { layers: oldLayers, offset: oldOffset, scale: oldScale } = store;
-        if (oldLayers.length > 0) {
-          try {
-            const layersToSave = await Promise.all(oldLayers.map(async (layer) => {
-              const { src, thumbnail, ...rest } = layer;
-              let imageId = layer.imageId;
-              if (src && src.startsWith('data:') && !imageId) {
-                try {
-                  const imgId = unifiedImageService.generateImageId();
-                  const response = await fetch(src);
-                  const blob = await response.blob();
-                  await unifiedImageService.saveImage(imgId, blob);
-                  imageId = imgId;
-                } catch (e) {
-                  console.warn(`[CanvasIntegration] 保存旧项目图片失败:`, e);
-                }
-              }
-              return { ...rest, imageId };
-            }));
-            await canvasSyncService.saveNow(oldProjectId, layersToSave, oldOffset, oldScale);
-            console.log('[CanvasIntegration] 旧项目画布数据已保存');
-          } catch (e) {
-            console.warn('[CanvasIntegration] 保存旧项目画布数据失败:', e);
-          }
-        }
-
-        const { importLayers, setOffset, setScale, setProjectId } = store;
-        importLayers([], true);
-        setOffset({ x: 0, y: 0 });
-        setScale(1);
-        setProjectId(this.currentProjectId);
+        logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
+        return false;
       }
 
       const canvasData = await canvasSyncService.load();
-      
+
       if (!canvasData) {
         logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未找到画布数据');
         return false;
       }
 
       logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 加载画布数据，版本: ${canvasData.version}, 图层数: ${canvasData.layers.length}`);
-      
-      const { importLayers, setOffset, setScale } = useCanvasStore.getState();
 
-      if (canvasData.layers && canvasData.layers.length > 0) {
-        const restoredLayers = await Promise.all(canvasData.layers.map(async (layer: any) => {
-          if (layer.type === 'image') {
-            if (layer.imageId) {
-              try {
-                const blob = await unifiedImageService.getImage(layer.imageId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
-                }
-              } catch (e) {
-                console.warn('恢复图片失败 (imageId):', e);
-              }
-            }
-            
-            if (layer.src && layer.src.startsWith('local:')) {
-              try {
-                const localId = layer.src.replace('local:', '');
-                const blob = await unifiedImageService.getImage(localId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
-                }
-              } catch (e) {
-                console.warn('恢复图片失败 (local:):', e);
-              }
-            }
-          } else if (layer.type === 'video') {
-            // 优先使用 imageId（新版存储方式）
-            if (layer.imageId) {
-              try {
-                const blob = await unifiedImageService.getVideo(layer.imageId);
-                if (blob) {
-                  console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
-                  return { ...layer, src: URL.createObjectURL(blob) };
-                }
-              } catch (e) {
-                console.warn('恢复视频失败 (imageId):', e);
-              }
-            }
-            // 兼容旧的 src 存储方式
-            if (layer.src && layer.src.startsWith('video:')) {
-              try {
-                const videoId = layer.src.replace('video:', '');
-                const blob = await unifiedImageService.getVideo(videoId);
-                if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
-                }
-              } catch (e) {
-                console.warn('恢复视频失败:', e);
-              }
-            }
-          } else if (layer.type === 'drawing') {
-            console.log('[CanvasIntegration] 恢复 drawing 图层:', layer.id, 'imageId:', layer.imageId, 'src:', layer.src?.substring(0, 50));
-            if (layer.imageId) {
-              try {
-                const blob = await unifiedImageService.getImage(layer.imageId);
-                if (blob) {
-                  const src = URL.createObjectURL(blob);
-                  console.log('[CanvasIntegration] 恢复 drawing 图层成功:', layer.id, 'blob size:', blob.size);
-                  return { ...layer, src };
-                } else {
-                  console.warn('[CanvasIntegration] 恢复 drawing 图层失败: blob 为空', layer.id, layer.imageId);
-                }
-              } catch (e) {
-                console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
-              }
-            } else if (layer.src && layer.src.startsWith('data:')) {
-              return layer;
-            } else {
-              console.warn('[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:', layer.id);
-            }
-          }
-          return layer;
-        }));
-
-        importLayers(restoredLayers, true);
-      }
-
-      if (canvasData.offset) {
-        setOffset(canvasData.offset);
-      }
-
-      if (canvasData.scale) {
-        setScale(canvasData.scale);
-      }
-
+      await this.importCanvasData(canvasData);
       logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已恢复');
       return true;
     } catch (error) {
@@ -773,25 +865,138 @@ export class CanvasIntegrationService {
   }
 
   /**
-   * 清理资源 - 退出项目时调用
+   * 将 CanvasData 恢复到 Zustand store
+   * 处理图层恢复（imageId → blob URL、video 恢复、drawing 恢复等）
+   */
+  private async importCanvasData(canvasData: CanvasData): Promise<void> {
+    const { importLayers, setOffset, setScale } = useCanvasStore.getState();
+
+    if (canvasData.layers && canvasData.layers.length > 0) {
+      const restoredLayers = await Promise.all(canvasData.layers.map(async (layer: any) => {
+        if (layer.type === 'image') {
+          if (layer.imageId) {
+            try {
+              const blob = await unifiedImageService.getImage(layer.imageId);
+              if (blob) {
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复图片失败 (imageId):', e);
+            }
+          }
+
+          if (layer.src && layer.src.startsWith('local:')) {
+            try {
+              const localId = layer.src.replace('local:', '');
+              const blob = await unifiedImageService.getImage(localId);
+              if (blob) {
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复图片失败 (local:):', e);
+            }
+          }
+        } else if (layer.type === 'video') {
+          if (layer.imageId) {
+            try {
+              const blob = await unifiedImageService.getVideo(layer.imageId);
+              if (blob) {
+                console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复视频失败 (imageId):', e);
+            }
+          }
+          if (layer.src && layer.src.startsWith('video:')) {
+            try {
+              const videoId = layer.src.replace('video:', '');
+              const blob = await unifiedImageService.getVideo(videoId);
+              if (blob) {
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复视频失败:', e);
+            }
+          }
+        } else if (layer.type === 'drawing') {
+          console.log('[CanvasIntegration] 恢复 drawing 图层:', layer.id, 'imageId:', layer.imageId, 'src:', layer.src?.substring(0, 50));
+          if (layer.imageId) {
+            try {
+              const blob = await unifiedImageService.getImage(layer.imageId);
+              if (blob) {
+                const src = URL.createObjectURL(blob);
+                console.log('[CanvasIntegration] 恢复 drawing 图层成功:', layer.id, 'blob size:', blob.size);
+                return { ...layer, src };
+              } else {
+                console.warn('[CanvasIntegration] 恢复 drawing 图层失败: blob 为空', layer.id, layer.imageId);
+              }
+            } catch (e) {
+              console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
+            }
+          } else if (layer.src && layer.src.startsWith('data:')) {
+            return layer;
+          } else {
+            console.warn('[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:', layer.id);
+          }
+        }
+        return layer;
+      }));
+
+      if (restoredLayers.length > 0) {
+        importLayers(restoredLayers, true);
+      }
+    }
+
+    if (canvasData.offset) {
+      setOffset(canvasData.offset);
+    }
+
+    if (canvasData.scale) {
+      setScale(canvasData.scale);
+    }
+  }
+
+  /**
+   * 恢复画布状态（公开 API，供 "恢复" 按钮调用）
+   * 
+   * 恢复优先级：
+   * 1. sessionStorage 同步备份（beforeunload 时写入的最新数据）
+   * 2. IndexedDB 本地数据（含云端同步）
+   */
+  async restoreCanvasState(): Promise<boolean> {
+    if (!this.currentProjectId) {
+      logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 未设置项目ID，无法恢复画布数据');
+      return false;
+    }
+
+    // 如果 enter() 仍在加载中，等待完成（防止与 loadingPromise 内部 _restoreCanvasState 竞态）
+    if (this.isLoading && this.loadingPromise) {
+      console.log('[CanvasIntegration] restoreCanvasState 等待 enter 完成...');
+      await this.loadingPromise;
+    }
+
+    // 先检查 sessionStorage 备份
+    const backup = this.restoreSessionBackup(this.currentProjectId);
+    if (backup) {
+      console.log('[CanvasIntegration] 从 sessionStorage 备份恢复画布（公开 restore）');
+      await this.importCanvasData(backup);
+      return true;
+    }
+
+    // 回退到正常加载
+    return this._restoreCanvasState();
+  }
+
+  /**
+   * 清理资源（兼容旧接口，委托给 exit）
+   * 
+   * 旧代码中 handleExitProject 会先调用 saveImmediately 再调用 cleanup。
+   * 现在 exit() 内部已完成保存 + 清理，所以 cleanup 直接委托给 exit。
+   * 多次调用安全（exit 有 !currentProjectId 防护）。
    */
   async cleanup(): Promise<void> {
-    console.log('[CanvasIntegration] 清理资源，触发强制云同步...');
-    // 切换页签前先确保数据已上传到云端
-    try {
-      await canvasSyncService.forceSync();
-    } catch (e) {
-      console.warn('[CanvasIntegration] 强制云同步失败:', e);
-    }
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
-    if (this.saveTimer) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
-    }
-    await canvasSyncService.cleanup();
+    await this.exit();
   }
 }
 

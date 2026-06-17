@@ -34,48 +34,12 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const projectRef = useRef<HTMLDivElement>(null);
 
-  const isMountedRef = useRef(false);
-  const isRestoringRef = useRef(false);
+  // 画布状态已由 CanvasIntegrationService.enter() 在项目打开时自动恢复，
+  // 退出时由 CanvasIntegrationService.exit() 统一清理。
+  // StageCanvas 无需额外调用 restore/cleanup。
 
-  // 自动恢复画布状态
-  // 使用 canvasSyncService 实现 Local-First 架构
-  // 使用 ref 防止 React Strict Mode 下双重执行导致竞争
-  useEffect(() => {
-    isMountedRef.current = true;
-    isRestoringRef.current = true;
-
-    canvasIntegrationService.restoreCanvasState().then(restored => {
-      if (!isMountedRef.current) return;
-      isRestoringRef.current = false;
-      if (restored) {
-        console.log('[StageCanvas] 画布状态恢复成功，项目:', project.id);
-      } else {
-        console.log('[StageCanvas] 未找到画布数据，项目:', project.id);
-      }
-    }).catch(error => {
-      isRestoringRef.current = false;
-      console.error('[StageCanvas] 初始化画布失败:', error);
-    });
-    
-    return () => {
-      isMountedRef.current = false;
-      // 只在 restore 完成后执行 cleanup，避免 Strict Mode 双重 mount 误清理
-      if (!isRestoringRef.current) {
-        canvasIntegrationService.forceSync().catch(error => {
-          console.error('[StageCanvas] 同步画布失败:', error);
-        });
-      }
-    };
-  }, [project.id]);
-
-  // 浏览器刷新/关闭前兜底保存
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      canvasIntegrationService.saveImmediately(true);
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  // `beforeunload` 已在 CanvasIntegrationService 构造函数中统一注册
+  // 此处不再重复注册，避免两个 handler 同时调用 async 保存导致竞态
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -548,7 +512,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     }
   };
 
-  const handleClearCanvas = () => {
+  const handleClearCanvas = async () => {
     const summary = canvasIntegrationService.getCanvasSummary();
     if (summary.totalLayers === 0) {
       alert('画布已经是空的');
@@ -557,7 +521,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
 
     const confirmed = confirm(`确定要清空画布吗？当前有 ${summary.totalLayers} 个图层。`);
     if (confirmed) {
-      canvasIntegrationService.clearCanvas();
+      await canvasIntegrationService.clearCanvas();
     }
   };
 

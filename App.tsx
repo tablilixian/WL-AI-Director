@@ -411,15 +411,6 @@ function App() {
     const hasChanges = !isProjectEqual(project, initialProjectRef.current);
     logger.debug(LogCategory.APP, '项目是否有变化:', hasChanges);
     
-    if (!hasChanges) {
-      logger.debug(LogCategory.APP, '⏭️ 项目无变化，直接退出，跳过保存');
-      setProject(null);
-      setTimeout(() => setIsExiting(false), 100);
-      return;
-    }
-    
-    logger.debug(LogCategory.APP, '💾 项目有变化，开始保存...');
-    
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
         title: '生成任务进行中',
@@ -432,7 +423,8 @@ function App() {
           setIsGenerating(false);
           setIsExiting(true);
           if (project) {
-            await canvasIntegrationService.saveImmediately(true);
+            // exit() 内部处理：sessionStorage 备份 + 保存队列排空 + forceSync + cleanup
+            await canvasIntegrationService.exit();
             await hybridStorage.saveProject(project);
           }
           logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
@@ -443,10 +435,11 @@ function App() {
       return;
     }
     
-    logger.debug(LogCategory.APP, '💾 开始保存项目...');
+    logger.debug(LogCategory.APP, '💾 开始保存并退出...');
     setIsExiting(true);
     if (project) {
-      await canvasIntegrationService.saveImmediately(true);
+      // exit() 内部已包含保存逻辑，无需额外 saveImmediately
+      await canvasIntegrationService.exit();
       await hybridStorage.saveProject(project);
     }
     logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
