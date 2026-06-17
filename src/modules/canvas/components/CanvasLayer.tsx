@@ -4,6 +4,7 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { LayerData, PromptLayerData } from '../types/canvas';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useSnapAlignment } from '../hooks/useSnapAlignment';
@@ -42,6 +43,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(layer.title);
   const [resolvedSrc, setResolvedSrc] = useState<string>('');
+  const [isZoomed, setIsZoomed] = useState(false);
   
   const dragStartRef = useRef({ 
     x: 0, 
@@ -124,6 +126,13 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     setIsRenaming(true);
     setNewTitle(layer.title);
   }, [layer.title]);
+
+  const handleImageDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (layer.type === 'image' && resolvedSrc) {
+      setIsZoomed(true);
+    }
+  }, [layer.type, resolvedSrc]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -211,6 +220,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             alt={layer.title}
             className="w-full h-full object-contain"
             draggable={false}
+            onDoubleClick={handleImageDoubleClick}
             onError={(e) => {
               console.error('图片加载失败:', {
                 layerId: layer.id,
@@ -341,6 +351,34 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       )}
 
       {renderContent()}
+
+      {isZoomed && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center cursor-zoom-out"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
+            <img
+              src={resolvedSrc}
+              alt={layer.title}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              draggable={false}
+            />
+            <button
+              className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
+              {layer.title}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {isSelected && !isResizing && !layer.locked && (
         <>

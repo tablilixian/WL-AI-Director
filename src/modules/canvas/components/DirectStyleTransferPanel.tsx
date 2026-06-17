@@ -8,31 +8,31 @@ interface DirectStyleTransferPanelProps {
 }
 
 export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> = ({ selectedLayerId, onClose }) => {
-  const [selectedStyleLayerId, setSelectedStyleLayerId] = useState<string | null>(null);
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [enhancePrompt, setEnhancePrompt] = useState('');
   const [enhanceEnabled, setEnhanceEnabled] = useState(false);
   const { layers, addLayer } = useCanvasStore();
 
-  const targetLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasTarget = targetLayer?.type === 'image' && targetLayer?.src && !targetLayer?.isLoading;
+  const styleRefLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
+  const hasStyleRef = styleRefLayer?.type === 'image' && styleRefLayer?.src && !styleRefLayer?.isLoading;
 
-  const imageLayers = layers.filter(l =>
+  const targetImageLayers = layers.filter(l =>
     l.id !== selectedLayerId && l.type === 'image' && l.src && !l.isLoading
   );
-  const selectedStyleLayer = selectedStyleLayerId ? layers.find(l => l.id === selectedStyleLayerId) : null;
+  const selectedTargetLayer = selectedTargetId ? layers.find(l => l.id === selectedTargetId) : null;
 
   const handleStyleTransfer = async () => {
-    if (!hasTarget || !selectedStyleLayer || isProcessing || !targetLayer) return;
+    if (!hasStyleRef || !selectedTargetLayer || isProcessing || !styleRefLayer) return;
 
     setIsProcessing(true);
     setProgress(0);
 
     try {
       const resultUrl = await canvasModelService.directStyleTransfer(
-        targetLayer.src,
-        selectedStyleLayer.src,
+        selectedTargetLayer.src,
+        styleRefLayer.src,
         (p) => setProgress(p),
         enhancePrompt || undefined,
         enhanceEnabled || undefined,
@@ -68,17 +68,17 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
       addLayer({
         id: crypto.randomUUID(),
         type: 'image',
-        x: targetLayer.x + targetLayer.width + 20,
-        y: targetLayer.y,
-        width: targetLayer.width,
-        height: targetLayer.height,
+        x: selectedTargetLayer.x + selectedTargetLayer.width + 20,
+        y: selectedTargetLayer.y,
+        width: selectedTargetLayer.width,
+        height: selectedTargetLayer.height,
         src: resolvedUrl,
         imageId,
-        title: `${targetLayer.title} - 风格迁移`,
+        title: `${selectedTargetLayer.title} - 风格迁移`,
         isLoading: false,
         createdAt: Date.now(),
-        sourceLayerId: targetLayer.id,
-        sourceLayerIds: [targetLayer.id, selectedStyleLayer.id],
+        sourceLayerId: selectedTargetLayer.id,
+        sourceLayerIds: [selectedTargetLayer.id, styleRefLayer.id],
         operationType: 'direct-style-transfer',
       });
 
@@ -91,13 +91,13 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
     }
   };
 
-  if (!hasTarget) {
+  if (!hasStyleRef) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
           <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">风格参考迁移</h3>
           <p className="text-sm text-[var(--text-muted)] mb-4">
-            请先选中一张目标图片，然后再使用风格参考迁移功能。
+            请先选中一张图片作为风格参考，然后再使用风格参考迁移功能。
           </p>
           <button
             onClick={onClose}
@@ -125,31 +125,44 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
           </button>
         </div>
 
-        <div className="mb-4">
-          <p className="text-sm text-[var(--text-muted)]">
-            将选中的风格参考图的风格迁移到目标图片上。
-          </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            目标图片: {targetLayer?.title}
-          </p>
+        <p className="text-xs text-[var(--text-muted)] mb-4 leading-relaxed">
+          选中的图片作为<strong className="text-purple-400">风格参考图</strong>，
+          再选一张作为<strong className="text-blue-400">要迁移的目标图</strong>。
+          风格参考图的色彩、纹理和整体风格将被迁移到目标图上。
+        </p>
+
+        <div className="mb-4 p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">风格参考图</span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">— 此图的风格将被迁移</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-20 h-20 rounded-lg overflow-hidden border border-purple-500/30 shrink-0">
+              <img src={styleRefLayer?.src} alt={styleRefLayer?.title} className="w-full h-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm text-[var(--text-primary)] truncate font-medium">{styleRefLayer?.title}</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">色彩、纹理、整体风格走向</p>
+            </div>
+          </div>
         </div>
 
         <div className="mb-4">
           <p className="text-sm font-medium text-[var(--text-primary)] mb-2">
-            选择风格参考图（点击选择）:
+            选择要迁移的目标图（点击选择）:
           </p>
-          {imageLayers.length === 0 ? (
+          {targetImageLayers.length === 0 ? (
             <p className="text-xs text-yellow-400">
-              画布上没有其他可用图片，请先添加一张风格参考图片。
+              画布上没有其他可用图片，请先添加一张目标图片。
             </p>
           ) : (
             <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-              {imageLayers.map((l) => (
+              {targetImageLayers.map((l) => (
                 <button
                   key={l.id}
-                  onClick={() => setSelectedStyleLayerId(l.id)}
+                  onClick={() => setSelectedTargetId(l.id)}
                   className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedStyleLayerId === l.id
+                    selectedTargetId === l.id
                       ? 'border-blue-500 ring-2 ring-blue-500/30'
                       : 'border-gray-600 hover:border-gray-400'
                   }`}
@@ -168,6 +181,24 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
             </div>
           )}
         </div>
+
+        {selectedTargetLayer && (
+          <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">目标图</span>
+              <span className="text-sm font-medium text-[var(--text-primary)]">已选中</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-20 h-20 rounded-lg overflow-hidden border border-blue-500/30 shrink-0">
+                <img src={selectedTargetLayer.src} alt={selectedTargetLayer.title} className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-[var(--text-primary)] truncate font-medium">{selectedTargetLayer.title}</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">此图将被应用风格参考图的风格</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-4 p-3 bg-gray-800/50 rounded-lg space-y-3">
           <p className="text-sm font-medium text-[var(--text-primary)]">
@@ -214,9 +245,9 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
         ) : (
           <button
             onClick={handleStyleTransfer}
-            disabled={!selectedStyleLayer}
+            disabled={!selectedTargetLayer}
             className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              selectedStyleLayer
+              selectedTargetLayer
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-700 text-gray-400 cursor-not-allowed'
             }`}
