@@ -545,6 +545,13 @@ class CanvasSyncService {
         return ConflictResolution.USE_CLOUD;
       }
 
+      // 安全策略：双方都为空时，优先使用本地数据
+      // 防止在竞态条件下（自动保存空数据 vs 云端空数据）云端因时间戳更新而覆盖本地
+      if ((!localData.layers || localData.layers.length === 0) && (!cloudData.layers || cloudData.layers.length === 0)) {
+        logger.warn(LogCategory.CANVAS, '[CanvasSync] 本地和云端都为空，优先保留本地状态');
+        return ConflictResolution.USE_LOCAL;
+      }
+
       // 如果本地有待同步数据，优先使用本地
       if (localData.syncStatus === 'pending') {
         return ConflictResolution.USE_LOCAL;
