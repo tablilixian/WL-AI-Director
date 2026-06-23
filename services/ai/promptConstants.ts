@@ -14,6 +14,7 @@ export const VISUAL_STYLE_PROMPTS: { [key: string]: string } = {
   '3d-animation': 'high-quality 3D CGI animation, Pixar/DreamWorks style, subsurface scattering on skin, detailed PBR textures, stylized character proportions, volumetric lighting, ambient occlusion, soft shadows, physically-based rendering, motion blur',
   'cyberpunk': 'cyberpunk aesthetic, neon-lit urban environment, rain-soaked reflective streets, holographic UI displays, high-tech low-life contrast, Blade Runner style, volumetric fog with neon color bleeding, chromatic aberration, cool blue-purple palette with hot pink and cyan accents, gritty detailed textures',
   'oil-painting': 'oil painting style, visible impasto brushstrokes, rich layered textures, classical art composition with golden ratio, museum quality fine art, warm undertones, Rembrandt lighting, chiaroscuro contrast, canvas texture visible, glazing technique color depth',
+  'ink-wash': 'traditional Chinese ink wash painting style (水墨画), brush and ink on xuan paper texture, flowing ink gradients, deliberate brushstrokes with varying ink density, negative space and minimalist composition, misty atmospheric perspective, classical Chinese landscape painting tradition, elegant restraint, poetic visual language, natural color palette of ink black, grays, and subtle traditional pigments (cyan, ochre, vermillion accents)',
 };
 
 // ============================================
@@ -27,6 +28,7 @@ export const VISUAL_STYLE_PROMPTS_CN: { [key: string]: string } = {
   '3d-animation': '3D CGI动画，Pixar/DreamWorks风格，精细材质',
   'cyberpunk': '赛博朋克美学，霓虹灯光，未来科技感',
   'oil-painting': '油画风格，可见笔触，古典艺术构图',
+  'ink-wash': '水墨国风，传统中国水墨画，毛笔宣纸质感，浓淡干湿墨韵变化，留白与写意构图，淡雅配色',
 };
 
 // ============================================
@@ -40,6 +42,7 @@ export const NEGATIVE_PROMPTS: { [key: string]: string } = {
   '3d-animation': 'photorealistic, 2d, flat, hand-drawn, low poly, bad topology, texture artifacts, z-fighting, clipping, low quality, blurry, watermark, text, bad rigging, unnatural movement',
   'cyberpunk': 'bright daylight, pastoral, medieval, fantasy, cartoon, low tech, rural, natural, watermark, text, logo, low quality, blurry, amateur',
   'oil-painting': 'digital art, photorealistic, 3d render, cartoon, anime, low quality, blurry, watermark, text, amateur, poorly painted, muddy colors, overworked canvas',
+  'ink-wash': 'oil painting, impasto, thick paint, photorealistic, 3d render, anime, cartoon, western art style, bright neon colors, oversaturated, heavy digital effects, graffiti, pop art, low quality, blurry, watermark, text',
 };
 
 // ============================================
@@ -53,6 +56,7 @@ export const SCENE_NEGATIVE_PROMPTS: { [key: string]: string } = {
   '3d-animation': 'person, people, human, character, figure, silhouette, crowd, portrait, face, body, ' + NEGATIVE_PROMPTS['3d-animation'],
   'cyberpunk': 'person, people, human, figure, silhouette, crowd, pedestrian, portrait, face, body, ' + NEGATIVE_PROMPTS['cyberpunk'],
   'oil-painting': 'person, people, human, figure, silhouette, crowd, portrait, face, body, ' + NEGATIVE_PROMPTS['oil-painting'],
+  'ink-wash': 'person, people, human, figure, silhouette, crowd, portrait, face, body, ' + NEGATIVE_PROMPTS['ink-wash'],
 };
 
 // ============================================

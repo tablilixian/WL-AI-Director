@@ -22,6 +22,7 @@ import {
   getStylePrompt,
   getNegativePrompt,
   getSceneNegativePrompt,
+  VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
 import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi } from '../adapters/imageAdapter';
 
@@ -1354,6 +1355,74 @@ Output ONLY valid JSON with this exact structure:
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 批量角色视觉提示词生成失败:', error);
     throw new Error(`批量角色视觉提示词生成失败: ${error.message}`);
+  }
+};
+
+// ============================================
+// 视觉风格自动检测
+// ============================================
+
+/**
+ * 从剧本文本自动推断最匹配的视觉风格
+ * 供"自动检测风格"功能使用
+ */
+export const suggestVisualStyleFromScript = async (
+  scriptText: string,
+  language: string = '中文',
+  model?: string
+): Promise<{ suggestedStyle: string; isCustom: boolean; confidence: string; reason: string }> => {
+  const resolvedModel = model || getDefaultChatModelId();
+  logger.debug(LogCategory.AI, `🔍 suggestVisualStyleFromScript 调用 - 使用模型: ${resolvedModel}`);
+
+  const predefinedList = Object.entries(VISUAL_STYLE_PROMPTS_CN)
+    .map(([key, cn]) => `- ${key}: ${cn}`)
+    .join('\n');
+
+  const prompt = `You are a professional art director. Determine the visual style for a script.
+
+## STEP 1 — Extract Keywords
+List all visual style keywords/phrases from the script (e.g., "水墨写实", "8-bit pixel art", "film noir", "赛博朋克", "watercolor", "classical Chinese painting"). If the script contains explicit style names, treat them as the ground truth.
+
+## STEP 2 — Check Predefined Styles
+Here are the available predefined styles:
+${predefinedList}
+
+Compare your extracted keywords against them. Ask yourself: is this an EXACT semantic match, or am I stretching?
+
+## STEP 3 — Decide
+- If the script gives an explicit style name (like "水墨写实", "像素风", "水彩") → isCustom: true, use that exact name.
+- If none of the predefined styles is an unambiguous match → isCustom: true.
+- Use isCustom: false ONLY when the script's style is literally the same concept as a predefined style (e.g., script says "anime" → anime). Do NOT treat "pixel art" as a subset of "2d-animation", or "ink wash" as a subset of "oil painting".
+- When in doubt, isCustom: true. A custom style name is always better than a wrong match.
+
+## Output JSON
+{
+  "extractedKeywords": "comma-separated list of style keywords from script",
+  "suggestedStyle": "the style name",
+  "isCustom": true,
+  "confidence": "high|medium|low",
+  "reason": "Brief explanation in ${language}"
+}`;
+
+  try {
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.3, 1024, 'json_object')
+    );
+    const text = cleanJsonString(responseText);
+    const parsed = JSON.parse(text);
+
+    const result = {
+      suggestedStyle: parsed.suggestedStyle || 'live-action',
+      isCustom: !!parsed.isCustom,
+      confidence: parsed.confidence || 'medium',
+      reason: parsed.reason || '',
+    };
+
+    logger.debug(LogCategory.AI, `✅ 风格检测完成: ${result.suggestedStyle} (${result.confidence})`);
+    return result;
+  } catch (error: any) {
+    logger.error(LogCategory.AI, '❌ 风格检测失败:', error);
+    throw new Error(`视觉风格检测失败: ${error.message}`);
   }
 };
 

@@ -25,6 +25,7 @@ export const VISUAL_STYLE_OPTIONS = [
   { label: '🌌 赛博朋克', value: 'cyberpunk', desc: '高科技赛博朋克风' },
   { label: '🖼️ 油画风格', value: 'oil-painting', desc: '油画质感艺术风' },
   { label: '🎬 真人影视', value: 'live-action', desc: '超写实电影/电视剧风格' },
+  { label: '🏮 水墨国风', value: 'ink-wash', desc: '传统中国水墨画风' },
   { label: '✨ 其他 (自定义)', value: 'custom', desc: '手动输入风格' }
 ];
 

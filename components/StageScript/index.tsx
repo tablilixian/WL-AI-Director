@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProjectState, Shot, ConsistencyCheckResult, ConsistencyConflict } from '../../types';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
-import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency, parsePropsFromStory, generateAllPropPrompts } from '../../services/aiService';
+import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency, parsePropsFromStory, generateAllPropPrompts, suggestVisualStyleFromScript } from '../../services/aiService';
 import { getActiveChatModel } from '../../services/modelRegistry';
 import { savePreferences } from '../../services/userPreferencesService';
 import { getFinalValue, validateConfig } from './utils';
@@ -46,6 +46,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDetectingStyle, setIsDetectingStyle] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
   const [isRewriting, setIsRewriting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +104,34 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
     return () => clearScriptLogCallback();
   }, []);
+
+  const handleAutoDetectStyle = async () => {
+    if (!localScript.trim()) {
+      showAlert('请先输入剧本内容', { type: 'warning' });
+      return;
+    }
+    setIsDetectingStyle(true);
+    try {
+      const finalModel = getFinalValue(localModel, customModelInput);
+      const result = await suggestVisualStyleFromScript(localScript, localLanguage, finalModel);
+
+      if (result.isCustom) {
+        setLocalVisualStyle('custom');
+        setCustomStyleInput(result.suggestedStyle);
+      } else {
+        setLocalVisualStyle(result.suggestedStyle);
+      }
+
+      const confidenceLabel = { high: '高', medium: '中', low: '低' }[result.confidence] || result.confidence;
+      showAlert(`检测到风格：${result.suggestedStyle}（置信度: ${confidenceLabel}）\n${result.reason}`, {
+        type: 'info',
+      });
+    } catch (err: any) {
+      showAlert(`风格检测失败：${err.message || '请检查网络后重试'}`, { type: 'error' });
+    } finally {
+      setIsDetectingStyle(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     const finalDuration = getFinalValue(localDuration, customDurationInput);
@@ -741,8 +770,10 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
             customModelInput={customModelInput}
             customStyleInput={customStyleInput}
             isProcessing={isProcessing}
+            isDetectingStyle={isDetectingStyle}
             error={error}
             onShowModelConfig={onShowModelConfig}
+            onAutoDetectStyle={handleAutoDetectStyle}
             onTitleChange={setLocalTitle}
             onDurationChange={(val) => { setLocalDuration(val); savePreferences({ targetDuration: val }); }}
             onLanguageChange={(val) => { setLocalLanguage(val); savePreferences({ language: val }); }}

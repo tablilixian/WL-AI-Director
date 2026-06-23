@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Wand2, BrainCircuit, AlertCircle, ChevronRight, Aperture } from 'lucide-react';
+import { BookOpen, Wand2, BrainCircuit, AlertCircle, ChevronRight, Aperture, Sparkles, Loader2 } from 'lucide-react';
 import OptionSelector from './OptionSelector';
 import { DURATION_OPTIONS, LANGUAGE_OPTIONS, VISUAL_STYLE_OPTIONS, STYLES } from './constants';
 import ModelSelector from '../ModelSelector';
@@ -14,6 +14,7 @@ interface Props {
   customModelInput: string;
   customStyleInput: string;
   isProcessing: boolean;
+  isDetectingStyle?: boolean;
   error: string | null;
   onShowModelConfig?: () => void;
   onTitleChange: (value: string) => void;
@@ -25,6 +26,7 @@ interface Props {
   onCustomModelChange: (value: string) => void;
   onCustomStyleChange: (value: string) => void;
   onAnalyze: () => void;
+  onAutoDetectStyle?: () => void;
 }
 
 const ConfigPanel: React.FC<Props> = ({
@@ -37,6 +39,7 @@ const ConfigPanel: React.FC<Props> = ({
   customModelInput,
   customStyleInput,
   isProcessing,
+  isDetectingStyle,
   error,
   onShowModelConfig,
   onTitleChange,
@@ -47,7 +50,8 @@ const ConfigPanel: React.FC<Props> = ({
   onCustomDurationChange,
   onCustomModelChange,
   onCustomStyleChange,
-  onAnalyze
+  onAnalyze,
+  onAutoDetectStyle
 }) => {
   return (
     <div className="w-96 border-r border-[var(--border-primary)] flex flex-col bg-[var(--bg-primary)]">
@@ -138,6 +142,26 @@ const ConfigPanel: React.FC<Props> = ({
           customPlaceholder="输入风格 (如: 水彩风格, 像素艺术)"
           gridCols={2}
         />
+        {/* Auto-detect style button */}
+        {onAutoDetectStyle && (
+          <button
+            onClick={onAutoDetectStyle}
+            disabled={isDetectingStyle || isProcessing}
+            className="w-full mt-1 py-2 bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border-primary)] rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {isDetectingStyle ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                检测中...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3" />
+                AI 自动检测风格
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Action Button */}
