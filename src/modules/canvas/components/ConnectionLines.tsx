@@ -68,7 +68,7 @@ const getSourceLabel = (opType: string, index: number): string | null => {
 export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale }) => {
   const { layers, selectedLayerId } = useCanvasStore();
 
-  const layersWithSource = layers.filter(l => l.sourceLayerId);
+  const layersWithSource = layers.filter(l => l.sourceLayerId || (l.sourceLayerIds && l.sourceLayerIds.length > 0));
 
   const getLayerRightCenter = (layer: LayerData) => ({
     x: (layer.x + layer.width) * scale + offset.x,

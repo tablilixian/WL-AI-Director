@@ -15,6 +15,7 @@ import { InpaintPanel } from './InpaintPanel';
 import { GridSplitPanel } from './GridSplitPanel';
 import { ImageToImagePanel } from './ImageToImagePanel';
 import { ImageToVideoPanel } from './ImageToVideoPanel';
+import { GenerateVideoPanel } from './GenerateVideoPanel';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
 export type ImageAction =
@@ -34,7 +35,8 @@ export type ImageAction =
   | 'split-4grid'
   | 'split-25grid'
   | 'image-to-image'
-  | 'image-to-video';
+  | 'image-to-video'
+  | 'generate-video';
 
 interface ActionItem {
   id: ImageAction;
@@ -59,6 +61,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ImageAction | null>(null);
   const [showSplitPanel, setShowSplitPanel] = useState(false);
+  const [showGenerateVideo, setShowGenerateVideo] = useState(false);
   const [splitGridType, setSplitGridType] = useState<GridGenerationType | null>(null);
   const groupRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +79,9 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
 
   const handleAction = (action: ImageAction) => {
     closeAll();
-    if (action === 'split-9grid' || action === 'split-4grid' || action === 'split-25grid') {
+    if (action === 'generate-video') {
+      setShowGenerateVideo(true);
+    } else if (action === 'split-9grid' || action === 'split-4grid' || action === 'split-25grid') {
       const gt = action === 'split-9grid' ? '9grid' : action === 'split-4grid' ? '4grid' : '25grid';
       setSplitGridType(gt);
       setShowSplitPanel(true);
@@ -92,8 +97,9 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       label: '基于此图生成',
       icon: <ImagePlus className="w-3.5 h-3.5" />,
       items: [
+        { id: 'generate-video', label: 'AI 生成视频' },
         { id: 'image-to-image', label: '图生图' },
-        { id: 'image-to-video', label: '图生视频' },
+        { id: 'image-to-video', label: '单图生视频' },
       ],
     },
     {
@@ -234,6 +240,13 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           selectedLayerId={layer.id}
           gridType={splitGridType}
           onClose={() => { setShowSplitPanel(false); setSplitGridType(null); }}
+        />
+      )}
+
+      {showGenerateVideo && (
+        <GenerateVideoPanel
+          selectedLayerIds={[layer.id]}
+          onClose={() => setShowGenerateVideo(false)}
         />
       )}
     </>

@@ -4,6 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { Film, Sparkles } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -18,6 +19,7 @@ import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
 import { SaveToLibraryDialog } from './SaveToLibraryDialog';
 import { ImageActionMenu } from './ImageActionMenu';
+import { GenerateVideoPanel, type GenerationConfig } from './GenerateVideoPanel';
 import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
@@ -78,6 +80,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null);
   const [showSaveToLibraryDialog, setShowSaveToLibraryDialog] = useState(false);
   const [saveToLibraryLayer, setSaveToLibraryLayer] = useState<LayerData | null>(null);
+  const [generateVideoLayerIds, setGenerateVideoLayerIds] = useState<string[] | null>(null);
+  const [regenerateVideoConfig, setRegenerateVideoConfig] = useState<{
+    sourceLayerIds: string[];
+    config: GenerationConfig;
+  } | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -506,6 +513,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         </div>
       </div>
 
+      {/* 单图操作菜单 */}
       {(() => {
         const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image') : undefined;
         if (!imgLayer || !canvasRef.current) return null;
@@ -520,6 +528,118 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               height: imgLayer.height * scale,
             }}
           />
+        );
+      })()}
+
+      {/* 视频层操作栏：选中图生视频结果时显示 */}
+      {(() => {
+        const videoLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'video' && l.operationType === 'image-to-video') : null;
+        if (!videoLayer || !canvasRef.current) return null;
+        const hasOtherBar = selectedLayerId && layers.find(l => l.id === selectedLayerId && l.type === 'image');
+        if (hasOtherBar) return null;
+
+        let parsedConfig: GenerationConfig | null = null;
+        try {
+          if (videoLayer.generationPrompt) {
+            parsedConfig = JSON.parse(videoLayer.generationPrompt) as GenerationConfig;
+          }
+        } catch {}
+
+        const sourceImgs = (videoLayer.sourceLayerIds || [])
+          .map(id => layers.find(l => l.id === id))
+          .filter(Boolean) as LayerData[];
+
+        return (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
+            <div className="flex items-center gap-3 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-2xl px-5 py-3">
+              <Film className="w-5 h-5 text-cyan-400" />
+              <span className="text-sm text-gray-300">
+                已选视频
+                {sourceImgs.length > 0 && (
+                  <span className="text-gray-500 ml-1">(来源 {sourceImgs.length} 张图片)</span>
+                )}
+              </span>
+              {sourceImgs.length > 0 && (
+                <div className="flex items-center -space-x-2">
+                  {sourceImgs.slice(0, 4).map(l => (
+                    <div key={l.id} className="w-7 h-7 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700">
+                      {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                  ))}
+                  {sourceImgs.length > 4 && (
+                    <div className="w-7 h-7 rounded-full border-2 border-gray-800 bg-gray-700 flex items-center justify-center text-[9px] text-gray-400">
+                      +{sourceImgs.length - 4}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="w-px h-6 bg-gray-700" />
+              {parsedConfig ? (
+                <button
+                  onClick={() => {
+                    const sourceIds = videoLayer.sourceLayerIds || (videoLayer.sourceLayerId ? [videoLayer.sourceLayerId] : []);
+                    setRegenerateVideoConfig({ sourceLayerIds: sourceIds, config: parsedConfig! });
+                  }}
+                  className="flex items-center gap-2 px-5 py-2 text-sm text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors font-medium"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  重新生成
+                </button>
+              ) : (
+                <span className="text-xs text-gray-500">无配置信息，无法重新生成</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 多图操作栏：当选中 2+ 图片时显示 */}
+      {(() => {
+        const selectedImages = selectedLayerIds.filter(id => {
+          const l = layers.find(la => la.id === id);
+          return l && l.type === 'image' && !l.isLoading;
+        });
+        if (selectedImages.length < 2 || !canvasRef.current) return null;
+        const hasSingleImageMenu = selectedLayerId && layers.find(l => l.id === selectedLayerId && l.type === 'image');
+        if (hasSingleImageMenu) return null;
+        return (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
+            <div className="flex items-center gap-3 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-2xl px-5 py-3">
+              <Film className="w-5 h-5 text-purple-400" />
+              <span className="text-sm text-gray-300">
+                已选 <span className="text-white font-semibold">{selectedImages.length}</span> 张图片
+              </span>
+              <div className="flex items-center -space-x-2">
+                {selectedImages.slice(0, 5).map(id => {
+                  const l = layers.find(la => la.id === id);
+                  if (!l) return null;
+                  return (
+                    <div
+                      key={id}
+                      className="w-8 h-8 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700"
+                    >
+                      {l.src && (
+                        <img src={l.src} alt="" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                  );
+                })}
+                {selectedImages.length > 5 && (
+                  <div className="w-8 h-8 rounded-full border-2 border-gray-800 bg-gray-700 flex items-center justify-center text-[10px] text-gray-400">
+                    +{selectedImages.length - 5}
+                  </div>
+                )}
+              </div>
+              <div className="w-px h-6 bg-gray-700" />
+              <button
+                onClick={() => setGenerateVideoLayerIds(selectedImages)}
+                className="flex items-center gap-2 px-5 py-2 text-sm text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors font-medium"
+              >
+                <Sparkles className="w-4 h-4" />
+                AI 生成视频
+              </button>
+            </div>
+          </div>
         );
       })()}
 
@@ -585,6 +705,21 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
             setShowSaveToLibraryDialog(false);
             setSaveToLibraryLayer(null);
           }}
+        />
+      )}
+
+      {generateVideoLayerIds && (
+        <GenerateVideoPanel
+          selectedLayerIds={generateVideoLayerIds}
+          onClose={() => setGenerateVideoLayerIds(null)}
+        />
+      )}
+
+      {regenerateVideoConfig && (
+        <GenerateVideoPanel
+          selectedLayerIds={regenerateVideoConfig.sourceLayerIds}
+          initialConfig={regenerateVideoConfig.config}
+          onClose={() => setRegenerateVideoConfig(null)}
         />
       )}
 

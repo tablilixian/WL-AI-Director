@@ -10,3 +10,4 @@
 | `图片处理机制分析.md` | 项目图片处理全链路分析 + 整合计划（已合并 `图片服务整合计划.md`） |
 | `canvas-feature-integration-plan.md` | Canvas 创意功能集成计划与状态 |
 | `SCRIPT-QUALITY-IMPROVEMENT.md` | 漫剧剧本质量提升方案 |
+| `图生视频功能全览.md` | 图生视频全流程：面板、入口、数据流、重新生成 |
