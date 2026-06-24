@@ -39,6 +39,7 @@ interface ShotWorkbenchProps {
   onToggleAIEnhancement: () => void;
   onGenerateVideo: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
   onEditVideoPrompt: () => void;
+  onEditCameraChoreography: () => void; // 新增：编辑运镜编排
   onVideoModelChange: (modelId: string) => void;
   onImageClick: (url: string, title: string) => void;
   // 九宫格分镜预览（高级功能）
@@ -82,6 +83,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onToggleAIEnhancement,
   onGenerateVideo,
   onEditVideoPrompt,
+  onEditCameraChoreography,
   onVideoModelChange,
   onImageClick,
   onGenerateNineGrid,
@@ -155,9 +157,23 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="text-[var(--text-primary)] font-bold text-sm">镜头详情</h3>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest truncate" title={shot.cameraMovement}>
-              {shot.cameraMovement}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest truncate" title={shot.cameraMovement}>
+                {shot.cameraMovement}
+              </span>
+              {shot.cameraChoreography && (
+                <span className="text-[8px] px-1 py-0.5 rounded bg-[var(--accent-bg)] text-[var(--accent-text)] border border-[var(--accent-border)] font-bold shrink-0">
+                  编排
+                </span>
+              )}
+              <button
+                onClick={onEditCameraChoreography}
+                className="p-0.5 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors shrink-0"
+                title="编辑运镜编排"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
         
@@ -369,6 +385,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           hasEndFrame={!!endKf?.imageUrl}
           onGenerate={onGenerateVideo}
           onEditPrompt={onEditVideoPrompt}
+          onEditCameraChoreography={onEditCameraChoreography}
           onModelChange={(modelId) => {
             setLocalVideoModelId(modelId);
             onVideoModelChange(modelId);

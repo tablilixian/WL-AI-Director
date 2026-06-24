@@ -1,4 +1,4 @@
-import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData, AspectRatio } from '../../types';
+import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData, AspectRatio, CameraChoreography, renderCameraChoreographyPrompt } from '../../types';
 import { VISUAL_STYLE_PROMPTS, VIDEO_PROMPT_TEMPLATES, NINE_GRID } from './constants';
 import { getCameraMovementCompositionGuide } from './cameraMovementGuides';
 import { logger, LogCategory } from '../../services/logger';
@@ -205,11 +205,17 @@ export const buildVideoPrompt = (
   videoModel: 'sora-2' | 'veo' | 'veo_3_1-fast' | 'veo_3_1-fast-4K' | 'veo_3_1_t2v_fast_landscape' | 'veo_3_1_t2v_fast_portrait' | 'veo_3_1_i2v_s_fast_fl_landscape' | 'veo_3_1_i2v_s_fast_fl_portrait' | string,
   language: string,
   nineGrid?: NineGridData,
-  videoDuration?: number
+  videoDuration?: number,
+  cameraChoreography?: CameraChoreography
 ): string => {
   const isChinese = language === '中文' || language === 'Chinese';
-  
   const isAsyncVideoModel = videoModel === 'sora-2' || videoModel.toLowerCase().startsWith('veo_3_1-fast');
+
+  // 如果有结构化运镜编排，替换 cameraMovement 为渲染后的运镜段落
+  let effectiveCameraMovement = cameraMovement;
+  if (cameraChoreography) {
+    effectiveCameraMovement = renderCameraChoreographyPrompt(cameraChoreography, actionSummary, videoDuration || 8);
+  }
 
   // 九宫格分镜模式：有九宫格数据时，使用异步模型专用精简提示词
   // 保留9个面板的景别/角度顺序，但 description 截断到60字符以内，避免超过 Sora-2 的 8192 字符限制
@@ -233,7 +239,7 @@ export const buildVideoPrompt = (
       .replace('{actionSummary}', actionSummary)
       .replace('{panelDescriptions}', panelDescriptions)
       .replace(/\{secondsPerPanel\}/g, String(secondsPerPanel))
-      .replace('{cameraMovement}', cameraMovement)
+      .replace('{cameraMovement}', effectiveCameraMovement)
       .replace('{language}', language);
   }
   
@@ -245,12 +251,12 @@ export const buildVideoPrompt = (
     
     return template
       .replace('{actionSummary}', actionSummary)
-      .replace('{cameraMovement}', cameraMovement)
+      .replace('{cameraMovement}', effectiveCameraMovement)
       .replace('{language}', language);
   } else {
     return VIDEO_PROMPT_TEMPLATES.veo.simple
       .replace('{actionSummary}', actionSummary)
-      .replace('{cameraMovement}', cameraMovement)
+      .replace('{cameraMovement}', effectiveCameraMovement)
       .replace('{language}', isChinese ? '中文' : language);
   }
 };

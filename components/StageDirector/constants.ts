@@ -108,6 +108,41 @@ export const DEFAULTS = {
 };
 
 // ============================================
+// 运镜编排选项（供 UI 下拉菜单使用）
+// ============================================
+
+export const CAMERA_SHOT_SIZES = ['大远景', '远景', '全景', '中全景', '中景', '中近景', '近景', '特写', '大特写'] as const;
+
+export const CAMERA_ANGLES = ['平视', '仰拍', '俯拍', '鸟瞰', '斜拍', '正面', '侧面', '背面', '低角度'] as const;
+
+export const CAMERA_SUBJECT_POSITIONS = ['居中', '左侧1/3', '右侧1/3', '黄金分割左', '黄金分割右', '边缘'] as const;
+
+export const CAMERA_FOCUS_TYPES = ['浅景深', '深焦', '全景清晰', '柔焦', '移轴'] as const;
+
+export const CAMERA_MOVEMENT_SPEEDS = ['极慢', '慢速', '中速', '快速', '极快'] as const;
+
+export const CAMERA_MOVEMENT_TYPES = [
+  { id: 'none', label: '固定镜头', promptEn: 'Static shot, camera remains fixed, no movement.' },
+  { id: 'push-in', label: '推镜头', promptEn: 'Camera slowly pushes in towards the subject, gradual dolly forward, intensifying focus.' },
+  { id: 'pull-out', label: '拉镜头', promptEn: 'Camera slowly pulls out, dolly backward, revealing the surrounding environment.' },
+  { id: 'pan-left', label: '左摇摄', promptEn: 'Camera pans left, horizontal rotation from left to right, revealing the scene.' },
+  { id: 'pan-right', label: '右摇摄', promptEn: 'Camera pans right, horizontal rotation, revealing the scene dynamically.' },
+  { id: 'tilt-up', label: '上仰摄', promptEn: 'Camera tilts upward, revealing the upper part of the scene or subject.' },
+  { id: 'tilt-down', label: '下俯摄', promptEn: 'Camera tilts downward, revealing the lower part of the scene or subject.' },
+  { id: 'follow', label: '跟拍', promptEn: 'Camera follows the subject, tracking movement smoothly, maintaining framing.' },
+  { id: 'orbit', label: '环绕', promptEn: 'Camera orbits around the subject, circular movement, 360-degree rotational shot.' },
+  { id: 'shake', label: '手持抖动', promptEn: 'Handheld camera effect, slight shake and vibration, adding realism and tension.' },
+  { id: 'crane-up', label: '升降上', promptEn: 'Crane shot, camera rises upward, revealing the scene from an elevated perspective.' },
+  { id: 'crane-down', label: '升降下', promptEn: 'Crane shot, camera descends downward, narrowing the view.' },
+  { id: 'tracking', label: '轨道跟焦', promptEn: 'Camera tracks alongside the subject, maintaining precise distance and focus.' },
+  { id: 'dolly-zoom', label: '推拉变焦', promptEn: 'Dolly zoom effect, camera moves while zooming, creating a vertigo-like perspective distortion.' },
+  { id: 'rotating', label: '旋转镜头', promptEn: 'Camera rotates around its axis, creating a dynamic spinning effect.' },
+  { id: 'custom', label: '自定义', promptEn: '' },
+];
+
+export const MOVEMENT_INTENSITY_LABELS = ['轻微', '', '', '', '适中', '', '', '', '', '强烈'] as const;
+
+// ============================================
 // 九宫格分镜预览相关常量（高级功能）
 // ============================================
 

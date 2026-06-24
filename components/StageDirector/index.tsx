@@ -24,6 +24,7 @@ import {
 import { unifiedImageService } from '../../services/unifiedImageService';
 import { DEFAULTS } from './constants';
 import EditModal from './EditModal';
+import CameraChoreographyModal from './CameraChoreographyModal';
 import ShotCard from './ShotCard';
 import ShotWorkbench from './ShotWorkbench';
 import ImagePreviewModal from './ImagePreviewModal';
@@ -74,6 +75,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     shotId?: string;
     frameType?: 'start' | 'end';
   } | null>(null);
+
+  // 运镜编排弹窗
+  const [showChoreographyModal, setShowChoreographyModal] = useState(false);
 
   const activeShotIndex = project.shots.findIndex(s => s.id === activeShotId);
   const activeShot = project.shots[activeShotIndex];
@@ -355,7 +359,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       selectedModel,
       projectLanguage,
       isNineGridMode ? shot.nineGrid : undefined,
-      duration
+      duration,
+      shot.cameraChoreography
     );
     
     const intervalId = shot.interval?.id || generateId(`int-${shot.id}`);
@@ -1352,6 +1357,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                 videoModel: modelId as any
               }));
             }}
+            onEditCameraChoreography={() => setShowChoreographyModal(true)}
             onEditVideoPrompt={() => {
               // 如果videoPrompt不存在，动态生成一个
               let promptValue = activeShot.interval?.videoPrompt;
@@ -1368,7 +1374,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                   activeShot.cameraMovement,
                   selectedModel,
                   projectLanguage,
-                  isNineGridMode ? activeShot.nineGrid : undefined
+                  isNineGridMode ? activeShot.nineGrid : undefined,
+                  undefined,
+                  activeShot.cameraChoreography
                 );
               }
               setEditModal({ 
@@ -1437,6 +1445,22 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         title={previewImage?.title}
         onClose={() => setPreviewImage(null)}
       />
+
+      {/* 运镜编排弹窗 */}
+      {activeShot && (
+        <CameraChoreographyModal
+          isOpen={showChoreographyModal}
+          onClose={() => setShowChoreographyModal(false)}
+          onSave={(choreography) => {
+            updateShot(activeShot.id, s => ({
+              ...s,
+              cameraChoreography: choreography,
+            }));
+            setShowChoreographyModal(false);
+          }}
+          initial={activeShot.cameraChoreography}
+        />
+      )}
     </div>
   );
 };

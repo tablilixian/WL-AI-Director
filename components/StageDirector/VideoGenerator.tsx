@@ -18,6 +18,7 @@ interface VideoGeneratorProps {
   hasEndFrame: boolean;
   onGenerate: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
   onEditPrompt: () => void;
+  onEditCameraChoreography?: () => void;
   onModelChange?: (modelId: string) => void;
 }
 
@@ -27,6 +28,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   hasEndFrame,
   onGenerate,
   onEditPrompt,
+  onEditCameraChoreography,
   onModelChange
 }) => {
   const normalizeModelId = (modelId?: string) => {
@@ -116,13 +118,33 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-widest flex items-center gap-2">
           <Video className="w-3 h-3 text-[var(--accent)]" />
           视频生成
-          <button 
-            onClick={onEditPrompt}
-            className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
-            title="预览/编辑视频提示词"
-          >
-            <Edit2 className="w-3 h-3" />
-          </button>
+          {shot.cameraChoreography ? (
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onEditCameraChoreography?.()}
+                className="p-1 text-[var(--accent-text)] hover:text-[var(--text-primary)] transition-colors"
+                title="编辑运镜编排"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+              <span className="text-[8px] text-[var(--text-muted)]">|</span>
+              <button
+                onClick={onEditPrompt}
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--warning-text)] transition-colors"
+                title="编辑原始提示词"
+              >
+                <span className="text-[9px] font-mono">raw</span>
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={onEditPrompt}
+              className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
+              title="预览/编辑视频提示词"
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+          )}
         </h4>
         {shot.interval?.status === 'completed' && (
           <span className="text-[10px] text-[var(--success)] font-mono flex items-center gap-1">

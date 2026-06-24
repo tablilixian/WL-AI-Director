@@ -170,6 +170,7 @@ export interface Shot {
   actionSummary: string;
   dialogue?: string; 
   cameraMovement: string;
+  cameraChoreography?: CameraChoreography; // 结构化运镜编排（起点→路径→终点）
   shotSize?: string; 
   characters: string[]; // Character IDs
   characterVariations?: { [characterId: string]: string }; // Added: Map char ID to variation ID for this shot
@@ -178,6 +179,33 @@ export interface Shot {
   interval?: VideoInterval;
   videoModel?: string; // 视频模型 ID，由 modelRegistry 管理
   nineGrid?: NineGridData; // 可选的九宫格分镜预览数据（高级功能）
+}
+
+// ============================================
+// 运镜编排类型 —— "起点→路径→终点" 结构化运镜
+// ============================================
+
+export type ShotSizeLabel = '大远景' | '远景' | '全景' | '中全景' | '中景' | '中近景' | '近景' | '特写' | '大特写';
+export type CameraAngleLabel = '平视' | '仰拍' | '俯拍' | '鸟瞰' | '斜拍' | '正面' | '侧面' | '背面' | '低角度';
+export type SubjectPosition = '居中' | '左侧1/3' | '右侧1/3' | '黄金分割左' | '黄金分割右' | '边缘';
+export type FocusType = '浅景深' | '深焦' | '全景清晰' | '柔焦' | '移轴';
+export type MovementSpeedLabel = '极慢' | '慢速' | '中速' | '快速' | '极快';
+
+export interface CameraChoreography {
+  startShotSize: ShotSizeLabel;
+  startAngle: CameraAngleLabel;
+  startSubject: SubjectPosition;
+  startFocus: FocusType;
+  movementType: string;
+  movementPath: string;
+  movementSpeed: MovementSpeedLabel;
+  movementIntensity: number;
+  endShotSize: ShotSizeLabel;
+  endAngle: CameraAngleLabel;
+  endSubject: SubjectPosition;
+  timingStartRatio: number;
+  timingMoveRatio: number;
+  timingEndRatio: number;
 }
 
 /**
@@ -320,3 +348,38 @@ export interface ConsistencyCheckResult {
  * 视频时长类型（仅异步视频模型支持）
  */
 export type VideoDuration = 4 | 8 | 12;
+
+/**
+ * 将结构化运镜编排渲染为提示词段落
+ * 输出格式:
+ *   【运镜编排】
+ *   0-2.4s [起始:中景/平视/居中/浅景深] 动作描述 - 镜头稳定构图
+ *   2.4-5.6s [推镜头] 沿Z轴向前推进至面部特写 | 速度:中速 强度:6/10
+ *   5.6-8s [结束:近景/仰拍/黄金分割左] 最终画面构成
+ */
+export function renderCameraChoreographyPrompt(
+  cc: CameraChoreography,
+  actionSummary: string,
+  totalSeconds: number = 8
+): string {
+  const tStart = Math.round(totalSeconds * cc.timingStartRatio * 10) / 10;
+  const tMove = Math.round(totalSeconds * cc.timingMoveRatio * 10) / 10;
+  const tEnd = Math.round(totalSeconds * cc.timingEndRatio * 10) / 10;
+
+  const tStartEnd = tStart;
+  const tMoveEnd = Math.round((tStart + tMove) * 10) / 10;
+  const tEndEnd = totalSeconds;
+
+  const speedMap: Record<MovementSpeedLabel, string> = {
+    '极慢': 'very-slow',
+    '慢速': 'slow',
+    '中速': 'medium',
+    '快速': 'fast',
+    '极快': 'very-fast',
+  };
+
+  return `【运镜编排】
+0-${tStartEnd}s [起始:${cc.startShotSize}/${cc.startAngle}/主体${cc.startSubject}/${cc.startFocus}] ${actionSummary} — 镜头稳定构图，为运动预留空间
+${tStartEnd}-${tMoveEnd}s [${cc.movementType}] ${cc.movementPath} | 速度:${cc.movementSpeed}(${speedMap[cc.movementSpeed]}) 强度:${cc.movementIntensity}/10
+${tMoveEnd}-${tEndEnd}s [结束:${cc.endShotSize}/${cc.endAngle}/主体${cc.endSubject}] 镜头到位，定格最终画面`;
+}
