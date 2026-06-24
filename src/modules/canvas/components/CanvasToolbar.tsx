@@ -38,7 +38,7 @@ export const CanvasToolbar: React.FC = () => {
     setStrokeColor,
     setStrokeWidth
   } = useCanvasStore();
-  const { zoomIn, zoomOut, resetZoom, fitToContent } = useCanvasControls();
+  const { zoomIn, zoomOut, resetZoom } = useCanvasControls();
   const autoArrangeLayers = useCanvasStore((s) => s.autoArrangeLayers);
   const scale = useCanvasStore((s) => s.scale);
   const templatePanelOpen = useCanvasStore((s) => s.templatePanelOpen);
@@ -138,8 +138,8 @@ export const CanvasToolbar: React.FC = () => {
           </svg>
         </button>
 
-        {isToolOpen && (
-          <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
+            {isToolOpen && (
+          <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[140px] z-[100]" onClick={(e) => e.stopPropagation()}>
             {(Object.keys(toolIcons) as DrawingTool[]).map(tool => (
               <button
                 key={tool}
@@ -223,7 +223,7 @@ export const CanvasToolbar: React.FC = () => {
             </button>
 
             {isLayerOpen && (
-              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-[100]" onClick={(e) => e.stopPropagation()}>
                 <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">属性</div>
                 <button onClick={() => { toggleLayerVisibility(selectedLayerId); setIsLayerOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -312,7 +312,7 @@ export const CanvasToolbar: React.FC = () => {
             </button>
 
             {isArrangeOpen && (
-              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute top-full left-0 mt-1.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[180px] z-[100]" onClick={(e) => e.stopPropagation()}>
                 <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">对齐</div>
                 <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'left'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">左对齐</button>
                 <button onClick={() => { alignLayers(selectedLayerIds.length > 0 ? selectedLayerIds : [selectedLayerId], 'center'); setIsArrangeOpen(false); }} disabled={!hasMultipleSelection} className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">水平居中</button>
@@ -362,16 +362,6 @@ export const CanvasToolbar: React.FC = () => {
           {Math.round(scale * 100)}%
         </span>
       </div>
-
-      <button
-        onClick={fitToContent}
-        className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-        title="Fit to Content"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-        </svg>
-      </button>
 
       <button
         onClick={autoArrangeLayers}
