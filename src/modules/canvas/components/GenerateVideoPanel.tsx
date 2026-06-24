@@ -588,6 +588,20 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                 <div className="absolute bottom-1 left-1 text-[9px] text-white/60 bg-black/40 px-1.5 py-0.5 rounded">
                   {activePreviewLayer.title} · {activePreviewLayer.width}×{activePreviewLayer.height}
                 </div>
+                {selectedCamera !== 'none' && (
+                  <div className="absolute bottom-1 right-1 text-[9px] text-white/80 bg-black/60 backdrop-blur-sm px-2 py-1 rounded leading-tight max-w-[60%]">
+                    {useChoreography ? (
+                      <>
+                        <div className="font-semibold text-purple-300">📽 {CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label}</div>
+                        <div className="text-[8px] opacity-80">{startShotSize}/{startAngle} → {endShotSize}/{endAngle}</div>
+                        <div className="text-[8px] opacity-60">{Math.round(timingStartRatio * 100)}%/{Math.round(timingMoveRatio * 100)}%/{Math.round(timingEndRatio * 100)}%</div>
+                        {movementPath && <div className="text-[8px] opacity-70 truncate">{movementPath}</div>}
+                      </>
+                    ) : (
+                      <div>{CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label} 强度{cameraIntensity}/10</div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="h-[100px] flex items-center justify-center text-[10px] text-gray-600 bg-gray-800/40 rounded-lg border border-dashed border-gray-700">
