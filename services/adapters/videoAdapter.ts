@@ -588,18 +588,28 @@ const callDramaBackendVideoApi = async (
     throw new Error('视频生成需要提供至少一张图片');
   }
 
-  // 第一张图作为背景（background 为必填字段）
-  const bgFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
-  requestBody.background = bgFilename;
-  console.log(`[${tid}] 背景图上传成功 -> filename: ${bgFilename}`);
+  // 第一张图作为 background
+  const firstFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
+  requestBody.background = firstFilename;
+  console.log(`[${tid}] 背景图上传成功 -> filename: ${firstFilename}`);
 
-  // 后续图片作为参考图（从 image1 开始）
-  for (let i = 1; i < Math.min(allImages.length, 5); i++) {
-    const imgKey = `image${i}`;
-    console.log(`[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`);
-    const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
-    requestBody[imgKey] = filename;
-    console.log(`[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+  if (allImages.length === 1) {
+    requestBody.image1 = firstFilename;
+    console.log(`[${tid}] 仅一张图，image1 复用背景图`);
+  } else {
+    // 第二张图作为 image1
+    const secondFilename = await uploadImageToDramaBackend(allImages[1], baseUrl, tid);
+    requestBody.image1 = secondFilename;
+    console.log(`[${tid}] image1 上传成功 -> filename: ${secondFilename}`);
+
+    // 后续图片依次为 image2/image3/image4
+    for (let i = 2; i < Math.min(allImages.length, 5); i++) {
+      const imgKey = `image${i}`;
+      console.log(`[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`);
+      const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
+      requestBody[imgKey] = filename;
+      console.log(`[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+    }
   }
 
   console.log(`\n[${tid}] ========== 请求参数 (JSON) ==========`);
