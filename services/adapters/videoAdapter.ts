@@ -4,9 +4,11 @@
  */
 
 import { VideoModelDefinition, VideoGenerateOptions, AspectRatio, VideoDuration } from '../../types/model';
-import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel } from '../modelRegistry';
+import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel, getProviderById } from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
 import { unifiedImageService } from '../unifiedImageService';
+import { uploadImageToDramaBackend } from './imageAdapter';
+import { videoStorageService } from '../imageStorageService';
 
 /**
  * 解析图片引用为 Base64 格式
@@ -544,6 +546,133 @@ const callSoraApi = async (
 };
 
 /**
+ * 调用 Drama Backend 视频生成 API (image2videomsr)
+ * 基于图像生成视频（MSR 多帧超分辨率技术）
+ */
+const callDramaBackendVideoApi = async (
+  options: VideoGenerateOptions,
+  model: VideoModelDefinition,
+  apiBase: string
+): Promise<string> => {
+  const tid = `drama_video_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  console.log(`\n========== [${tid}] Drama Backend 视频生成请求开始 ==========`);
+  console.log(`[${tid}] 端点: POST /api/v1/generate/image2videomsr`);
+  console.log(`[${tid}] 目标地址: ${apiBase}`);
+  console.log(`[${tid}] 代理模式: ${import.meta.env.DEV ? '开发环境 (/drama-api)' : '生产环境'}`);
+
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  const sizeMap: Record<string, { width: number; height: number }> = {
+    '16:9': { width: 640, height: 320 },
+    '9:16': { width: 320, height: 640 },
+    '1:1': { width: 512, height: 512 },
+  };
+  const aspectRatio = options.aspectRatio || '16:9';
+  const size = sizeMap[aspectRatio] || { width: 640, height: 320 };
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    width: size.width,
+    height: size.height,
+    duration: options.duration || 5,
+    fps: 30,
+  };
+
+  // 收集所有图片：优先使用 referenceImages，否则回退 startImage + endImage
+  const allImages = options.referenceImages?.length
+    ? options.referenceImages
+    : [options.startImage, options.endImage].filter(Boolean) as string[];
+
+  if (allImages.length === 0) {
+    throw new Error('视频生成需要提供至少一张图片');
+  }
+
+  // 第一张图作为背景（background 为必填字段）
+  const bgFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
+  requestBody.background = bgFilename;
+  console.log(`[${tid}] 背景图上传成功 -> filename: ${bgFilename}`);
+
+  // 后续图片作为参考图（从 image1 开始）
+  for (let i = 1; i < Math.min(allImages.length, 5); i++) {
+    const imgKey = `image${i}`;
+    console.log(`[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`);
+    const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
+    requestBody[imgKey] = filename;
+    console.log(`[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+  }
+
+  console.log(`\n[${tid}] ========== 请求参数 (JSON) ==========`);
+  console.log(JSON.stringify(requestBody, null, 2));
+  console.log(`[${tid}] ====================================\n`);
+
+  const data = await retryOperation(async () => {
+    const requestUrl = `${baseUrl}/api/v1/generate/image2videomsr`;
+    console.log(`[${tid}] 发送请求: POST ${requestUrl}`);
+
+    const res = await fetch(requestUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log(`[${tid}] 响应状态: ${res.status} ${res.statusText}`);
+    console.log(`[${tid}] 响应头:`, Object.fromEntries(res.headers.entries()));
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status} ${res.statusText}`;
+      try {
+        const errorText = await res.text();
+        console.log(`[${tid}] ========== 错误响应 Body ==========`);
+        console.log(errorText);
+        console.log(`[${tid}] ===================================`);
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 500);
+          } catch {
+            errorMessage = errorText.slice(0, 500);
+          }
+        }
+      } catch (e) {
+        console.log(`[${tid}] 读取响应 Body 失败:`, e);
+        errorMessage = `HTTP 错误: ${res.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const responseData = await res.json();
+    console.log(`[${tid}] ========== 成功响应 Body ==========`);
+    console.log(JSON.stringify(responseData, null, 2));
+    console.log(`[${tid}] ===================================`);
+    return responseData;
+  });
+  const videoUrl = data.full_url;
+  if (!videoUrl) {
+    throw new Error(`视频生成失败：响应中未找到视频 URL: ${JSON.stringify(data)}`);
+  }
+
+  console.log(`[${tid}] 视频URL: ${videoUrl}`);
+
+  let downloadUrl = videoUrl;
+  if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = videoUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const videoResponse = await fetch(downloadUrl);
+  if (!videoResponse.ok) {
+    throw new Error(`视频下载失败: ${videoResponse.status}`);
+  }
+
+  const videoBlob = await videoResponse.blob();
+  const videoId = `vid_drama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  await videoStorageService.saveVideo(videoId, videoBlob);
+
+  console.log(`[${tid}] 视频已保存: ${videoId}`);
+  return `video:${videoId}`;
+};
+
+/**
  * 调用视频生成 API
  */
 export const callVideoApi = async (
@@ -554,6 +683,13 @@ export const callVideoApi = async (
   const activeModel = model || getActiveVideoModel();
   if (!activeModel) {
     throw new Error('没有可用的视频模型');
+  }
+
+  // WLDrama 提供商走独立的视频生成流程
+  const provider = getProviderById(activeModel.providerId);
+  if (provider?.id === 'wldrama' || activeModel.providerId === 'wldrama') {
+    const apiBase = getDevApiBaseUrl(activeModel.id);
+    return callDramaBackendVideoApi(options, activeModel, apiBase);
   }
 
   // 获取 API 配置

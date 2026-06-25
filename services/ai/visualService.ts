@@ -24,7 +24,7 @@ import {
   getSceneNegativePrompt,
   VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -1514,5 +1514,72 @@ Output ONLY valid JSON with this exact structure:
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 批量道具视觉提示词生成失败:', error);
     throw new Error(`批量道具视觉提示词生成失败: ${error.message}`);
+  }
+};
+
+/**
+ * 图像转视频 MSR 生成
+ * 调用 Drama Backend image2videomsr API，基于图像生成视频（MSR 多帧超分辨率技术）
+ * 返回保存后的本地 video: 引用
+ */
+export const generateVideoMsr = async (
+  prompt: string,
+  referenceImages: string[] = [],
+  backgroundImage: string,
+  width: number = 640,
+  height: number = 320,
+  duration: number = 5,
+  fps: number = 30,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎬 generateVideoMsr 调用 - 图像转视频 MSR`);
+    logger.debug(LogCategory.AI, `📝 提示词: ${prompt}`);
+    logger.debug(LogCategory.AI, `🖼️ 参考图数量: ${referenceImages.length}`);
+    logger.debug(LogCategory.AI, `🎥 视频参数: ${width}x${height}, ${duration}秒, ${fps}fps`);
+
+    const localVideoUrl = await callDramaBackendVideoMsrApi({
+      prompt,
+      referenceImages,
+      isVideoMsr: true,
+      videoMsrWidth: width,
+      videoMsrHeight: height,
+      videoMsrDuration: duration,
+      videoMsrFps: fps,
+      videoMsrBackground: backgroundImage,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomsr-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 图像转视频 MSR 完成: ${localVideoUrl}`);
+    return localVideoUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomsr-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`图像转视频 MSR 失败: ${error.message}`);
   }
 };

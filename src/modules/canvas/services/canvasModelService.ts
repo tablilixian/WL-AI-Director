@@ -22,6 +22,7 @@ interface GenerateVideoOptions {
   prompt: string;
   startImage?: string;
   endImage?: string;
+  referenceImages?: string[];
   aspectRatio?: AspectRatio;
   duration?: number;
   onProgress?: (progress: number) => void;
@@ -142,6 +143,7 @@ export class CanvasModelService {
         prompt,
         startImage,
         endImage,
+        referenceImages: options.referenceImages,
         aspectRatio,
         duration: duration as any
       });
@@ -149,6 +151,12 @@ export class CanvasModelService {
       onProgress?.(60);
 
       console.log('[CanvasModelService] 视频生成完成，URL:', videoUrl);
+
+      // Adapter 已保存到本地 (video: 协议)，直接返回
+      if (videoUrl.startsWith('video:')) {
+        onProgress?.(100);
+        return videoUrl;
+      }
 
       try {
         let downloadUrl = videoUrl;

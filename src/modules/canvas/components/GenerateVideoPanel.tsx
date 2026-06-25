@@ -426,11 +426,15 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       setProgressLabel('正在生成视频 (图片 1/' + imageSequence.length + ')...');
 
       const firstLayer = imageLookup.get(imageSequence[0].layerId);
-      const startImage = firstLayer?.src || '';
+      const allImages = imageSequence
+        .map(s => imageLookup.get(s.layerId)?.src)
+        .filter((s): s is string => !!s);
 
       const videoUrl = await canvasModelService.generateVideo({
         prompt: fullPrompt,
-        startImage,
+        startImage: allImages[0],
+        endImage: allImages[1],
+        referenceImages: allImages,
         aspectRatio,
         duration: Math.round(durationMs / 1000),
         onProgress: (p) => {

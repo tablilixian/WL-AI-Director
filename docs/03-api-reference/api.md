@@ -1,15 +1,7 @@
 ---
-title: Drama Backend API 文档
-category: api-reference
-status: active
-audience: developer
-created: 2026-01-01
-updated: 2026-06-01
----
-
 # Drama Backend API 文档
 
-**版本:** 0.1.0  
+**版本:** 0.2.0  
 ---
 
 ## 目录
@@ -27,6 +19,7 @@ updated: 2026-06-01
 - [图像修复](#图像修复)
 - [视觉语言模型](#视觉语言模型)
 - [视频生成](#视频生成)
+- [图像转视频](#图像转视频)
 - [错误响应](#错误响应)
 
 ---
@@ -610,6 +603,60 @@ updated: 2026-06-01
     "status": "video generated"
 }
 ```
+
+---
+
+## 图像转视频
+
+### POST /api/v1/generate/image2videomsr
+
+基于图像生成视频（MSR 多帧超分辨率技术）
+
+**请求体 (Image2VideoRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
+| `width` | integer | 否 | 640 | 视频宽度 |
+| `height` | integer | 否 | 320 | 视频高度 |
+| `duration` | integer | 否 | 5 | 视频时长（秒） |
+| `fps` | integer | 否 | 30 | 视频帧率（帧/秒） |
+| `image1` | string | 否 | "" | 参考图像1（文件名） |
+| `image2` | string | 否 | "" | 参考图像2（文件名） |
+| `image3` | string | 否 | "" | 参考图像3（文件名） |
+| `image4` | string | 否 | "" | 参考图像4（文件名） |
+| `background` | string | 是 | "" | 背景图像（文件名），使用UI上的第一张图上传 |
+
+**请求示例:**
+```json
+{
+  "prompt": "A beautiful sunset over the ocean, waves crashing on the shore",
+  "width": 1024,
+  "height": 768,
+  "duration": 10,
+  "fps": 30,
+  "image1": "reference_image.png",
+  "background": "background.png"
+}
+```
+
+**响应:** 返回生成的视频数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "video_00001_.mp4",
+    "full_url": "http://117.50.108.73:8082/view?filename=video_00001_.mp4",
+    "duration": 15.30
+}
+```
+
+**说明:**
+- 该端点使用 MSR (Multi-Frame Super-Resolution) 技术生成视频
+- 支持最多4张参考图像和1张背景图像
+- 根据提示词和参考图像生成连贯的视频内容
+- 适用于从静态图像生成动态视频效果
 
 ---
 

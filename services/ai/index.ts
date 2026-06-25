@@ -78,6 +78,7 @@ export {
   generatePromptEnhanceImage,
   generateAllPropPrompts,
   suggestVisualStyleFromScript,
+  generateVideoMsr,
 } from './visualService';
 
 // 视频生成服务

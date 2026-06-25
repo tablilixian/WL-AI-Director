@@ -382,6 +382,23 @@ export const generateVideo = async (
 ): Promise<string> => {
   const resolvedVideoModel = resolveModel('video', model);
   const requestModel = resolveRequestModel('video', model) || model;
+
+  // WLDrama 提供商使用独立的 drama backend API
+  if (resolvedVideoModel?.providerId === 'wldrama') {
+    const { callVideoApi } = await import('../adapters/videoAdapter');
+    const resultUrl = await callVideoApi(
+      {
+        prompt,
+        startImage: startImageBase64,
+        endImage: endImageBase64,
+        aspectRatio,
+        duration: duration as any,
+      },
+      resolvedVideoModel as any
+    );
+    return resultUrl;
+  }
+
   const apiKey = checkApiKey('video', model);
   const apiBase = getApiBase('video', model);
   const isAsyncMode =

@@ -198,6 +198,12 @@ export interface ImageGenerateOptions {
   autoEnhancePrompt?: boolean; // 是否在生成前自动增强提示词（仅 Drama Backend）
   refImage?: string;           // IPA 风格迁移参考图像
   enhance?: boolean;           // 是否增强风格迁移效果（image2styletransfer / image2ipastyletransfer）
+  isVideoMsr?: boolean;        // 是否为图像转视频 MSR（image2videomsr）
+  videoMsrWidth?: number;      // 视频宽度（默认 640）
+  videoMsrHeight?: number;     // 视频高度（默认 320）
+  videoMsrDuration?: number;   // 视频时长（默认 5）
+  videoMsrFps?: number;        // 视频帧率（默认 30）
+  videoMsrBackground?: string; // 背景图像 URL
 }
 
 /**
@@ -216,6 +222,7 @@ export interface VideoGenerateOptions {
   prompt: string;
   startImage?: string;
   endImage?: string;
+  referenceImages?: string[];
   aspectRatio?: AspectRatio;
   duration?: VideoDuration;
 }
@@ -526,6 +533,24 @@ export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
       mode: 'async',
       defaultAspectRatio: '16:9',
       supportedAspectRatios: ['16:9'],
+      defaultDuration: 5,
+      supportedDurations: [5, 10],
+    },
+  },
+  // WLDrama Video Model
+  {
+    id: 'dramabackend-video',
+    name: 'Drama Backend 生视频',
+    type: 'video',
+    providerId: 'wldrama',
+    endpoint: '/api/v1/generate/image2videomsr',
+    description: '自建 Drama Backend 图生视频服务（MSR 多帧超分辨率），无需 API Key',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      mode: 'sync',
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
       defaultDuration: 5,
       supportedDurations: [5, 10],
     },

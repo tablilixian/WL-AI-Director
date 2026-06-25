@@ -8,7 +8,7 @@ import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProvi
 import { enhanceWithQualityTags } from '../ai/promptConstants';
 import { ApiKeyError } from './chatAdapter';
 import { useAuthStore } from '../../src/stores/authStore';
-import { imageStorageService, generateImageId } from '../imageStorageService';
+import { imageStorageService, generateImageId, videoStorageService } from '../imageStorageService';
 
 /**
  * 重试操作
@@ -360,7 +360,7 @@ const resolveImageToBlob = async (imageUrl: string): Promise<Blob> => {
  * 无论输入什么格式（data: / local: / blob: / http），统一转为 Blob 上传
  * 返回服务器上的 filename，用于后续 image2image 请求
  */
-const uploadImageToDramaBackend = async (
+export const uploadImageToDramaBackend = async (
   imageUrl: string,
   apiBase: string,
   traceId?: string
@@ -1442,6 +1442,115 @@ export const callDramaBackendPromptEnhanceApi = async (
   console.log(`[PE:${tid}] 增强结果: ${response.output}`);
 
   return response.output;
+};
+
+/**
+ * 调用 Drama Backend 图像转视频 MSR API (image2videomsr)
+ * 基于图像生成视频（MSR 多帧超分辨率技术）
+ * 返回保存后的本地 video: 引用
+ */
+export const callDramaBackendVideoMsrApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `vmsr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[VMSR:${tid}] 调用图像转视频 MSR API`);
+  console.log(`[VMSR:${tid}] 端点: /api/v1/generate/image2videomsr`);
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    width: options.videoMsrWidth || 640,
+    height: options.videoMsrHeight || 320,
+    duration: options.videoMsrDuration || 5,
+    fps: options.videoMsrFps || 30,
+  };
+
+  if (options.videoMsrBackground) {
+    const bgFilename = await uploadImageToDramaBackend(options.videoMsrBackground, baseUrl, tid);
+    requestBody.background = bgFilename;
+    console.log(`[VMSR:${tid}] 背景图上传成功 -> filename: ${bgFilename}`);
+  } else if (options.referenceImages && options.referenceImages.length > 0) {
+    // 未指定 background 时，使用第一张参考图作为背景
+    const bgFilename = await uploadImageToDramaBackend(options.referenceImages[0], baseUrl, tid);
+    requestBody.background = bgFilename;
+    console.log(`[VMSR:${tid}] 使用第一张参考图作为背景 -> filename: ${bgFilename}`);
+  } else {
+    throw new Error('图像转视频需要提供背景图像');
+  }
+
+  if (options.referenceImages) {
+    for (let i = 0; i < Math.min(options.referenceImages.length, 4); i++) {
+      const imgKey = `image${i + 1}`;
+      const imageUrl = options.referenceImages[i];
+      const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+      requestBody[imgKey] = filename;
+      console.log(`[VMSR:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+    }
+  }
+
+  console.log(`[VMSR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2videomsr`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorText = await res.text();
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+          } catch {
+            errorMessage = errorText.slice(0, 200);
+          }
+        }
+      } catch {
+        errorMessage = `HTTP 错误: ${res.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const videoUrl = response.full_url;
+  if (!videoUrl) {
+    throw new Error(`图像转视频失败：响应中未找到视频 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[VMSR:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
+
+  let downloadUrl = videoUrl;
+  if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = videoUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const videoResponse = await fetch(downloadUrl);
+  if (!videoResponse.ok) {
+    throw new Error(`视频下载失败: ${videoResponse.status}`);
+  }
+
+  const videoBlob = await videoResponse.blob();
+
+  const videoId = `vid_msr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  await videoStorageService.saveVideo(videoId, videoBlob);
+
+  console.log(`[VMSR:${tid}] 视频已保存: ${videoId}`);
+  return `video:${videoId}`;
 };
 
 /**

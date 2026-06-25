@@ -149,7 +149,7 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
 
   if (resolvedModel) {
     // 本地部署的模型（如 Ollama）无需 API Key
-    if (isLocalProvider(resolvedModel.providerId)) {
+    if (isLocalProvider(resolvedModel.providerId) || resolvedModel.providerId === 'wldrama') {
       return '';
     }
 
