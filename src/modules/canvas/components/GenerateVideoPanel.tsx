@@ -49,11 +49,21 @@ interface VideoSizePreset {
   aspectRatio: string;
 }
 
-type RightTab = 'prompt' | 'settings' | 'camera' | 'lighting' | 'dialogue';
+type RightTab = 'prompt' | 'settings' | 'camera' | 'lighting' | 'dialogue' | 'actions' | 'templates';
 
 export interface GenerationConfig {
   imageSequence: { layerId: string; imagePrompt: string }[];
   globalPrompt: string;
+  // 结构化提示词
+  subjectPrompt: string;
+  actionPrompt: string;
+  environmentPrompt: string;
+  stylePrompt: string;
+  negativePrompt: string;
+  // 时间戳动作
+  timestampActions: TimestampActionItem[];
+  // 使用的模板
+  appliedTemplateId?: string;
   sizePresetIndex: number;
   useCustomSize: boolean;
   customWidth: number;
@@ -79,6 +89,44 @@ export interface GenerationConfig {
   timingStartRatio?: number;
   timingMoveRatio?: number;
   timingEndRatio?: number;
+}
+
+interface TimestampActionItem {
+  id: string;
+  startTime: number;
+  endTime: number;
+  description: string;
+}
+
+interface VideoTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  subjectPrompt: string;
+  actionPrompt: string;
+  environmentPrompt: string;
+  stylePrompt: string;
+  negativePrompt: string;
+  cameraId: string;
+  cameraIntensity: number;
+  cameraSpeed: number;
+  useChoreography: boolean;
+  startShotSize?: string;
+  startAngle?: string;
+  startSubject?: string;
+  startFocus?: string;
+  movementPath?: string;
+  movementSpeed?: string;
+  endShotSize?: string;
+  endAngle?: string;
+  endSubject?: string;
+  timingStartRatio?: number;
+  timingMoveRatio?: number;
+  timingEndRatio?: number;
+  lightingId: string;
+  lightingIntensity: number;
+  durationMs: number;
 }
 
 // ─── 常量 ────────────────────────────────────────────────
@@ -121,9 +169,162 @@ const LIGHTING_PRESETS: LightingPreset[] = [
   { id: 'golden-hour', label: '黄金时刻', description: '日落时分的温暖金色光线', promptEn: 'Golden hour lighting, warm golden sunlight, long shadows, warm color temperature.' },
 ];
 
+// ─── 视频模板预设 ──────────────────────────────────────────
+
+interface TemplatePreset {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  subjectPrompt: string;
+  actionPrompt: string;
+  environmentPrompt: string;
+  stylePrompt: string;
+  negativePrompt: string;
+  cameraId: string;
+  cameraIntensity: number;
+  cameraSpeed: number;
+  lightingId: string;
+  lightingIntensity: number;
+  durationMs: number;
+}
+
+const VIDEO_TEMPLATE_PRESETS: TemplatePreset[] = [
+  {
+    id: 'cinematic-opening',
+    name: '电影级开场',
+    description: '大气推镜头开场，配合伦勃朗光效，适合剧情片开头',
+    category: 'cinematic',
+    subjectPrompt: '',
+    actionPrompt: '',
+    environmentPrompt: '宏大的场景环境，细节丰富，有纵深感',
+    stylePrompt: '电影级质感，变形宽银幕镜头，丰富的色彩分级，胶片颗粒纹理',
+    negativePrompt: '卡通风格，动漫风格，低质量，模糊，水印',
+    cameraId: 'push-in',
+    cameraIntensity: 4,
+    cameraSpeed: 30,
+    lightingId: 'rembrandt',
+    lightingIntensity: 70,
+    durationMs: 5000,
+  },
+  {
+    id: 'product-showcase',
+    name: '产品展示',
+    description: '环绕拍摄产品，正面柔和布光，适合商业广告',
+    category: 'commercial',
+    subjectPrompt: '产品主体，细节清晰，质感突出',
+    actionPrompt: '产品缓缓旋转，展示各个角度',
+    environmentPrompt: '简洁干净的背景，突出主体',
+    stylePrompt: '商业摄影风格，锐利对焦，高清晰度，柔光效果',
+    negativePrompt: '卡通，动漫，插画，低质量，模糊，水印，文字，标志',
+    cameraId: 'orbit',
+    cameraIntensity: 3,
+    cameraSpeed: 25,
+    lightingId: 'front',
+    lightingIntensity: 60,
+    durationMs: 8000,
+  },
+  {
+    id: 'cyberpunk-night',
+    name: '赛博朋克夜',
+    description: '手持跟拍，霓虹灯光，适合都市夜场景',
+    category: 'stylized',
+    subjectPrompt: '人物或主体在霓虹灯下的轮廓',
+    actionPrompt: '在雨中行走或穿梭，动态感强',
+    environmentPrompt: '未来都市夜景，全息广告牌，潮湿的街道反射霓虹灯光',
+    stylePrompt: '赛博朋克美学，霓虹灯光，雨夜街道，全息显示，银翼杀手风格',
+    negativePrompt: '明亮日光，田园风光，中世纪，低质量，模糊',
+    cameraId: 'follow',
+    cameraIntensity: 5,
+    cameraSpeed: 60,
+    lightingId: 'neon',
+    lightingIntensity: 80,
+    durationMs: 6000,
+  },
+  {
+    id: 'dreamy-flashback',
+    name: '梦幻回忆',
+    description: '缓慢拉远镜头，逆光柔焦，适合回忆/梦境段落',
+    category: 'cinematic',
+    subjectPrompt: '人物轮廓柔和，表情朦胧',
+    actionPrompt: '缓慢动作，带有诗意感',
+    environmentPrompt: '温暖的午后环境，光线柔和，有光晕效果',
+    stylePrompt: '柔光滤镜，暖色调，浅景深，梦幻氛围，胶片感',
+    negativePrompt: '冷色调，高对比度，卡通，动漫，低质量，模糊',
+    cameraId: 'pull-out',
+    cameraIntensity: 3,
+    cameraSpeed: 20,
+    lightingId: 'golden-hour',
+    lightingIntensity: 60,
+    durationMs: 8000,
+  },
+  {
+    id: 'action-climax',
+    name: '动作高潮',
+    description: '手持抖动+快速运镜，加强紧张感',
+    category: 'action',
+    subjectPrompt: '动作主体，充满力量感',
+    actionPrompt: '快速移动，爆发性动作，冲击感强',
+    environmentPrompt: '混乱或紧张的环境，有爆炸/追逐元素',
+    stylePrompt: '高对比度，快速剪辑感，略带颗粒，电影级动态模糊',
+    negativePrompt: '静态，平滑，低质量，模糊，水印',
+    cameraId: 'shake',
+    cameraIntensity: 8,
+    cameraSpeed: 85,
+    lightingId: 'side',
+    lightingIntensity: 80,
+    durationMs: 4000,
+  },
+  {
+    id: 'nature-landscape',
+    name: '自然风光',
+    description: '航拍式升降，黄金时刻光线，适合风光/旅行',
+    category: 'nature',
+    subjectPrompt: '自然主体（山脉/森林/海洋等）',
+    actionPrompt: '云层流动，光影缓缓变化',
+    environmentPrompt: '广阔的自然景观，有层次感的前中远景',
+    stylePrompt: '黄金时刻光线，暖色调，高饱和度，深邃的天空，电影级风光摄影',
+    negativePrompt: '城市建筑，人物，卡通，动漫，低质量，模糊',
+    cameraId: 'crane-up',
+    cameraIntensity: 3,
+    cameraSpeed: 15,
+    lightingId: 'golden-hour',
+    lightingIntensity: 75,
+    durationMs: 8000,
+  },
+  {
+    id: 'horror-suspense',
+    name: '悬疑惊悚',
+    description: '缓慢推镜头+底光，营造不安氛围',
+    category: 'cinematic',
+    subjectPrompt: '神秘主体，部分隐藏于阴影中',
+    actionPrompt: '缓慢、不祥的移动',
+    environmentPrompt: '黑暗、压抑的环境，有阴影和未知空间',
+    stylePrompt: '高对比度布光，深阴影，冷色调，颗粒感，不安氛围',
+    negativePrompt: '明亮，温暖，卡通，动漫，低质量，模糊',
+    cameraId: 'push-in',
+    cameraIntensity: 2,
+    cameraSpeed: 10,
+    lightingId: 'bottom',
+    lightingIntensity: 40,
+    durationMs: 6000,
+  },
+];
+
+const TEMPLATE_CATEGORIES = [
+  { id: 'all', name: '全部' },
+  { id: 'cinematic', name: '电影质感' },
+  { id: 'commercial', name: '商业广告' },
+  { id: 'stylized', name: '风格化' },
+  { id: 'action', name: '动感节奏' },
+  { id: 'nature', name: '自然风光' },
+];
+
 const TAB_CONFIG: { id: RightTab; label: string; icon: React.ReactNode }[] = [
   { id: 'prompt',   label: '提示词', icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'settings', label: '画面设置', icon: <Settings className="w-4 h-4" /> },
+  { id: 'actions',  label: '动作',   icon: <Film className="w-4 h-4" /> },
+  { id: 'templates', label: '模板',  icon: <Layout className="w-4 h-4" /> },
+  { id: 'settings', label: '画面',   icon: <Settings className="w-4 h-4" /> },
   { id: 'camera',   label: '运镜',   icon: <Camera className="w-4 h-4" /> },
   { id: 'lighting', label: '光照',   icon: <Sun className="w-4 h-4" /> },
   { id: 'dialogue', label: '对白',   icon: <Mic className="w-4 h-4" /> },
@@ -206,6 +407,21 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
   const [selectedLighting, setSelectedLighting] = useState('none');
   const [lightingIntensity, setLightingIntensity] = useState(50);
   const [dialogues, setDialogues] = useState<DialogueEntry[]>([]);
+  // ── 结构化提示词 ──
+  const [subjectPrompt, setSubjectPrompt] = useState('');
+  const [actionPrompt, setActionPrompt] = useState('');
+  const [environmentPrompt, setEnvironmentPrompt] = useState('');
+  const [stylePrompt, setStylePrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
+  // ── 时间戳动作 ──
+  const [timestampActions, setTimestampActions] = useState<TimestampActionItem[]>([]);
+  // ── 模板 ──
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templateCategory, setTemplateCategory] = useState('all');
+  // ── AI 质检 ──
+  const [isCheckingQuality, setIsCheckingQuality] = useState(false);
+  const [qualityReport, setQualityReport] = useState<string | null>(null);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
@@ -224,6 +440,13 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       order: i + 1,
     })));
     setGlobalPrompt(initialConfig.globalPrompt);
+    setSubjectPrompt(initialConfig.subjectPrompt || '');
+    setActionPrompt(initialConfig.actionPrompt || '');
+    setEnvironmentPrompt(initialConfig.environmentPrompt || '');
+    setStylePrompt(initialConfig.stylePrompt || '');
+    setNegativePrompt(initialConfig.negativePrompt || '');
+    setTimestampActions(initialConfig.timestampActions || []);
+    setSelectedTemplateId(initialConfig.appliedTemplateId || null);
     setSelectedSizePreset(initialConfig.sizePresetIndex);
     setUseCustomSize(initialConfig.useCustomSize);
     setCustomWidth(initialConfig.customWidth);
@@ -361,6 +584,35 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       };
       const aspectRatio = aspectRatioMap[finalAspectRatio] || '16:9';
 
+      // ── 构建结构化 prompt ──
+      const promptParts: string[] = [];
+
+      // 主体
+      if (subjectPrompt) promptParts.push(`[Subject] ${subjectPrompt}`);
+      // 动作
+      if (actionPrompt) promptParts.push(`[Action] ${actionPrompt}`);
+      // 环境
+      if (environmentPrompt) promptParts.push(`[Environment] ${environmentPrompt}`);
+      // 风格
+      if (stylePrompt) promptParts.push(`[Style] ${stylePrompt}`);
+      // 负面
+      if (negativePrompt) promptParts.push(`[Negative] ${negativePrompt}`);
+
+      // 时间戳动作
+      const validActions = timestampActions
+        .filter(a => a.description.trim())
+        .sort((a, b) => a.startTime - b.startTime);
+      if (validActions.length > 0) {
+        promptParts.push('');
+        promptParts.push('--- Timestamped action sequence ---');
+        validActions.forEach(a => {
+          const startStr = formatTime(a.startTime);
+          const endStr = formatTime(a.endTime);
+          promptParts.push(`[${startStr} - ${endStr}] ${a.description}`);
+        });
+      }
+
+      // 运镜
       let cameraPrompt = '';
       if (useChoreography && selectedCamera !== 'none') {
         const cc: CameraChoreography = {
@@ -379,19 +631,32 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
           timingMoveRatio,
           timingEndRatio,
         };
-        cameraPrompt = '\n' + renderCameraChoreographyPrompt(cc, globalPrompt || '', Math.round(durationMs / 1000));
+        cameraPrompt = renderCameraChoreographyPrompt(cc, actionPrompt || globalPrompt || '', Math.round(durationMs / 1000));
       } else {
         const cameraMove = CAMERA_MOVEMENTS.find(c => c.id === selectedCamera);
         cameraPrompt = cameraMove && selectedCamera !== 'none'
-          ? `\nCamera movement: ${cameraMove.promptEn} Intensity level ${cameraIntensity}/10, speed ${cameraSpeed}/100.`
+          ? `Camera movement: ${cameraMove.promptEn} Intensity level ${cameraIntensity}/10, speed ${cameraSpeed}/100.`
           : '';
       }
+      if (cameraPrompt) promptParts.push('\n' + cameraPrompt);
 
+      // 光照
       const lightingPreset = LIGHTING_PRESETS.find(l => l.id === selectedLighting);
-      const lightingPrompt = lightingPreset && selectedLighting !== 'none'
-        ? `\nLighting: ${lightingPreset.promptEn} Apply with intensity ${lightingIntensity}/100.`
-        : '';
+      if (lightingPreset && selectedLighting !== 'none') {
+        promptParts.push(`Lighting: ${lightingPreset.promptEn} Apply with intensity ${lightingIntensity}/100.`);
+      }
 
+      // 图片序列
+      promptParts.push('\n--- Image sequence description ---');
+      imageSequence.forEach(s => {
+        const layer = imageLookup.get(s.layerId);
+        const title = layer?.title || `Image ${s.order}`;
+        promptParts.push(s.imagePrompt
+          ? `[${title}] ${s.imagePrompt}`
+          : `[${title}] No specific prompt.`);
+      });
+
+      // 对白/旁白
       const dialogueSegments = dialogues
         .filter(d => d.text.trim())
         .sort((a, b) => a.timestamp - b.timestamp)
@@ -400,28 +665,15 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
           if (d.type === 'narration') return `[${timeStr}] Narration: "${d.text}"`;
           return `[${timeStr}] ${d.character || 'Character'}: "${d.text}"`;
         });
-      const dialoguePrompt = dialogueSegments.length > 0
-        ? `\nDialogue and narration timeline:\n${dialogueSegments.join('\n')}`
-        : '';
+      if (dialogueSegments.length > 0) {
+        promptParts.push('\nDialogue and narration timeline:');
+        promptParts.push(...dialogueSegments);
+      }
 
-      const imagePrompts = imageSequence
-        .map(s => {
-          const layer = imageLookup.get(s.layerId);
-          const title = layer?.title || `Image ${s.order}`;
-          return s.imagePrompt
-            ? `[${title}] ${s.imagePrompt}`
-            : `[${title}] No specific prompt.`;
-        })
-        .join('\n');
+      // 全局补充
+      if (globalPrompt) promptParts.push('\n' + globalPrompt);
 
-      const fullPrompt = [
-        globalPrompt,
-        `\n--- Image sequence description ---`,
-        imagePrompts,
-        cameraPrompt,
-        lightingPrompt,
-        dialoguePrompt,
-      ].filter(Boolean).join('\n');
+      const fullPrompt = promptParts.join('\n');
 
       setProgressLabel('正在生成视频 (图片 1/' + imageSequence.length + ')...');
 
@@ -474,6 +726,13 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       const generationConfig: GenerationConfig = {
         imageSequence: imageSequence.map(s => ({ layerId: s.layerId, imagePrompt: s.imagePrompt })),
         globalPrompt,
+        subjectPrompt,
+        actionPrompt,
+        environmentPrompt,
+        stylePrompt,
+        negativePrompt,
+        timestampActions: timestampActions.map(a => ({ ...a })),
+        appliedTemplateId: selectedTemplateId || undefined,
         sizePresetIndex: selectedSizePreset,
         useCustomSize,
         customWidth,
@@ -785,6 +1044,8 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
   const renderTabContent = () => {
     switch (activeTab) {
       case 'prompt': return renderPromptTab();
+      case 'actions': return renderActionsTab();
+      case 'templates': return renderTemplatesTab();
       case 'settings': return renderSettingsTab();
       case 'camera': return renderCameraTab();
       case 'lighting': return renderLightingTab();
@@ -792,66 +1053,274 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
     }
   };
 
-  // ── Tab: 提示词 ──
+  // ── Tab: 结构化提示词 ──
 
-  const renderPromptTab = () => (
-    <div className="p-4 space-y-3">
+  const renderPromptTab = () => {
+    const fullPromptPreview = buildFullPromptPreview();
+    return (
+    <div className="p-4 space-y-3 overflow-y-auto">
+      {/* 主体描述 */}
       <div>
         <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-          全局视频提示词
+          <span className="w-2 h-2 rounded-full bg-blue-400" />
+          主体描述
         </label>
-        <textarea
-          value={globalPrompt}
-          onChange={(e) => setGlobalPrompt(e.target.value)}
-          placeholder="描述视频的整体风格、氛围、叙事方向...&#10;例如：电影级光影，赛博朋克城市夜景，镜头充满动感"
-          rows={5}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+        <input
+          value={subjectPrompt}
+          onChange={(e) => setSubjectPrompt(e.target.value)}
+          placeholder="描述视频中的主要人物/对象的外观特征...&#10;例如：一位穿黑色风衣的年轻男子，短发，眼神坚毅"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
         />
-        <p className="text-[10px] text-gray-600 mt-1">
-          全局提示词会与各图片的描述、运镜、光照等配置合并后一起发送给 AI 模型
-        </p>
       </div>
 
-      <div className="bg-gray-800/40 rounded-lg border border-gray-700/50 p-3">
-        <h4 className="text-xs font-medium text-gray-400 mb-2">提示词预览</h4>
-        <div className="bg-gray-900 rounded p-2.5 text-[11px] text-gray-500 font-mono leading-relaxed max-h-36 overflow-y-auto">
-          <div>{globalPrompt || <span className="text-gray-700">[全局提示词]</span>}</div>
-          <div className="text-gray-700">--- Image sequence description ---</div>
-          {imageSequence.map((s, i) => {
-            const layer = imageLookup.get(s.layerId);
-            return (
-              <div key={s.layerId} className={s.imagePrompt ? 'text-gray-400' : 'text-gray-700'}>
-                [{layer?.title || `Image ${i + 1}`}] {s.imagePrompt || '[无描述]'}
-              </div>
-            );
-          })}
-          {selectedCamera !== 'none' && (
-            <div className="text-gray-500">
-              {useChoreography ? (
-                <div className="space-y-0.5">
-                  <div className="text-purple-400 font-semibold">[运镜编排模式]</div>
-                  <div>起始: {startShotSize}/{startAngle}/{startSubject}</div>
-                  <div>运镜: {CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label} → {movementPath || '默认路径'}</div>
-                  <div>结束: {endShotSize}/{endAngle}/{endSubject}</div>
-                </div>
-              ) : (
-                <span>[{CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label}]</span>
-              )}
-            </div>
+      {/* 动作描述 */}
+      <div>
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-400" />
+          动作描述
+        </label>
+        <textarea
+          value={actionPrompt}
+          onChange={(e) => setActionPrompt(e.target.value)}
+          placeholder="描述主体的动作、行为、情绪变化...&#10;例如：在雨中缓步前行，偶尔抬头看路灯，神情疲惫"
+          rows={2}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition-colors resize-none"
+        />
+      </div>
+
+      {/* 环境描述 */}
+      <div>
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+          <span className="w-2 h-2 rounded-full bg-yellow-400" />
+          环境描述
+        </label>
+        <textarea
+          value={environmentPrompt}
+          onChange={(e) => setEnvironmentPrompt(e.target.value)}
+          placeholder="描述场景环境、空间关系、背景细节...&#10;例如：潮湿的柏油路面反射霓虹灯光，雨滴打在水洼上泛起涟漪"
+          rows={2}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-yellow-500/50 transition-colors resize-none"
+        />
+      </div>
+
+      {/* 风格氛围 */}
+      <div>
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+          <span className="w-2 h-2 rounded-full bg-purple-400" />
+          风格与氛围
+        </label>
+        <textarea
+          value={stylePrompt}
+          onChange={(e) => setStylePrompt(e.target.value)}
+          placeholder="描述视觉风格、色彩基调、情感氛围...&#10;例如：赛博朋克美学，冷色调，电影级景深，略带颗粒感"
+          rows={2}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+        />
+      </div>
+
+      {/* 负面提示词 */}
+      <div>
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+          <span className="w-2 h-2 rounded-full bg-red-400" />
+          负面提示词
+          <span className="text-[9px] text-gray-600 font-normal">（不希望出现的内容）</span>
+        </label>
+        <input
+          value={negativePrompt}
+          onChange={(e) => setNegativePrompt(e.target.value)}
+          placeholder="例如：卡通风格，低质量，模糊，水印，人物变形"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition-colors"
+        />
+      </div>
+
+      {/* AI 质检按钮 */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleQualityCheck}
+          disabled={isCheckingQuality || !fullPromptPreview.trim()}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-cyan-600/80 text-white rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isCheckingQuality ? (
+            <>
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              分析中...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3" />
+              AI 质检
+            </>
           )}
-          {selectedLighting !== 'none' && (
-            <div className="text-gray-500">
-              [{LIGHTING_PRESETS.find(l => l.id === selectedLighting)?.label}]
-            </div>
-          )}
-          {dialogues.filter(d => d.text.trim()).length > 0 && (
-            <div className="text-gray-500">[{dialogues.filter(d => d.text.trim()).length} 条对白/旁白]</div>
-          )}
+        </button>
+        <span className="text-[10px] text-gray-600">检查提示词是否有逻辑冲突或不合理之处</span>
+      </div>
+
+      {/* 质检报告 */}
+      {qualityReport && (
+        <div className="bg-gray-800/60 rounded-lg border border-cyan-500/30 p-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <h4 className="text-xs font-medium text-cyan-400 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" />
+              AI 质检报告
+            </h4>
+            <button
+              onClick={() => setQualityReport(null)}
+              className="text-gray-500 hover:text-white"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <pre className="text-[11px] text-gray-300 font-sans leading-relaxed whitespace-pre-wrap">
+            {qualityReport}
+          </pre>
         </div>
+      )}
+
+      {/* 全局补充说明 */}
+      <div className="border-t border-gray-700/30 pt-3">
+        <details className="group">
+          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
+            <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
+            全局补充提示词（可选）
+          </summary>
+          <textarea
+            value={globalPrompt}
+            onChange={(e) => setGlobalPrompt(e.target.value)}
+            placeholder="额外的全局描述，会附加在最终提示词末尾"
+            rows={2}
+            className="w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+          />
+        </details>
+      </div>
+
+      {/* 提示词预览 */}
+      <div className="bg-gray-800/40 rounded-lg border border-gray-700/50 p-3">
+        <details open>
+          <summary className="text-xs font-medium text-gray-400 mb-1 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
+            <ChevronDown className="w-3 h-3" />
+            最终提示词预览
+          </summary>
+          <div className="bg-gray-900 rounded p-2.5 text-[11px] text-gray-500 font-mono leading-relaxed max-h-48 overflow-y-auto mt-1">
+            {fullPromptPreview || <span className="text-gray-700">填写上方字段后自动生成</span>}
+          </div>
+        </details>
       </div>
     </div>
-  );
+    );
+  };
+
+  // ── 构建最终 prompt 预览 ──
+
+  const buildFullPromptPreview = useCallback(() => {
+    const parts: string[] = [];
+
+    if (subjectPrompt) parts.push(`[主体] ${subjectPrompt}`);
+    if (actionPrompt) parts.push(`[动作] ${actionPrompt}`);
+    if (environmentPrompt) parts.push(`[环境] ${environmentPrompt}`);
+    if (stylePrompt) parts.push(`[风格] ${stylePrompt}`);
+    if (negativePrompt) parts.push(`[负面] ${negativePrompt}`);
+
+    // 时间戳动作
+    const validActions = timestampActions
+      .filter(a => a.description.trim())
+      .sort((a, b) => a.startTime - b.startTime);
+    if (validActions.length > 0) {
+      parts.push('');
+      parts.push('--- 动作时间线 ---');
+      validActions.forEach(a => {
+        const startStr = formatTime(a.startTime);
+        const endStr = formatTime(a.endTime);
+        parts.push(`[${startStr} - ${endStr}] ${a.description}`);
+      });
+    }
+
+    parts.push('');
+    parts.push('--- Image sequence description ---');
+    imageSequence.forEach((s) => {
+      const layer = imageLookup.get(s.layerId);
+      const title = layer?.title || 'Image';
+      parts.push(s.imagePrompt ? `[${title}] ${s.imagePrompt}` : `[${title}] No specific prompt.`);
+    });
+
+    const cameraMove = CAMERA_MOVEMENTS.find(c => c.id === selectedCamera);
+    if (selectedCamera !== 'none' && cameraMove) {
+      if (useChoreography) {
+        parts.push('');
+        parts.push(`[运镜编排] ${cameraMove.label}`);
+        parts.push(`  起始: ${startShotSize}/${startAngle}/${startSubject}`);
+        parts.push(`  结束: ${endShotSize}/${endAngle}/${endSubject}`);
+        if (movementPath) parts.push(`  路径: ${movementPath}`);
+      } else {
+        parts.push(`[运镜] ${cameraMove.label} 强度${cameraIntensity}/10 速度${cameraSpeed}%`);
+      }
+    }
+
+    const lightingPreset = LIGHTING_PRESETS.find(l => l.id === selectedLighting);
+    if (selectedLighting !== 'none' && lightingPreset) {
+      parts.push(`[光照] ${lightingPreset.label} 强度${lightingIntensity}%`);
+    }
+
+    const dialogueTexts = dialogues
+      .filter(d => d.text.trim())
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(d => {
+        const timeStr = formatTime(d.timestamp);
+        if (d.type === 'dialogue') return `[对白][${timeStr}] ${d.character || '角色'}: "${d.text}"`;
+        return `[旁白][${timeStr}] "${d.text}"`;
+      });
+    if (dialogueTexts.length > 0) {
+      parts.push('');
+      parts.push('--- 对白/旁白 ---');
+      parts.push(...dialogueTexts);
+    }
+
+    if (globalPrompt) {
+      parts.push('');
+      parts.push(globalPrompt);
+    }
+
+    return parts.join('\n');
+  }, [subjectPrompt, actionPrompt, environmentPrompt, stylePrompt, negativePrompt, timestampActions, imageSequence, imageLookup, selectedCamera, useChoreography, startShotSize, startAngle, startSubject, startFocus, movementPath, endShotSize, endAngle, endSubject, cameraIntensity, cameraSpeed, selectedLighting, lightingIntensity, LIGHTING_PRESETS, dialogues, globalPrompt]);
+
+  // ── AI 质检 ──
+
+  const handleQualityCheck = useCallback(async () => {
+    const preview = buildFullPromptPreview();
+    if (!preview.trim()) return;
+
+    setIsCheckingQuality(true);
+    setQualityReport(null);
+
+    try {
+      const { chatCompletion } = await import('../../../../services/ai/apiCore');
+      const report = await chatCompletion(
+        `你是一位专业的 AI 视频提示词质量评审专家。请分析以下视频生成提示词，检查是否存在以下问题：
+
+1. 逻辑冲突：描述中是否存在前后矛盾（如"白天"和"星空"同时出现）
+2. 动作冲突：角色动作是否存在物理上不可能的情况
+3. 风格冲突：视觉风格描述是否相互矛盾
+4. 环境冲突：场景环境元素是否合理共存
+5. 运镜与内容冲突：镜头运动是否与画面内容协调
+6. 缺失关键信息：是否缺少主体、动作、环境等核心要素
+
+请输出分析结果，格式如下：
+✅ 通过 / ⚠️ 警告 / ❌ 问题
+- 发现的问题（如有）：
+- 改进建议：
+
+提示词内容：
+${preview}`,
+        undefined,
+        0.5,
+        2048
+      );
+      setQualityReport(report || '分析完成，未发现问题。');
+    } catch (error: any) {
+      setQualityReport(`质检失败: ${error.message}`);
+    } finally {
+      setIsCheckingQuality(false);
+    }
+  }, [buildFullPromptPreview]);
 
   // ── Tab: 画面设置 ──
 
@@ -1242,6 +1711,21 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
     </div>
   );
 
+  // ── 对白时间编辑态 ──
+  const [dialogueTimeRaw, setDialogueTimeRaw] = useState<Record<string, string>>({});
+
+  const commitDialogueTime = (entryId: string, raw: string) => {
+    setDialogueTimeRaw(prev => {
+      const next = { ...prev };
+      delete next[entryId];
+      return next;
+    });
+    const parsed = parseTime(raw);
+    if (parsed !== null && parsed >= 0 && parsed <= durationMs) {
+      updateDialogue(entryId, { timestamp: parsed });
+    }
+  };
+
   // ── Tab: 对白/旁白 ──
 
   const renderDialogueTab = () => (
@@ -1278,13 +1762,9 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="text"
-                value={formatTime(entry.timestamp)}
-                onChange={(e) => {
-                  const parsed = parseTime(e.target.value);
-                  if (parsed !== null && parsed >= 0 && parsed <= durationMs) {
-                    updateDialogue(entry.id, { timestamp: parsed });
-                  }
-                }}
+                value={dialogueTimeRaw[entry.id] ?? formatTime(entry.timestamp)}
+                onChange={(e) => setDialogueTimeRaw(prev => ({ ...prev, [entry.id]: e.target.value }))}
+                onBlur={() => commitDialogueTime(entry.id, dialogueTimeRaw[entry.id] ?? formatTime(entry.timestamp))}
                 className="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-[11px] text-gray-200 font-mono text-center focus:outline-none focus:border-purple-500/50"
               />
               <select
@@ -1306,7 +1786,8 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
               )}
               <button
                 onClick={() => removeDialogue(entry.id)}
-                className="ml-auto opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all p-0.5"
+                className="ml-auto text-gray-400 hover:text-red-400 transition-all p-0.5"
+                title="删除此条目"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -1350,6 +1831,369 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
           <span>00:00.000</span>
           <span>{formatTime(durationMs)}</span>
         </div>
+      </div>
+    </div>
+  );
+
+  // ── Tab: 动作时间线 ──
+
+  const addTimestampAction = useCallback(() => {
+    const lastAction = timestampActions[timestampActions.length - 1];
+    const start = lastAction ? lastAction.endTime : 0;
+    const end = Math.min(start + 2000, durationMs);
+    setTimestampActions(prev => [...prev, {
+      id: crypto.randomUUID(),
+      startTime: start,
+      endTime: end,
+      description: '',
+    }]);
+  }, [timestampActions, durationMs]);
+
+  const updateTimestampAction = useCallback((id: string, updates: Partial<TimestampActionItem>) => {
+    setTimestampActions(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+  }, []);
+
+  const removeTimestampAction = useCallback((id: string) => {
+    setTimestampActions(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  // ── 时间输入编辑状态（临时字符串，不强制格式） ──
+  const [timeEditRaw, setTimeEditRaw] = useState<Record<string, { start?: string; end?: string }>>({});
+
+  const getTimeInputValue = (actionId: string, field: 'start' | 'end', msValue: number): string => {
+    return timeEditRaw[actionId]?.[field] ?? formatActionTime(msValue);
+  };
+
+  const handleTimeInputChange = (actionId: string, field: 'start' | 'end', raw: string) => {
+    setTimeEditRaw(prev => ({
+      ...prev,
+      [actionId]: { ...prev[actionId], [field]: raw },
+    }));
+  };
+
+  const commitTimeInput = (actionId: string, field: 'start' | 'end', action: TimestampActionItem) => {
+    const raw = timeEditRaw[actionId]?.[field];
+    if (raw === undefined) return;
+
+    // 清除编辑态
+    setTimeEditRaw(prev => {
+      const next = { ...prev };
+      if (next[actionId]) {
+        delete next[actionId][field];
+        if (Object.keys(next[actionId]).length === 0) delete next[actionId];
+      }
+      return next;
+    });
+
+    // 尝试解析
+    const parsed = parseTimeDisplay(raw);
+    if (parsed === null) return;
+
+    if (field === 'start') {
+      if (parsed >= 0 && parsed < action.endTime) {
+        updateTimestampAction(actionId, { startTime: parsed });
+      }
+    } else {
+      if (parsed > action.startTime && parsed <= durationMs) {
+        updateTimestampAction(actionId, { endTime: parsed });
+      }
+    }
+  };
+
+  const parseTimeDisplay = (str: string): number | null => {
+    const parts = str.split(':');
+    if (parts.length !== 2) return null;
+    const min = parseInt(parts[0], 10);
+    const sec = parseFloat(parts[1]);
+    if (isNaN(min) || isNaN(sec)) return null;
+    if (sec >= 60) return null;
+    return (min * 60 + sec) * 1000;
+  };
+
+  const formatActionTime = (ms: number): string => {
+    const totalSec = ms / 1000;
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (!isFinite(sec) || isNaN(sec)) return '00:00.000';
+    return `${min.toString().padStart(2, '0')}:${sec.toFixed(3).padStart(6, '0')}`;
+  };
+
+  const renderActionsTab = () => (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
+          <Film className="w-3.5 h-3.5 text-green-400" />
+          动作时间线
+          <span className="text-gray-500 font-normal">({timestampActions.length}段)</span>
+        </label>
+        <button
+          onClick={addTimestampAction}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-lg transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          添加动作段
+        </button>
+      </div>
+
+      <p className="text-[10px] text-gray-500">
+        将视频按时间段分解为连续的动作序列。模型将按时间顺序依次执行各段动作描述。
+        <span className="text-green-500/70"> Sora 2 等模型对此格式响应最佳。</span>
+      </p>
+
+      {timestampActions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-10 text-gray-500 text-sm gap-2">
+          <Film className="w-8 h-8 opacity-30" />
+          <p>暂无动作分段</p>
+          <p className="text-xs">点击"添加动作段"将视频动作分解为时间序列</p>
+        </div>
+      )}
+
+      <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+        {timestampActions.map((action, idx) => (
+          <div
+            key={action.id}
+            className="bg-gray-800/40 rounded-lg border border-green-700/30 p-2.5 group"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] text-gray-500 font-mono w-5">#{idx + 1}</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={getTimeInputValue(action.id, 'start', action.startTime)}
+                  onChange={(e) => handleTimeInputChange(action.id, 'start', e.target.value)}
+                  onBlur={() => commitTimeInput(action.id, 'start', action)}
+                  className="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-[11px] text-gray-200 font-mono text-center focus:outline-none focus:border-green-500/50"
+                />
+                <span className="text-gray-600 text-[10px]">→</span>
+                <input
+                  type="text"
+                  value={getTimeInputValue(action.id, 'end', action.endTime)}
+                  onChange={(e) => handleTimeInputChange(action.id, 'end', e.target.value)}
+                  onBlur={() => commitTimeInput(action.id, 'end', action)}
+                  className="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-[11px] text-gray-200 font-mono text-center focus:outline-none focus:border-green-500/50"
+                />
+              </div>
+              <span className="text-[10px] text-gray-600">
+                时长 {(action.endTime - action.startTime) / 1000}s
+              </span>
+              <button
+                onClick={() => removeTimestampAction(action.id)}
+                className="ml-auto text-gray-400 hover:text-red-400 transition-all p-0.5"
+                title="删除此动作段"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+            <textarea
+              value={action.description}
+              onChange={(e) => updateTimestampAction(action.id, { description: e.target.value })}
+              placeholder={`描述第 ${idx + 1} 段的动作内容...`}
+              rows={2}
+              className="w-full bg-gray-900/60 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition-colors resize-none"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* 时间轴可视化 */}
+      {timestampActions.length > 0 && (
+        <div className="bg-gray-800/20 rounded-lg border border-gray-700/50 p-2.5">
+          <div className="relative h-8 bg-gray-900 rounded overflow-hidden">
+            {timestampActions
+              .filter(a => a.description.trim())
+              .sort((a, b) => a.startTime - b.startTime)
+              .map((action, idx) => {
+                const left = durationMs > 0 ? (action.startTime / durationMs) * 100 : 0;
+                const width = durationMs > 0 ? ((action.endTime - action.startTime) / durationMs) * 100 : 0;
+                const colors = ['bg-green-500', 'bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-cyan-500'];
+                return (
+                  <div
+                    key={action.id}
+                    className={`absolute top-1 bottom-1 rounded ${colors[idx % colors.length]} opacity-60`}
+                    style={{ left: `${Math.min(left, 100)}%`, width: `${Math.min(width, 100 - left)}%` }}
+                    title={`${formatActionTime(action.startTime)}-${formatActionTime(action.endTime)}: ${action.description}`}
+                  />
+                );
+              })}
+          </div>
+          <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+            <span>00:00.000</span>
+            <span>{formatTime(durationMs)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Tab: 视频模板 ──
+
+  const applyTemplate = useCallback((template: TemplatePreset) => {
+    setSubjectPrompt(template.subjectPrompt);
+    setActionPrompt(template.actionPrompt);
+    setEnvironmentPrompt(template.environmentPrompt);
+    setStylePrompt(template.stylePrompt);
+    setNegativePrompt(template.negativePrompt);
+    setSelectedCamera(template.cameraId);
+    setCameraIntensity(template.cameraIntensity);
+    setCameraSpeed(template.cameraSpeed);
+    setSelectedLighting(template.lightingId);
+    setLightingIntensity(template.lightingIntensity);
+    setDurationMs(template.durationMs);
+    setDurationInput((template.durationMs / 1000).toFixed(3));
+    setSelectedTemplateId(template.id);
+  }, []);
+
+  const saveCurrentAsTemplate = useCallback(() => {
+    const name = prompt('输入模板名称：');
+    if (!name?.trim()) return;
+    const template: TemplatePreset = {
+      id: `custom_${Date.now()}`,
+      name: name.trim(),
+      description: `${actionPrompt?.slice(0, 50) || '自定义模板'}`,
+      category: 'custom',
+      subjectPrompt,
+      actionPrompt,
+      environmentPrompt,
+      stylePrompt,
+      negativePrompt,
+      cameraId: selectedCamera,
+      cameraIntensity,
+      cameraSpeed,
+      lightingId: selectedLighting,
+      lightingIntensity,
+      durationMs,
+    };
+    // 保存到 localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem('video_templates') || '[]');
+      existing.push(template);
+      localStorage.setItem('video_templates', JSON.stringify(existing));
+      alert(`模板"${name}"已保存！`);
+    } catch {
+      alert('保存失败');
+    }
+  }, [subjectPrompt, actionPrompt, environmentPrompt, stylePrompt, negativePrompt, selectedCamera, cameraIntensity, cameraSpeed, selectedLighting, lightingIntensity, durationMs]);
+
+  const [customTemplates, setCustomTemplates] = useState<TemplatePreset[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('video_templates') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const deleteCustomTemplate = useCallback((id: string) => {
+    const updated = customTemplates.filter(t => t.id !== id);
+    setCustomTemplates(updated);
+    localStorage.setItem('video_templates', JSON.stringify(updated));
+  }, [customTemplates]);
+
+  const filteredTemplates = useMemo(() => {
+    const presets = templateCategory === 'all'
+      ? VIDEO_TEMPLATE_PRESETS
+      : VIDEO_TEMPLATE_PRESETS.filter(t => t.category === templateCategory);
+    return [...presets, ...customTemplates];
+  }, [templateCategory, customTemplates]);
+
+  const renderTemplatesTab = () => (
+    <div className="p-4 space-y-3 overflow-y-auto">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
+          <Layout className="w-3.5 h-3.5 text-purple-400" />
+          视频模板
+        </label>
+        <button
+          onClick={saveCurrentAsTemplate}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          保存当前配置为模板
+        </button>
+      </div>
+
+      <p className="text-[10px] text-gray-500">
+        选择一个模板快速应用运镜、光照、风格和时长的组合配置。选中模板后可在各标签页中微调。
+      </p>
+
+      {/* 分类筛选 */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+        {TEMPLATE_CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setTemplateCategory(cat.id)}
+            className={`shrink-0 px-2.5 py-1 text-[11px] rounded-lg transition-colors ${
+              templateCategory === cat.id
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'bg-gray-800/60 text-gray-400 hover:text-gray-200 border border-transparent'
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+        {customTemplates.length > 0 && (
+          <button
+            onClick={() => setTemplateCategory('custom')}
+            className={`shrink-0 px-2.5 py-1 text-[11px] rounded-lg transition-colors ${
+              templateCategory === 'custom'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'bg-gray-800/60 text-gray-400 hover:text-gray-200 border border-transparent'
+            }`}
+          >
+            自定义
+          </button>
+        )}
+      </div>
+
+      {/* 模板列表 */}
+      <div className="grid grid-cols-2 gap-2">
+        {filteredTemplates.map(template => (
+          <div
+            key={template.id}
+            className={`rounded-lg border p-3 cursor-pointer transition-all ${
+              selectedTemplateId === template.id
+                ? 'border-purple-500 bg-purple-500/10'
+                : 'border-gray-700/50 bg-gray-800/40 hover:border-gray-600'
+            }`}
+            onClick={() => applyTemplate(template)}
+          >
+            <div className="flex items-start justify-between mb-1">
+              <h4 className={`text-xs font-medium ${
+                selectedTemplateId === template.id ? 'text-purple-300' : 'text-gray-300'
+              }`}>
+                {template.name}
+              </h4>
+              {template.id.startsWith('custom_') && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteCustomTemplate(template.id); }}
+                  className="text-gray-500 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-500 mb-1.5 line-clamp-2">{template.description}</p>
+            <div className="flex flex-wrap gap-1">
+              {template.cameraId !== 'none' && (
+                <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
+                  {CAMERA_MOVEMENTS.find(c => c.id === template.cameraId)?.label || template.cameraId}
+                </span>
+              )}
+              {template.lightingId !== 'none' && (
+                <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
+                  {LIGHTING_PRESETS.find(l => l.id === template.lightingId)?.label || template.lightingId}
+                </span>
+              )}
+              <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
+                {template.durationMs / 1000}s
+              </span>
+              {template.category !== 'custom' && (
+                <span className="text-[9px] text-gray-600 bg-gray-700/30 px-1.5 py-0.5 rounded">
+                  {TEMPLATE_CATEGORIES.find(c => c.id === template.category)?.name || template.category}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
