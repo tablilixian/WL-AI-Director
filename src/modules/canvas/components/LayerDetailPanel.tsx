@@ -19,7 +19,8 @@ const operationLabels: Record<string, string> = {
   'background-remove': '智能抠图',
   'variant': '图片变体',
   'import': '导入',
-  'drawing': '绘图'
+  'drawing': '绘图',
+  'visual-language': 'AI 视觉分析'
 };
 
 const operationIcons: Record<string, string> = {
@@ -35,7 +36,8 @@ const operationIcons: Record<string, string> = {
   'background-remove': '✂️',
   'variant': '🔄',
   'import': '📥',
-  'drawing': '✏️'
+  'drawing': '✏️',
+  'visual-language': '🧠'
 };
 
 const layerTypeLabels: Record<string, string> = {

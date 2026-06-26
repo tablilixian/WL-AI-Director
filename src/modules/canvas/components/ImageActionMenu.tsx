@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Scissors, Palette, ImagePlus, Maximize2, Copy, Grid3x3, ChevronDown } from 'lucide-react';
+import { Scissors, Palette, ImagePlus, Maximize2, Copy, Grid3x3, ChevronDown, Brain } from 'lucide-react';
 import { StyleTransferPanel } from './StyleTransferPanel';
 import { DirectStyleTransferPanel } from './DirectStyleTransferPanel';
 import { IPAStyleTransferPanel } from './IPAStyleTransferPanel';
@@ -16,6 +16,7 @@ import { GridSplitPanel } from './GridSplitPanel';
 import { ImageToImagePanel } from './ImageToImagePanel';
 import { ImageToVideoPanel } from './ImageToVideoPanel';
 import { GenerateVideoPanel } from './GenerateVideoPanel';
+import { VisualLanguagePanel } from './VisualLanguagePanel';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
 export type ImageAction =
@@ -36,7 +37,8 @@ export type ImageAction =
   | 'split-25grid'
   | 'image-to-image'
   | 'image-to-video'
-  | 'generate-video';
+  | 'generate-video'
+  | 'visual-language';
 
 interface ActionItem {
   id: ImageAction;
@@ -93,6 +95,11 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
   const handleClosePanel = () => setActivePanel(null);
 
   const groups: ActionGroup[] = [
+    {
+      label: 'AI 分析',
+      icon: <Brain className="w-3.5 h-3.5" />,
+      single: { id: 'visual-language', label: 'AI 分析图片' },
+    },
     {
       label: '基于此图生成',
       icon: <ImagePlus className="w-3.5 h-3.5" />,
@@ -231,6 +238,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {activePanel === 'lighting' && <LightingControlPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'image-to-image' && <ImageToImagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'image-to-video' && <ImageToVideoPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'visual-language' && <VisualLanguagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
         </>,
         document.body
       )}
