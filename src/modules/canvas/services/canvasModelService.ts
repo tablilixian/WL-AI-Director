@@ -28,6 +28,16 @@ interface GenerateVideoOptions {
   onProgress?: (progress: number) => void;
 }
 
+interface GenerateVideoMkrOptions {
+  prompt: string;
+  images: { src: string; frameIndex: number }[];
+  width?: number;
+  height?: number;
+  duration?: number;
+  fps?: number;
+  onProgress?: (progress: number) => void;
+}
+
 export class CanvasModelService {
   private async getApiConfig() {
     const { getApiBase, checkApiKey, resolveRequestModel } = await import('../../../../services/ai/apiCore');
@@ -200,6 +210,72 @@ export class CanvasModelService {
       }
     } catch (error: any) {
       logger.error(LogCategory.CANVAS, '[CanvasModelService] Video generation failed', error);
+      throw error;
+    }
+  }
+
+  async generateVideoMkr(options: GenerateVideoMkrOptions): Promise<string> {
+    const { prompt, images, width = 640, height = 320, duration = 12, fps = 30, onProgress } = options;
+
+    logger.debug(LogCategory.CANVAS, '[CanvasModelService] Generating MKR video');
+
+    onProgress?.(10);
+
+    try {
+      const { callDramaBackendVideoMkrApi } = await import('../../../../services/adapters/imageAdapter');
+
+      onProgress?.(30);
+
+      const videoMkrImages = images.map((img, i) => ({
+        image: img.src,
+        frame_index: img.frameIndex,
+      }));
+
+      const videoUrl = await callDramaBackendVideoMkrApi({
+        prompt,
+        isVideoMkr: true,
+        videoMkrWidth: width,
+        videoMkrHeight: height,
+        videoMkrDuration: duration,
+        videoMkrFps: fps,
+        videoMkrImages,
+      });
+
+      onProgress?.(60);
+
+      console.log('[CanvasModelService] MKR 视频生成完成，URL:', videoUrl);
+
+      if (videoUrl.startsWith('video:')) {
+        onProgress?.(100);
+        return videoUrl;
+      }
+
+      try {
+        let downloadUrl = videoUrl;
+        if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
+          downloadUrl = videoUrl.replace('http://117.50.108.73:8082', '/drama-api');
+        }
+
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+          throw new Error(`下载失败: ${response.status}`);
+        }
+
+        const videoBlob = await response.blob();
+        console.log('[CanvasModelService] MKR 视频下载成功，大小:', videoBlob.size);
+
+        const { unifiedImageService } = await import('../../../../services/unifiedImageService');
+        const localVideoUrl = await unifiedImageService.saveVideoToLocal(URL.createObjectURL(videoBlob));
+
+        onProgress?.(100);
+        return localVideoUrl;
+      } catch (downloadError: any) {
+        console.error('[CanvasModelService] MKR 视频下载失败:', downloadError);
+        onProgress?.(100);
+        return videoUrl;
+      }
+    } catch (error: any) {
+      logger.error(LogCategory.CANVAS, '[CanvasModelService] MKR video generation failed', error);
       throw error;
     }
   }

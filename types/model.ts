@@ -171,6 +171,14 @@ export interface ChatOptions {
 }
 
 /**
+ * MKR 关键帧项
+ */
+export interface ImageFrameItem {
+  image: string;
+  frame_index: number;
+}
+
+/**
  * 图片生成调用参数
  */
 export interface ImageGenerateOptions {
@@ -204,6 +212,12 @@ export interface ImageGenerateOptions {
   videoMsrDuration?: number;   // 视频时长（默认 5）
   videoMsrFps?: number;        // 视频帧率（默认 30）
   videoMsrBackground?: string; // 背景图像 URL
+  isVideoMkr?: boolean;        // 是否为图像转视频 MKR（image2videomkr）
+  videoMkrWidth?: number;      // 视频宽度（默认 640）
+  videoMkrHeight?: number;     // 视频高度（默认 320）
+  videoMkrDuration?: number;   // 视频时长（默认 12）
+  videoMkrFps?: number;        // 视频帧率（默认 30）
+  videoMkrImages?: ImageFrameItem[]; // MKR 关键帧列表
 }
 
 /**

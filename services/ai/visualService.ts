@@ -24,7 +24,7 @@ import {
   getSceneNegativePrompt,
   VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -1581,5 +1581,70 @@ export const generateVideoMsr = async (
     });
 
     throw new Error(`图像转视频 MSR 失败: ${error.message}`);
+  }
+};
+
+/**
+ * 图像转视频 MKR 生成
+ * 调用 Drama Backend image2videomkr API，基于多关键帧生成视频
+ * 返回保存后的本地 video: 引用
+ */
+export const generateVideoMkr = async (
+  prompt: string,
+  images: { image: string; frame_index: number }[] = [],
+  width: number = 640,
+  height: number = 320,
+  duration: number = 12,
+  fps: number = 30,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎬 generateVideoMkr 调用 - 图像转视频 MKR`);
+    logger.debug(LogCategory.AI, `📝 提示词: ${prompt}`);
+    logger.debug(LogCategory.AI, `🖼️ 关键帧数量: ${images.length}`);
+    logger.debug(LogCategory.AI, `🎥 视频参数: ${width}x${height}, ${duration}秒, ${fps}fps`);
+
+    const localVideoUrl = await callDramaBackendVideoMkrApi({
+      prompt,
+      isVideoMkr: true,
+      videoMkrWidth: width,
+      videoMkrHeight: height,
+      videoMkrDuration: duration,
+      videoMkrFps: fps,
+      videoMkrImages: images,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomkr-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 图像转视频 MKR 完成: ${localVideoUrl}`);
+    return localVideoUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomkr-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`图像转视频 MKR 失败: ${error.message}`);
   }
 };

@@ -14,9 +14,9 @@ import { LightingControlPanel } from './LightingControlPanel';
 import { InpaintPanel } from './InpaintPanel';
 import { GridSplitPanel } from './GridSplitPanel';
 import { ImageToImagePanel } from './ImageToImagePanel';
-import { ImageToVideoPanel } from './ImageToVideoPanel';
 import { GenerateVideoPanel } from './GenerateVideoPanel';
 import { VisualLanguagePanel } from './VisualLanguagePanel';
+import { useCanvasStore } from '../hooks/useCanvasState';
 import type { LayerData, GridGenerationType } from '../types/canvas';
 
 export type ImageAction =
@@ -36,7 +36,7 @@ export type ImageAction =
   | 'split-4grid'
   | 'split-25grid'
   | 'image-to-image'
-  | 'image-to-video'
+  | 'mkr-video'
   | 'generate-video'
   | 'visual-language';
 
@@ -87,6 +87,33 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       const gt = action === 'split-9grid' ? '9grid' : action === 'split-4grid' ? '4grid' : '25grid';
       setSplitGridType(gt);
       setShowSplitPanel(true);
+    } else if (action === 'mkr-video') {
+      const { addLayer, selectLayer } = useCanvasStore.getState();
+      const sourceLayerIds = [layer.id];
+      addLayer({
+        id: crypto.randomUUID(),
+        type: 'video',
+        x: layer.x,
+        y: layer.y + layer.height + 40,
+        width: 640,
+        height: 360,
+        src: '',
+        title: 'MKR视频节点',
+        createdAt: Date.now(),
+        sourceLayerIds,
+        operationType: 'mkr-video',
+        generationPrompt: JSON.stringify({
+          frames: [{ layerId: layer.id, frameIndex: 0, prompt: '' }],
+          globalPrompt: '',
+          duration: 12,
+          fps: 30,
+          width: 640,
+          height: 360,
+        }),
+      });
+      const newLayers = useCanvasStore.getState().layers;
+      const newNode = newLayers[newLayers.length - 1];
+      if (newNode) selectLayer(newNode.id);
     } else {
       setActivePanel(action);
     }
@@ -106,7 +133,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       items: [
         { id: 'generate-video', label: 'AI 生成视频' },
         { id: 'image-to-image', label: '图生图' },
-        { id: 'image-to-video', label: '单图生视频' },
+        { id: 'mkr-video', label: '多关键帧视频 (MKR)' },
       ],
     },
     {
@@ -237,7 +264,6 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {activePanel === 'inpaint' && <InpaintPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'lighting' && <LightingControlPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'image-to-image' && <ImageToImagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
-          {activePanel === 'image-to-video' && <ImageToVideoPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'visual-language' && <VisualLanguagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
         </>,
         document.body

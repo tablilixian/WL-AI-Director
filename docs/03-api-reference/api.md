@@ -1,7 +1,6 @@
----
 # Drama Backend API 文档
 
-**版本:** 0.2.0  
+**版本:** 0.3.0  
 ---
 
 ## 目录
@@ -161,6 +160,7 @@
     "full_url": "http://117.50.108.73:8082/view?filename=z-image_00039_.png",
     "duration": 3.63
 }
+```
 
 ### GET /api/v1/generate/image
 
@@ -248,6 +248,7 @@
     "full_url": "http://117.50.108.73:8082/view?filename=dramma_character_visual_image.png",
     "duration": 3.63
 }
+```
 
 **说明:** 
 - 该接口将根据输入的角色设计图生成三视图立绘图
@@ -612,7 +613,7 @@
 
 基于图像生成视频（MSR 多帧超分辨率技术）
 
-**请求体 (Image2VideoRequest):**
+**请求体 (Image2VideoMsrRequest):**
 
 | 字段 | 类型 | 必填 | 默认值 | 描述 |
 |------|------|------|--------|------|
@@ -625,7 +626,7 @@
 | `image2` | string | 否 | "" | 参考图像2（文件名） |
 | `image3` | string | 否 | "" | 参考图像3（文件名） |
 | `image4` | string | 否 | "" | 参考图像4（文件名） |
-| `background` | string | 是 | "" | 背景图像（文件名），使用UI上的第一张图上传 |
+| `background` | string | 是 | - | 背景图像（文件名） |
 
 **请求示例:**
 ```json
@@ -657,6 +658,71 @@
 - 支持最多4张参考图像和1张背景图像
 - 根据提示词和参考图像生成连贯的视频内容
 - 适用于从静态图像生成动态视频效果
+
+### POST /api/v1/generate/image2videomkr
+
+基于图像生成视频（MKR 多关键帧技术）
+
+**请求体 (Image2VideoMkrRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
+| `width` | integer | 否 | 640 | 视频宽度 |
+| `height` | integer | 否 | 320 | 视频高度 |
+| `duration` | integer | 否 | 12 | 视频总时长（秒） |
+| `fps` | integer | 否 | 30 | 每秒帧数 |
+| `images` | array | 否 | [] | 包含图片名称及其对应帧位置的列表 |
+
+**ImageFrameItem 结构体:**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `image` | string | 是 | 图片的文件名或路径 |
+| `frame_index` | integer | 是 | 该图片对应的帧索引位置，-1通常表示结束或特殊标记 |
+
+**请求示例:**
+```json
+{
+  "prompt": "A character walking through a forest",
+  "width": 1024,
+  "height": 768,
+  "duration": 12,
+  "fps": 30,
+  "images": [
+    {
+      "image": "frame_start.png",
+      "frame_index": 0
+    },
+    {
+      "image": "frame_mid.png",
+      "frame_index": 180
+    },
+    {
+      "image": "frame_end.png",
+      "frame_index": 360
+    }
+  ]
+}
+```
+
+**响应:** 返回生成的视频数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "video_mkr_00001_.mp4",
+    "full_url": "http://117.50.108.73:8082/view?filename=video_mkr_00001_.mp4",
+    "duration": 20.50
+}
+```
+
+**说明:**
+- 该端点使用 MKR (Multi-Keyframe Rendering) 技术生成视频
+- 通过多个关键帧图像进行插值生成连贯的视频
+- `frame_index` 根据 `duration × fps` 计算，如 12秒 × 30fps = 360帧
+- 适用于需要精确控制关键帧位置的视频生成场景
 
 ---
 

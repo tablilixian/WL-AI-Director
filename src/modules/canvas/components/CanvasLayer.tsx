@@ -11,6 +11,7 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { Film } from 'lucide-react';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -235,6 +236,15 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           />
         );
       case 'video':
+        if (layer.operationType === 'mkr-video' && !resolvedSrc) {
+          return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800/80 rounded-lg border-2 border-dashed border-purple-500/50">
+              <Film className="w-8 h-8 text-purple-400 mb-2" />
+              <span className="text-xs text-purple-300 font-semibold">MKR 视频节点</span>
+              <span className="text-[9px] text-gray-500 mt-1">选中后在底部编辑配置</span>
+            </div>
+          );
+        }
         if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
@@ -318,7 +328,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   return (
     <div
       ref={layerRef}
-      className={`absolute transition-shadow duration-150 ${
+      className={`group absolute transition-shadow duration-150 ${
         isSelected ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:ring-1 hover:ring-gray-500'
       } ${layer.locked ? 'cursor-not-allowed' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{
@@ -347,6 +357,18 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       {layer.error && (
         <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center rounded-lg">
           <span className="text-sm text-red-500">{layer.error}</span>
+        </div>
+      )}
+
+      {/* 完成状态指示器 */}
+      {!layer.isLoading && !layer.error && (
+        <div className="absolute top-1.5 right-1.5 z-10">
+          <div
+            className={`w-2.5 h-2.5 rounded-full border border-black/20 shadow-sm ${
+              layer.src ? 'bg-green-500' : 'bg-gray-500'
+            }`}
+            title={layer.src ? '已完成' : '未完成'}
+          />
         </div>
       )}
 

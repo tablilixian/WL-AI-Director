@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { LayerData, PromptLayerData, PROMPT_MODE_COLORS } from '../types/canvas';
 
 interface ConnectionLinesProps {
   offset: { x: number; y: number };
   scale: number;
+  selectedEdgeId: string | null;
+  onEdgeSelect: (edgeId: string | null) => void;
+}
+
+function isLayerComplete(layer: LayerData): boolean {
+  if (layer.isLoading) return false;
+  if (layer.error) return false;
+  if (!layer.src) return false;
+  return true;
 }
 
 const operationColors: Record<string, string> = {
@@ -12,6 +21,7 @@ const operationColors: Record<string, string> = {
   'image-to-image': '#3b82f6',
   'text-to-video': '#06b6d4',
   'image-to-video': '#8b5cf6',
+  'mkr-video': '#a855f7',
   'style-transfer': '#f59e0b',
   'direct-style-transfer': '#f59e0b',
   'ipa-style-transfer': '#a855f7',
@@ -36,6 +46,7 @@ const operationLabels: Record<string, string> = {
   'image-to-image': '图生图',
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
+  'mkr-video': 'MKR多关键帧',
   'style-transfer': '风格迁移',
   'direct-style-transfer': '风格迁移',
   'ipa-style-transfer': 'IPA风格迁移',
@@ -65,8 +76,10 @@ const getSourceLabel = (opType: string, index: number): string | null => {
   return roles ? roles[index] ?? null : null;
 };
 
-export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale }) => {
+export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale, selectedEdgeId, onEdgeSelect }) => {
   const { layers, selectedLayerId } = useCanvasStore();
+  const currentTargetId = selectedEdgeId ? selectedEdgeId.split('::')[0] : null;
+  const currentSourceId = selectedEdgeId ? selectedEdgeId.split('::')[1] : null;
 
   const layersWithSource = layers.filter(l => l.sourceLayerId || (l.sourceLayerIds && l.sourceLayerIds.length > 0));
 
@@ -158,8 +171,10 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
       </defs>
 
       {layersWithSource.map((layer, index) => {
+        const sourceIds = layer.sourceLayerIds && layer.sourceLayerIds.length > 0
+          ? layer.sourceLayerIds
+          : (layer.sourceLayerId ? [layer.sourceLayerId] : []);
         const isMultiSource = layer.sourceLayerIds && layer.sourceLayerIds.length > 1;
-        const sourceIds = isMultiSource ? layer.sourceLayerIds! : (layer.sourceLayerId ? [layer.sourceLayerId] : []);
         if (sourceIds.length === 0) return null;
 
         const to = getLayerLeftCenter(layer);
@@ -184,6 +199,10 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
         return (
           <g key={`connection-${layer.id}-${index}`}>
             {connections.map((conn, ci) => {
+              const sourceLayer = sourceIds[ci];
+              const edgeId = sourceLayer ? `${layer.id}::${sourceLayer}` : null;
+              const isThisEdgeSelected = selectedEdgeId !== null && selectedEdgeId === edgeId;
+              const isTargetComplete = isLayerComplete(layer);
               const midX = (conn.from.x + to.x) / 2;
               const midY = (conn.from.y + to.y) / 2;
               return (
@@ -191,10 +210,11 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
                   <path
                     d={calculateCurvePath(conn.from, to)}
                     fill="none"
-                    stroke={color}
-                    strokeWidth={isAnySelected ? 3 : 2}
-                    opacity={isAnySelected ? 1 : 0.5}
+                    stroke={isThisEdgeSelected ? '#3b82f6' : color}
+                    strokeWidth={isThisEdgeSelected ? 3.5 : isAnySelected ? 3 : 2}
+                    opacity={isThisEdgeSelected ? 1 : isTargetComplete ? 0.4 : 0.5}
                     markerEnd={`url(#arrow-${opType})`}
+                    style={{ transition: 'stroke-width 0.15s, opacity 0.15s' }}
                   />
                   {conn.label && (
                     <g>
@@ -321,7 +341,7 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale 
               const midY = (from.y + to.y) / 2;
               
               return (
-                <g key={`prompt-output-${promptLayer.id}-${outputId}`}>
+                <g key={`prompt-output-${promptLayer.id}-${outputId}`} style={{ pointerEvents: 'none' }}>
                   <path
                     d={calculateCurvePath(from, to)}
                     fill="none"
