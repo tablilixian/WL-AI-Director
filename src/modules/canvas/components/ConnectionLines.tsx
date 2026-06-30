@@ -9,13 +9,6 @@ interface ConnectionLinesProps {
   onEdgeSelect: (edgeId: string | null) => void;
 }
 
-function isLayerComplete(layer: LayerData): boolean {
-  if (layer.isLoading) return false;
-  if (layer.error) return false;
-  if (!layer.src) return false;
-  return true;
-}
-
 const operationColors: Record<string, string> = {
   'text-to-image': '#22c55e',
   'image-to-image': '#3b82f6',
@@ -202,7 +195,6 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale,
               const sourceLayer = sourceIds[ci];
               const edgeId = sourceLayer ? `${layer.id}::${sourceLayer}` : null;
               const isThisEdgeSelected = selectedEdgeId !== null && selectedEdgeId === edgeId;
-              const isTargetComplete = isLayerComplete(layer);
               const midX = (conn.from.x + to.x) / 2;
               const midY = (conn.from.y + to.y) / 2;
               return (
@@ -212,7 +204,7 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale,
                     fill="none"
                     stroke={isThisEdgeSelected ? '#3b82f6' : color}
                     strokeWidth={isThisEdgeSelected ? 3.5 : isAnySelected ? 3 : 2}
-                    opacity={isThisEdgeSelected ? 1 : isTargetComplete ? 0.4 : 0.5}
+                    opacity={isThisEdgeSelected ? 1 : 0.5}
                     markerEnd={`url(#arrow-${opType})`}
                     style={{ transition: 'stroke-width 0.15s, opacity 0.15s' }}
                   />

@@ -95,7 +95,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     sourceLayerIds: string[];
     config: GenerationConfig;
   } | null>(null);
-  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -677,7 +676,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
             if (!source) return null;
             const edgeId = `${layer.id}::${sourceId}`;
             const isThisEdgeSelected = selectedEdgeId === edgeId;
-            const isTargetComplete = !layer.isLoading && !layer.error && !!layer.src;
             const fromX = (source.x + source.width) * scale + offset.x;
             const fromY = (source.y + source.height / 2) * scale + offset.y;
             const toX = layer.x * scale + offset.x;
@@ -693,13 +691,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
                   top: midY - 15,
                   width: 30,
                   height: 30,
-                  cursor: isTargetComplete ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isTargetComplete) {
-                    handleEdgeSelect(isThisEdgeSelected ? null : edgeId);
-                  }
+                  handleEdgeSelect(isThisEdgeSelected ? null : edgeId);
                 }}
               />
             );
@@ -744,7 +740,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           const target = layers.find(l => l.id === targetId);
           const source = layers.find(l => l.id === sourceId);
           if (!target || !source) return null;
-          if (!target.isLoading && !target.error && target.src) return null;
           const fromX = (source.x + source.width) * scale + offset.x;
           const fromY = (source.y + source.height / 2) * scale + offset.y;
           const toX = target.x * scale + offset.x;
@@ -786,61 +781,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               isSelected={selectedLayerIds.includes(layer.id)}
               onPromptLinkRequest={handlePromptLinkRequest}
               onContextMenuRequest={handleContextMenuRequest}
-              onMouseEnter={() => setHoveredLayerId(layer.id)}
-              onMouseLeave={() => setHoveredLayerId(prev => prev === layer.id ? null : prev)}
+              onConnectionStart={handleConnectionStart}
             />
           ))}
         </div>
       </div>
-
-      {/* 连接把手（屏幕坐标系，不受缩放影响） */}
-      {(() => {
-        const handleIds = new Set<string>();
-        if (selectedLayerId) handleIds.add(selectedLayerId);
-        if (hoveredLayerId && hoveredLayerId !== selectedLayerId) handleIds.add(hoveredLayerId);
-        if (handleIds.size === 0) return null;
-        const GAP = 22;
-        const HIT_AREA = 40;
-        return Array.from(handleIds).map(id => {
-          const layer = layers.find(l => l.id === id);
-          if (!layer) return null;
-          const screenLeft = layer.x * scale + offset.x;
-          const screenRight = (layer.x + layer.width) * scale + offset.x;
-          const screenCenterY = (layer.y + layer.height / 2) * scale + offset.y;
-          const isSelected = id === selectedLayerId;
-          return (
-            <React.Fragment key={id}>
-              <div
-                className={`absolute z-[55] ${isSelected ? '' : 'opacity-60 hover:opacity-100 transition-opacity'}`}
-                style={{ left: screenLeft - GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
-                title="输入连线"
-              >
-                <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
-                  <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
-                    <Plus className="w-2.5 h-2.5 text-white" />
-                  </div>
-                </div>
-              </div>
-              <div
-                className={`absolute z-[55] ${isSelected ? '' : 'opacity-60 hover:opacity-100 transition-opacity'}`}
-                style={{ left: screenRight + GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
-                title="拖拽到其它图层建立输出连线"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleConnectionStart(layer.id, e.clientX, e.clientY);
-                }}
-              >
-                <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
-                  <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
-                    <Plus className="w-2.5 h-2.5 text-white" />
-                  </div>
-                </div>
-              </div>
-            </React.Fragment>
-          );
-        });
-      })()}
 
       {/* 单图操作菜单 */}
       {(() => {

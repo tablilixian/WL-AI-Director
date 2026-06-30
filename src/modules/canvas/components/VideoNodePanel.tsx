@@ -65,6 +65,9 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
   const [progressLabel, setProgressLabel] = useState('');
   const isInternalRef = useRef(false);
 
+  const isComplete = !!layer.src && !layer.isLoading && !layer.error;
+  const [editing, setEditing] = useState(!isComplete);
+
   // Re-sync config when store changes from outside (connection drag / edge delete)
   useEffect(() => {
     if (isInternalRef.current) {
@@ -250,6 +253,64 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
 
   if (!layer) return null;
 
+  // ── Compact "已完成" bar ──
+  if (isComplete && !editing) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-[200] flex justify-center pb-4 pointer-events-none">
+        <div className="w-[95vw] max-w-[1100px] bg-gray-800/95 backdrop-blur-sm rounded-t-xl border border-gray-700 shadow-2xl pointer-events-auto">
+          <div className="flex items-center justify-between px-5 py-3">
+            <div className="flex items-center gap-3">
+              <Film className="w-4 h-5 text-green-400" />
+              <span className="text-sm text-gray-300">
+                视频已生成
+                {sourceLayers.length > 0 && (
+                  <span className="text-gray-500 ml-1">(来源 {sourceLayers.length} 张图片)</span>
+                )}
+              </span>
+              {sourceLayers.length > 0 && (
+                <div className="flex items-center -space-x-2">
+                  {sourceLayers.slice(0, 5).map(l => (
+                    <div key={l.id} className="w-7 h-7 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700">
+                      {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="w-px h-5 bg-gray-700" />
+              <span className="text-[10px] text-gray-500">
+                {activeMode === 'mkr' ? '逐帧 MKR' : activeMode === 'mkr-grid' ? `宫格 Grid` : 'MSR 单图'}
+                {' · '}{config.duration}s
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {isGenerating && (
+                <div className="flex items-center gap-2 text-[10px] text-gray-400 mr-2">
+                  <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  <span>{progressLabel}</span>
+                </div>
+              )}
+              <button
+                onClick={() => { setEditing(true); }}
+                disabled={isGenerating}
+                className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors font-medium disabled:opacity-40"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                重新生成
+              </button>
+              <button
+                onClick={() => selectLayer(null)}
+                className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 完整配置面板 ──
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[200] flex justify-center pb-4 pointer-events-none">
       <div className="w-[95vw] max-w-[1100px] bg-gray-800/95 backdrop-blur-sm rounded-t-xl border border-gray-700 shadow-2xl pointer-events-auto flex flex-col max-h-[55vh]">
@@ -257,7 +318,7 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700/60">
           <div className="flex items-center gap-3">
             <Film className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-semibold text-white">视频生成</span>
+            <span className="text-sm font-semibold text-white">{isComplete ? '重新生成' : '视频生成'}</span>
 
             {availableModes.length > 1 && (
               <div className="flex items-center bg-gray-800 rounded-lg border border-gray-700 p-0.5 gap-0.5">

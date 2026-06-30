@@ -18,8 +18,7 @@ interface CanvasLayerProps {
   isSelected: boolean;
   onPromptLinkRequest?: (layerId: string, x: number, y: number) => void;
   onContextMenuRequest?: (layerId: string, x: number, y: number) => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
+  onConnectionStart?: (layerId: string, clientX: number, clientY: number) => void;
 }
 
 /**
@@ -36,8 +35,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   isSelected, 
   onPromptLinkRequest, 
   onContextMenuRequest,
-  onMouseEnter,
-  onMouseLeave,
+  onConnectionStart,
 }) => {
   const { selectLayer, updateLayer, layers } = useCanvasStore();
   const { calculateSnap } = useSnapAlignment();
@@ -346,8 +344,6 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       }}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       {layer.isLoading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
@@ -452,6 +448,35 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           </div>
         </>
       )}
+
+      {/* 连接把手（在图层边框上，跟随图层缩放） */}
+      <div
+        className={`absolute z-10 transition-opacity duration-150 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        style={{ left: '-10px', top: '50%', transform: 'translateY(-50%)' }}
+        title="输入连线"
+      >
+        <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+        </div>
+      </div>
+      <div
+        className={`absolute z-10 transition-opacity duration-150 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        style={{ right: '-10px', top: '50%', transform: 'translateY(-50%)' }}
+        title="拖拽到其它图层建立输出连线"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onConnectionStart?.(layer.id, e.clientX, e.clientY);
+        }}
+      >
+        <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all cursor-crosshair hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+        </div>
+      </div>
     </div>
   );
 };
