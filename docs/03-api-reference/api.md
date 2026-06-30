@@ -19,6 +19,7 @@
 - [视觉语言模型](#视觉语言模型)
 - [视频生成](#视频生成)
 - [图像转视频](#图像转视频)
+- [图像转视频（宫格）](#图像转视频宫格)
 - [错误响应](#错误响应)
 
 ---
@@ -136,7 +137,7 @@
 | `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
 | `width` | integer | 否 | 1024 | 图像宽度 |
 | `height` | integer | 否 | 768 | 图像高度 |
-| `image1` | string | 是 | "" | 参考图像1（文件名） |
+| `image1` | string | 否 | "" | 参考图像1（文件名） |
 | `image2` | string | 否 | "" | 参考图像2（文件名） |
 | `image3` | string | 否 | "" | 参考图像3（文件名） |
 
@@ -723,6 +724,60 @@
 - 通过多个关键帧图像进行插值生成连贯的视频
 - `frame_index` 根据 `duration × fps` 计算，如 12秒 × 30fps = 360帧
 - 适用于需要精确控制关键帧位置的视频生成场景
+
+### POST /api/v1/generate/image2videomkrgrid
+
+基于图像生成视频（MKR Grid 宫格视频技术）
+
+**请求体 (Image2VideoMkrGridRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `prompt` | string | 是 | - | 场景描述（从脚本内容派生） |
+| `width` | integer | 否 | 640 | 视频宽度 |
+| `height` | integer | 否 | 320 | 视频高度 |
+| `duration` | integer | 否 | 12 | 视频总时长（秒） |
+| `fps` | integer | 否 | 30 | 每秒帧数 |
+| `image` | string | 否 | "" | 输入图像（文件名） |
+| `gridtype` | integer | 否 | 4 | 宫格类型，仅支持 4、6、9 |
+| `frame_indexs` | array | 否 | [0,0,0,0] | 帧索引位置列表，长度必须等于 gridtype |
+
+**校验规则:**
+- `gridtype` 仅允许取值 4、6、9
+- `frame_indexs` 的长度必须等于 `gridtype` 的值
+- 例如 `gridtype=6` 时，`frame_indexs` 需要提供 6 个帧索引
+
+**请求示例:**
+```json
+{
+  "prompt": "A character walking through a fantasy landscape",
+  "width": 640,
+  "height": 320,
+  "duration": 12,
+  "fps": 30,
+  "image": "input_image.png",
+  "gridtype": 4,
+  "frame_indexs": [0, 90, 180, 360]
+}
+```
+
+**响应:** 返回生成的视频数据
+
+**响应示例:**
+```json
+{
+    "prompt_id": "1e315014-43e3-4140-bbf3-ef1a1119705e",
+    "filename": "video_mkrgrid_00001_.mp4",
+    "full_url": "http://117.50.108.73:8082/view?filename=video_mkrgrid_00001_.mp4",
+    "duration": 20.50
+}
+```
+
+**说明:**
+- 该端点使用 MKR (Multi-Keyframe Rendering) 宫格视频技术生成视频
+- 将输入图像分割为指定数量的宫格（4/6/9宫格），在每个宫格内分别处理
+- `frame_indexs` 根据 `duration × fps` 计算，如 12秒 × 30fps = 360帧
+- 适用于需要多宫格布局的视频生成场景
 
 ---
 

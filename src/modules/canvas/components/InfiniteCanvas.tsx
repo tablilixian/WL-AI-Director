@@ -20,7 +20,7 @@ import { PromptLinkPanel } from './PromptLinkPanel';
 import { SaveToLibraryDialog } from './SaveToLibraryDialog';
 import { ImageActionMenu } from './ImageActionMenu';
 import { GenerateVideoPanel, type GenerationConfig } from './GenerateVideoPanel';
-import { MkrVideoConfigBar } from './MkrVideoConfigBar';
+import { VideoNodePanel } from './VideoNodePanel';
 import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
@@ -168,6 +168,18 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     if (target?.sourceLayerId === sourceId) {
       updates.sourceLayerId = newSourceLayerIds.length > 0 ? newSourceLayerIds[0] : undefined;
     }
+    // Also remove the frame from generationPrompt
+    if (target?.generationPrompt) {
+      try {
+        const config = JSON.parse(target.generationPrompt);
+        if (config.mkr?.frames) {
+          config.mkr.frames = config.mkr.frames.filter(
+            (f: any) => f.layerId !== sourceId
+          );
+          updates.generationPrompt = JSON.stringify(config);
+        }
+      } catch {}
+    }
     updateLayer(targetId, updates);
     setSelectedEdgeId(null);
   }, [selectedEdgeId, layers, updateLayer]);
@@ -251,10 +263,26 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           if (target) {
             const existing = target.sourceLayerIds || (target.sourceLayerId ? [target.sourceLayerId] : []);
             if (!existing.includes(dragState.sourceLayerId)) {
-              store.updateLayer(target.id, {
-                sourceLayerIds: [...existing, dragState.sourceLayerId],
+              const newSourceIds = [...existing, dragState.sourceLayerId];
+              const updates: Partial<LayerData> = {
+                sourceLayerIds: newSourceIds,
                 sourceLayerId: existing.length === 0 ? dragState.sourceLayerId : undefined,
-              });
+              };
+              // Also add a frame to generationPrompt
+              if (target.generationPrompt) {
+                try {
+                  const config = JSON.parse(target.generationPrompt);
+                  if (config.mkr?.frames) {
+                    config.mkr.frames.push({
+                      layerId: dragState.sourceLayerId,
+                      frameIndex: -1,
+                      prompt: '',
+                    });
+                    updates.generationPrompt = JSON.stringify(config);
+                  }
+                } catch {}
+              }
+              store.updateLayer(target.id, updates);
             }
           }
         }
@@ -809,70 +837,21 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         );
       })()}
 
-      {/* 视频层操作栏：选中图生视频结果时显示 */}
+      {/* 视频节点面板：选中视频层时显示统一配置 */}
       {(() => {
-        const videoLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'video' && (l.operationType === 'image-to-video' || l.operationType === 'mkr-video')) : null;
+        const videoLayer = selectedLayerId
+          ? layers.find(
+              l =>
+                l.id === selectedLayerId &&
+                l.type === 'video' &&
+                (l.operationType === 'image-to-video' || l.operationType === 'mkr-video')
+            )
+          : null;
         if (!videoLayer || !canvasRef.current) return null;
-        const hasOtherBar = selectedLayerId && layers.find(l => l.id === selectedLayerId && l.type === 'image');
-        if (hasOtherBar) return null;
+        const hasImageBar = selectedLayerId && layers.find(l => l.id === selectedLayerId && l.type === 'image');
+        if (hasImageBar) return null;
 
-        if (videoLayer.operationType === 'mkr-video') {
-          return <MkrVideoConfigBar layerId={videoLayer.id} />;
-        }
-
-        let parsedConfig: GenerationConfig | null = null;
-        try {
-          if (videoLayer.generationPrompt) {
-            parsedConfig = JSON.parse(videoLayer.generationPrompt) as GenerationConfig;
-          }
-        } catch {}
-
-        const sourceImgs = (videoLayer.sourceLayerIds || [])
-          .map(id => layers.find(l => l.id === id))
-          .filter(Boolean) as LayerData[];
-
-        return (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
-            <div className="flex items-center gap-3 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-2xl px-5 py-3">
-              <Film className="w-5 h-5 text-cyan-400" />
-              <span className="text-sm text-gray-300">
-                已选视频
-                {sourceImgs.length > 0 && (
-                  <span className="text-gray-500 ml-1">(来源 {sourceImgs.length} 张图片)</span>
-                )}
-              </span>
-              {sourceImgs.length > 0 && (
-                <div className="flex items-center -space-x-2">
-                  {sourceImgs.slice(0, 4).map(l => (
-                    <div key={l.id} className="w-7 h-7 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700">
-                      {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
-                    </div>
-                  ))}
-                  {sourceImgs.length > 4 && (
-                    <div className="w-7 h-7 rounded-full border-2 border-gray-800 bg-gray-700 flex items-center justify-center text-[9px] text-gray-400">
-                      +{sourceImgs.length - 4}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="w-px h-6 bg-gray-700" />
-              {parsedConfig ? (
-                <button
-                  onClick={() => {
-                    const sourceIds = videoLayer.sourceLayerIds || (videoLayer.sourceLayerId ? [videoLayer.sourceLayerId] : []);
-                    setRegenerateVideoConfig({ sourceLayerIds: sourceIds, config: parsedConfig! });
-                  }}
-                  className="flex items-center gap-2 px-5 py-2 text-sm text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors font-medium"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  重新生成
-                </button>
-              ) : (
-                <span className="text-xs text-gray-500">无配置信息，无法重新生成</span>
-              )}
-            </div>
-          </div>
-        );
+        return <VideoNodePanel layerId={videoLayer.id} />;
       })()}
 
       {/* 多图操作栏：当选中 2+ 图片时显示 */}

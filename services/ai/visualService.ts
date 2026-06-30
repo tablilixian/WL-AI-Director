@@ -1648,3 +1648,66 @@ export const generateVideoMkr = async (
     throw new Error(`图像转视频 MKR 失败: ${error.message}`);
   }
 };
+
+export const generateVideoMkrGrid = async (
+  prompt: string,
+  refImage: string,
+  gridtype: number = 4,
+  frame_indexs: number[] = [0, 0, 0, 0],
+  width: number = 640,
+  height: number = 320,
+  duration: number = 12,
+  fps: number = 30,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🎬 generateVideoMkrGrid 调用 - 图像转视频 MKR Grid`);
+    logger.debug(LogCategory.AI, `📝 提示词: ${prompt}`);
+    logger.debug(LogCategory.AI, `🖼️ 宫格类型: ${gridtype}, 帧索引: [${frame_indexs.join(', ')}]`);
+    logger.debug(LogCategory.AI, `🎥 视频参数: ${width}x${height}, ${duration}秒, ${fps}fps`);
+
+    const localVideoUrl = await callDramaBackendVideoMkrGridApi({
+      prompt,
+      isVideoMkrGrid: true,
+      refImage,
+      videoMkrGridWidth: width,
+      videoMkrGridHeight: height,
+      videoMkrGridDuration: duration,
+      videoMkrGridFps: fps,
+      videoMkrGridType: gridtype,
+      videoMkrGridFrameIndexs: frame_indexs,
+      resourceType,
+      resourceId,
+    });
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomkrgrid-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'success',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 图像转视频 MKR Grid 完成: ${localVideoUrl}`);
+    return localVideoUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: 'videomkrgrid-' + Date.now(),
+      resourceName: prompt.substring(0, 50) + '...',
+      status: 'failed',
+      model: imageModelId,
+      prompt,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`图像转视频 MKR Grid 失败: ${error.message}`);
+  }
+};

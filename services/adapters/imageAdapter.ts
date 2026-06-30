@@ -1558,6 +1558,104 @@ export const callDramaBackendVideoMsrApi = async (
  * 基于图像生成视频（MKR 多关键帧技术）
  * 返回保存后的本地 video: 引用
  */
+export const callDramaBackendVideoMkrGridApi = async (
+  options: ImageGenerateOptions,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `vmkrg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[VMKRG:${tid}] 调用图像转视频 MKR Grid API`);
+  console.log(`[VMKRG:${tid}] 端点: /api/v1/generate/image2videomkrgrid`);
+
+  const requestBody: any = {
+    prompt: options.prompt,
+    width: options.videoMkrGridWidth || 640,
+    height: options.videoMkrGridHeight || 320,
+    duration: options.videoMkrGridDuration || 12,
+    fps: options.videoMkrGridFps || 30,
+    gridtype: options.videoMkrGridType || 4,
+    frame_indexs: options.videoMkrGridFrameIndexs || [0, 0, 0, 0],
+  };
+
+  // 上传参考图片
+  if (options.refImage) {
+    const filename = await uploadImageToDramaBackend(options.refImage, baseUrl, tid);
+    requestBody.image = filename;
+    console.log(`[VMKRG:${tid}] 参考图上传成功 -> image: ${filename}`);
+  }
+
+  console.log(`[VMKRG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2videomkrgrid`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorText = await res.text();
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+          } catch {
+            errorMessage = errorText.slice(0, 200);
+          }
+        }
+      } catch {
+        errorMessage = `HTTP 错误: ${res.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const videoUrl = response.full_url;
+  if (!videoUrl) {
+    throw new Error(`图像转视频 Grid 失败：响应中未找到视频 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[VMKRG:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
+
+  let downloadUrl = videoUrl;
+  if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = videoUrl.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  try {
+    console.log(`[VMKRG:${tid}] 开始下载视频...`);
+    const response = await fetch(downloadUrl);
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`);
+    }
+
+    const videoBlob = await response.blob();
+    console.log(`[VMKRG:${tid}] 视频下载成功，大小:`, videoBlob.size);
+
+    const videoId = `vmkrg_${Date.now()}`;
+    const { videoStorageService } = await import('../imageStorageService');
+    await videoStorageService.saveVideo(videoId, videoBlob);
+    console.log(`[VMKRG:${tid}] 视频保存到本地: ${videoId}`);
+
+    return `video:${videoId}`;
+  } catch (downloadError: any) {
+    console.warn(`[VMKRG:${tid}] 视频下载失败，使用外部 URL:`, downloadError.message);
+    return videoUrl;
+  }
+};
+
 export const callDramaBackendVideoMkrApi = async (
   options: ImageGenerateOptions,
   traceId?: string
@@ -1712,6 +1810,11 @@ export const callImageApi = async (
     if (options.isAnime) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (动漫风格生成 txt2imageanime 端点)`);
       return callDramaBackendAnimeApi(options, tid);
+    }
+
+    if (options.isVideoMkrGrid) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (MKR Grid 宫格视频 image2videomkrgrid 端点)`);
+      return callDramaBackendVideoMkrGridApi(options, tid);
     }
 
     if (options.isVideoMkr) {

@@ -218,6 +218,13 @@ export interface ImageGenerateOptions {
   videoMkrDuration?: number;   // 视频时长（默认 12）
   videoMkrFps?: number;        // 视频帧率（默认 30）
   videoMkrImages?: ImageFrameItem[]; // MKR 关键帧列表
+  isVideoMkrGrid?: boolean;    // 是否为图像转视频 MKR Grid（image2videomkrgrid）
+  videoMkrGridWidth?: number;  // 视频宽度（默认 640）
+  videoMkrGridHeight?: number; // 视频高度（默认 320）
+  videoMkrGridDuration?: number; // 视频时长（默认 12）
+  videoMkrGridFps?: number;    // 视频帧率（默认 30）
+  videoMkrGridType?: number;   // 宫格类型 4/6/9（默认 4）
+  videoMkrGridFrameIndexs?: number[]; // 帧索引位置列表
 }
 
 /**

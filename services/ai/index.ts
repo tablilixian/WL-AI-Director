@@ -80,6 +80,7 @@ export {
   suggestVisualStyleFromScript,
   generateVideoMsr,
   generateVideoMkr,
+  generateVideoMkrGrid,
 } from './visualService';
 
 // 视频生成服务

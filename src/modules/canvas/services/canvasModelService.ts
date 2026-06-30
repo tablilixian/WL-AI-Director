@@ -38,6 +38,18 @@ interface GenerateVideoMkrOptions {
   onProgress?: (progress: number) => void;
 }
 
+interface GenerateVideoMkrGridOptions {
+  prompt: string;
+  refImage: string;
+  gridtype?: number;
+  frameIndexs?: number[];
+  width?: number;
+  height?: number;
+  duration?: number;
+  fps?: number;
+  onProgress?: (progress: number) => void;
+}
+
 export class CanvasModelService {
   private async getApiConfig() {
     const { getApiBase, checkApiKey, resolveRequestModel } = await import('../../../../services/ai/apiCore');
@@ -276,6 +288,67 @@ export class CanvasModelService {
       }
     } catch (error: any) {
       logger.error(LogCategory.CANVAS, '[CanvasModelService] MKR video generation failed', error);
+      throw error;
+    }
+  }
+
+  async generateVideoMkrGrid(options: GenerateVideoMkrGridOptions): Promise<string> {
+    const { prompt, refImage, gridtype = 4, frameIndexs, width = 640, height = 320, duration = 12, fps = 30, onProgress } = options;
+
+    logger.debug(LogCategory.CANVAS, '[CanvasModelService] Generating MKR Grid video');
+
+    onProgress?.(10);
+
+    try {
+      const { callDramaBackendVideoMkrGridApi } = await import('../../../../services/adapters/imageAdapter');
+
+      onProgress?.(30);
+
+      const videoUrl = await callDramaBackendVideoMkrGridApi({
+        prompt,
+        isVideoMkrGrid: true,
+        refImage,
+        videoMkrGridWidth: width,
+        videoMkrGridHeight: height,
+        videoMkrGridDuration: duration,
+        videoMkrGridFps: fps,
+        videoMkrGridType: gridtype,
+        videoMkrGridFrameIndexs: frameIndexs || new Array(gridtype).fill(0),
+      });
+
+      onProgress?.(60);
+
+      console.log('[CanvasModelService] MKR Grid 视频生成完成，URL:', videoUrl);
+
+      if (videoUrl.startsWith('video:')) {
+        onProgress?.(100);
+        return videoUrl;
+      }
+
+      try {
+        let downloadUrl = videoUrl;
+        if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
+          downloadUrl = videoUrl.replace('http://117.50.108.73:8082', '/drama-api');
+        }
+
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error(`下载失败: ${response.status}`);
+
+        const videoBlob = await response.blob();
+        const { unifiedImageService } = await import('../../../../services/unifiedImageService');
+        const localVideoUrl = await unifiedImageService.saveVideoToLocal(URL.createObjectURL(videoBlob));
+
+        console.log('[CanvasModelService] MKR Grid 视频保存到本地成功:', localVideoUrl);
+        onProgress?.(100);
+
+        return localVideoUrl;
+      } catch (downloadError: any) {
+        console.warn('[CanvasModelService] MKR Grid 视频下载失败，使用外部 URL:', downloadError.message);
+        onProgress?.(100);
+        return videoUrl;
+      }
+    } catch (error: any) {
+      logger.error(LogCategory.CANVAS, '[CanvasModelService] MKR Grid video generation failed', error);
       throw error;
     }
   }

@@ -216,7 +216,7 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale,
                     markerEnd={`url(#arrow-${opType})`}
                     style={{ transition: 'stroke-width 0.15s, opacity 0.15s' }}
                   />
-                  {conn.label && (
+                  {conn.label ? (
                     <g>
                       <rect
                         x={midX - 24}
@@ -240,44 +240,41 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({ offset, scale,
                         {conn.label}
                       </text>
                     </g>
+                  ) : (
+                    <g>
+                      {(() => {
+                        const labelW = Math.max(label.length * 8 + 16, 50);
+                        return (
+                          <>
+                            <rect
+                              x={midX - labelW / 2}
+                              y={midY - 10}
+                              width={labelW}
+                              height={20}
+                              fill="#1f2937"
+                              stroke={color}
+                              strokeWidth={1}
+                              rx={4}
+                              opacity={0.9}
+                            />
+                            <text
+                              x={midX}
+                              y={midY + 4}
+                              fill={color}
+                              fontSize={10}
+                              textAnchor="middle"
+                              className="select-none"
+                            >
+                              {label}
+                            </text>
+                          </>
+                        );
+                      })()}
+                    </g>
                   )}
                 </g>
               );
             })}
-            {!isMultiSource && (
-              <g>
-                {(() => {
-                  const midX = (connections[0].from.x + to.x) / 2;
-                  const midY = (connections[0].from.y + to.y) / 2;
-                  const labelW = Math.max(label.length * 8 + 16, 50);
-                  return (
-                    <>
-                      <rect
-                        x={midX - labelW / 2}
-                        y={midY - 10}
-                        width={labelW}
-                        height={20}
-                        fill="#1f2937"
-                        stroke={color}
-                        strokeWidth={1}
-                        rx={4}
-                        opacity={0.9}
-                      />
-                      <text
-                        x={midX}
-                        y={midY + 4}
-                        fill={color}
-                        fontSize={10}
-                        textAnchor="middle"
-                        className="select-none"
-                      >
-                        {label}
-                      </text>
-                    </>
-                  );
-                })()}
-              </g>
-            )}
           </g>
         );
       })}
