@@ -95,6 +95,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     sourceLayerIds: string[];
     config: GenerationConfig;
   } | null>(null);
+  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -255,12 +256,15 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           const store = useCanvasStore.getState();
           const mcX = (e.clientX - rect.left - store.offset.x) / store.scale;
           const mcY = (e.clientY - rect.top - store.offset.y) / store.scale;
+          const sourceLayer = store.layers.find(l => l.id === dragState.sourceLayerId);
           const target = store.layers.find(l =>
             l.id !== dragState.sourceLayerId &&
             mcX >= l.x && mcX <= l.x + l.width &&
             mcY >= l.y && mcY <= l.y + l.height
           );
-          if (target) {
+          // Strict mode: only allow image → video
+          const isValid = target && sourceLayer?.type === 'image' && target.type === 'video';
+          if (isValid) {
             const existing = target.sourceLayerIds || (target.sourceLayerId ? [target.sourceLayerId] : []);
             if (!existing.includes(dragState.sourceLayerId)) {
               const newSourceIds = [...existing, dragState.sourceLayerId];
@@ -705,22 +709,32 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         {connectionDragRef.current && (() => {
           const d = connectionDragRef.current!;
           const controlOffset = Math.abs(d.toX - d.fromX) * 0.5;
+          const store = useCanvasStore.getState();
+          const src = store.layers.find(l => l.id === d.sourceLayerId);
+          const isValidSource = src?.type === 'image';
           return (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 60 }}>
-              <defs>
-                <marker id="arrow-connect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
-                </marker>
-              </defs>
-              <path
-                d={`M ${d.fromX} ${d.fromY} C ${d.fromX + controlOffset} ${d.fromY}, ${d.toX - controlOffset} ${d.toY}, ${d.toX} ${d.toY}`}
-                fill="none"
-                stroke="#a855f7"
-                strokeWidth={2.5}
-                strokeDasharray="8,4"
-                markerEnd="url(#arrow-connect)"
-              />
-            </svg>
+            <>
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 60 }}>
+                <defs>
+                  <marker id="arrow-connect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
+                  </marker>
+                </defs>
+                <path
+                  d={`M ${d.fromX} ${d.fromY} C ${d.fromX + controlOffset} ${d.fromY}, ${d.toX - controlOffset} ${d.toY}, ${d.toX} ${d.toY}`}
+                  fill="none"
+                  stroke={isValidSource ? '#a855f7' : '#ef4444'}
+                  strokeWidth={2.5}
+                  strokeDasharray="8,4"
+                  markerEnd="url(#arrow-connect)"
+                />
+              </svg>
+              {!isValidSource && (
+                <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[300] px-3 py-1.5 bg-red-900/80 text-red-300 text-[10px] rounded-lg border border-red-700/60 pointer-events-none">
+                  仅支持图片 → 视频连线
+                </div>
+              )}
+            </>
           );
         })()}
 
@@ -772,51 +786,60 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               isSelected={selectedLayerIds.includes(layer.id)}
               onPromptLinkRequest={handlePromptLinkRequest}
               onContextMenuRequest={handleContextMenuRequest}
+              onMouseEnter={() => setHoveredLayerId(layer.id)}
+              onMouseLeave={() => setHoveredLayerId(prev => prev === layer.id ? null : prev)}
             />
           ))}
         </div>
       </div>
 
       {/* 连接把手（屏幕坐标系，不受缩放影响） */}
-      {selectedLayerId && (() => {
-        const layer = layers.find(l => l.id === selectedLayerId);
-        if (!layer) return null;
+      {(() => {
+        const handleIds = new Set<string>();
+        if (selectedLayerId) handleIds.add(selectedLayerId);
+        if (hoveredLayerId && hoveredLayerId !== selectedLayerId) handleIds.add(hoveredLayerId);
+        if (handleIds.size === 0) return null;
         const GAP = 22;
         const HIT_AREA = 40;
-        const screenLeft = layer.x * scale + offset.x;
-        const screenRight = (layer.x + layer.width) * scale + offset.x;
-        const screenCenterY = (layer.y + layer.height / 2) * scale + offset.y;
-        return (
-          <>
-            <div
-              className="absolute z-[55]"
-              style={{ left: screenLeft - GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
-              title="输入连线"
-            >
-              <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
-                <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
-                  <Plus className="w-2.5 h-2.5 text-white" />
+        return Array.from(handleIds).map(id => {
+          const layer = layers.find(l => l.id === id);
+          if (!layer) return null;
+          const screenLeft = layer.x * scale + offset.x;
+          const screenRight = (layer.x + layer.width) * scale + offset.x;
+          const screenCenterY = (layer.y + layer.height / 2) * scale + offset.y;
+          const isSelected = id === selectedLayerId;
+          return (
+            <React.Fragment key={id}>
+              <div
+                className={`absolute z-[55] ${isSelected ? '' : 'opacity-60 hover:opacity-100 transition-opacity'}`}
+                style={{ left: screenLeft - GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
+                title="输入连线"
+              >
+                <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
+                  <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
+                    <Plus className="w-2.5 h-2.5 text-white" />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div
-              className="absolute z-[55]"
-              style={{ left: screenRight + GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
-              title="拖拽到其它图层建立输出连线"
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleConnectionStart(layer.id, e.clientX, e.clientY);
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
-                <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
-                  <Plus className="w-2.5 h-2.5 text-white" />
+              <div
+                className={`absolute z-[55] ${isSelected ? '' : 'opacity-60 hover:opacity-100 transition-opacity'}`}
+                style={{ left: screenRight + GAP - HIT_AREA / 2, top: screenCenterY - HIT_AREA / 2, width: HIT_AREA, height: HIT_AREA }}
+                title="拖拽到其它图层建立输出连线"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleConnectionStart(layer.id, e.clientX, e.clientY);
+                }}
+              >
+                <div className="w-full h-full flex items-center justify-center cursor-crosshair group">
+                  <div className="w-4 h-4 rounded-full bg-gray-600/80 border border-gray-500 flex items-center justify-center transition-all group-hover:bg-purple-500 group-hover:border-purple-400 group-hover:scale-125">
+                    <Plus className="w-2.5 h-2.5 text-white" />
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        );
+            </React.Fragment>
+          );
+        });
       })()}
 
       {/* 单图操作菜单 */}

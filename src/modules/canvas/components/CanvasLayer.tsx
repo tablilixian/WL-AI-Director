@@ -18,6 +18,8 @@ interface CanvasLayerProps {
   isSelected: boolean;
   onPromptLinkRequest?: (layerId: string, x: number, y: number) => void;
   onContextMenuRequest?: (layerId: string, x: number, y: number) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 /**
@@ -33,7 +35,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   layer, 
   isSelected, 
   onPromptLinkRequest, 
-  onContextMenuRequest 
+  onContextMenuRequest,
+  onMouseEnter,
+  onMouseLeave,
 }) => {
   const { selectLayer, updateLayer, layers } = useCanvasStore();
   const { calculateSnap } = useSnapAlignment();
@@ -342,6 +346,8 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       }}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {layer.isLoading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
