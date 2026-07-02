@@ -143,7 +143,8 @@ export const Minimap: React.FC = () => {
     text: '#fafaf9',
     group: 'rgba(99, 102, 241, 0.5)',
     drawing: '#f472b6',
-    prompt: '#3b82f6'
+    prompt: '#3b82f6',
+    panorama: '#a855f7'
   };
 
   return (

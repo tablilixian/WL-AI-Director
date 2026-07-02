@@ -11,7 +11,9 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
-import { Film } from 'lucide-react';
+import { Film, Orbit, BadgeHelp } from 'lucide-react';
+import { PanoramaViewer } from './PanoramaViewer';
+import { isLikelyPanoramaImage } from '../utils/panoramaUtils';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -47,6 +49,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [newTitle, setNewTitle] = useState(layer.title);
   const [resolvedSrc, setResolvedSrc] = useState<string>('');
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showPanorama, setShowPanorama] = useState(false);
+  const [isProbablyPanorama, setIsProbablyPanorama] = useState(false);
+  const imgNaturalRef = useRef({ w: 0, h: 0 });
   
   const dragStartRef = useRef({ 
     x: 0, 
@@ -61,15 +66,14 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     let objectUrl: string | null = null;
     
     const resolve = async () => {
-      if (layer.type === 'image' || layer.type === 'drawing') {
+      if (layer.type === 'image' || layer.type === 'drawing' || layer.type === 'panorama') {
         console.log('[CanvasLayer] 解析图片/drawing:', layer.id, 'type:', layer.type, 'src:', layer.src?.substring(0, 30), 'imageId:', layer.imageId);
         
         let srcToResolve = layer.src;
         
-        // 对于 drawing 类型，如果 src 为空但有 imageId，则使用 imageId
-        if (layer.type === 'drawing' && !srcToResolve && layer.imageId) {
+        // 如果 src 为空但有 imageId，则使用 imageId 构造 local 引用
+        if (!srcToResolve && layer.imageId) {
           srcToResolve = `local:${layer.imageId}`;
-          console.log('[CanvasLayer] drawing 类型使用 imageId 构造 URL:', srcToResolve);
         }
         
         const resolved = await resolveImageSrc(srcToResolve);
@@ -136,6 +140,13 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       setIsZoomed(true);
     }
   }, [layer.type, resolvedSrc]);
+
+  const openPanoramaViewer = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (resolvedSrc && (layer.type === 'panorama' || (layer.type === 'image' && isProbablyPanorama))) {
+      setShowPanorama(true);
+    }
+  }, [layer.type, resolvedSrc, isProbablyPanorama]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -218,24 +229,39 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           );
         }
         return (
-          <img
-            src={resolvedSrc}
-            alt={layer.title}
-            className="w-full h-full object-contain"
-            draggable={false}
-            onDoubleClick={handleImageDoubleClick}
-            onError={(e) => {
-              console.error('图片加载失败:', {
-                layerId: layer.id,
-                title: layer.title,
-                srcLength: layer.src?.length,
-                srcPrefix: layer.src?.substring(0, 50)
-              });
-            }}
-            onLoad={() => {
-              console.log('图片加载成功:', layer.id);
-            }}
-          />
+          <div className="relative w-full h-full" onDoubleClick={handleImageDoubleClick}>
+            <img
+              src={resolvedSrc}
+              alt={layer.title}
+              className="w-full h-full object-contain"
+              draggable={false}
+              onError={(e) => {
+                console.error('图片加载失败:', {
+                  layerId: layer.id,
+                  title: layer.title,
+                  srcLength: layer.src?.length,
+                  srcPrefix: layer.src?.substring(0, 50)
+                });
+              }}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                imgNaturalRef.current = { w: img.naturalWidth, h: img.naturalHeight };
+                if (isLikelyPanoramaImage(layer.title, img.naturalWidth, img.naturalHeight)) {
+                  setIsProbablyPanorama(true);
+                }
+              }}
+            />
+            {isProbablyPanorama && (
+              <div
+                className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-purple-600/80 text-white text-[10px] font-semibold rounded flex items-center gap-1 cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); setShowPanorama(true); }}
+                title="此图片看起来像全景图，点击以 720° 模式查看"
+              >
+                <Orbit size={10} />
+                720°
+              </div>
+            )}
+          </div>
         );
       case 'video':
         if (layer.operationType === 'mkr-video' && !resolvedSrc) {
@@ -315,6 +341,31 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             draggable={false}
           />
         );
+      case 'panorama':
+        if (!resolvedSrc) {
+          return (
+            <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
+              <div className="text-gray-500 text-sm">加载全景图中...</div>
+            </div>
+          );
+        }
+        return (
+          <div
+            className="w-full h-full relative cursor-pointer overflow-hidden rounded-lg"
+            onDoubleClick={openPanoramaViewer}
+          >
+            <img
+              src={resolvedSrc}
+              alt={layer.title}
+              className="w-full h-full object-cover"
+              draggable={false}
+            />
+            <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-purple-600/80 text-white text-[10px] font-semibold rounded flex items-center gap-1">
+              <Orbit size={10} />
+              720°
+            </div>
+          </div>
+        );
       case 'prompt':
         return (
           <PromptLayer
@@ -375,6 +426,34 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       )}
 
       {renderContent()}
+
+      {showPanorama && resolvedSrc && createPortal(
+        <PanoramaViewer
+          panoramaSrc={resolvedSrc}
+          layerId={layer.type === 'panorama' ? layer.id : undefined}
+          initialCamera={(layer as any).cameraState}
+          onClose={() => setShowPanorama(false)}
+          onScreenshots={(results) => {
+            const { addLayer } = useCanvasStore.getState();
+            results.forEach((r, i) => {
+              addLayer({
+                id: crypto.randomUUID(),
+                type: 'image',
+                x: layer.x + (i % 4) * 180,
+                y: layer.y + layer.height + 60 + Math.floor(i / 4) * 160,
+                width: 320,
+                height: 180,
+                src: r.dataUrl,
+                title: `全景截图 - ${r.label}`,
+                createdAt: Date.now(),
+                operationType: 'panorama-screenshot',
+              });
+            });
+            setShowPanorama(false);
+          }}
+        />,
+        document.body
+      )}
 
       {isZoomed && createPortal(
         <div

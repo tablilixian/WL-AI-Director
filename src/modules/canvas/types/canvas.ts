@@ -45,7 +45,7 @@ export type Annotation = DrawingPath | TextAnnotation | RectangleAnnotation;
 // 图层类型
 // ============================================
 
-export type LayerType = 'image' | 'video' | 'sticky' | 'text' | 'group' | 'drawing' | 'audio' | 'prompt';
+export type LayerType = 'image' | 'video' | 'sticky' | 'text' | 'group' | 'drawing' | 'audio' | 'prompt' | 'panorama';
 
 // ============================================
 // 宫格生成类型
@@ -98,7 +98,7 @@ export interface LayerData {
   // 来源追踪
   sourceLayerId?: string; // 来源图层 ID（单来源）
   sourceLayerIds?: string[]; // 来源图层 ID 列表（多来源，如风格迁移需要目标图+风格参考图）
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'mkr-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint' | 'visual-language'; // 操作类型
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'mkr-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint' | 'visual-language' | 'panorama-generation' | 'panorama-screenshot'; // 操作类型
   // 宫格生成数据（用于后续宫格拆分）
   gridData?: GridGenerationData;
   // 生成信息
@@ -193,6 +193,39 @@ export interface MinimapViewport {
   width: number;
   height: number;
 }
+
+// ============================================
+// 全景（Panorama）类型
+// ============================================
+
+/** 全景相机视角状态 */
+export interface PanoramaCameraState {
+  /** 水平角度（度），0 = 正前方 */
+  yaw: number;
+  /** 垂直角度（度），0 = 水平，范围 ±85 */
+  pitch: number;
+  /** 视野角度（度），范围 35~100 */
+  fov: number;
+}
+
+/** 全景图层数据（扩展 LayerData） */
+export interface PanoramaLayerData extends LayerData {
+  type: 'panorama';
+  /** 相机视角状态（可选，用于恢复上次查看位置） */
+  cameraState?: PanoramaCameraState;
+  /** 全景图原始宽高比（用于等距柱状投影校验） */
+  aspectRatio?: number;
+}
+
+/** 全景截图操作类型 */
+export type PanoramaScreenshotMode =
+  | 'single'    // 单张截图（当前视角）
+  | 'quad'      // 4 大视角（每 90°）
+  | 'dodeca'    // 12 大视角（每 30°）
+  | 'custom';   // 自定义角度（预留）
+
+/** 全景生成模式 */
+export type PanoramaGenerationMode = 'text-to-panorama' | 'image-to-panorama' | 'upload';
 
 // ============================================
 // Prompt Layer 类型

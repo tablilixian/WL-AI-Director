@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Film, Sparkles, Plus } from 'lucide-react';
+import { Film, Sparkles, Plus, Orbit } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -14,6 +14,8 @@ import { LayerPanel } from './LayerPanel';
 import { PromptBar } from './PromptBar';
 
 import { ConnectionLines } from './ConnectionLines';
+import { canvasModelService } from '../services/canvasModelService';
+import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { LayerDetailPanel } from './LayerDetailPanel';
 import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
@@ -152,6 +154,88 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     if (newNode) selectLayer(newNode.id);
   }, [addLayer, selectLayer]);
 
+  const [stitchLoading, setStitchLoading] = useState(false);
+
+  const stitchPanorama = useCallback(async (sourceImageIds: string[]) => {
+    if (stitchLoading) return;
+    const currentLayers = useCanvasStore.getState().layers;
+    const sourceLayers = currentLayers.filter(l => sourceImageIds.includes(l.id) && l.type === 'image' && l.src);
+    if (sourceLayers.length === 0) return;
+
+    setStitchLoading(true);
+    try {
+      const refImages = sourceLayers.map(l => l.src).filter(Boolean) as string[];
+      const result = await canvasModelService.generateImage({
+        prompt: '720 degree equirectangular panorama, seamless stitching of multiple views, wide angle, 360 degree spatial scene',
+        referenceImages: refImages,
+        aspectRatio: '16:9',
+      });
+
+      let panoramaSrc = '';
+      if (typeof result === 'string') {
+        panoramaSrc = result;
+      } else if (result && typeof result === 'object' && 'images' in result) {
+        panoramaSrc = (result as any).images?.[0]?.url || (result as any).images?.[0] || '';
+      }
+
+      if (!panoramaSrc) throw new Error('生成结果为空');
+
+      const { imageStorageService } = await import('../../../../services/imageStorageService');
+      let resolvedUrl = panoramaSrc;
+      let imageId: string | undefined;
+
+      if (panoramaSrc.startsWith('local:')) {
+        const localId = panoramaSrc.replace('local:', '');
+        imageId = localId;
+        const blob = await imageStorageService.getImage(localId);
+        if (blob) {
+          const reader = new FileReader();
+          resolvedUrl = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } else if (panoramaSrc.startsWith('data:')) {
+        try {
+          const imgId = `panorama_stitch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          const response = await fetch(panoramaSrc);
+          const blob = await response.blob();
+          await imageStorageService.saveImage(imgId, blob);
+          imageId = imgId;
+        } catch (e) {
+          console.warn('[stitchPanorama] 保存到 IndexedDB 失败:', e);
+        }
+        resolvedUrl = panoramaSrc;
+      } else {
+        resolvedUrl = await unifiedImageService.resolveForDisplay(panoramaSrc);
+      }
+
+      const firstSource = sourceLayers[0];
+
+      addLayer({
+        id: crypto.randomUUID(),
+        type: 'panorama',
+        x: firstSource.x,
+        y: firstSource.y + firstSource.height + 40,
+        width: 640,
+        height: 360,
+        src: resolvedUrl,
+        imageId,
+        title: `全景拼接 ${new Date().toLocaleTimeString()}`,
+        createdAt: Date.now(),
+        operationType: 'panorama-generation',
+        sourceLayerIds: sourceImageIds,
+        isLoading: false,
+        progress: 100,
+      });
+    } catch (e) {
+      console.error('[stitchPanorama] 拼接失败:', e);
+      alert(`拼接失败: ${(e as Error).message}`);
+    } finally {
+      setStitchLoading(false);
+    }
+  }, [addLayer, stitchLoading]);
+
   const handleEdgeSelect = useCallback((edgeId: string | null) => {
     setSelectedEdgeId(edgeId);
     if (edgeId) {
@@ -261,8 +345,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
             mcX >= l.x && mcX <= l.x + l.width &&
             mcY >= l.y && mcY <= l.y + l.height
           );
-          // Strict mode: only allow image → video
-          const isValid = target && sourceLayer?.type === 'image' && target.type === 'video';
+          // Strict mode: only allow image/panorama → video
+          const isValid = target && (sourceLayer?.type === 'image' || sourceLayer?.type === 'panorama') && target.type === 'video';
           if (isValid) {
             const existing = target.sourceLayerIds || (target.sourceLayerId ? [target.sourceLayerId] : []);
             if (!existing.includes(dragState.sourceLayerId)) {
@@ -707,7 +791,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           const controlOffset = Math.abs(d.toX - d.fromX) * 0.5;
           const store = useCanvasStore.getState();
           const src = store.layers.find(l => l.id === d.sourceLayerId);
-          const isValidSource = src?.type === 'image';
+          const isValidSource = src?.type === 'image' || src?.type === 'panorama';
           return (
             <>
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 60 }}>
@@ -873,6 +957,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               >
                 <Sparkles className="w-4 h-4" />
                 AI 生成视频
+              </button>
+              <button
+                onClick={() => stitchPanorama(selectedImages)}
+                disabled={stitchLoading}
+                className="flex items-center gap-2 px-5 py-2 text-sm text-white bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 rounded-lg transition-colors font-medium"
+              >
+                <Orbit className="w-4 h-4" />
+                {stitchLoading ? '拼接中...' : '全景拼接'}
               </button>
             </div>
           </div>

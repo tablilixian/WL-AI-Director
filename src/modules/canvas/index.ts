@@ -25,12 +25,16 @@ export { MultiAnglePanel } from './components/MultiAnglePanel';
 export { ThreeViewPanel } from './components/ThreeViewPanel';
 export { StoryboardDeductionPanel } from './components/StoryboardDeductionPanel';
 export { LightingControlPanel } from './components/LightingControlPanel';
+export { PanoramaViewer } from './components/PanoramaViewer';
+export { PanoramaViewerToolbar } from './components/PanoramaViewerToolbar';
+export { PanoramaPanel } from './components/PanoramaPanel';
 
 export { useCanvasStore } from './hooks/useCanvasState';
 export { useCanvasControls } from './hooks/useCanvasControls';
 export { useSnapAlignment } from './hooks/useSnapAlignment';
 
 export { CanvasModelService } from './services/canvasModelService';
+export { panoramaGenerationService } from './services/panoramaGenerationService';
 export { canvasIntegrationService, CanvasIntegrationService } from './services/canvasIntegrationService';
 export { thumbnailService } from './services/thumbnailService';
 
@@ -56,7 +60,11 @@ export type {
   PromptExecutionResult,
   GridGenerationType,
   GridPanelData,
-  GridGenerationData
+  GridGenerationData,
+  PanoramaLayerData,
+  PanoramaCameraState,
+  PanoramaScreenshotMode,
+  PanoramaGenerationMode
 } from './types/canvas';
 
 export type { ImageAction } from './components/ImageActionMenu';

@@ -919,6 +919,28 @@ export class CanvasIntegrationService {
               console.warn('恢复视频失败:', e);
             }
           }
+        } else if (layer.type === 'panorama') {
+          if (layer.imageId) {
+            try {
+              const blob = await unifiedImageService.getImage(layer.imageId);
+              if (blob) {
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复全景图失败 (imageId):', e);
+            }
+          }
+          if (layer.src && layer.src.startsWith('local:')) {
+            try {
+              const localId = layer.src.replace('local:', '');
+              const blob = await unifiedImageService.getImage(localId);
+              if (blob) {
+                return { ...layer, src: URL.createObjectURL(blob) };
+              }
+            } catch (e) {
+              console.warn('恢复全景图失败 (local:):', e);
+            }
+          }
         } else if (layer.type === 'drawing') {
           console.log('[CanvasIntegration] 恢复 drawing 图层:', layer.id, 'imageId:', layer.imageId, 'src:', layer.src?.substring(0, 50));
           if (layer.imageId) {
