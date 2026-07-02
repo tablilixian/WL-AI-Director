@@ -215,6 +215,8 @@ export interface PanoramaLayerData extends LayerData {
   cameraState?: PanoramaCameraState;
   /** 全景图原始宽高比（用于等距柱状投影校验） */
   aspectRatio?: number;
+  /** 显示模式：flat（平面缩略图）| 3d（内嵌 Three.js 视口） */
+  displayMode?: 'flat' | '3d';
 }
 
 /** 全景截图操作类型 */

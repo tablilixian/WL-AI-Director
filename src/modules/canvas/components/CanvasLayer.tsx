@@ -13,6 +13,7 @@ import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { Film, Orbit, BadgeHelp } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
+import { InlinePanoramaViewer } from './InlinePanoramaViewer';
 import { isLikelyPanoramaImage } from '../utils/panoramaUtils';
 
 interface CanvasLayerProps {
@@ -50,6 +51,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [resolvedSrc, setResolvedSrc] = useState<string>('');
   const [isZoomed, setIsZoomed] = useState(false);
   const [showPanorama, setShowPanorama] = useState(false);
+  const [inline3d, setInline3d] = useState(layer.type === 'panorama' ? (layer as any).displayMode === '3d' : false);
   const [isProbablyPanorama, setIsProbablyPanorama] = useState(false);
   const imgNaturalRef = useRef({ w: 0, h: 0 });
   
@@ -349,6 +351,15 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             </div>
           );
         }
+        if (inline3d) {
+          return (
+            <InlinePanoramaViewer
+              panoramaSrc={resolvedSrc}
+              onOpenFullscreen={() => setShowPanorama(true)}
+              onToggleFlat={() => setInline3d(false)}
+            />
+          );
+        }
         return (
           <div
             className="w-full h-full relative cursor-pointer overflow-hidden rounded-lg"
@@ -364,6 +375,14 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
               <Orbit size={10} />
               720°
             </div>
+            <button
+              className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/50 hover:bg-black/70 text-white text-[10px] font-semibold rounded flex items-center gap-1 transition-colors"
+              title="内嵌 3D 查看"
+              onClick={(e) => { e.stopPropagation(); setInline3d(true); }}
+            >
+              <Orbit size={10} />
+              3D
+            </button>
           </div>
         );
       case 'prompt':
@@ -433,22 +452,40 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           layerId={layer.type === 'panorama' ? layer.id : undefined}
           initialCamera={(layer as any).cameraState}
           onClose={() => setShowPanorama(false)}
-          onScreenshots={(results) => {
-            const { addLayer } = useCanvasStore.getState();
-            results.forEach((r, i) => {
-              addLayer({
-                id: crypto.randomUUID(),
-                type: 'image',
-                x: layer.x + (i % 4) * 180,
-                y: layer.y + layer.height + 60 + Math.floor(i / 4) * 160,
-                width: 320,
-                height: 180,
-                src: r.dataUrl,
-                title: `全景截图 - ${r.label}`,
-                createdAt: Date.now(),
-                operationType: 'panorama-screenshot',
-              });
-            });
+          onScreenshots={async (results) => {
+            const store = useCanvasStore.getState();
+            const pending: LayerData[] = [];
+            await Promise.all(results.map(async (r, i) => {
+              const x = layer.x + (i % 4) * 180;
+              const y = layer.y + layer.height + 60 + Math.floor(i / 4) * 160;
+              try {
+                const blob = await unifiedImageService.base64ToBlob(r.dataUrl);
+                const imageId = unifiedImageService.generateImageId();
+                await unifiedImageService.saveImage(imageId, blob);
+                pending.push({
+                  id: crypto.randomUUID(),
+                  type: 'image',
+                  x, y, width: 320, height: 180,
+                  src: URL.createObjectURL(blob),
+                  imageId,
+                  title: `全景截图 - ${r.label}`,
+                  createdAt: Date.now(),
+                  operationType: 'panorama-screenshot',
+                } as LayerData);
+              } catch (e) {
+                console.error('[CanvasLayer] 截图保存失败:', e);
+                pending.push({
+                  id: crypto.randomUUID(),
+                  type: 'image',
+                  x, y, width: 320, height: 180,
+                  src: r.dataUrl,
+                  title: `全景截图 - ${r.label}`,
+                  createdAt: Date.now(),
+                  operationType: 'panorama-screenshot',
+                } as LayerData);
+              }
+            }));
+            store.addLayers(pending);
             setShowPanorama(false);
           }}
         />,

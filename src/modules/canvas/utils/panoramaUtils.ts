@@ -17,7 +17,7 @@ export const PANORAMA_DEFAULTS = {
   sphereRadius: 500,
   sphereSegmentsW: 64,
   sphereSegmentsH: 64,
-  dragSensitivity: 0.02,
+  dragSensitivity: 0.18,
   wheelZoomStep: 5,
   renderLongSide: 1536,
 } as const;
@@ -62,4 +62,9 @@ export function clampFov(fov: number): number {
 
 export function clampPitch(pitch: number): number {
   return Math.max(-PANORAMA_DEFAULTS.pitchMax, Math.min(PANORAMA_DEFAULTS.pitchMax, pitch));
+}
+
+/** 将 yaw 归一化到 [0, 360) 范围，防止浮点精度发散 */
+export function normalizeYaw(yaw: number): number {
+  return ((yaw % 360) + 360) % 360;
 }

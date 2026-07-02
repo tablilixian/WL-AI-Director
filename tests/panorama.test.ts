@@ -113,8 +113,8 @@ describe('panoramaUtils', () => {
       expect(VIEW_ANGLE_LABELS.dodeca[11].yaw).toBe(330);
     });
 
-    it('has single entry for single mode', () => {
-      expect(VIEW_ANGLE_LABELS.single).toHaveLength(1);
+    it('has custom entry for custom mode', () => {
+      expect(VIEW_ANGLE_LABELS.custom).toEqual([]);
     });
   });
 });

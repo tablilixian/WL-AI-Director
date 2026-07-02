@@ -56,6 +56,7 @@ interface CanvasState {
 interface CanvasActions {
   setProjectId: (projectId: string | null) => void;
   addLayer: (layer: LayerData) => void;
+  addLayers: (layers: LayerData[]) => void;
   updateLayer: (id: string, updates: Partial<LayerData>) => void;
   deleteLayer: (id: string) => void;
   duplicateLayer: (id: string) => void;
@@ -129,6 +130,20 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       addLayer: (layer) => {
         const state = get();
         const newLayers = [...state.layers, layer];
+        set({
+          layers: newLayers,
+          history: [...state.history.slice(0, state.historyIndex + 1), {
+            layers: state.layers,
+            timestamp: Date.now()
+          }].slice(-MAX_HISTORY),
+          historyIndex: state.historyIndex + 1
+        });
+      },
+
+      addLayers: (layers) => {
+        if (layers.length === 0) return;
+        const state = get();
+        const newLayers = [...state.layers, ...layers];
         set({
           layers: newLayers,
           history: [...state.history.slice(0, state.historyIndex + 1), {
