@@ -23,7 +23,6 @@ export const PANORAMA_DEFAULTS = {
 } as const;
 
 export const VIEW_ANGLE_LABELS: Record<PanoramaScreenshotMode, { yaw: number; label: string }[]> = {
-  single: [{ yaw: 0, label: '当前视角' }],
   quad: [
     { yaw: 0, label: '正面' },
     { yaw: 90, label: '右侧' },

@@ -219,7 +219,6 @@ export interface PanoramaLayerData extends LayerData {
 
 /** 全景截图操作类型 */
 export type PanoramaScreenshotMode =
-  | 'single'    // 单张截图（当前视角）
   | 'quad'      // 4 大视角（每 90°）
   | 'dodeca'    // 12 大视角（每 30°）
   | 'custom';   // 自定义角度（预留）

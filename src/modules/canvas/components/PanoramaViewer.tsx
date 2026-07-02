@@ -148,10 +148,11 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     const angles = VIEW_ANGLE_LABELS[mode];
     if (!angles || angles.length === 0) return;
 
+    const currentPitch = stateRef.current.pitch;
     const results: { dataUrl: string; yaw: number; pitch: number; label: string }[] = [];
     for (const angle of angles) {
-      const dataUrl = await captureView(angle.yaw, 0);
-      results.push({ dataUrl, yaw: angle.yaw, pitch: 0, label: angle.label });
+      const dataUrl = await captureView(angle.yaw, currentPitch);
+      results.push({ dataUrl, yaw: angle.yaw, pitch: currentPitch, label: angle.label });
     }
     onScreenshots?.(results);
   }, [captureView, onScreenshots]);
