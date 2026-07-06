@@ -20,12 +20,19 @@ class PanoramaGenerationService {
 
     const finalPrompt = prompt?.trim() || '720 degree equirectangular panorama, seamless, immersive 360 view';
 
-    const result = await canvasModelService.generateImage({
-      prompt: finalPrompt,
-      referenceImages: mode === 'image-to-panorama' && referenceImage ? [referenceImage] : undefined,
-      aspectRatio: '16:9',
-      onProgress,
-    });
+    let result: string;
+
+    if (mode === 'image-to-panorama' && referenceImage) {
+      // 使用专用 360° HDRI 端点
+      result = await canvasModelService.generate360Hdri(referenceImage, onProgress);
+    } else {
+      result = await canvasModelService.generateImage({
+        prompt: finalPrompt,
+        referenceImages: referenceImage ? [referenceImage] : undefined,
+        aspectRatio: '16:9',
+        onProgress,
+      });
+    }
 
     let panoramaSrc = '';
     if (typeof result === 'string') {

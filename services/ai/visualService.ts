@@ -24,7 +24,7 @@ import {
   getSceneNegativePrompt,
   VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi, callDramaBackend360HdriApi } from '../adapters/imageAdapter';
 
 // ============================================
 // 美术指导文档生成
@@ -939,6 +939,54 @@ export const generateInpaintImage = async (
     });
 
     throw new Error(`图像修复失败: ${error.message}`);
+  }
+};
+
+/**
+ * 360° HDRI 全景图像生成
+ * 调用 Drama Backend image2360hdri API，将输入图像转换为 360° 全景 HDRI 图像
+ * 返回生成的 HDRI 全景图片 local: 引用
+ */
+export const generate360HdriImage = async (
+  imageUrl?: string,
+  resourceType?: string,
+  resourceId?: string
+): Promise<string> => {
+  const startTime = Date.now();
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'dramabackend';
+
+  try {
+    logger.debug(LogCategory.AI, `🌐 generate360HdriImage 调用 - 360° HDRI 全景生成`);
+    logger.debug(LogCategory.AI, `🖼️ 输入图像: ${imageUrl || '无（文生全景）'}`);
+
+    const localUrl = await callDramaBackend360HdriApi(imageUrl);
+
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: '360hdri-' + Date.now(),
+      resourceName: '360° HDRI 全景',
+      status: 'success',
+      model: imageModelId,
+      prompt: '360 HDRI generation',
+      duration: Date.now() - startTime
+    });
+
+    logger.debug(LogCategory.AI, `✅ 360° HDRI 全景生成完成: ${localUrl}`);
+    return localUrl;
+  } catch (error: any) {
+    addRenderLogWithTokens({
+      type: 'keyframe',
+      resourceId: '360hdri-' + Date.now(),
+      resourceName: '360° HDRI 全景',
+      status: 'failed',
+      model: imageModelId,
+      prompt: '360 HDRI generation',
+      error: error.message,
+      duration: Date.now() - startTime
+    });
+
+    throw new Error(`360° HDRI 全景生成失败: ${error.message}`);
   }
 };
 

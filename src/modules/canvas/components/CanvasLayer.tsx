@@ -255,11 +255,15 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             />
             {isProbablyPanorama && (
               <div
-                className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-purple-600/80 text-white text-[10px] font-semibold rounded flex items-center gap-1 cursor-pointer"
+                className="absolute top-1.5 right-1.5 bg-purple-600/80 text-white font-semibold rounded flex items-center gap-1 cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); setShowPanorama(true); }}
                 title="此图片看起来像全景图，点击以 720° 模式查看"
+                style={{
+                  fontSize: `${Math.max(11, Math.round(layer.height / 28))}px`,
+                  padding: `${Math.round(layer.height / 90)}px ${Math.round(layer.height / 50)}px`,
+                }}
               >
-                <Orbit size={10} />
+                <Orbit size={Math.max(12, Math.round(layer.height / 28))} />
                 720°
               </div>
             )}
@@ -371,16 +375,26 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
               className="w-full h-full object-cover"
               draggable={false}
             />
-            <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-purple-600/80 text-white text-[10px] font-semibold rounded flex items-center gap-1">
-              <Orbit size={10} />
+            <div
+              className="absolute top-1.5 right-1.5 bg-purple-600/80 text-white font-semibold rounded flex items-center gap-1"
+              style={{
+                fontSize: `${Math.max(11, Math.round(layer.height / 28))}px`,
+                padding: `${Math.round(layer.height / 90)}px ${Math.round(layer.height / 50)}px`,
+              }}
+            >
+              <Orbit size={Math.max(12, Math.round(layer.height / 28))} />
               720°
             </div>
             <button
-              className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/50 hover:bg-black/70 text-white text-[10px] font-semibold rounded flex items-center gap-1 transition-colors"
+              className="absolute bottom-1.5 right-1.5 bg-black/50 hover:bg-black/70 text-white font-semibold rounded flex items-center gap-1 transition-colors"
               title="内嵌 3D 查看"
               onClick={(e) => { e.stopPropagation(); setInline3d(true); }}
+              style={{
+                fontSize: `${Math.max(11, Math.round(layer.height / 28))}px`,
+                padding: `${Math.round(layer.height / 90)}px ${Math.round(layer.height / 50)}px`,
+              }}
             >
-              <Orbit size={10} />
+              <Orbit size={Math.max(12, Math.round(layer.height / 28))} />
               3D
             </button>
           </div>

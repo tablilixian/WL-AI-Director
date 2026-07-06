@@ -225,6 +225,7 @@ export interface ImageGenerateOptions {
   videoMkrGridFps?: number;    // 视频帧率（默认 30）
   videoMkrGridType?: number;   // 宫格类型 4/6/9（默认 4）
   videoMkrGridFrameIndexs?: number[]; // 帧索引位置列表
+  is360HDRI?: boolean;         // 是否为 360° HDRI 全景图像生成（image2360hdri）
 }
 
 /**

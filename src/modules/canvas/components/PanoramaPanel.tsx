@@ -87,12 +87,18 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
 
     try {
       const baseLayer = selectedLayer;
-      const result = await canvasModelService.generateImage({
-        prompt: prompt.trim() || '720 degree equirectangular panorama, seamless, wide angle view',
-        referenceImages: mode === 'image-to-panorama' && baseLayer?.src ? [baseLayer.src] : undefined,
-        aspectRatio: '16:9',
-        onProgress: (p) => setProgress(p),
-      });
+      let result: string;
+
+      if (mode === 'image-to-panorama' && baseLayer?.src) {
+        result = await canvasModelService.generate360Hdri(baseLayer.src, (p) => setProgress(p));
+      } else {
+        result = await canvasModelService.generateImage({
+          prompt: prompt.trim() || '720 degree equirectangular panorama, seamless, wide angle view',
+          referenceImages: mode === 'image-to-panorama' && baseLayer?.src ? [baseLayer.src] : undefined,
+          aspectRatio: '16:9',
+          onProgress: (p) => setProgress(p),
+        });
+      }
 
       let panoramaSrc = '';
       if (typeof result === 'string') {
@@ -138,13 +144,20 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
       const baseX = baseLayer ? baseLayer.x + baseLayer.width + 40 : 200;
       const baseY = baseLayer ? baseLayer.y : 200;
 
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const imgEl = new Image();
+        imgEl.onload = () => resolve(imgEl);
+        imgEl.onerror = () => reject(new Error('图片加载失败'));
+        imgEl.src = resolvedUrl;
+      });
+
       addLayer({
         id: crypto.randomUUID(),
         type: 'panorama',
         x: baseX,
         y: baseY,
-        width: 640,
-        height: 360,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
         src: resolvedUrl,
         imageId,
         title: `全景图 ${new Date().toLocaleTimeString()}`,
@@ -292,13 +305,13 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
             onClick={onClose}
             disabled={isProcessing}
             style={{
-              padding: '8px 16px',
+              padding: '12px 24px',
               borderRadius: 8,
               border: '1px solid #444',
               background: 'transparent',
               color: '#ccc',
               cursor: 'pointer',
-              fontSize: 13,
+              fontSize: 15,
             }}
           >
             取消
@@ -307,13 +320,13 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
             onClick={handleGenerate}
             disabled={isProcessing || (mode === 'image-to-panorama' && !hasSelectedImage) || (mode === 'upload' && !uploadFile)}
             style={{
-              padding: '8px 16px',
+              padding: '12px 24px',
               borderRadius: 8,
               border: 'none',
               background: isProcessing ? '#555' : '#6366f1',
               color: '#fff',
               cursor: isProcessing ? 'not-allowed' : 'pointer',
-              fontSize: 13,
+              fontSize: 15,
             }}
           >
             {isProcessing ? '处理中...' : mode === 'upload' ? '导入' : '生成全景'}
@@ -326,12 +339,12 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
 
 const modeBtnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1,
-  padding: '8px 12px',
+  padding: '12px 16px',
   borderRadius: 8,
   border: active ? '1px solid #6366f1' : '1px solid #444',
   background: active ? 'rgba(99,102,241,0.15)' : 'transparent',
   color: active ? '#fff' : '#999',
   cursor: 'pointer',
-  fontSize: 13,
+  fontSize: 14,
   transition: 'all 0.15s',
 });

@@ -1028,6 +1028,85 @@ export const callDramaBackendInpaintApi = async (
 };
 
 /**
+ * 调用 Drama Backend 360° HDRI 图像生成 API (image2360hdri)
+ * 将输入图像转换为 360° 全景 HDRI 图像
+ */
+export const callDramaBackend360HdriApi = async (
+  imageUrl?: string,
+  traceId?: string
+): Promise<string> => {
+  const tid = traceId || `hdri_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[HDRI:${tid}] 调用 360° HDRI 图像生成 API`);
+  console.log(`[HDRI:${tid}] 端点: /api/v1/generate/image2360hdri`);
+  console.log(`[HDRI:${tid}] API基础地址: ${apiBase}`);
+
+  const requestBody: any = {};
+
+  if (imageUrl) {
+    console.log(`[HDRI:${tid}] 上传参考图像到 Drama Backend...`);
+    const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+    requestBody.image = filename;
+    console.log(`[HDRI:${tid}] 参考图像上传成功 -> filename: ${filename}`);
+  }
+
+  console.log(`[HDRI:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/image2360hdri`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  const imageUrl_ = response.full_url;
+  if (!imageUrl_) {
+    throw new Error(`360° HDRI 生成失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[HDRI:${tid}] Drama Backend 返回图片URL: ${imageUrl_}`);
+
+  let downloadUrl = imageUrl_;
+  if (import.meta.env.DEV && imageUrl_.startsWith('http://117.50.108.73:8082')) {
+    downloadUrl = imageUrl_.replace('http://117.50.108.73:8082', '/drama-api');
+  }
+
+  const imageBlob = await fetch(downloadUrl).then(r => {
+    if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
+    return r.blob();
+  });
+
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
+
+  console.log(`[HDRI:${tid}] 360° HDRI 图片已保存: ${localImageId}`);
+  return `local:${localImageId}`;
+};
+
+/**
  * 调用 Drama Backend 风格迁移 API (image2styletransfer)
  * 基于参考图像进行风格迁移，将 image2 的风格迁移到 image1 上
  */
@@ -1820,6 +1899,12 @@ export const callImageApi = async (
     if (options.isVideoMkr) {
       console.log(`[I2I:${tid}] → 路由到: Drama Backend (MKR 多关键帧视频 image2videomkr 端点)`);
       return callDramaBackendVideoMkrApi(options, tid);
+    }
+
+    if (options.is360HDRI) {
+      console.log(`[I2I:${tid}] → 路由到: Drama Backend (360° HDRI 全景图像 image2360hdri 端点)`);
+      const refImage = options.referenceImages?.[0];
+      return callDramaBackend360HdriApi(refImage, tid);
     }
 
     console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);

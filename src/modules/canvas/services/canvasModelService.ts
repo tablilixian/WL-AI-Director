@@ -653,6 +653,29 @@ export class CanvasModelService {
     }
   }
 
+  async generate360Hdri(
+    imageUrl?: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    console.log('=== 360° HDRI 全景生成请求 (image2360hdri) ===');
+    if (imageUrl) console.log('[输入图像]', imageUrl.substring(0, 60));
+
+    onProgress?.(10);
+
+    try {
+      const { callDramaBackend360HdriApi } = await import('../../../../services/adapters/imageAdapter');
+      const traceId = `hdri_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+      const result = await callDramaBackend360HdriApi(imageUrl, traceId);
+
+      onProgress?.(100);
+      return result;
+    } catch (error) {
+      console.error('360° HDRI 全景生成失败:', error);
+      throw error;
+    }
+  }
+
   async generateVariants(imageUrl: string, options: {
     count?: number;
     strength?: number;
