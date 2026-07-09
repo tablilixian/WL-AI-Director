@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Scissors, Palette, ImagePlus, Maximize2, Copy, Grid3x3, ChevronDown, Brain, Orbit } from 'lucide-react';
+import { Scissors, Palette, ImagePlus, Maximize2, Copy, Grid3x3, ChevronDown, Brain, Orbit, Sparkles } from 'lucide-react';
 import { StyleTransferPanel } from './StyleTransferPanel';
 import { DirectStyleTransferPanel } from './DirectStyleTransferPanel';
 import { IPAStyleTransferPanel } from './IPAStyleTransferPanel';
@@ -10,6 +10,8 @@ import { VariantPanel } from './VariantPanel';
 import { MultiAnglePanel } from './MultiAnglePanel';
 import { ThreeViewPanel } from './ThreeViewPanel';
 import { StoryboardDeductionPanel } from './StoryboardDeductionPanel';
+import { StoryDeductionPanel } from './StoryDeductionPanel';
+import { DeductionPanel } from './DeductionPanel';
 import { LightingControlPanel } from './LightingControlPanel';
 import { InpaintPanel } from './InpaintPanel';
 import { GridSplitPanel } from './GridSplitPanel';
@@ -32,6 +34,8 @@ export type ImageAction =
   | 'multi-angle'
   | 'three-view'
   | 'storyboard-deduction'
+  | 'story-deduction-ai'
+  | 'story-deduction'
   | 'lighting'
   | 'split-9grid'
   | 'split-4grid'
@@ -169,7 +173,11 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
     {
       label: '剧情推演',
       icon: <Grid3x3 className="w-3.5 h-3.5" />,
-      single: { id: 'storyboard-deduction', label: '剧情推演' },
+      items: [
+        { id: 'story-deduction-ai', label: '四宫格推演' },
+        { id: 'story-deduction', label: '推演后续剧情' },
+        { id: 'storyboard-deduction', label: '旧版推演' },
+      ],
     },
     // {
     //   label: '变体生成',
@@ -268,6 +276,8 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           {activePanel === 'multi-angle' && <MultiAnglePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'three-view' && <ThreeViewPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'storyboard-deduction' && <StoryboardDeductionPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'story-deduction-ai' && <StoryDeductionPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
+          {activePanel === 'story-deduction' && <DeductionPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'inpaint' && <InpaintPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'lighting' && <LightingControlPanel selectedLayerId={layer.id} onClose={handleClosePanel} />}
           {activePanel === 'image-to-image' && <ImageToImagePanel selectedLayerId={layer.id} onClose={handleClosePanel} />}

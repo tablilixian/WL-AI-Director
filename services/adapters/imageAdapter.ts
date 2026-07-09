@@ -1466,6 +1466,130 @@ export const callDramaBackendVLApi = async (
 };
 
 /**
+ * 剧情推演接口类型
+ */
+export interface DeductionRequest {
+  image: string;
+  analysis_system_prompt?: string;
+  analysis_prompt?: string;
+  deduction_system_prompt?: string;
+  deduction_prompt?: string;
+}
+
+export interface DeductionAnalysis {
+  scene: string;
+  composition: string;
+  lighting: string;
+  characters: string;
+  mood: string;
+  camera: string;
+}
+
+export interface DeductionResult {
+  next_frame: string;
+  rationale: string;
+  key_elements: string[];
+  changes: string[];
+}
+
+export interface DeductionResponse {
+  analysis: DeductionAnalysis;
+  deduction: DeductionResult;
+}
+
+const DEFAULT_ANALYSIS_SYSTEM_PROMPT = '你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张画面。';
+const DEFAULT_ANALYSIS_PROMPT = `请分析这张画面的以下要素，每项用一句话描述：
+1. 场景：这是什么场景/环境？
+2. 构图：镜头构图方式、主体位置
+3. 光影：光源方向、光线质感、色调
+4. 角色/主体：画面中的角色或主要视觉元素
+5. 情绪/氛围：画面的情绪基调
+6. 镜头语言：机位、焦段、运镜方式`;
+
+const DEFAULT_DEDUCTION_SYSTEM_PROMPT = '你是一个专业的影视编剧。请基于当前帧的画面分析和剧情方向，推演下一帧的内容。';
+const DEFAULT_DEDUCTION_PROMPT = `基于以上画面分析结果，推演下一帧的内容。要求：
+1. 保持角色、场景、光影风格的一致性
+2. 叙事要自然推进，有合理的动因
+3. 明确描述构图变化和镜头运动
+4. 输出结构化的推演结果`;
+
+/**
+ * 调用 Drama Backend 剧情推演 API (deduction)
+ * 画面分析 + 剧情推演两步合一
+ *
+ * Step 1 (服务端): 用 analysis_system_prompt + analysis_prompt 调 image2vl 分析画面
+ * Step 2 (服务端): 用分析结果 + deduction_system_prompt + deduction_prompt 调 LLM 推演剧情
+ */
+export const callDramaBackendDeductionApi = async (
+  imageUrl: string,
+  prompts?: {
+    analysisSystemPrompt?: string;
+    analysisPrompt?: string;
+    deductionSystemPrompt?: string;
+    deductionPrompt?: string;
+  },
+  traceId?: string
+): Promise<DeductionResponse> => {
+  const tid = traceId || `ded_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const activeModel = getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
+
+  console.log(`\n[DED:${tid}] 调用剧情推演 API`);
+  console.log(`[DED:${tid}] 端点: /api/v1/generate/deduction`);
+
+  const imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
+  console.log(`[DED:${tid}] 图片上传成功 -> filename: ${imageFilename}`);
+
+  const requestBody: DeductionRequest = {
+    image: imageFilename,
+    analysis_system_prompt: prompts?.analysisSystemPrompt || DEFAULT_ANALYSIS_SYSTEM_PROMPT,
+    analysis_prompt: prompts?.analysisPrompt || DEFAULT_ANALYSIS_PROMPT,
+    deduction_system_prompt: prompts?.deductionSystemPrompt || DEFAULT_DEDUCTION_SYSTEM_PROMPT,
+    deduction_prompt: prompts?.deductionPrompt || DEFAULT_DEDUCTION_PROMPT,
+  };
+
+  console.log(`[DED:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${baseUrl}/api/v1/generate/deduction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  if (!response.analysis || !response.deduction) {
+    throw new Error(`剧情推演失败：响应结构不完整: ${JSON.stringify(response)}`);
+  }
+
+  console.log(`[DED:${tid}] 推演完成`);
+  console.log(`[DED:${tid}] 画面分析:`, JSON.stringify(response.analysis, null, 2));
+  console.log(`[DED:${tid}] 推演结果:`, JSON.stringify(response.deduction, null, 2));
+
+  return response as DeductionResponse;
+};
+
+/**
  * 调用 Drama Backend 提示词增强 API (image2promptenhance)
  * 根据输入提示词生成更丰富的提示词
  */

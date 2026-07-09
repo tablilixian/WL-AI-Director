@@ -819,6 +819,87 @@
 
 ---
 
+### POST /api/v1/generate/deduction
+
+剧情推演：基于当前帧画面分析 + 剧情方向，推演下一帧的构图描述和关键要素
+
+**处理流程（服务端内部）：**
+
+1. 用 `analysis_system_prompt` + `analysis_prompt` 调 VLM（image2vl）分析画面
+2. 用 `deduction_system_prompt` + `deduction_prompt` + 分析结果调 LLM 推演下一帧
+3. 返回结构化分析 + 推演结果
+
+**请求体 (DeductionRequest):**
+
+| 字段 | 类型 | 必填 | 默认值 | 描述 |
+|------|------|------|--------|------|
+| `image` | string | 是 | - | 当前帧图片（已上传的文件名） |
+| `analysis_system_prompt` | string | 否 | 见下方 | VLM 画面分析的系统提示词 |
+| `analysis_prompt` | string | 否 | 见下方 | VLM 画面分析的用户提示词 |
+| `deduction_system_prompt` | string | 否 | 见下方 | LLM 剧情推演的系统提示词 |
+| `deduction_prompt` | string | 否 | 见下方 | LLM 剧情推演的用户提示词 |
+
+**默认提示词：**
+
+| 字段 | 默认值 |
+|------|--------|
+| `analysis_system_prompt` | "你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张画面。" |
+| `analysis_prompt` | "请分析这张画面的以下要素，每项用一句话描述：\n1. 场景：这是什么场景/环境？\n2. 构图：镜头构图方式、主体位置\n3. 光影：光源方向、光线质感、色调\n4. 角色/主体：画面中的角色或主要视觉元素\n5. 情绪/氛围：画面的情绪基调\n6. 镜头语言：机位、焦段、运镜方式" |
+| `deduction_system_prompt` | "你是一个专业的影视编剧。请基于当前帧的画面分析和剧情方向，推演下一帧的内容。" |
+| `deduction_prompt` | "基于以上画面分析结果，推演下一帧的内容。要求：\n1. 保持角色、场景、光影风格的一致性\n2. 叙事要自然推进，有合理的动因\n3. 明确描述构图变化和镜头运动\n4. 输出结构化的推演结果" |
+
+**响应 (DeductionResponse):**
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `analysis` | object | 当前帧的画面分析结果 |
+| `analysis.scene` | string | 场景描述 |
+| `analysis.composition` | string | 构图分析 |
+| `analysis.lighting` | string | 光影描述 |
+| `analysis.characters` | string | 角色/主体描述 |
+| `analysis.mood` | string | 情绪氛围 |
+| `analysis.camera` | string | 镜头语言 |
+| `deduction` | object | 剧情推演结果 |
+| `deduction.next_frame` | string | 下一帧的画面描述（用于图生图 prompt） |
+| `deduction.rationale` | string | 推演逻辑说明 |
+| `deduction.key_elements` | string[] | 下一帧需保留的关键元素 |
+| `deduction.changes` | string[] | 相对当前帧的变化 |
+
+**请求示例:**
+```json
+{
+  "image": "keyframe_001.png",
+  "analysis_prompt": "请分析这张画面的场景、构图、光影、角色、情绪和镜头语言",
+  "deduction_prompt": "主角发现密道，决定探索。基于画面分析，推演下一帧的内容"
+}
+```
+
+**响应示例:**
+```json
+{
+  "analysis": {
+    "scene": "古堡密室内景",
+    "composition": "中景镜头，角色坐于石阶中央，构图对称",
+    "lighting": "暖黄烛光，右侧单光源，墙壁投射阴影",
+    "characters": "中年男子，灰色长袍，面容凝重",
+    "mood": "沉思、压抑、等待",
+    "camera": "固定机位，轻微仰拍，镜头距离约2米"
+  },
+  "deduction": {
+    "next_frame": "主角从石阶上缓缓站起身，视线转向右侧墙壁上的暗门；镜头跟随上升，变为站姿中景；暗门边缘透出微光",
+    "rationale": "角色长时间沉思后进入行动阶段，由静转动是叙事的自然推进；转向暗门为下一场景做铺垫",
+    "key_elements": ["暖黄烛光", "灰色长袍", "古堡密室背景", "中年男子"],
+    "changes": ["从坐姿变为站姿", "视线方向改变", "引入暗门新元素", "镜头从仰拍变为平视"]
+  }
+}
+```
+
+**说明:**
+- 前端完全控制 prompt，后端只做编排（image2vl → LLM）
+- 如果图像尚未上传，需先调用 `/api/v1/generate/uploadimage` 上传
+
+---
+
 ## 错误响应
 
 所有端点可能返回以下错误状态码：
