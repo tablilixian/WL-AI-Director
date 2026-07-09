@@ -20,6 +20,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
+  const [resultImageId, setResultImageId] = useState<string | null>(null);
   const { layers, addLayer } = useCanvasStore();
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
@@ -77,6 +78,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
       setProgress(85);
       const displayUrl = await unifiedImageService.resolveForDisplay(resultUrl);
       setResultImageUrl(displayUrl);
+      // 提取实际保存的 imageId
+      const match = resultUrl.match(/^local:(.+)$/);
+      if (match) setResultImageId(match[1]);
       setProgress(100);
     } catch (err: any) {
       setError(err.message);
@@ -96,7 +100,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
       width: 1024,
       height: 512,
       src: resultImageUrl,
-      imageId: `storyboard_4grid_${Date.now()}`,
+      imageId: resultImageId || `storyboard_4grid_${Date.now()}`,
       title: `${selectedLayer.title} - 四宫格推演`,
       createdAt: Date.now(),
       sourceLayerId: selectedLayer.id,
