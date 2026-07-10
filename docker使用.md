@@ -36,3 +36,17 @@ docker stop bigbanana-ai-app
 - 浏览器可能缓存了静态资源：先尝试强制刷新（Ctrl+F5）或清理站点缓存。
 - 如果前面有 CDN/反代，也可能缓存了 index.html，需要在上游刷新缓存。
 
+---
+
+## 📦 PocketBase 数据库管理后台
+
+| 项目 | 说明 |
+|------|------|
+| 访问地址 | <http://127.0.0.1:8090/_/> |
+| 默认管理员邮箱 | `admin@wlai.com` |
+| 默认管理员密码 | `admin123456` |
+
+> ⚠️ **注意**：**必须使用 `127.0.0.1` 而不是 `localhost`** 访问管理后台。
+>
+> 原因是 PocketBase 的 Content-Security-Policy 限制了 `connect-src` 仅允许 `127.0.0.1`，`localhost` 会被 CSP 拦截导致页面无法正常加载 JS 和 API 请求。
+

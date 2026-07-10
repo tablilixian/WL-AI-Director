@@ -9,6 +9,7 @@ import { ApiKeyError } from './chatAdapter';
 import { unifiedImageService } from '../unifiedImageService';
 import { uploadImageToDramaBackend } from './imageAdapter';
 import { videoStorageService } from '../imageStorageService';
+import { VIDEO_SORA_SIZE, VIDEO_DRAMA_SIZE, VIDEO_DRAMA_FALLBACK } from '../../config/sizeConfig';
 
 /**
  * 解析图片引用为 Base64 格式
@@ -119,12 +120,7 @@ const convertVideoUrlToBase64 = async (videoUrl: string): Promise<string> => {
  * 根据宽高比获取尺寸
  */
 const getSizeFromAspectRatio = (aspectRatio: AspectRatio): { width: number; height: number; size: string } => {
-  const sizeMap: Record<AspectRatio, { width: number; height: number; size: string }> = {
-    '16:9': { width: 1280, height: 720, size: '1280x720' },
-    '9:16': { width: 720, height: 1280, size: '720x1280' },
-    '1:1': { width: 720, height: 720, size: '720x720' },
-  };
-  return sizeMap[aspectRatio];
+  return VIDEO_SORA_SIZE[aspectRatio];
 };
 
 /**
@@ -563,13 +559,7 @@ const callDramaBackendVideoApi = async (
 
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  const sizeMap: Record<string, { width: number; height: number }> = {
-    '16:9': { width: 640, height: 320 },
-    '9:16': { width: 320, height: 640 },
-    '1:1': { width: 512, height: 512 },
-  };
-  const aspectRatio = options.aspectRatio || '16:9';
-  const size = sizeMap[aspectRatio] || { width: 640, height: 320 };
+  const size = VIDEO_DRAMA_SIZE[options.aspectRatio || '16:9'] || VIDEO_DRAMA_FALLBACK;
 
   const requestBody: any = {
     prompt: options.prompt,

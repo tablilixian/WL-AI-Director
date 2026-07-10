@@ -69,6 +69,9 @@ docs/
 - [用户手册](./04-guides/user-guide.md)
 - [部署指南](./04-guides/deployment-guide.md)
 
+### 创作案例
+- [漫剧创作实录：剑意传承](./漫剧创作实录-剑意传承.md) — 从故事构思到视觉提示词打磨的完整创作过程记录
+
 ### 架构决策
 - [Supabase → PocketBase 迁移方案](./06-adrs/Supabase2PocketBase.md)
 

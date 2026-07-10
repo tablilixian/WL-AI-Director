@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { STORYBOARD_FALLBACK_SIZE } from '../../../../config/sizeConfig';
 
 interface StoryboardDeductionPanelProps {
   selectedLayerId: string | null;
@@ -163,7 +164,7 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
       const firstLoaded = await new Promise<{ w: number; h: number }>((resolve) => {
         const img = new Image();
         img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-        img.onerror = () => resolve({ w: 1024, h: 576 });
+        img.onerror = () => resolve({ w: STORYBOARD_FALLBACK_SIZE.width, h: STORYBOARD_FALLBACK_SIZE.height });
         img.src = resolvedLabels[0].url;
       });
       const cellW = firstLoaded.w;

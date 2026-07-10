@@ -9,6 +9,17 @@ import { enhanceWithQualityTags } from '../ai/promptConstants';
 import { ApiKeyError } from './chatAdapter';
 import { useAuthStore } from '../../src/stores/authStore';
 import { imageStorageService, generateImageId, videoStorageService } from '../imageStorageService';
+import {
+  IMAGE_COGVIEW_SIZE, IMAGE_COGVIEW_FALLBACK,
+  IMAGE_DRAMA_SIZE, IMAGE_DRAMA_FALLBACK,
+  IMAGE_IPA_SIZE, IMAGE_IPA_FALLBACK,
+  IMAGE_ANIME_SIZE, IMAGE_ANIME_FALLBACK,
+  STORYBOARD_ITEM_WIDTH,
+  IMAGE_SPLITE_GRID,
+  VIDEO_MSR_DEFAULT,
+  VIDEO_MKR_DEFAULT,
+  VIDEO_MKR_GRID_DEFAULT,
+} from '../../config/sizeConfig';
 
 /**
  * 重试操作
@@ -96,13 +107,7 @@ const callCogViewApi = async (
   const apiModel = model.apiModel || model.id;
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   
-  // BigModel 尺寸映射
-  const sizeMap: Record<AspectRatio, string> = {
-    '16:9': '1280x720',
-    '9:16': '720x1280',
-    '1:1': '1024x1024',
-  };
-  const size = sizeMap[aspectRatio] || '1024x1024';
+  const size = IMAGE_COGVIEW_SIZE[aspectRatio as keyof typeof IMAGE_COGVIEW_SIZE] || IMAGE_COGVIEW_FALLBACK;
   
   const finalPrompt = enhanceWithQualityTags(options.prompt);
 
@@ -192,13 +197,7 @@ const callDramaBackendApi = async (
 ): Promise<string> => {
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   
-  // 尺寸映射
-  const sizeMap: Record<AspectRatio, { width: number; height: number }> = {
-    '16:9': { width: 1024, height: 576 },
-    '9:16': { width: 576, height: 1024 },
-    '1:1': { width: 768, height: 768 },
-  };
-  const size = sizeMap[aspectRatio] || { width: 1024, height: 720 };
+  const size = IMAGE_DRAMA_SIZE[aspectRatio as keyof typeof IMAGE_DRAMA_SIZE] || IMAGE_DRAMA_FALLBACK;
   
   const hasReferenceImages = options.referenceImages && options.referenceImages.length > 0;
   const endpoint = hasReferenceImages 
@@ -762,7 +761,7 @@ const callDramaBackendStoryboardApi = async (
   const requestBody: any = {
     prompt: options.prompt,
     gridnum: options.gridnum || 4,
-    width: options.itemWidth || 1024,
+    width: options.itemWidth || STORYBOARD_ITEM_WIDTH,
   };
   if (imageFilename) {
     requestBody.image = imageFilename;
@@ -862,8 +861,8 @@ export const callDramaBackendSpliteGridApi = async (
   const requestBody: any = {
     row: options.spliteGridRow || 2,
     column: options.spliteGridColumn || 2,
-    target_width: options.spliteGridTargetWidth || 1024,
-    target_height: options.spliteGridTargetHeight || 720,
+    target_width: options.spliteGridTargetWidth || IMAGE_SPLITE_GRID.targetWidth,
+    target_height: options.spliteGridTargetHeight || IMAGE_SPLITE_GRID.targetHeight,
     image: imageFilename,
   };
 
@@ -1222,13 +1221,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
   console.log(`[IPA:${tid}] 端点: /api/v1/generate/image2ipastyletransfer`);
   console.log(`[IPA:${tid}] API基础地址: ${apiBase}`);
 
-  const aspectRatio = options.aspectRatio || '16:9';
-  const sizeMap: Record<string, { width: number; height: number }> = {
-    '16:9': { width: 1024, height: 576 },
-    '9:16': { width: 576, height: 1024 },
-    '1:1': { width: 768, height: 768 },
-  };
-  const size = sizeMap[aspectRatio] || { width: 1024, height: 720 };
+  const size = IMAGE_IPA_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_IPA_SIZE] || IMAGE_IPA_FALLBACK;
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1327,13 +1320,7 @@ export const callDramaBackendAnimeApi = async (
   console.log(`[ANIME:${tid}] 端点: /api/v1/generate/txt2imageanime`);
   console.log(`[ANIME:${tid}] API基础地址: ${apiBase}`);
 
-  const aspectRatio = options.aspectRatio || '16:9';
-  const sizeMap: Record<string, { width: number; height: number }> = {
-    '16:9': { width: 1024, height: 576 },
-    '9:16': { width: 576, height: 1024 },
-    '1:1': { width: 768, height: 768 },
-  };
-  const size = sizeMap[aspectRatio] || { width: 1024, height: 720 };
+  const size = IMAGE_ANIME_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_ANIME_SIZE] || IMAGE_ANIME_FALLBACK;
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1671,8 +1658,8 @@ export const callDramaBackendVideoMsrApi = async (
 
   const requestBody: any = {
     prompt: options.prompt,
-    width: options.videoMsrWidth || 640,
-    height: options.videoMsrHeight || 320,
+    width: options.videoMsrWidth || VIDEO_MSR_DEFAULT.width,
+    height: options.videoMsrHeight || VIDEO_MSR_DEFAULT.height,
     duration: options.videoMsrDuration || 5,
     fps: options.videoMsrFps || 30,
   };
@@ -1710,9 +1697,10 @@ export const callDramaBackendVideoMsrApi = async (
     });
 
     if (!res.ok) {
-      let errorMessage = `HTTP 错误: ${res.status}`;
+      let errorMessage = `HTTP ${res.status}`;
       try {
         const errorText = await res.text();
+        console.error(`[VMSR:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -1722,9 +1710,9 @@ export const callDramaBackendVideoMsrApi = async (
           }
         }
       } catch {
-        errorMessage = `HTTP 错误: ${res.status}`;
+        errorMessage = `HTTP ${res.status}`;
       }
-      throw new Error(errorMessage);
+      throw new Error(`[MSR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height}`);
     }
 
     return await res.json();
@@ -1780,8 +1768,8 @@ export const callDramaBackendVideoMkrGridApi = async (
 
   const requestBody: any = {
     prompt: options.prompt,
-    width: options.videoMkrGridWidth || 640,
-    height: options.videoMkrGridHeight || 320,
+    width: options.videoMkrGridWidth || VIDEO_MKR_GRID_DEFAULT.width,
+    height: options.videoMkrGridHeight || VIDEO_MKR_GRID_DEFAULT.height,
     duration: options.videoMkrGridDuration || 12,
     fps: options.videoMkrGridFps || 30,
     gridtype: options.videoMkrGridType || 4,
@@ -1805,9 +1793,10 @@ export const callDramaBackendVideoMkrGridApi = async (
     });
 
     if (!res.ok) {
-      let errorMessage = `HTTP 错误: ${res.status}`;
+      let errorMessage = `HTTP ${res.status}`;
       try {
         const errorText = await res.text();
+        console.error(`[VMKRG:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -1817,9 +1806,9 @@ export const callDramaBackendVideoMkrGridApi = async (
           }
         }
       } catch {
-        errorMessage = `HTTP 错误: ${res.status}`;
+        errorMessage = `HTTP ${res.status}`;
       }
-      throw new Error(errorMessage);
+      throw new Error(`[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`);
     }
 
     return await res.json();
@@ -1878,8 +1867,8 @@ export const callDramaBackendVideoMkrApi = async (
 
   const requestBody: any = {
     prompt: options.prompt,
-    width: options.videoMkrWidth || 640,
-    height: options.videoMkrHeight || 320,
+    width: options.videoMkrWidth || VIDEO_MKR_DEFAULT.width,
+    height: options.videoMkrHeight || VIDEO_MKR_DEFAULT.height,
     duration: options.videoMkrDuration || 12,
     fps: options.videoMkrFps || 30,
   };
@@ -1908,9 +1897,10 @@ export const callDramaBackendVideoMkrApi = async (
     });
 
     if (!res.ok) {
-      let errorMessage = `HTTP 错误: ${res.status}`;
+      let errorMessage = `HTTP ${res.status}`;
       try {
         const errorText = await res.text();
+        console.error(`[VMKR:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -1920,9 +1910,9 @@ export const callDramaBackendVideoMkrApi = async (
           }
         }
       } catch {
-        errorMessage = `HTTP 错误: ${res.status}`;
+        errorMessage = `HTTP ${res.status}`;
       }
-      throw new Error(errorMessage);
+      throw new Error(`[MKR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height}`);
     }
 
     return await res.json();

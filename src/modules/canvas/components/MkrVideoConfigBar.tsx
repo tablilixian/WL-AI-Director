@@ -3,6 +3,7 @@ import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { X, Sparkles, Plus, Trash2, ChevronUp, ChevronDown, Film, Grid } from 'lucide-react';
 import type { LayerData } from '../types/canvas';
+import { UI_MKR_SIZE_PRESETS } from '../../../../config/sizeConfig';
 
 interface MkrVideoConfigBarProps {
   layerId: string;
@@ -29,12 +30,7 @@ interface MkrGenerationConfig {
   gridFrameIndexs: number[];
 }
 
-const VIDEO_SIZE_PRESETS = [
-  { label: '横屏 720p', width: 1280, height: 720 },
-  { label: '测试 640p', width: 640, height: 320 },
-  { label: '竖屏 720p', width: 720, height: 1280 },
-  { label: '方形 720p', width: 720, height: 720 },
-];
+const VIDEO_SIZE_PRESETS = UI_MKR_SIZE_PRESETS;
 
 function parseConfig(layer: LayerData | undefined): MkrGenerationConfig | null {
   if (!layer?.generationPrompt) return null;

@@ -14,6 +14,7 @@ import {
   resolveModel,
   getDefaultChatModelId,
 } from './apiCore';
+import { STORYBOARD_ITEM_WIDTH } from '../../config/sizeConfig';
 import { getStylePromptCN, getStylePrompt } from './promptConstants';
 import { generateStoryboardImage } from './visualService';
 
@@ -801,7 +802,7 @@ export const generateNineGridImage = async (
     const imageUrl = await generateStoryboardImage(
       storyboardPrompt,
       panels.length,       // gridnum
-      1024,                // itemWidth
+      STORYBOARD_ITEM_WIDTH,   // itemWidth
       referenceImages[0],  // referenceImage (只传第一张)
       'ninegrid',
       shotId

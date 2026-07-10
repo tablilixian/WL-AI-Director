@@ -180,6 +180,11 @@ docker-compose up -d --build
 # 3. 访问应用
 # 浏览器打开 http://localhost:3005
 
+# 4. 数据库管理后台（PocketBase）
+# 访问地址：http://127.0.0.1:8090/_/
+# 默认管理员：admin@wlai.com / admin123456
+# ⚠️ 必须使用 127.0.0.1 而非 localhost（CSP 限制）
+
 # 查看日志
 docker-compose logs -f
 

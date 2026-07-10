@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
+import { STORYBOARD_4GRID } from '../../../../config/sizeConfig';
 
 interface StoryDeductionPanelProps {
   selectedLayerId: string | null;
@@ -72,7 +73,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
         referenceImages: [imageUrl],
         isStoryboard: true,
         gridnum: 4,
-        itemWidth: 512,
+        itemWidth: STORYBOARD_4GRID.ITEM_WIDTH,
       });
 
       setProgress(85);
@@ -89,16 +90,24 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
     }
   };
 
-  const handleSaveToCanvas = () => {
+  const handleSaveToCanvas = async () => {
     if (!resultImageUrl || !selectedLayer) return;
+
+    // 获取图片实际尺寸，确保图层与图片完全匹配，不留空白
+    const actualDimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = () => resolve({ width: STORYBOARD_4GRID.LAYER_WIDTH, height: STORYBOARD_4GRID.LAYER_HEIGHT });
+      img.src = resultImageUrl;
+    });
 
     addLayer({
       id: crypto.randomUUID(),
       type: 'image',
       x: selectedLayer.x,
       y: selectedLayer.y + selectedLayer.height + 40,
-      width: 1024,
-      height: 512,
+      width: actualDimensions.width,
+      height: actualDimensions.height,
       src: resultImageUrl,
       imageId: resultImageId || `storyboard_4grid_${Date.now()}`,
       title: `${selectedLayer.title} - 四宫格推演`,

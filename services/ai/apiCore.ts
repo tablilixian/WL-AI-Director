@@ -20,6 +20,7 @@ import {
   getActiveImageModel,
   isLocalProvider,
 } from '../modelRegistry';
+import { VIDEO_SORA_SIZE } from '../../config/sizeConfig';
 
 /**
  * 检查是否为 BigModel 模型
@@ -661,10 +662,5 @@ export const getVeoModelName = (hasReferenceImage: boolean, aspectRatio: AspectR
  * 根据横竖屏比例获取 Sora 视频尺寸
  */
 export const getSoraVideoSize = (aspectRatio: AspectRatio): string => {
-  const sizeMap: Record<AspectRatio, string> = {
-    '16:9': '1280x720',
-    '9:16': '720x1280',
-    '1:1': '720x720',
-  };
-  return sizeMap[aspectRatio];
+  return VIDEO_SORA_SIZE[aspectRatio]?.size;
 };

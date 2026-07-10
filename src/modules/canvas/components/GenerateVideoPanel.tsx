@@ -5,6 +5,7 @@ import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { CameraChoreography, renderCameraChoreographyPrompt } from '../../../../types';
 import { CAMERA_MOVEMENT_TYPES, CAMERA_SHOT_SIZES, CAMERA_ANGLES, CAMERA_SUBJECT_POSITIONS, CAMERA_FOCUS_TYPES, CAMERA_MOVEMENT_SPEEDS } from '../../../../components/StageDirector/constants';
 import { Plus, GripVertical, Trash2, ChevronDown, Sparkles, Camera, Sun, Mic, Settings, Film, Clock, X, Maximize2, Eye, EyeOff, Layout } from 'lucide-react';
+import { UI_VIDEO_SIZE_PRESETS } from '../../../../config/sizeConfig';
 
 interface GenerateVideoPanelProps {
   selectedLayerIds: string[];
@@ -131,15 +132,7 @@ interface VideoTemplate {
 
 // ─── 常量 ────────────────────────────────────────────────
 
-const VIDEO_SIZE_PRESETS: VideoSizePreset[] = [
-  { label: '横屏 1080p', width: 1920, height: 1080, aspectRatio: '16:9' },
-  { label: '横屏 720p',  width: 1280, height: 720,  aspectRatio: '16:9' },
-  { label: '测试 640p',  width: 640,  height: 320,  aspectRatio: '2:1' },
-  { label: '竖屏 1080p', width: 1080, height: 1920, aspectRatio: '9:16' },
-  { label: '竖屏 720p',  width: 720,  height: 1280, aspectRatio: '9:16' },
-  { label: '方形 1080p', width: 1080, height: 1080, aspectRatio: '1:1' },
-  { label: '方形 720p',  width: 720,  height: 720,  aspectRatio: '1:1' },
-];
+const VIDEO_SIZE_PRESETS: VideoSizePreset[] = UI_VIDEO_SIZE_PRESETS as unknown as VideoSizePreset[];
 
 const CAMERA_MOVEMENTS: CameraMovement[] = [
   { id: 'none', label: '固定镜头', description: '摄像机保持静止', promptEn: 'Static shot, camera remains fixed, no movement.' },
