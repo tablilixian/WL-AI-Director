@@ -71,6 +71,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const [editingShotActionId, setEditingShotActionId] = useState<string | null>(null);
   const [editingShotActionText, setEditingShotActionText] = useState('');
   const [editingShotDialogueText, setEditingShotDialogueText] = useState('');
+  const [editingShotCameraId, setEditingShotCameraId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalScript(project.rawScript);
@@ -188,7 +189,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       logger.debug(LogCategory.AI, `📞 调用 generateShotList, 传入模型: ${finalModel}`);
       logScriptProgress('开始生成分镜...');
       setProcessingMessage('正在生成分镜...');
-      const shots = await generateShotList(scriptData, finalModel);
+      const shots = await generateShotList(scriptData, finalModel, localScript);
 
       const updatedProject: ProjectState = {
         ...project,
@@ -463,6 +464,26 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     setEditingShotDialogueText('');
   };
 
+  // Camera movement / shot size editing handlers
+  const handleEditShotCamera = (shotId: string) => {
+    setEditingShotCameraId(shotId);
+  };
+
+  const handleSaveShotCamera = (shotId: string, cameraMovement: string, shotSize: string) => {
+    const updatedShots = project.shots.map(shot => {
+      if (shot.id === shotId) {
+        return { ...shot, cameraMovement, shotSize };
+      }
+      return shot;
+    });
+    updateProject({ shots: updatedShots });
+    setEditingShotCameraId(null);
+  };
+
+  const handleCancelShotCamera = () => {
+    setEditingShotCameraId(null);
+  };
+
   const getNextShotId = (shots: Shot[]) => {
     const maxMain = shots.reduce((max, shot) => {
       const parts = shot.id.split('-');
@@ -734,6 +755,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           setEditingShotActionText('');
           setEditingShotDialogueText('');
         }
+        if (editingShotCameraId === shotId) {
+          setEditingShotCameraId(null);
+        }
         showAlert(`${displayName} 已删除`, { type: 'success' });
       }
     });
@@ -807,6 +831,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           editingShotActionId={editingShotActionId}
           editingShotActionText={editingShotActionText}
           editingShotDialogueText={editingShotDialogueText}
+          editingShotCameraId={editingShotCameraId}
           onEditCharacter={handleEditCharacter}
           onSaveCharacter={handleSaveCharacter}
           onCancelCharacterEdit={handleCancelCharacterEdit}
@@ -820,6 +845,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           onEditShotAction={handleEditShotAction}
           onSaveShotAction={handleSaveShotAction}
           onCancelShotAction={handleCancelShotAction}
+          onEditShotCamera={handleEditShotCamera}
+          onSaveShotCamera={handleSaveShotCamera}
+          onCancelShotCamera={handleCancelShotCamera}
           onAddShot={handleAddShot}
           onAddSubShot={handleAddSubShot}
           onDeleteShot={handleDeleteShot}

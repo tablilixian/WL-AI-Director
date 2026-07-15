@@ -18,6 +18,7 @@ interface Props {
   editingShotActionId: string | null;
   editingShotActionText: string;
   editingShotDialogueText: string;
+  editingShotCameraId: string | null;
   onEditCharacter: (charId: string, prompt: string) => void;
   onSaveCharacter: (charId: string, prompt: string) => void;
   onCancelCharacterEdit: () => void;
@@ -31,6 +32,9 @@ interface Props {
   onEditShotAction: (shotId: string, action: string, dialogue: string) => void;
   onSaveShotAction: () => void;
   onCancelShotAction: () => void;
+  onEditShotCamera: (shotId: string) => void;
+  onSaveShotCamera: (shotId: string, cameraMovement: string, shotSize: string) => void;
+  onCancelShotCamera: () => void;
   onAddShot: (sceneId: string) => void;
   onAddSubShot: (shotId: string) => void;
   onDeleteShot: (shotId: string) => void;
@@ -57,6 +61,7 @@ const SceneBreakdown: React.FC<Props> = ({
   editingShotActionId,
   editingShotActionText,
   editingShotDialogueText,
+  editingShotCameraId,
   onEditCharacter,
   onSaveCharacter,
   onCancelCharacterEdit,
@@ -70,6 +75,9 @@ const SceneBreakdown: React.FC<Props> = ({
   onEditShotAction,
   onSaveShotAction,
   onCancelShotAction,
+  onEditShotCamera,
+  onSaveShotCamera,
+  onCancelShotCamera,
   onAddShot,
   onAddSubShot,
   onDeleteShot,
@@ -218,6 +226,7 @@ const SceneBreakdown: React.FC<Props> = ({
                           editingShotActionId={editingShotActionId}
                           editingShotActionText={editingShotActionText}
                           editingShotDialogueText={editingShotDialogueText}
+                          editingShotCameraId={editingShotCameraId}
                           onEditPrompt={onEditShotPrompt}
                           onSavePrompt={onSaveShotPrompt}
                           onCancelPrompt={onCancelShotPrompt}
@@ -228,6 +237,9 @@ const SceneBreakdown: React.FC<Props> = ({
                           onEditAction={onEditShotAction}
                           onSaveAction={onSaveShotAction}
                           onCancelAction={onCancelShotAction}
+                          onEditCamera={onEditShotCamera}
+                          onSaveCamera={onSaveShotCamera}
+                          onCancelCamera={onCancelShotCamera}
                           onAddSubShot={onAddSubShot}
                           onDeleteShot={onDeleteShot}
                         />

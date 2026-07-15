@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2, Lock, Unlock } from 'lucide-react';
 import { Keyframe, AspectRatio } from '../../types';
 import { unifiedImageService } from '../../services/unifiedImageService';
 import { getImageAspectRatio } from './utils';
@@ -22,6 +22,7 @@ interface KeyframeEditorProps {
   onCopyPrevious: () => void;
   onCopyNext: () => void; // 复制下一镜头首帧到当前尾帧
   onImageClick: (url: string, title: string) => void;
+  onToggleLock?: (type: 'start' | 'end') => void;
 }
 
 const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
@@ -41,7 +42,8 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   onOptimizeBothWithAI,
   onCopyPrevious,
   onCopyNext,
-  onImageClick
+  onImageClick,
+  onToggleLock
 }) => {
   const [startImageUrl, setStartImageUrl] = useState<string | null>(null);
   const [endImageUrl, setEndImageUrl] = useState<string | null>(null);
@@ -90,6 +92,15 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
                 <Sparkles className="w-3 h-3" />
               )}
             </button>
+            {keyframe?.visualPrompt && (
+              <button
+                onClick={() => onToggleLock?.(type)}
+                className={`p-1 transition-colors ${keyframe.visualPromptSource === 'manual' ? 'text-[var(--error-text)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                title={keyframe.visualPromptSource === 'manual' ? '提示词已锁定，点击解锁（允许AI覆盖）' : '点击锁定（禁止AI覆盖）'}
+              >
+                {keyframe.visualPromptSource === 'manual' ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+              </button>
+            )}
             {keyframe?.visualPrompt && (
               <button
                 onClick={() => onEditPrompt(type, keyframe.visualPrompt!)}

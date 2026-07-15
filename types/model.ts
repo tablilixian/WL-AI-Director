@@ -40,6 +40,7 @@ export interface ChatModelParams {
   topP?: number;                 // Top P，可选
   frequencyPenalty?: number;     // 频率惩罚，可选
   presencePenalty?: number;      // 存在惩罚，可选
+  maxConcurrency?: number;       // 最大并发数，0=不限制，默认 5
 }
 
 /**
@@ -259,6 +260,7 @@ export interface VideoGenerateOptions {
 export const DEFAULT_CHAT_PARAMS: ChatModelParams = {
   temperature: 0.7,
   maxTokens: undefined,
+  maxConcurrency: 5,
 };
 
 /**
@@ -327,16 +329,28 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
   },
   // Ollama Chat Models
   {
-    id: 'ollama-gemma4',
-    name: 'Gemma 4 (Ollama)',
+    id: 'ollama-gemma4-e2b',
+    name: 'Gemma 4 E2B (Ollama)',
     type: 'chat',
     providerId: 'ollama',
     apiModel: 'gemma4:e2b',
     endpoint: '/v1/chat/completions',
-    description: 'Ollama 本地部署 Gemma 4 (5.1B)，无需 API Key',
+    description: 'Ollama 本地部署 Gemma 4 (5.1B) E2B 版，轻量快速，无需 API Key',
     isBuiltIn: true,
     isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 0 },
+  },
+  {
+    id: 'ollama-gemma4',
+    name: 'Gemma 4 8B (Ollama)',
+    type: 'chat',
+    providerId: 'ollama',
+    apiModel: 'gemma4:latest',
+    endpoint: '/v1/chat/completions',
+    description: 'Ollama 本地部署 Gemma 4 (8B) Q4_K_M，更强的推理能力，无需 API Key',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 0 },
   },
   {
     id: 'ollama-qwen3',
@@ -348,7 +362,7 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     description: 'Ollama 本地部署 Qwen 3 (1.7B)，无需 API Key',
     isBuiltIn: true,
     isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 0 },
   },
   {
     id: 'ollama-deepseek-r1',
@@ -360,7 +374,7 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     description: 'Ollama 本地部署 DeepSeek R1 (1.5B)，无需 API Key',
     isBuiltIn: true,
     isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 0 },
   },
   // BigModel Chat Models
   {
@@ -388,6 +402,18 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     params: { ...DEFAULT_CHAT_PARAMS },
   },
   {
+    id: 'glm-4.7-flash',
+    name: 'GLM-4.7 Flash (免费)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4.7-flash',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4.7 Flash 免费混合思考模型 (30B/3B)，2026年发布，增强编码能力，推荐使用',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 1 },
+  },
+  {
     id: 'glm-4-flash',
     name: 'GLM-4 Flash (免费)',
     type: 'chat',
@@ -397,7 +423,43 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     description: '智谱 GLM-4 Flash 免费快速响应模型，适合实时对话和快速生成',
     isBuiltIn: true,
     isEnabled: true,
-    params: { ...DEFAULT_CHAT_PARAMS },
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 1 },
+  },
+  {
+    id: 'glm-4v-flash',
+    name: 'GLM-4V Flash (免费/多模态)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4v-flash',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4V Flash 免费多模态视觉理解模型，支持图片理解',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 1 },
+  },
+  {
+    id: 'glm-4.6v-flash',
+    name: 'GLM-4.6V Flash (免费/多模态)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4.6v-flash',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4.6V Flash 免费多模态模型，支持图片/视频/文件理解',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 1 },
+  },
+  {
+    id: 'glm-4.1v-thinking-flash',
+    name: 'GLM-4.1V Thinking Flash (免费/思考)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4.1v-thinking-flash',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4.1V Thinking Flash 免费带思考模式的视觉理解模型',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS, maxConcurrency: 1 },
   },
   {
     id: 'glm-4',
@@ -626,7 +688,7 @@ export const ALL_BUILTIN_MODELS: ModelDefinition[] = [
  * 默认激活模型
  */
 export const DEFAULT_ACTIVE_MODELS: ActiveModels = {
-  chat: 'glm-4-flash',
+  chat: 'glm-4.7-flash',
   image: 'dramabackend',
   video: 'cogvideox-flash',
 };

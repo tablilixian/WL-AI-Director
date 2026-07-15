@@ -5,6 +5,7 @@
 
 import { ChatModelDefinition, ChatOptions, ChatModelParams } from '../../types/model';
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveChatModel, isLocalProvider } from '../modelRegistry';
+import { withConcurrencyLimit } from '../ai/concurrencyLimiter';
 
 /**
  * API Key 错误类
@@ -148,57 +149,60 @@ export const callChatApi = async (
   const timeout = options.timeout || 600000; // 默认 10 分钟
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await retryOperation(async () => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-      const res = await fetch(`${apiBase}${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
+  const maxConcurrency = activeModel.params.maxConcurrency ?? 5;
+
+  return withConcurrencyLimit(activeModel.id, maxConcurrency, async () => {
+    try {
+      const response = await retryOperation(async () => {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+        const res = await fetch(`${apiBase}${endpoint}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        });
+        
+        if (!res.ok) {
+          let errorMessage = `HTTP 错误: ${res.status}`;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.error?.message || errorMessage;
+          } catch (e) {
+            const errorText = await res.text();
+            if (errorText) errorMessage = errorText;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        return res;
       });
       
-      if (!res.ok) {
-        let errorMessage = `HTTP 错误: ${res.status}`;
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.error?.message || errorMessage;
-        } catch (e) {
-          const errorText = await res.text();
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
+      clearTimeout(timeoutId);
+      
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      
+      // 如果是 JSON 格式，清理响应
+      if (options.responseFormat === 'json') {
+        return cleanJsonResponse(content);
       }
       
-      return res;
-    });
-    
-    clearTimeout(timeoutId);
-    
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    
-    // 如果是 JSON 格式，清理响应
-    if (options.responseFormat === 'json') {
-      return cleanJsonResponse(content);
+      return content;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`请求超时 (${timeout / 1000}秒)`);
+      }
+      
+      throw error;
     }
-    
-    return content;
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      throw new Error(`请求超时 (${timeout / 1000}秒)`);
-    }
-    
-    throw error;
-  }
+  });
 };
 
 /**

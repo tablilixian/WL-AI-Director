@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Aperture, Edit2, Check, X, UserPlus, Trash2, Plus, Sparkles } from 'lucide-react';
 import { Shot, Character, ScriptData } from '../../types';
 import InlineEditor from './InlineEditor';
 import { STYLES } from './constants';
+import { CAMERA_SHOT_SIZES, CAMERA_MOVEMENT_TYPES } from '../StageDirector/constants';
 
 const visualVerbs = [
   '握紧', '攥紧', '颤抖', '抽搐', '低头', '抬头',
@@ -63,6 +64,7 @@ interface Props {
   editingShotActionId: string | null;
   editingShotActionText: string;
   editingShotDialogueText: string;
+  editingShotCameraId: string | null;
   onEditPrompt: (shotId: string, prompt: string) => void;
   onSavePrompt: () => void;
   onCancelPrompt: () => void;
@@ -73,6 +75,9 @@ interface Props {
   onEditAction: (shotId: string, action: string, dialogue: string) => void;
   onSaveAction: () => void;
   onCancelAction: () => void;
+  onEditCamera: (shotId: string) => void;
+  onSaveCamera: (shotId: string, cameraMovement: string, shotSize: string) => void;
+  onCancelCamera: () => void;
   onAddSubShot: (shotId: string) => void;
   onDeleteShot: (shotId: string) => void;
 }
@@ -87,6 +92,7 @@ const ShotRow: React.FC<Props> = ({
   editingShotActionId,
   editingShotActionText,
   editingShotDialogueText,
+  editingShotCameraId,
   onEditPrompt,
   onSavePrompt,
   onCancelPrompt,
@@ -97,9 +103,14 @@ const ShotRow: React.FC<Props> = ({
   onEditAction,
   onSaveAction,
   onCancelAction,
+  onEditCamera,
+  onSaveCamera,
+  onCancelCamera,
   onAddSubShot,
   onDeleteShot
 }) => {
+  const [localCameraMovement, setLocalCameraMovement] = useState(shot.cameraMovement || '');
+  const [localShotSize, setLocalShotSize] = useState(shot.shotSize || '中景');
   // 从shot.id中提取显示编号
   // 例如：shot-1 → "SHOT 001", shot-1-1 → "SHOT 001-1"
   const getShotDisplayNumber = () => {
@@ -141,12 +152,67 @@ const ShotRow: React.FC<Props> = ({
         </div>
         
         <div className="flex flex-col gap-2">
-          <div className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded">
-            {shot.shotSize || 'MED'}
-          </div>
-          <div className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded">
-            {shot.cameraMovement}
-          </div>
+          {editingShotCameraId === shot.id ? (
+            <div className="space-y-2 p-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg">
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">景别</label>
+                <select
+                  value={localShotSize}
+                  onChange={(e) => setLocalShotSize(e.target.value)}
+                  className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-1.5 py-1 text-[10px] font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                >
+                  {CAMERA_SHOT_SIZES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">运镜</label>
+                <select
+                  value={localCameraMovement}
+                  onChange={(e) => setLocalCameraMovement(e.target.value)}
+                  className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-1.5 py-1 text-[10px] font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                >
+                  {CAMERA_MOVEMENT_TYPES.map(m => (
+                    <option key={m.id} value={m.label}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-1 pt-1">
+                <button
+                  onClick={() => onSaveCamera(shot.id, localCameraMovement, localShotSize)}
+                  className="flex-1 px-1.5 py-1 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-[9px] font-bold rounded flex items-center justify-center gap-1 hover:bg-[var(--btn-primary-hover)] transition-colors"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                  保存
+                </button>
+                <button
+                  onClick={onCancelCamera}
+                  className="flex-1 px-1.5 py-1 bg-[var(--bg-hover)] text-[var(--text-tertiary)] text-[9px] font-bold rounded flex items-center justify-center gap-1 hover:bg-[var(--border-secondary)] transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { setLocalShotSize(shot.shotSize || '中景'); setLocalCameraMovement(shot.cameraMovement || ''); onEditCamera(shot.id); }}
+                className="group/btn px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                title="编辑景别"
+              >
+                {shot.shotSize || '中景'}
+              </button>
+              <button
+                onClick={() => { setLocalShotSize(shot.shotSize || '中景'); setLocalCameraMovement(shot.cameraMovement || ''); onEditCamera(shot.id); }}
+                className="group/btn px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                title="编辑运镜"
+              >
+                {shot.cameraMovement}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

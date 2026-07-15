@@ -18,6 +18,12 @@ import {
 import { getStylePrompt } from './promptConstants';
 import { generateArtDirection, generateAllCharacterPrompts, generateVisualPrompt } from './visualService';
 import { checkScriptQuality, detectOpeningHook, detectMutedTest } from './scriptQualityService';
+import {
+  parseWithSkill,
+  validateSceneRefMapping,
+  analyzeCharacterVariations,
+  SCRIPT_PARSER_SKILL_DESCRIPTION,
+} from './scriptParserSkill';
 
 // Re-export 日志回调函数（保持外部 API 兼容）
 export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from './apiCore';
@@ -29,6 +35,7 @@ export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from 
 /**
  * Agent 1 & 2: Script Structuring & Breakdown
  * 解析原始文本为结构化剧本数据
+ * 使用 ScriptParserSkill 支持多策略解析（专业格式/自由格式）
  */
 export const parseScriptToData = async (
   rawText: string,
@@ -37,44 +44,14 @@ export const parseScriptToData = async (
   visualStyle: string = 'live-action'
 ): Promise<ScriptData> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `📝 parseScriptToData 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${visualStyle}`);
+  logger.debug(LogCategory.AI, `📝 parseScriptToData 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${visualStyle}, 解析策略: ${SCRIPT_PARSER_SKILL_DESCRIPTION.name} v${SCRIPT_PARSER_SKILL_DESCRIPTION.version}`);
   logScriptProgress('正在解析剧本结构...');
   const startTime = Date.now();
 
-  const prompt = `
-    Analyze the text and output a JSON object in the language: ${language}.
-    
-    Tasks:
-    1. Extract title, genre, logline (in ${language}).
-    2. Extract characters (id, name, gender, age, personality).
-    3. Extract scenes (id, location, time, atmosphere).
-    4. Break down the story into paragraphs linked to scenes.
-    
-    Input:
-    "${rawText.slice(0, 30000)}" // Limit input context if needed
-    
-    Output ONLY valid JSON with this structure:
-    {
-      "title": "string",
-      "genre": "string",
-      "logline": "string",
-      "characters": [{"id": "string", "name": "string", "gender": "string", "age": "string", "personality": "string"}],
-      "scenes": [{"id": "string", "location": "string", "time": "string", "atmosphere": "string"}],
-      "storyParagraphs": [{"id": number, "text": "string", "sceneRefId": "string"}]
-    }
-  `;
-
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 8192, 'json_object'));
+    const { parsed, format, detection } = await parseWithSkill(rawText, language, resolvedModel);
 
-    let parsed: any = {};
-    try {
-      const text = cleanJsonString(responseText);
-      parsed = JSON.parse(text);
-    } catch (e) {
-      logger.error(LogCategory.AI, 'Failed to parse script data JSON:', e);
-      parsed = {};
-    }
+    logger.debug(LogCategory.AI, `📋 B01 解析完成: 格式=${format}, 置信度=${detection.confidence}, 场景数=${Array.isArray(parsed.scenes) ? parsed.scenes.length : 0}, 段落数=${Array.isArray(parsed.storyParagraphs) ? parsed.storyParagraphs.length : 0}`);
 
     // Enforce String IDs for consistency and init variations
     const characters = Array.isArray(parsed.characters) ? parsed.characters.map((c: any) => ({
@@ -83,7 +60,25 @@ export const parseScriptToData = async (
       variations: []
     })) : [];
     const scenes = Array.isArray(parsed.scenes) ? parsed.scenes.map((s: any) => ({ ...s, id: String(s.id) })) : [];
-    const storyParagraphs = Array.isArray(parsed.storyParagraphs) ? parsed.storyParagraphs.map((p: any) => ({ ...p, sceneRefId: String(p.sceneRefId) })) : [];
+    let storyParagraphs = Array.isArray(parsed.storyParagraphs) ? parsed.storyParagraphs.map((p: any) => ({ ...p, sceneRefId: String(p.sceneRefId) })) : [];
+
+    // B01 后处理: 校验 sceneRefId 映射，修复无效引用
+    if (scenes.length > 0 && storyParagraphs.length > 0) {
+      storyParagraphs = validateSceneRefMapping(storyParagraphs, scenes);
+    }
+
+    // B10: 分析角色跨场景变装（填充 character.variations）
+    if (characters.length > 0 && scenes.length > 0) {
+      const variedChars = await analyzeCharacterVariations(
+        characters, scenes, storyParagraphs, resolvedModel, language
+      );
+      // Merge back variations (characters array is the same objects)
+      for (let i = 0; i < characters.length; i++) {
+        if (variedChars[i]?.variations?.length) {
+          characters[i].variations = variedChars[i].variations;
+        }
+      }
+    }
 
     const genre = parsed.genre || "通用";
 
@@ -212,7 +207,7 @@ export const parseScriptToData = async (
       resourceName: result.title,
       status: 'success',
       model: model,
-      prompt: prompt.substring(0, 200) + '...',
+      prompt: `ScriptParserSkill v${SCRIPT_PARSER_SKILL_DESCRIPTION.version} | format=${format} | scenes=${scenes.length} | paragraphs=${storyParagraphs.length}`,
       duration: Date.now() - startTime
     });
 
@@ -224,7 +219,7 @@ export const parseScriptToData = async (
       resourceName: '剧本解析',
       status: 'failed',
       model: model,
-      prompt: prompt.substring(0, 200) + '...',
+      prompt: `ScriptParserSkill v${SCRIPT_PARSER_SKILL_DESCRIPTION.version} | error=${error.message}`,
       error: error.message,
       duration: Date.now() - startTime
     });
@@ -339,9 +334,9 @@ ${paragraphsText}
  * 生成分镜列表
  * 根据剧本数据和目标时长，为每个场景生成适量的分镜头
  */
-export const generateShotList = async (scriptData: ScriptData, model?: string): Promise<Shot[]> => {
+export const generateShotList = async (scriptData: ScriptData, model?: string, rawScript?: string): Promise<Shot[]> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎬 generateShotList 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${scriptData.visualStyle}`);
+  logger.debug(LogCategory.AI, `🎬 generateShotList 调用 - 使用模型: ${resolvedModel}, 视觉风格: ${scriptData.visualStyle}${rawScript ? ', 附带原始剧本用于对白提取' : ''}`);
   logScriptProgress('正在生成分镜列表...');
   const overallStartTime = Date.now();
 
@@ -376,6 +371,34 @@ export const generateShotList = async (scriptData: ScriptData, model?: string): 
 
     if (!paragraphs.trim()) return [];
 
+    // B02: 从原始剧本中提取该场景相关的原文片段，供 AI 提取对白
+    let rawSceneText = '';
+    if (rawScript) {
+      const sceneKeywords = [scene.location, scene.time, scene.atmosphere].filter(Boolean);
+      const paragraphKeywords = scriptData.storyParagraphs
+        .filter(p => String(p.sceneRefId) === String(scene.id))
+        .slice(0, 3)
+        .map(p => p.text.slice(0, 80));
+      const searchKeys = [...sceneKeywords, ...paragraphKeywords].filter(k => k.length >= 4);
+      const lines = rawScript.split('\n');
+      let bestStart = -1, bestEnd = -1;
+      let bestScore = 0;
+      for (let i = 0; i < lines.length; i++) {
+        let score = 0;
+        for (const key of searchKeys) {
+          if (lines[i].includes(key)) score++;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestStart = Math.max(0, i - 5);
+          bestEnd = Math.min(lines.length, i + 15);
+        }
+      }
+      if (bestStart >= 0) {
+        rawSceneText = lines.slice(bestStart, bestEnd).join('\n').slice(0, 3000);
+      }
+    }
+
     const targetDurationStr = scriptData.targetDuration || '60s';
     const targetSeconds = parseInt(targetDurationStr.replace(/[^\d]/g, '')) || 60;
     const totalShotsNeeded = Math.round(targetSeconds / 10);
@@ -397,6 +420,9 @@ ${artDirectionBlock}
       Scene Action:
       "${paragraphs.slice(0, 5000)}"
       
+      ${rawSceneText ? `Raw Script for this scene (extract dialogue from here):
+      "${rawSceneText}"
+      ` : ''}
       Context:
       Genre: ${scriptData.genre}
       Visual Style: ${visualStyle} (${stylePrompt})
@@ -444,17 +470,18 @@ ${artDirectionBlock}
       3. DO NOT exceed ${shotsPerScene + 1} shots for this scene. Select the most important moments only.
       4. 'cameraMovement': Can reference the Professional Camera Movement Reference list above for inspiration, or use your own creative camera movements. You may use the exact English terms (e.g., "Dolly Shot", "Pan Right Shot", "Zoom In Shot", "Tracking Shot") or describe custom movements.
       5. 'shotSize': Specify the field of view (e.g., Extreme Close-up, Medium Shot, Wide Shot).
-      6. 'actionSummary': Detailed description of what happens in the shot (in ${lang}).
-      7. 'visualPrompt': Detailed description for image generation in ${visualStyle} style (OUTPUT IN ${lang}). Include style-specific keywords.${artDir ? ' MUST follow the Global Art Direction color palette, lighting, and mood.' : ''} Keep it under 50 words.
-      
-      Output ONLY a valid JSON OBJECT with this exact structure (no markdown, no extra text):
-      {
-        "shots": [
-          {
-            "id": "string",
-            "sceneId": "${scene.id}",
-            "actionSummary": "string",
-            "dialogue": "string (empty if none)",
+       6. 'actionSummary': Detailed description of what happens in the shot (in ${lang}).
+       7. 'visualPrompt': Detailed description for image generation in ${visualStyle} style (OUTPUT IN ${lang}). Include style-specific keywords.${artDir ? ' MUST follow the Global Art Direction color palette, lighting, and mood.' : ''} Keep it under 50 words.
+       ${rawSceneText ? `8. CRITICAL for 'dialogue': The dialogue field MUST be filled with the EXACT character dialogue extracted from the "Raw Script for this scene" above. Do NOT summarize or paraphrase. If a character speaks, put their exact words in the dialogue field of the corresponding shot. If no one speaks in this shot, set dialogue to empty string.` : ''}
+       
+       Output ONLY a valid JSON OBJECT with this exact structure (no markdown, no extra text):
+       {
+         "shots": [
+           {
+             "id": "string",
+             "sceneId": "${scene.id}",
+             "actionSummary": "string",
+             "dialogue": "string (extract from Raw Script above ${rawSceneText ? '- use the exact spoken lines' : ''})",
             "cameraMovement": "string",
             "shotSize": "string",
             "characters": ["character_id_here"], // ⚠️ MUST use character 'id' from the Characters list above, NOT the name

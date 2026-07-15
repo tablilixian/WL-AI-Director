@@ -25,6 +25,7 @@ import {
   VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
 import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi, callDramaBackend360HdriApi } from '../adapters/imageAdapter';
+import { buildEraContextBlock } from './eraContext';
 
 // ============================================
 // 美术指导文档生成
@@ -50,6 +51,9 @@ export const generateArtDirection = async (
 
   const stylePrompt = getStylePrompt(visualStyle);
 
+  const eraBlock = buildEraContextBlock(title, genre, characters, language);
+  logger.debug(LogCategory.AI, `📖 时代背景注入: ${eraBlock.split('\n')[1]?.trim() || 'unknown'}`);
+
   const prompt = `You are a world-class Art Director for ${visualStyle} productions. 
 Your job is to create a unified Art Direction Brief that will guide ALL visual prompt generation for characters, scenes, and shots in a single project. This document ensures perfect visual consistency across every generated image.
 
@@ -59,7 +63,7 @@ Your job is to create a unified Art Direction Brief that will guide ALL visual p
 - Logline: ${logline}
 - Visual Style: ${visualStyle} (${stylePrompt})
 - Language: ${language}
-
+${eraBlock}
 ## Characters
 ${characters.map((c, i) => `${i + 1}. ${c.name} (${c.gender}, ${c.age}, ${c.personality})`).join('\n')}
 
@@ -135,7 +139,8 @@ export const generateImage = async (
   isVariation: boolean = false,
   hasTurnaround: boolean = false,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
+  negativePrompt?: string
 ): Promise<string> => {
   const startTime = Date.now();
 
@@ -182,6 +187,7 @@ Scene consistency requirements:
       aspectRatio,
       resourceType,
       resourceId,
+      negativePrompt,
     });
 
     addRenderLogWithTokens({
@@ -427,7 +433,7 @@ export const generateCharacterVisualPrompt = async (
   visualStyle: string = 'anime',
   language: string = '中文',
   model?: string
-): Promise<string> => {
+): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
   logger.debug(LogCategory.AI, `🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成角色视觉提示词...');
@@ -503,14 +509,28 @@ CRITICAL REQUIREMENTS:
    - Write the prompt in ${language}
    - Use natural, flowing language
 
-Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400 words.`;
+Output JSON format:
+{
+  "visualPrompt": "detailed visual prompt text...",
+  "negativePrompt": "things to avoid..."
+}
 
+- visualPrompt: Length 200-400 words. Describe the character appearance in ${language}.
+- negativePrompt: Describe what should NOT appear (unwanted styles, distortions, etc.) in ${language}.`;
   try {
     const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
-    const visualPrompt = responseText.trim();
-
+    let visualPrompt = responseText.trim();
+    let negativePrompt = '';
+    try {
+      const cleaned = cleanJsonString(responseText);
+      const parsed = JSON.parse(cleaned);
+      if (parsed.visualPrompt) visualPrompt = parsed.visualPrompt;
+      if (parsed.negativePrompt) negativePrompt = parsed.negativePrompt;
+    } catch {
+      // fallback: use raw response as visual prompt
+    }
     logger.debug(LogCategory.AI, '✅ 角色视觉提示词生成完成');
-    return visualPrompt;
+    return { visualPrompt, negativePrompt };
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 角色视觉提示词生成失败:', error);
     throw new Error(`角色视觉提示词生成失败: ${error.message}`);
@@ -526,7 +546,7 @@ export const generateSceneVisualPrompt = async (
   artDirection: ArtDirection,
   language: string = '中文',
   model?: string
-): Promise<string> => {
+): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
   logger.debug(LogCategory.AI, `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}`);
   logScriptProgress('正在生成场景视觉提示词...');
@@ -600,14 +620,29 @@ CRITICAL REQUIREMENTS:
    - Write the prompt in ${language}
    - Use natural, flowing language
 
-Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400 words.`;
+Output JSON format:
+{
+  "visualPrompt": "detailed visual prompt text for the scene...",
+  "negativePrompt": "scene-specific things to avoid..."
+}
+
+- visualPrompt: Length 200-400 words. Describe the scene in ${language}.
+- negativePrompt: Describe scene-specific visual elements to avoid in ${language}.`;
 
   try {
     const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
-    const visualPrompt = responseText.trim();
-
+    let visualPrompt = responseText.trim();
+    let negativePrompt = '';
+    try {
+      const cleaned = cleanJsonString(responseText);
+      const parsed = JSON.parse(cleaned);
+      if (parsed.visualPrompt) visualPrompt = parsed.visualPrompt;
+      if (parsed.negativePrompt) negativePrompt = parsed.negativePrompt;
+    } catch {
+      // fallback: use raw response as visual prompt
+    }
     logger.debug(LogCategory.AI, '✅ 场景视觉提示词生成完成');
-    return visualPrompt;
+    return { visualPrompt, negativePrompt };
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 场景视觉提示词生成失败:', error);
     throw new Error(`场景视觉提示词生成失败: ${error.message}`);
@@ -1267,7 +1302,7 @@ export async function generateVisualPrompts(
   artDirection: ArtDirection,
   language: string = '中文',
   model?: string
-): Promise<{ characters: string[]; scenes: string[] }> {
+): Promise<{ characters: Array<{ visualPrompt: string; negativePrompt: string }>; scenes: Array<{ visualPrompt: string; negativePrompt: string }> }> {
   const resolvedModel = model || getDefaultChatModelId();
   logger.debug(LogCategory.AI, `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}`);
 

@@ -105,3 +105,14 @@ export {
   checkAllCharactersConsistency,
   fixKeyframeConsistency,
 } from './consistencyService';
+
+// 视频生成调度器
+export {
+  VideoGenerationOrchestrator,
+  videoOrchestrator,
+} from './orchestrator';
+export type {
+  VideoGenerationRequest,
+  VideoGenerationProgress,
+  VideoGenerationResult,
+} from './orchestrator';

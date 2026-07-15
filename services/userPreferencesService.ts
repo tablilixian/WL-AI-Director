@@ -24,7 +24,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   targetDuration: '60s',
   language: '中文',
   visualStyle: 'live-action',
-  shotGenerationModel: 'glm-4-flash',
+  shotGenerationModel: 'glm-4.7-flash',
   skipOnboarding: false,
 };
 

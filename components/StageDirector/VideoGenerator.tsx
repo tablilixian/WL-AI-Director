@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Video, Loader2, Edit2 } from 'lucide-react';
-import { Shot, AspectRatio, VideoDuration } from '../../types';
-import { getImageAspectRatio } from './utils';
+import { Video, Loader2, Edit2, Settings2, AlertTriangle } from 'lucide-react';
+import { Shot, AspectRatio, VideoDuration, VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe } from '../../types';
+import { getImageAspectRatio, getDefaultResolution } from './utils';
+import type { PipelineShotData } from './utils';
 import { VideoSettingsPanel } from '../AspectRatioSelector';
 import { 
   getDefaultAspectRatio, 
@@ -11,25 +12,55 @@ import {
 } from '../../services/modelRegistry';
 import { VideoModelDefinition } from '../../types/model';
 import { unifiedImageService } from '../../services/unifiedImageService';
+import AdvancedVideoPanel from './AdvancedVideoPanel';
 
 interface VideoGeneratorProps {
   shot: Shot;
   hasStartFrame: boolean;
   hasEndFrame: boolean;
+  isNineGridMode?: boolean;
   onGenerate: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
+  onGenerateAdvanced: (params: {
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    timedKeyframes: TimedKeyframe[];
+    backgroundImage?: string;
+    aspectRatio: AspectRatio;
+    duration: VideoDuration;
+    modelId: string;
+  }) => void;
   onEditPrompt: () => void;
   onEditCameraChoreography?: () => void;
   onModelChange?: (modelId: string) => void;
+  // Pipeline 字段自动打通
+  projectAspectRatio?: AspectRatio;  // 用于推断默认分辨率
+  // 预设系统
+  videoPresets?: VideoPreset[];
+  onSavePreset: (name: string, description?: string) => void;
+  onApplyPreset: (presetId: string) => void;
+  onDeletePreset?: (presetId: string) => void;
+  // 悬空引用校验
+  shotKeyframes?: Keyframe[];
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   shot,
   hasStartFrame,
   hasEndFrame,
+  isNineGridMode = false,
   onGenerate,
+  onGenerateAdvanced,
   onEditPrompt,
   onEditCameraChoreography,
-  onModelChange
+  onModelChange,
+  videoPresets,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
+  shotKeyframes,
+  projectAspectRatio,
 }) => {
   const normalizeModelId = (modelId?: string) => {
     if (!modelId) return modelId;
@@ -46,6 +77,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   const defaultModel = getActiveVideoModel();
   
   // 状态（废弃模型已在数据加载层迁移，此处无需额外处理）
+  const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
   const [selectedModelId, setSelectedModelId] = useState<string>(
     normalizeModelId(shot.videoModel) || defaultModel?.id || videoModels[0]?.id || 'sora-2'
   );
@@ -55,6 +87,23 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => getDefaultAspectRatio());
   const [duration, setDuration] = useState<VideoDuration>(() => getDefaultVideoDuration());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  // 从 shot 现有字段推断高级面板默认值
+  const inferredResolution = getDefaultResolution(projectAspectRatio || '16:9');
+  const [advancedParams, setAdvancedParams] = useState<{
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    timedKeyframes: TimedKeyframe[];
+    backgroundImage?: string;
+  }>({
+    mode: shot.interval?.mode || 'basic',
+    fps: shot.interval?.fps || 30,
+    width: shot.interval?.width || inferredResolution.width,
+    height: shot.interval?.height || inferredResolution.height,
+    timedKeyframes: shot.interval?.timedKeyframes || [],
+    backgroundImage: shot.interval?.backgroundImage,
+  });
   
   // 当前选中的模型
   const selectedModel = videoModels.find(m => m.id === selectedModelId) as VideoModelDefinition | undefined;
@@ -99,7 +148,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   }, [shot.interval?.videoUrl]);
 
   const handleGenerate = () => {
-    onGenerate(aspectRatio, duration, effectiveModelId);
+    if (activeTab === 'advanced') {
+      onGenerateAdvanced({ ...advancedParams, aspectRatio, duration, modelId: effectiveModelId });
+    } else {
+      onGenerate(aspectRatio, duration, effectiveModelId);
+    }
   };
 
   const handleVeoFastQualityChange = (quality: 'standard' | '4k') => {
@@ -111,6 +164,23 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   };
 
   const canGenerate = hasStartFrame;
+
+  // Pipeline 字段自动打通：构建 shot 现有字段预览数据
+  const pipelineShotData: PipelineShotData | undefined = (shot.shotSize || shot.cameraMovement || shot.actionSummary || shot.cameraChoreography)
+    ? {
+        shotSize: shot.shotSize,
+        cameraMovement: shot.cameraMovement,
+        actionSummary: shot.actionSummary,
+        cameraChoreography: shot.cameraChoreography,
+      }
+    : undefined;
+
+  // 九宫格模式下强制锁定基本 Tab
+  useEffect(() => {
+    if (isNineGridMode) {
+      setActiveTab('basic');
+    }
+  }, [isNineGridMode]);
 
   return (
     <div className="bg-[var(--bg-surface)] rounded-xl p-5 border border-[var(--border-primary)] space-y-4">
@@ -152,8 +222,70 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           </span>
         )}
       </div>
+
+      {/* nineGrid 锁定提示 */}
+      {isNineGridMode && (
+        <div className="flex items-start gap-2 px-3 py-2 bg-[var(--warning-bg)]/30 border border-[var(--warning-border)] rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-[var(--warning-text)] shrink-0 mt-0.5" />
+          <div className="text-[10px] text-[var(--warning-text)]">
+            <span className="font-bold">九宫格分镜模式已激活。</span>
+            <span className="block mt-0.5">当前使用九宫格整图作为起始帧，仅支持基本视频生成模式。如需使用高级模式，请先生成新的起始帧解除九宫格。</span>
+          </div>
+        </div>
+      )}
+
+      {/* Basic / Advanced Tab */}
+      <div className="flex gap-1 border-b border-[var(--border-primary)] pb-0.5">
+        <button
+          onClick={() => setActiveTab('basic')}
+          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-t transition-colors ${
+            activeTab === 'basic'
+              ? 'text-[var(--text-primary)] border-b-2 border-[var(--accent)] bg-[var(--bg-elevated)]'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          基本
+        </button>
+        <button
+          disabled={isNineGridMode}
+          onClick={() => setActiveTab('advanced')}
+          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-t transition-colors flex items-center gap-1 ${
+            isNineGridMode
+              ? 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
+              : activeTab === 'advanced'
+                ? 'text-[var(--text-primary)] border-b-2 border-[var(--accent)] bg-[var(--bg-elevated)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+          title={isNineGridMode ? '九宫格模式下仅支持基本模式' : '高级视频生成'}
+        >
+          <Settings2 className="w-3 h-3" />
+          高级
+        </button>
+      </div>
+
+      {/* Advanced Panel */}
+      {activeTab === 'advanced' && (
+        <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg p-4">
+          <AdvancedVideoPanel
+            initialMode={advancedParams.mode}
+            initialFps={advancedParams.fps}
+            initialWidth={advancedParams.width}
+            initialHeight={advancedParams.height}
+            initialTimedKeyframes={advancedParams.timedKeyframes}
+            initialBackground={advancedParams.backgroundImage}
+            isNineGridMode={isNineGridMode}
+            videoPresets={videoPresets}
+            onSavePreset={onSavePreset}
+            onApplyPreset={onApplyPreset}
+            onDeletePreset={onDeletePreset}
+            shotKeyframes={shotKeyframes}
+            pipelineShotData={pipelineShotData}
+            onParamsChange={(params) => setAdvancedParams(prev => ({ ...prev, ...params }))}
+          />
+        </div>
+      )}
       
-      {/* Model Selector */}
+      {/* Model Selector (always visible) */}
       <div className="space-y-2">
         <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">
           选择视频模型

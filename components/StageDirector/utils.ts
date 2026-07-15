@@ -1,4 +1,12 @@
 import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData, AspectRatio, CameraChoreography, renderCameraChoreographyPrompt } from '../../types';
+
+/** Pipeline 字段自动打通：从 shot 现有字段带入的预览数据 */
+export interface PipelineShotData {
+  shotSize?: string;
+  cameraMovement?: string;
+  actionSummary?: string;
+  cameraChoreography?: CameraChoreography;
+}
 import { VISUAL_STYLE_PROMPTS, VIDEO_PROMPT_TEMPLATES, NINE_GRID } from './constants';
 import { getCameraMovementCompositionGuide } from './cameraMovementGuides';
 import { logger, LogCategory } from '../../services/logger';
@@ -11,6 +19,17 @@ export const getImageAspectRatio = (ratio: AspectRatio): string => {
     case '16:9': return '16 / 9';
     case '9:16': return '9 / 16';
     case '1:1': return '1 / 1';
+  }
+};
+
+/**
+ * 根据横竖屏比例获取默认视频分辨率
+ */
+export const getDefaultResolution = (ratio: AspectRatio): { width: number; height: number } => {
+  switch (ratio) {
+    case '16:9': return { width: 1920, height: 1080 };
+    case '9:16': return { width: 1080, height: 1920 };
+    case '1:1': return { width: 1080, height: 1080 };
   }
 };
 
@@ -109,13 +128,25 @@ export const buildKeyframePrompt = async (
   frameType: 'start' | 'end',
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
   chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
-  model?: string
+  model?: string,
+  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[]
 ): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   console.log('🎨 [buildKeyframePrompt] visualStyle key:', visualStyle, '→ resolved style:', stylePrompt.substring(0, 60));
   const cameraGuide = await getCameraMovementCompositionGuide(cameraMovement, frameType, chatCompletion, model);
   const compositionNote = `帧类型: ${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}
 构图指导: ${cameraGuide}`;
+
+  // 角色外观描述（文字回退，当 API 不支持参考图时保证一致性）
+  let characterDescriptionsSection = '';
+  if (characterDescriptions && characterDescriptions.length > 0) {
+    const descLines = characterDescriptions.map(c =>
+      `- ${c.name}: ${c.visualPrompt || '未提供详细描述'}${c.hasImage ? '（已提供参考图）' : ''}`
+    ).join('\n');
+    characterDescriptionsSection = `\n\n【角色外观】CHARACTER APPEARANCE
+当前镜头涉及以下角色，外观描述必须严格遵循：
+${descLines}`;
+  }
 
   // 角色一致性要求
   const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
@@ -156,7 +187,7 @@ ${stylePrompt}
 【构图】Composition
 ${compositionNote}
 
-${characterConsistencyGuide}${propConsistencyGuide}`;
+${characterConsistencyGuide}${characterDescriptionsSection}${propConsistencyGuide}`;
 };
 
 /**
@@ -176,11 +207,12 @@ export const buildKeyframePromptWithAI = async (
   cameraMovement: string,
   frameType: 'start' | 'end',
   enhanceWithAI: boolean = true,
-  propsInfo?: { name: string; description: string; hasImage: boolean }[]
+  propsInfo?: { name: string; description: string; hasImage: boolean }[],
+  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[]
 ): Promise<string> => {
   // 如果不需要AI增强,直接使用模板构建
   if (!enhanceWithAI) {
-    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
+    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, characterDescriptions);
   }
   
   // 动态导入aiService以避免循环依赖
@@ -325,14 +357,16 @@ export const createKeyframe = (
   type: 'start' | 'end',
   visualPrompt: string,
   imageUrl?: string,
-  status: 'pending' | 'generating' | 'completed' | 'failed' = 'pending'
+  status: 'pending' | 'generating' | 'completed' | 'failed' = 'pending',
+  visualPromptSource?: 'auto' | 'manual'
 ): Keyframe => {
   return {
     id,
     type,
     visualPrompt,
     imageUrl,
-    status
+    status,
+    visualPromptSource
   };
 };
 

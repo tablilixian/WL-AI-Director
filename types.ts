@@ -124,6 +124,16 @@ export interface Keyframe {
   visualPrompt: string;
   imageUrl?: string; // 关键帧图像，存储为base64格式（data:image/png;base64,...）
   status: 'pending' | 'generating' | 'completed' | 'failed';
+  visualPromptSource?: 'auto' | 'manual'; // 提示词来源：'auto'=AI可覆盖，'manual'=用户手工锁定
+}
+
+/** 视频生成模式 */
+export type VideoGenerationMode = 'basic' | 'msr' | 'mkr' | 'mkr-grid';
+
+/** MKR 模式下带时间位置的关键帧引用 */
+export interface TimedKeyframe {
+  keyframeId: string;
+  positionPercent: number; // 0-100, 在视频时间轴上的位置百分比
 }
 
 export interface VideoInterval {
@@ -135,6 +145,15 @@ export interface VideoInterval {
   videoUrl?: string; // 视频数据，存储为base64格式（data:video/mp4;base64,...），避免URL过期问题
   videoPrompt?: string; // 视频生成时使用的提示词
   status: 'pending' | 'generating' | 'completed' | 'failed';
+  // === 高级参数（扩展字段，旧项目兼容） ===
+  mode?: VideoGenerationMode;        // 生成模式，默认 'basic'
+  fps?: number;                      // 帧率，默认 30
+  width?: number;                    // 视频宽度（从 aspectRatio 推断，或用户自定义）
+  height?: number;                   // 视频高度
+  timedKeyframes?: TimedKeyframe[];  // MKR 用：所有帧的时间位置列表
+  backgroundImage?: string;          // MSR 用：背景图
+  gridType?: number;                 // MKR Grid 用：宫格类型（如 3x3=9, 2x2=4）
+  frameIndexes?: number[];           // MKR Grid 用：选中格子的索引
 }
 
 /**
@@ -271,6 +290,26 @@ export interface RenderLog {
   duration?: number; // Time taken in milliseconds
 }
 
+/** 视频生成预设（参数快照） */
+export interface VideoPreset {
+  id: string;
+  name: string;
+  description?: string;
+  version: number;        // 预设数据版本，用于向前兼容迁移
+  createdAt: number;
+  params: {
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    duration: VideoDuration;
+    modelId: string;
+    aspectRatio: AspectRatio;
+    backgroundImage?: string;
+    timedKeyframes?: TimedKeyframe[];
+  };
+}
+
 export interface ProjectState {
   id: string;
   userId?: string;
@@ -292,6 +331,7 @@ export interface ProjectState {
   isParsingScript: boolean;
   renderLogs: RenderLog[]; // History of all API calls for this project
   aspectRatio?: AspectRatio; // 工程级横竖屏比例（可选，向后兼容）
+  videoPresets?: VideoPreset[]; // 项目级视频生成预设列表
 }
 
 // ============================================

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Film, Edit2, MessageSquare, Sparkles, Loader2, Scissors, Grid3x3 } from 'lucide-react';
-import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration, NineGridData, NineGridPanel } from '../../types';
+import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration, NineGridData, NineGridPanel, VideoGenerationMode, TimedKeyframe, VideoPreset } from '../../types';
 import SceneContext from './SceneContext';
 import KeyframeEditor from './KeyframeEditor';
 import VideoGenerator from './VideoGenerator';
@@ -38,10 +38,31 @@ interface ShotWorkbenchProps {
   useAIEnhancement: boolean;
   onToggleAIEnhancement: () => void;
   onGenerateVideo: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
+  onGenerateAdvanced: (params: {
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    timedKeyframes: TimedKeyframe[];
+    backgroundImage?: string;
+    aspectRatio: AspectRatio;
+    duration: VideoDuration;
+    modelId: string;
+  }) => void;
   onEditVideoPrompt: () => void;
   onEditCameraChoreography: () => void; // 新增：编辑运镜编排
   onVideoModelChange: (modelId: string) => void;
+  // Pipeline 字段自动打通
+  projectAspectRatio?: AspectRatio;
+  // 预设系统
+  videoPresets?: VideoPreset[];
+  onSavePreset: (name: string, description?: string) => void;
+  onApplyPreset: (presetId: string) => void;
+  onDeletePreset?: (presetId: string) => void;
+  // 悬空引用校验
+  shotKeyframes?: Keyframe[];
   onImageClick: (url: string, title: string) => void;
+  onToggleKeyframeLock?: (type: 'start' | 'end') => void;
   // 九宫格分镜预览（高级功能）
   onGenerateNineGrid: () => void;
   onGenerateNineGridV2?: () => void; // V2 测试：风格帧 → image2storyboard
@@ -82,10 +103,18 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   useAIEnhancement,
   onToggleAIEnhancement,
   onGenerateVideo,
+  onGenerateAdvanced,
   onEditVideoPrompt,
+  projectAspectRatio,
+  videoPresets,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
+  shotKeyframes,
   onEditCameraChoreography,
   onVideoModelChange,
   onImageClick,
+  onToggleKeyframeLock,
   onGenerateNineGrid,
   onGenerateNineGridV2,
   nineGrid,
@@ -99,6 +128,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   const availablePropsForShot = (scriptData?.props || []).filter(p => !(shot.props || []).includes(p.id));
   
   const startKf = shot.keyframes?.find(k => k.type === 'start');
+  const isNineGridMode = !!(shot.nineGrid?.status === 'completed' && shot.nineGrid?.imageUrl && startKf?.imageUrl === shot.nineGrid.imageUrl);
   const endKf = shot.keyframes?.find(k => k.type === 'end');
   const [localVideoModelId, setLocalVideoModelId] = useState(currentVideoModelId);
   const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
@@ -316,6 +346,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onCopyPrevious={onCopyPreviousEndFrame}
           onCopyNext={onCopyNextStartFrame}
           onImageClick={onImageClick}
+          onToggleLock={onToggleKeyframeLock}
         />
 
         {/* Narrative Section - 叙事动作作为视频提示词，放在视觉制作之后、视频生成之前 */}
@@ -383,13 +414,21 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           shot={shot}
           hasStartFrame={!!startKf?.imageUrl}
           hasEndFrame={!!endKf?.imageUrl}
+          isNineGridMode={isNineGridMode}
+          projectAspectRatio={projectAspectRatio}
           onGenerate={onGenerateVideo}
+          onGenerateAdvanced={onGenerateAdvanced}
           onEditPrompt={onEditVideoPrompt}
           onEditCameraChoreography={onEditCameraChoreography}
           onModelChange={(modelId) => {
             setLocalVideoModelId(modelId);
             onVideoModelChange(modelId);
           }}
+          videoPresets={videoPresets}
+          onSavePreset={onSavePreset}
+          onApplyPreset={onApplyPreset}
+          onDeletePreset={onDeletePreset}
+          shotKeyframes={shotKeyframes}
         />
       </div>
     </div>

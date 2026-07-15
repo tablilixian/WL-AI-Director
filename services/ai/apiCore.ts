@@ -21,6 +21,7 @@ import {
   isLocalProvider,
 } from '../modelRegistry';
 import { VIDEO_SORA_SIZE } from '../../config/sizeConfig';
+import { withConcurrencyLimit } from './concurrencyLimiter';
 
 /**
  * 检查是否为 BigModel 模型
@@ -339,39 +340,42 @@ export const chatCompletion = async (
     requestBody.response_format = { type: 'json_object' };
   }
 
+  const resolved = resolveModel('chat', resolvedModel);
+  const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    const apiBase = getApiBase('chat', resolvedModel);
-    const resolved = resolveModel('chat', resolvedModel);
-    const endpoint = resolved?.endpoint || '/v1/chat/completions';
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-    const response = await fetch(`${apiBase}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
-    });
+  return withConcurrencyLimit(resolvedModel, maxConcurrency, async () => {
+    try {
+      const apiBase = getApiBase('chat', resolvedModel);
+      const endpoint = resolved?.endpoint || '/v1/chat/completions';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      const response = await fetch(`${apiBase}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      throw await parseHttpError(response);
-    }
+      if (!response.ok) {
+        throw await parseHttpError(response);
+      }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error(`请求超时（${timeout}ms）`);
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || '';
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`请求超时（${timeout}ms）`);
+      }
+      throw error;
     }
-    throw error;
-  }
+  });
 };
 
 /**
@@ -399,74 +403,76 @@ export const chatCompletionStream = async (
     requestBody.response_format = { type: 'json_object' };
   }
 
+  const resolved = resolveModel('chat', resolvedModel);
+  const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    const apiBase = getApiBase('chat', model);
-    const resolved = resolveModel('chat', model);
-    const endpoint = resolved?.endpoint || '/v1/chat/completions';
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-    const response = await fetch(`${apiBase}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
-    });
+  return withConcurrencyLimit(resolvedModel, maxConcurrency, async () => {
+    try {
+      const apiBase = getApiBase('chat', resolvedModel);
+      const endpoint = resolved?.endpoint || '/v1/chat/completions';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      const response = await fetch(`${apiBase}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      throw await parseHttpError(response);
-    }
+      if (!response.ok) {
+        throw await parseHttpError(response);
+      }
 
-    if (!response.body) {
-      throw new Error('响应流为空，无法进行流式处理');
-    }
+      if (!response.body) {
+        throw new Error('响应流为空，无法进行流式处理');
+      }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
-    let fullText = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let fullText = '';
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-      let boundaryIndex = buffer.indexOf('\n\n');
-      while (boundaryIndex !== -1) {
-        const chunk = buffer.slice(0, boundaryIndex).trim();
-        buffer = buffer.slice(boundaryIndex + 2);
+        let boundaryIndex = buffer.indexOf('\n\n');
+        while (boundaryIndex !== -1) {
+          const chunk = buffer.slice(0, boundaryIndex).trim();
+          buffer = buffer.slice(boundaryIndex + 2);
 
-        if (chunk) {
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const dataStr = line.replace(/^data:\s*/, '');
-            if (dataStr === '[DONE]') {
-              clearTimeout(timeoutId);
-              return fullText;
-            }
-            try {
-              const payload = JSON.parse(dataStr);
-              const delta = payload?.choices?.[0]?.delta?.content || payload?.choices?.[0]?.message?.content || '';
-              if (delta) {
-                fullText += delta;
-                onDelta?.(delta);
+          if (chunk) {
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data:')) continue;
+              const dataStr = line.replace(/^data:\s*/, '');
+              if (dataStr === '[DONE]') {
+                clearTimeout(timeoutId);
+                return fullText;
               }
-            } catch (e) {
-              // 忽略解析失败的行
+              try {
+                const payload = JSON.parse(dataStr);
+                const delta = payload?.choices?.[0]?.delta?.content || payload?.choices?.[0]?.message?.content || '';
+                if (delta) {
+                  fullText += delta;
+                  onDelta?.(delta);
+                }
+              } catch (e) {
+                // 忽略解析失败的行
+              }
             }
           }
-        }
 
-        boundaryIndex = buffer.indexOf('\n\n');
+          boundaryIndex = buffer.indexOf('\n\n');
+        }
       }
-    }
 
     clearTimeout(timeoutId);
     return fullText;
@@ -477,6 +483,7 @@ export const chatCompletionStream = async (
     }
     throw error;
   }
+});
 };
 
 // ============================================

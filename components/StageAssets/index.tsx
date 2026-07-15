@@ -293,15 +293,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           if (char.visualPrompt) {
             prompt = char.visualPrompt;
           } else {
-            const prompts = await generateCharacterVisualPrompt(char, project.scriptData?.artDirection, visualStyle, language);
-            prompt = prompts;
+            const result = await generateCharacterVisualPrompt(char, project.scriptData?.artDirection, visualStyle, language);
+            prompt = result.visualPrompt;
             
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
               const c = newData.characters.find(c => compareIds(c.id, id));
               if (c) {
-                c.visualPrompt = prompts;
+                c.visualPrompt = result.visualPrompt;
+                c.negativePrompt = result.negativePrompt;
               }
               updateProject({ scriptData: newData });
             }
@@ -313,15 +314,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           if (scene.visualPrompt) {
             prompt = scene.visualPrompt;
           } else {
-            const prompts = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, visualStyle, language);
-            prompt = prompts;
+            const result = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, visualStyle, language);
+            prompt = result.visualPrompt;
             
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
               const s = newData.scenes.find(s => compareIds(s.id, id));
               if (s) {
-                s.visualPrompt = prompts;
+                s.visualPrompt = result.visualPrompt;
+                s.negativePrompt = result.negativePrompt;
               }
               updateProject({ scriptData: newData });
             }
