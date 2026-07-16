@@ -1,5 +1,5 @@
-import React from 'react';
-import { Monitor, Smartphone, Square } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Monitor, Smartphone, Square, Minus, Plus } from 'lucide-react';
 import { AspectRatio, VideoDuration } from '../types';
 
 interface AspectRatioSelectorProps {
@@ -79,36 +79,66 @@ interface VideoDurationSelectorProps {
   disabled?: boolean;
 }
 
+const MIN_DURATION = 3;
+const MAX_DURATION = 15;
+
 /**
  * 视频时长选择器组件
- * 仅用于异步视频模型（Sora-2 / Veo 3.1 Fast）
+ * 支持 3-15 秒自由选择，滑块 + 加减按钮
  */
 export const VideoDurationSelector: React.FC<VideoDurationSelectorProps> = ({
   value,
   onChange,
   disabled = false
 }) => {
-  const durations: VideoDuration[] = [4, 8, 12];
+  const clampedValue = Math.max(MIN_DURATION, Math.min(MAX_DURATION, value));
+
+  const handleDecrement = useCallback(() => {
+    if (!disabled && clampedValue > MIN_DURATION) onChange(clampedValue - 1);
+  }, [clampedValue, disabled, onChange]);
+
+  const handleIncrement = useCallback(() => {
+    if (!disabled && clampedValue < MAX_DURATION) onChange(clampedValue + 1);
+  }, [clampedValue, disabled, onChange]);
+
+  const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!disabled) onChange(Number(e.target.value));
+  }, [disabled, onChange]);
 
   return (
-    <div className="flex gap-1">
-      {durations.map((d) => (
-        <button
-          key={d}
-          onClick={() => !disabled && onChange(d)}
-          disabled={disabled}
-          className={`
-            px-3 py-1.5 rounded-md text-xs transition-all
-            ${value === d
-              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
-            }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          `}
-        >
-          {d}秒
-        </button>
-      ))}
+    <div className="flex items-center gap-2 min-w-[180px]">
+      <button
+        onClick={handleDecrement}
+        disabled={disabled || clampedValue <= MIN_DURATION}
+        className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <Minus className="w-3.5 h-3.5" />
+      </button>
+      <input
+        type="range"
+        min={MIN_DURATION}
+        max={MAX_DURATION}
+        step={1}
+        value={clampedValue}
+        onChange={handleSliderChange}
+        disabled={disabled}
+        className="flex-1 h-1.5 appearance-none bg-[var(--border-secondary)] rounded-full cursor-pointer
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)]
+          [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md
+          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--bg-surface)]
+          disabled:opacity-40 disabled:cursor-not-allowed"
+      />
+      <button
+        onClick={handleIncrement}
+        disabled={disabled || clampedValue >= MAX_DURATION}
+        className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
+      <span className="text-xs font-mono font-bold text-[var(--text-primary)] min-w-[3ch] text-center tabular-nums">
+        {clampedValue}s
+      </span>
     </div>
   );
 };
@@ -151,9 +181,6 @@ export const VideoSettingsPanel: React.FC<VideoSettingsPanelProps> = ({
     ? supportedDurations.length > 1
     : modelType === 'sora';
   
-  // 可用的时长列表
-  const availableDurations = supportedDurations || [4, 8, 12];
-
   return (
     <div className="flex items-center gap-4 flex-wrap">
       <div className="flex items-center gap-2">
@@ -169,25 +196,7 @@ export const VideoSettingsPanel: React.FC<VideoSettingsPanelProps> = ({
       {showDuration && (
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-[var(--text-tertiary)] uppercase">时长</span>
-          <div className="flex gap-1">
-            {availableDurations.map((d) => (
-              <button
-                key={d}
-                onClick={() => !disabled && onDurationChange(d)}
-                disabled={disabled}
-                className={`
-                  px-3 py-1.5 rounded-md text-xs transition-all
-                  ${duration === d
-                    ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
-                  }
-                  ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {d}秒
-              </button>
-            ))}
-          </div>
+          <VideoDurationSelector value={duration} onChange={onDurationChange} disabled={disabled} />
         </div>
       )}
     </div>

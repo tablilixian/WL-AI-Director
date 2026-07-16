@@ -314,7 +314,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           if (scene.visualPrompt) {
             prompt = scene.visualPrompt;
           } else {
-            const result = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, visualStyle, language);
+            const result = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, language, undefined, visualStyle);
             prompt = result.visualPrompt;
             
             // 保存生成的提示词

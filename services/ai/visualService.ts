@@ -503,11 +503,12 @@ CRITICAL REQUIREMENTS:
 3. Be Specific and Actionable:
    - Use concrete, descriptive language suitable for image generation AI
    - Include specific details about materials, textures, and lighting
-   - Describe the pose and composition
-   
+    - Describe the pose and composition
+    
 4. Language:
-   - Write the prompt in ${language}
-   - Use natural, flowing language
+    - Write the prompt in ${language}
+    - Use natural, flowing language
+    - CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
 
 Output JSON format:
 {
@@ -545,13 +546,14 @@ export const generateSceneVisualPrompt = async (
   scene: Scene,
   artDirection: ArtDirection,
   language: string = '中文',
-  model?: string
+  model?: string,
+  visualStyle: string = 'anime'
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}`);
+  logger.debug(LogCategory.AI, `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${visualStyle}`);
   logScriptProgress('正在生成场景视觉提示词...');
 
-  const stylePrompt = getStylePrompt('anime');
+  const stylePrompt = getStylePrompt(visualStyle);
 
   const prompt = `You are a world-class visual prompt engineer for anime productions.
 Your task is to create a detailed visual prompt for generating a scene/environment image.
@@ -560,7 +562,7 @@ Your task is to create a detailed visual prompt for generating a scene/environme
 - Location: ${scene.location}
 - Time: ${scene.time}
 - Atmosphere: ${scene.atmosphere}
-- Visual Style: anime (${stylePrompt})
+- Visual Style: ${visualStyle} (${stylePrompt})
 - Base Visual Prompt: ${scene.visualPrompt || 'Not provided'}
 
 ## Art Direction Guidelines
@@ -617,8 +619,9 @@ CRITICAL REQUIREMENTS:
    - If you describe a location, describe it as empty - no one is there
    
 5. Language:
-   - Write the prompt in ${language}
-   - Use natural, flowing language
+    - Write the prompt in ${language}
+    - Use natural, flowing language
+    - CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
 
 Output JSON format:
 {
@@ -742,13 +745,14 @@ CRITICAL REQUIREMENTS:
    - Incorporate the mood keywords
    
 3. Be Specific and Actionable:
-   - Use concrete, descriptive language suitable for image generation AI
-   - Include specific details about materials, textures, and lighting
-   - Describe the pose and composition
-   
+    - Use concrete, descriptive language suitable for image generation AI
+    - Include specific details about materials, textures, and lighting
+    - Describe the pose and composition
+    
 4. Language:
-   - Write the prompt in ${language}
-   - Use natural, flowing language
+    - Write the prompt in ${language}
+    - Use natural, flowing language
+    - CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
 
 Output the result in the following JSON format:
 {
@@ -1301,17 +1305,19 @@ export async function generateVisualPrompts(
   scenes: Scene[],
   artDirection: ArtDirection,
   language: string = '中文',
-  model?: string
+  model?: string,
+  visualStyle?: string
 ): Promise<{ characters: Array<{ visualPrompt: string; negativePrompt: string }>; scenes: Array<{ visualPrompt: string; negativePrompt: string }> }> {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}`);
+  const resolvedVisualStyle = visualStyle || 'anime';
+  logger.debug(LogCategory.AI, `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${resolvedVisualStyle}`);
 
   const characterPromises = characters.map(char => 
     generateCharacterVisualPrompt(char, artDirection, language, resolvedModel)
   );
 
   const scenePromises = scenes.map(scene => 
-    generateSceneVisualPrompt(scene, artDirection, language, resolvedModel)
+    generateSceneVisualPrompt(scene, artDirection, language, resolvedModel, resolvedVisualStyle)
   );
 
   const [characterResults, sceneResults] = await Promise.all([
@@ -1401,11 +1407,12 @@ CRITICAL REQUIREMENTS for each character:
 3. Be Specific and Actionable:
    - Use concrete, descriptive language suitable for image generation AI
    - Include specific details about materials, textures, and lighting
-   - Describe the pose and composition
-   
+    - Describe the pose and composition
+    
 4. Language:
-   - Write prompts in ${language}
-   - Use natural, flowing language
+    - Write prompts in ${language}
+    - Use natural, flowing language
+    - CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
 
 Output ONLY valid JSON with this exact structure:
 {

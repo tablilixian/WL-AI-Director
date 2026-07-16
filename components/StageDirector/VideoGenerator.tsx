@@ -34,6 +34,15 @@ interface VideoGeneratorProps {
   onEditPrompt: () => void;
   onEditCameraChoreography?: () => void;
   onModelChange?: (modelId: string) => void;
+  /** 保存高级参数到 shot.interval（Tab 切换前持久化，避免丢失） */
+  onSaveAdvancedParams?: (params: {
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    timedKeyframes: TimedKeyframe[];
+    backgroundImage?: string;
+  }) => void;
   // Pipeline 字段自动打通
   projectAspectRatio?: AspectRatio;  // 用于推断默认分辨率
   // 预设系统
@@ -61,6 +70,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   onDeletePreset,
   shotKeyframes,
   projectAspectRatio,
+  onSaveAdvancedParams,
 }) => {
   const normalizeModelId = (modelId?: string) => {
     if (!modelId) return modelId;
@@ -85,7 +95,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     resolveVeoFastQuality(shot.videoModel)
   );
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => getDefaultAspectRatio());
-  const [duration, setDuration] = useState<VideoDuration>(() => getDefaultVideoDuration());
+  const [duration, setDuration] = useState<VideoDuration>(() => shot.interval?.duration || getDefaultVideoDuration());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // 从 shot 现有字段推断高级面板默认值
   const inferredResolution = getDefaultResolution(projectAspectRatio || '16:9');
@@ -181,6 +191,15 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       setActiveTab('basic');
     }
   }, [isNineGridMode]);
+
+  // 组件卸载前持久化高级参数，防止 Tab 切换丢失
+  useEffect(() => {
+    return () => {
+      if (onSaveAdvancedParams && activeTab === 'advanced') {
+        onSaveAdvancedParams(advancedParams);
+      }
+    };
+  }, [onSaveAdvancedParams, activeTab, advancedParams]);
 
   return (
     <div className="bg-[var(--bg-surface)] rounded-xl p-5 border border-[var(--border-primary)] space-y-4">

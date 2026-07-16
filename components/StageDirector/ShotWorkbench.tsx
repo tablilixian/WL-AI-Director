@@ -12,7 +12,7 @@ interface ShotWorkbenchProps {
   totalShots: number;
   scriptData?: ProjectState['scriptData'];
   currentVideoModelId: string;
-  nextShotHasStartFrame?: boolean; // 下一个镜头是否有首帧
+  nextShotHasStartFrame?: boolean;
   isAIOptimizing?: boolean;
   isSplittingShot?: boolean;
   aspectRatio: AspectRatio;
@@ -61,6 +61,15 @@ interface ShotWorkbenchProps {
   onDeletePreset?: (presetId: string) => void;
   // 悬空引用校验
   shotKeyframes?: Keyframe[];
+  /** 保存高级参数到 shot.interval（Tab 切换前持久化） */
+  onSaveAdvancedParams?: (params: {
+    mode: VideoGenerationMode;
+    fps: number;
+    width: number;
+    height: number;
+    timedKeyframes: TimedKeyframe[];
+    backgroundImage?: string;
+  }) => void;
   onImageClick: (url: string, title: string) => void;
   onToggleKeyframeLock?: (type: 'start' | 'end') => void;
   // 九宫格分镜预览（高级功能）
@@ -119,7 +128,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onGenerateNineGridV2,
   nineGrid,
   onSelectNineGridPanel,
-  onShowNineGrid
+  onShowNineGrid,
+  onSaveAdvancedParams
 }) => {
   const scene = scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
   const activeCharacters = scriptData?.characters.filter(c => shot.characters.includes(c.id)) || [];
@@ -429,6 +439,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onApplyPreset={onApplyPreset}
           onDeletePreset={onDeletePreset}
           shotKeyframes={shotKeyframes}
+          onSaveAdvancedParams={onSaveAdvancedParams}
         />
       </div>
     </div>

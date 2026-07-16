@@ -16,7 +16,7 @@ import {
 } from './apiCore';
 import { STORYBOARD_ITEM_WIDTH } from '../../config/sizeConfig';
 import { getStylePromptCN, getStylePrompt } from './promptConstants';
-import { generateStoryboardImage } from './visualService';
+import { generateStoryboardImage, generateVisualLanguage } from './visualService';
 
 // ============================================
 // 关键帧优化
@@ -311,75 +311,84 @@ ${frameType === 'start' ? `
 /**
  * AI生成叙事动作建议
  */
+/**
+ * 用 VLM 分析关键帧图像的实际画面内容
+ */
+async function analyzeKeyframeImage(imageUrl: string, frameLabel: string): Promise<string> {
+  const vlmSystemPrompt = `你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张${frameLabel}画面。`;
+  const vlmPrompt = `请分析这张${frameLabel}画面的以下要素，每项用一句话描述：
+1. 场景：这是什么场景/环境？
+2. 构图：镜头构图方式、主体位置、景别
+3. 光影：光源方向、光线质感、色调
+4. 角色：画面中的角色、姿态、表情、服装
+5. 关键物体：画面中的重要道具或环境细节
+6. 情绪/氛围：画面的情绪基调
+7. 镜头语言：机位角度、焦段感`;
+  try {
+    const result = await generateVisualLanguage(vlmSystemPrompt, vlmPrompt, imageUrl);
+    return result || '';
+  } catch {
+    return '';
+  }
+}
+
 export const generateActionSuggestion = async (
   startFramePrompt: string,
   endFramePrompt: string,
   cameraMovement: string,
-  model?: string
+  model?: string,
+  startImageUrl?: string,
+  endImageUrl?: string
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   console.log('🎬 generateActionSuggestion 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
-  const actionReferenceExamples = `
-## 高质量动作提示词参考示例
+  // 并行分析首尾帧的实际画面（有图时）
+  const [startVlmAnalysis, endVlmAnalysis] = await Promise.all([
+    startImageUrl ? analyzeKeyframeImage(startImageUrl, '首帧') : Promise.resolve(''),
+    endImageUrl ? analyzeKeyframeImage(endImageUrl, '尾帧') : Promise.resolve(''),
+  ]);
 
-### 特效魔法戏示例
-与男生飞在空中，随着抬起手臂，镜头迅速拉远到大远景，天空不断劈下密密麻麻的闪电，男生的机甲化作蓝光，形成一个压迫感拉满，巨大的魔法冲向镜头，震撼感和压迫感拉满。要求电影级运镜，有多个镜头的转换，内容动作符合要求，运镜要有大片的既视感，动作炫酷且合理，迅速且富有张力。
-
-### 打斗戏示例
-面具人和白发男生赤手空拳展开肉搏，他们会使用魔法。要求拥有李小龙、成龙级别的打斗动作。要求电影级运镜，有多个镜头的转换，内容动作符合要求，运镜要有大片的既视感，动作炫酷且合理，迅速且富有张力。
-
-### 蓄力攻击示例
-机甲蓄力，朝天空猛开几炮，震撼感和压迫感拉满。要求电影级运镜，有多个镜头的转换，内容动作符合要求，运镜要有大片的既视感，动作炫酷且合理，迅速且富有张力。
-
-### 魔法展开示例
-男生脚下的地面突然剧烈震动，一根根粗壮的石刺破土而出如同怪兽的獠牙，压迫感拉满，疯狂地朝他刺来(给石刺特写)！男生快速跃起，同时双手在胸前合拢。眼睛散发出蓝色的魔法光芒，大喊：领域展开·无尽冰原！嗡！一股肉眼可见的蓝色波纹瞬间扩散开来，所过之处，无论是地面、墙壁全都被一层厚厚的坚冰覆盖！整个仓库还是废弃的集装箱，瞬间变成了一片光滑的溜冰场！石刺也被冻住。要求电影级运镜，有多个镜头的转换，内容动作符合要求，运镜要有大片的既视感，动作炫酷且合理，迅速且富有张力。
-
-### 快速移动示例
-镜头1：天台左侧中景，郑一剑初始站立，背后是夜色笼罩下灯火闪烁的城市，圆月高悬。他保持着一种蓄势待发的静态站立姿态，周身氛围沉静。
-镜头2：郑一剑消失："模糊拖影"特效与空气扰动，画面瞬间触发"模糊拖影"特效，身影如被快速拉扯的幻影般，以极快的速度淡化、消失，原地只残留极其轻微的空气扰动波纹。
-镜头3：镜头急速移至曲飞面前，从郑一剑消失的位置，以迅猛的速度横向移动，画面里天台的栏杆、地面等景物飞速掠过，产生强烈的动态模糊效果。最终镜头定格在曲飞面前，脸上露出明显的惊讶与警惕。
-镜头4：郑一剑突然出现准备出拳，毫无征兆地出现在画面中央，身体大幅度前倾，呈现出极具张力的准备出拳姿势，右手紧紧握拳，带起的劲风使得衣角大幅度向后飘动。
-
-### 能量爆发示例
-镜头在倾盆大雨中快速抖动向前推进，对准在黑暗海平面中屹立不动的黑影。几道闪电快速划过，轮廓在雨幕中若隐若现。突然，一股巨大的雷暴能量在他身后快速汇聚，光芒猛烈爆发。镜头立刻快速向地面猛冲，并同时向上极度仰起，锁定他被能量光芒完全照亮的、张开双臂的威严姿态。
-`;
+  const hasVlmResult = !!(startVlmAnalysis || endVlmAnalysis);
 
   const prompt = `
 你是一位专业的电影动作导演和叙事顾问。请根据提供的首帧和尾帧信息，结合镜头运动，设计一个既符合叙事逻辑又充满视觉冲击力的动作场景。
 
 ## 重要约束
-⏱️ **时长限制**：这是一个8-10秒的单镜头场景，请严格控制动作复杂度
+⏱️ **时长限制**：这是一个单镜头场景，请严格控制动作复杂度
 📹 **镜头要求**：这是一个连续镜头，不要设计多个镜头切换（除非绝对必要，最多2-3个快速切换）
 
 ## 输入信息
-**首帧描述：** ${startFramePrompt}
-**尾帧描述：** ${endFramePrompt}
 **镜头运动：** ${cameraMovement}
 
-${actionReferenceExamples}
+**首帧文字描述（叙事意图）：**
+${startFramePrompt}
+${startVlmAnalysis ? `
+**首帧实际画面分析（VLM 视觉识别）：**
+${startVlmAnalysis}` : ''}
+
+**尾帧文字描述（叙事意图）：**
+${endFramePrompt}
+${endVlmAnalysis ? `
+**尾帧实际画面分析（VLM 视觉识别）：**
+${endVlmAnalysis}` : ''}
+${hasVlmResult ? `
+📌 **对照指南**：文字描述是叙事意图，实际画面分析是真实视觉事实。请以文字描述的叙事意图为主线，同时尊重实际画面的视觉事实（角色实际位置、表情、光影、构图等）。如果两者有差异，以实际画面为准来生成连贯的动作过渡。` : ''}
 
 ## 任务要求
-1. **时长适配**：动作设计必须在8-10秒内完成，避免过于复杂的多步骤动作
+1. **时长适配**：动作设计必须在 ${hasVlmResult ? '给定' : '8-10'} 秒内完成，避免过于复杂的多步骤动作
 2. **单镜头思维**：优先设计一个连贯的镜头内动作，而非多镜头组合
 3. **自然衔接**：动作需要自然地从首帧过渡到尾帧，确保逻辑合理
-4. **风格借鉴**：参考上述示例的风格和语言，但要简化步骤：
-   - 富有张力但简洁的描述语言
-   - 强调关键的视觉冲击点
-   - 电影级的运镜描述但避免过度分解
-5. **创新适配**：不要重复已有提示词，结合当前场景创新
-6. **镜头语言**：根据提供的镜头运动（${cameraMovement}），设计相应的运镜方案
+4. **创新适配**：不要重复已有提示词，结合当前场景创新
+5. **镜头语言**：根据提供的镜头运动（${cameraMovement}），设计相应的运镜方案
 
 ## 输出格式
 请直接输出动作描述文本，无需JSON格式或额外标记。内容应包含：
-- 简洁的单镜头动作场景描述（不要"镜头1、镜头2..."的分段，除非场景确实需要快速切换）
+- 简洁的单镜头动作场景描述
 - 关键的运镜说明（推拉摇移等）
 - 核心的视觉特效或情感氛围
 - 确保描述具有电影感但控制篇幅
-
-❌ 避免：过多的镜头切换、冗长的分步描述、超过10秒的复杂动作序列
-✅ 追求：精炼、有冲击力、符合8-10秒时长的单镜头动作
 
 请开始创作：
 `;
@@ -619,6 +628,10 @@ Camera: ${cameraMovement}
 Frame: ${frameLabel}
 ${propsBlock ? `Props:\n${propsBlock}` : ''}
 
+## Language Rules
+- Output primarily in Chinese
+- CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
+
 ## Output Template (fill in all sections, each 2-3 concise bullet points)
 
 画面描述: [rephrase scene in vivid cinematic Chinese, 1-2 sentences]
@@ -628,6 +641,7 @@ ${propsBlock ? `Props:\n${propsBlock}` : ''}
 
 【构图】Composition
 帧类型: ${frameLabel}，镜头运动: ${cameraMovement}
+帧类型差异化约束: ${frameLabel}必须侧重"${frameDesc}"
 
 【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
 如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：

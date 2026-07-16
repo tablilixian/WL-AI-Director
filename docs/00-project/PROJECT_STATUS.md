@@ -13,29 +13,44 @@ updated: 2026-06-01
 
 ## 📌 当前状态
 
-**项目阶段**: 核心功能已完成，持续迭代中  
+**项目阶段**: 核心功能已完成，P0/P1 优化接近完成，P2 进行中  
 **技术栈**: React 19 + TypeScript + Vite + Zustand + PocketBase (Auth + 云端同步) + IndexedDB  
 **存储架构**: 混合存储 — IndexedDB 本地优先 + PocketBase 异步云端同步
 
 ---
 
-## 🎯 活跃 TODO
+## 🎯 优化追踪
 
-### P0 — 必须完成
-| TODO | 状态 | 负责人 | 备注 |
-|------|------|--------|------|
-| *(无)* | ✅ | - | - |
+### 已完成优化项
 
-### P1 — 重要
-| TODO | 状态 | 负责人 | 备注 |
-|------|------|--------|------|
-| *(无)* | ✅ | - | - |
+| 编号 | 描述 | 优先级 | 涉及文件 |
+|------|------|--------|---------|
+| A01 | eraContext/knowledgeBase 注入 buildKeyframePrompt 和 buildVideoPrompt | P0 | `types.ts`, `utils.ts`, `index.tsx` |
+| A02 | 英文电影术语保留指令注入 4 个提示词模板 | P1 | `visualService.ts`, `shotService.ts` |
+| A04 | generateSceneVisualPrompt 使用 visualStyle 参数替代硬编码 'anime' | P1 | `visualService.ts`, `StageAssets/index.tsx` |
+| A05 | enhanceWithQualityTags 正则扩展支持中文质量标签 | P2 | `promptConstants.ts` |
+| B03 | buildKeyframePrompt 帧类型区分（start=场景建立, end=动作结论） | P0 | `utils.ts`, `shotService.ts` |
+| B04 | 角色出场时间线约束注入 buildShotGenerationPrompt | P0 | `modelService.ts` |
+| B05 | 情感权重镜头分配注入 buildShotGenerationPrompt | P1 | `modelService.ts` |
+| B07 | 情感驱动运镜池引导注入 buildShotGenerationPrompt | P1 | `modelService.ts` |
+| C06 | handleGenerateKeyframe 保存 basePrompt 而非合成 prompt | P2 | `index.tsx` |
+| E02 | VideoGenerator 卸载时通过 onSaveAdvancedParams 持久化 advancedParams | P2 | `VideoGenerator.tsx`, `ShotWorkbench.tsx`, `index.tsx` |
+| E03 | handleAdvancedGenerateVideo 在保存前调用 saveVideoToLocal | P2 | `index.tsx` |
+| F01 | 视频时长 3-15s 自由选择（VideoDuration → number，滑块 UI，默认 10） | P0 | `types.ts`, `types/model.ts`, `modelRegistry.ts`, `AspectRatioSelector.tsx`, `index.tsx` |
+| F02 | VLM 增强动作建议（generateActionSuggestion 注入关键帧画面分析） | P1 | `shotService.ts`, `index.tsx` |
+| F03 | 动作编辑弹窗重新设计（关键帧缩略图 + VLM 分析折叠区 + 重新识别按钮） | P1 | `EditModal.tsx`, `index.tsx` |
+| F04 | VLM 分析结果持久化到 JSON 导出（shot.vlmAnalysis） | P1 | `types.ts`, `index.tsx` |
 
-### P2 — 优化
-| TODO | 状态 | 负责人 | 备注 |
-|------|------|--------|------|
-| 用户设置页面（昵称/API Key/修改密码） | 📝 待做 | - | `updateProfile` + `changePassword` 已实现，缺 UI |
-| 密码重置 UI 提示本地日志路径 | 📝 待做 | - | 登录页已加忘记密码，但无邮件需要引导用户看日志 |
+### 未完成 / 待评估
+
+| 编号 | 描述 | 优先级 | 状态 | 备注 |
+|------|------|--------|------|------|
+| A03, A06 | A 系列剩余项目 | - | ⏳ 待确认 | 需要重新评估必要性 |
+| B01, B02, B06 | B 系列剩余项目 | - | ⏳ 待确认 | 需要重新评估必要性 |
+| C01-C05 | C 系列剩余项目 | - | ⏳ 待确认 | 需要重新评估必要性 |
+| E01 | E 系列剩余项目 | - | ⏳ 待确认 | 需要重新评估必要性 |
+| 用户设置页面 | 昵称/API Key/修改密码 UI | P2 | 📝 待做 | `updateProfile` + `changePassword` 已实现，缺 UI |
+| 密码重置引导 | 登录页提示查看本地日志获取密码重置链接 | P2 | 📝 待做 | 无邮件服务，需引导用户看日志 |
 
 ---
 
@@ -61,6 +76,12 @@ updated: 2026-06-01
 
 | 日期 | 变更 | 类型 |
 |------|------|------|
+| 2026-07-16 | P0/P1/P2 批量优化项完成（A/B/C/E 系列 + F 三合一增强） | ✨ 优化 |
+| 2026-07-16 | 视频时长 3-15s 自由选择，滑块 UI | ✨ 功能 |
+| 2026-07-16 | VLM 增强动作建议 + 画面分析结果持久化 | ✨ 功能 |
+| 2026-07-16 | 动作编辑弹窗重设计（关键帧缩略图 + VLM 折叠区 + 重新识别） | 🎨 UI |
+| 2026-07-16 | EditModal 图片改用 base64 解决 blob URL 回收报错 | 🐛 修复 |
+| 2026-07-16 | VLM 分析结果存入 shot.vlmAnalysis，跟随 JSON 导入导出 | 🏗️ 架构 |
 | 2026-06-01 | Supabase → PocketBase 全功能迁移完成 | 🏗️ 架构 |
 | 2026-06-01 | Token 自动刷新、密码重置、Profile 更新 | ✨ 功能 |
 | 2026-06-01 | 清理所有 Supabase 死代码 | 🧹 清理 |

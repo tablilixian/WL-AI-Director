@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LayoutGrid, Sparkles, Loader2, AlertCircle, Edit2, Film, Video as VideoIcon } from 'lucide-react';
 import { ProjectState, Shot, Keyframe, AspectRatio, VideoDuration, NineGridPanel, NineGridData, VideoGenerationMode, TimedKeyframe } from '../../types';
 import { logger, LogCategory } from '../../services/logger';
-import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId, chatCompletion, videoOrchestrator } from '../../services/aiService';
+import { generateImage, generateVideo, generateActionSuggestion, generateVisualLanguage, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId, chatCompletion, videoOrchestrator } from '../../services/aiService';
 import { 
   getRefImagesForShot, 
   getPropsInfoForShot,
@@ -48,6 +48,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number, message: string} | null>(null);
   const [previewImage, setPreviewImage] = useState<{url: string, title: string} | null>(null);
   const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [vlmData, setVlmData] = useState<{ start: string; end: string } | null>(null);
+  const [isVlmLoading, setIsVlmLoading] = useState(false);
   const [useAIEnhancement, setUseAIEnhancement] = useState(false); // 是否使用AI增强提示词
   const [isSplittingShot, setIsSplittingShot] = useState(false); // 是否正在拆分镜头
   const [showNineGrid, setShowNineGrid] = useState(false); // 是否显示九宫格预览弹窗
@@ -75,6 +77,10 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     value: string;
     shotId?: string;
     frameType?: 'start' | 'end';
+    startImageUrl?: string;
+    endImageUrl?: string;
+    startPrompt?: string;
+    endPrompt?: string;
   } | null>(null);
 
   // 运镜编排弹窗
@@ -237,13 +243,13 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     const guideModel = getActiveChatModel()?.id || getDefaultChatModelId();
     if (useAIEnhancement) {
       try {
-        prompt = await buildKeyframePromptWithAI(basePrompt, visualStyle, shot.cameraMovement, type, true, propsInfo, characterDescriptions);
+        prompt = await buildKeyframePromptWithAI(basePrompt, visualStyle, shot.cameraMovement, type, true, propsInfo, characterDescriptions, project.eraContext, project.knowledgeBase);
       } catch (error) {
         logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-        prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel, characterDescriptions);
+        prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel, characterDescriptions, project.eraContext, project.knowledgeBase);
       }
     } else {
-      prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel, characterDescriptions);
+      prompt = await buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type, propsInfo, chatCompletion, guideModel, characterDescriptions, project.eraContext, project.knowledgeBase);
     }
     
     try {
@@ -265,7 +271,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
           ...prevProject,
           shots: prevProject.shots.map(s => {
             if (s.id !== shot.id) return s;
-            return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, url, 'completed'));
+            return updateKeyframeInShot(s, type, createKeyframe(kfId, type, basePrompt, url, 'completed'));
           })
         };
 
@@ -287,7 +293,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         ...prevProject,
         shots: prevProject.shots.map(s => {
           if (s.id !== shot.id) return s;
-          return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, undefined, 'failed'));
+          return updateKeyframeInShot(s, type, createKeyframe(kfId, type, basePrompt, undefined, 'failed'));
         })
       }));
       
@@ -351,7 +357,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   * @param duration - 视频时长（仅异步模型有效）
    * @param modelId - 视频模型 ID
    */
-  const handleGenerateVideo = async (shot: Shot, aspectRatio: AspectRatio = '16:9', duration: VideoDuration = 8, modelId?: string) => {
+  const handleGenerateVideo = async (shot: Shot, aspectRatio: AspectRatio = '16:9', duration: VideoDuration = 10, modelId?: string) => {
     const sKf = shot.keyframes?.find(k => k.type === 'start');
     const eKf = shot.keyframes?.find(k => k.type === 'end');
     
@@ -386,7 +392,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       projectLanguage,
       isNineGridMode ? shot.nineGrid : undefined,
       duration,
-      shot.cameraChoreography
+      shot.cameraChoreography,
+      project.eraContext,
+      project.knowledgeBase
     );
     
     const intervalId = shot.interval?.id || generateId(`int-${shot.id}`);
@@ -431,7 +439,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
               id: intervalId,
               startKeyframeId: sKf?.id || '',
               endKeyframeId: eKf?.id || '',
-              duration: 10,
+              duration,
               motionStrength: 5,
               videoPrompt,
               videoUrl,
@@ -447,7 +455,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
           id: intervalId,
           startKeyframeId: sKf?.id || '',
           endKeyframeId: eKf?.id || '',
-          duration: 10,
+          duration,
           motionStrength: 5,
           videoPrompt,
           videoUrl,
@@ -509,7 +517,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       projectLanguage,
       isNineGridMode ? shot.nineGrid : undefined,
       params.duration,
-      shot.cameraChoreography
+      shot.cameraChoreography,
+      project.eraContext,
+      project.knowledgeBase
     );
 
     // 写回 shot.interval（含高级参数）
@@ -628,6 +638,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         logger.debug(LogCategory.AI, `🎬 Orchestrator 进度: ${progress.percent}% — ${progress.message}`);
       });
 
+      // 转为本地引用（避免 base64 嵌入 JSON 导致导出体积过大）
+      const localVideoUrl = await unifiedImageService.saveVideoToLocal(result.videoUrl);
+
       const updatedProject = {
         ...project,
         shots: project.shots.map(s => {
@@ -636,7 +649,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             ...s,
             interval: s.interval ? {
               ...s.interval,
-              videoUrl: result.videoUrl,
+              videoUrl: localVideoUrl,
               status: 'completed',
             } : undefined,
           };
@@ -647,7 +660,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         ...s,
         interval: s.interval ? {
           ...s.interval,
-          videoUrl: result.videoUrl,
+          videoUrl: localVideoUrl,
           status: 'completed',
         } : undefined,
       }));
@@ -734,7 +747,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         fps: interval?.fps || 30,
         width: interval?.width || 1920,
         height: interval?.height || 1080,
-        duration: (interval?.duration as VideoDuration) || 8,
+        duration: (interval?.duration as VideoDuration) || 10,
         modelId: activeShot.videoModel || DEFAULTS.videoModel,
         aspectRatio: (project.aspectRatio || '16:9') as AspectRatio,
         backgroundImage: interval?.backgroundImage,
@@ -862,6 +875,96 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     }
     
     setEditModal(null);
+    setVlmData(null);
+    setIsVlmLoading(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModal(null);
+    setVlmData(null);
+    setIsVlmLoading(false);
+  };
+
+  const analyzeKeyframeImage = async (imageUrl: string, frameLabel: string): Promise<string> => {
+    const vlmSystemPrompt = `你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张${frameLabel}画面。`;
+    const vlmPrompt = `请分析这张${frameLabel}画面的以下要素，每项用一句话描述：
+1. 场景：这是什么场景/环境？
+2. 构图：镜头构图方式、主体位置、景别
+3. 光影：光源方向、光线质感、色调
+4. 角色：画面中的角色、姿态、表情、服装
+5. 关键物体：画面中的重要道具或环境细节
+6. 情绪/氛围：画面的情绪基调
+7. 镜头语言：机位角度、焦段感`;
+    try {
+      const result = await generateVisualLanguage(vlmSystemPrompt, vlmPrompt, imageUrl);
+      return result || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const saveVlmToShot = (shotId: string, startAnalysis: string, endAnalysis: string, sKfId: string | undefined, eKfId: string | undefined) => {
+    updateShot(shotId, (s) => ({
+      ...s,
+      vlmAnalysis: {
+        startAnalysis,
+        endAnalysis,
+        startKeyframeId: sKfId || '',
+        endKeyframeId: eKfId || '',
+      },
+    }));
+  };
+
+  const runVlmAnalysis = (sKf: { imageUrl?: string; id?: string } | undefined, eKf: { imageUrl?: string; id?: string } | undefined) => {
+    if (!activeShot) return;
+    setIsVlmLoading(true);
+    setVlmData(null);
+
+    const rawStartUrl = sKf?.imageUrl;
+    const rawEndUrl = eKf?.imageUrl;
+    const shotId = activeShot.id;
+
+    Promise.all([
+      rawStartUrl ? analyzeKeyframeImage(rawStartUrl, '首帧') : Promise.resolve(''),
+      rawEndUrl ? analyzeKeyframeImage(rawEndUrl, '尾帧') : Promise.resolve(''),
+    ]).then(([start, end]) => {
+      const result = { start: start || '', end: end || '' };
+      setVlmData(result);
+      setIsVlmLoading(false);
+      saveVlmToShot(shotId, result.start, result.end, sKf?.id, eKf?.id);
+    }).catch(() => {
+      setIsVlmLoading(false);
+    });
+  };
+
+  const handleOpenActionEdit = () => {
+    if (!activeShot) return;
+    const sKf = activeShot.keyframes?.find(k => k.type === 'start');
+    const eKf = activeShot.keyframes?.find(k => k.type === 'end');
+
+    setEditModal({
+      type: 'action',
+      value: activeShot.actionSummary,
+      startImageUrl: sKf?.imageUrl,
+      endImageUrl: eKf?.imageUrl,
+      startPrompt: sKf?.visualPrompt,
+      endPrompt: eKf?.visualPrompt,
+    });
+
+    const vlm = activeShot.vlmAnalysis;
+    if (vlm && vlm.startKeyframeId === (sKf?.id || '') && vlm.endKeyframeId === (eKf?.id || '')) {
+      setVlmData({ start: vlm.startAnalysis, end: vlm.endAnalysis });
+      setIsVlmLoading(false);
+    } else {
+      runVlmAnalysis(sKf, eKf);
+    }
+  };
+
+  const handleReAnalyzeVlm = () => {
+    if (!activeShot) return;
+    const sKf = activeShot.keyframes?.find(k => k.type === 'start');
+    const eKf = activeShot.keyframes?.find(k => k.type === 'end');
+    runVlmAnalysis(sKf, eKf);
   };
 
   /**
@@ -873,7 +976,6 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     const startKf = activeShot.keyframes?.find(k => k.type === 'start');
     const endKf = activeShot.keyframes?.find(k => k.type === 'end');
     
-    // 检查是否有首帧和尾帧
     if (!startKf?.visualPrompt && !endKf?.visualPrompt) {
       showAlert('请先生成或编辑首帧和尾帧的提示词，以便AI更好地理解场景', { type: 'warning' });
       return;
@@ -885,14 +987,18 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       const startPrompt = startKf?.visualPrompt || activeShot.actionSummary || '未定义的起始场景';
       const endPrompt = endKf?.visualPrompt || activeShot.actionSummary || '未定义的结束场景';
       const cameraMovement = activeShot.cameraMovement || '平移';
+      const startImageUrl = startKf?.imageUrl;
+      const endImageUrl = endKf?.imageUrl;
       
       const suggestion = await generateActionSuggestion(
         startPrompt,
         endPrompt,
-        cameraMovement
+        cameraMovement,
+        undefined,
+        startImageUrl,
+        endImageUrl
       );
       
-      // 更新编辑框的内容
       if (editModal && editModal.type === 'action') {
         setEditModal({ ...editModal, value: suggestion });
       }
@@ -1270,7 +1376,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         if (!c) return null;
         return { name: c.name, visualPrompt: c.visualPrompt || '', hasImage: !!c.imageUrl || !!c.threeViewImageUrl };
       }).filter(Boolean) as { name: string; visualPrompt: string; hasImage: boolean }[];
-      const styleFramePrompt = await buildKeyframePrompt(shot.actionSummary, visualStyle, shot.cameraMovement, 'start', undefined, undefined, undefined, charDescs);
+      const styleFramePrompt = await buildKeyframePrompt(shot.actionSummary, visualStyle, shot.cameraMovement, 'start', undefined, undefined, undefined, charDescs, project.eraContext, project.knowledgeBase);
       const nineGridNegatives: string[] = [];
       (shot.characters || []).forEach(charId => {
         const c = project.scriptData?.characters.find(ch => String(ch.id) === String(charId));
@@ -1616,7 +1722,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             onClose={() => setActiveShotId(null)}
             onPrevious={() => setActiveShotId(project.shots[activeShotIndex - 1].id)}
             onNext={() => setActiveShotId(project.shots[activeShotIndex + 1].id)}
-            onEditActionSummary={() => setEditModal({ type: 'action', value: activeShot.actionSummary })}
+            onEditActionSummary={handleOpenActionEdit}
             onGenerateAIAction={handleGenerateAIAction}
             onSplitShot={() => handleSplitShot(activeShot)}
             onAddCharacter={(charId) => updateShot(activeShot.id, s => ({ ...s, characters: [...s.characters, charId] }))}
@@ -1673,6 +1779,21 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                 videoModel: modelId as any
               }));
             }}
+            onSaveAdvancedParams={(params) => {
+              if (!activeShot) return;
+              updateShot(activeShot.id, (s) => ({
+                ...s,
+                interval: s.interval ? {
+                  ...s.interval,
+                  mode: params.mode,
+                  fps: params.fps,
+                  width: params.width,
+                  height: params.height,
+                  backgroundImage: params.backgroundImage,
+                  timedKeyframes: params.timedKeyframes,
+                } : undefined
+              }));
+            }}
             onEditCameraChoreography={() => setShowChoreographyModal(true)}
             onEditVideoPrompt={() => {
               // 如果videoPrompt不存在，动态生成一个
@@ -1692,7 +1813,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                   projectLanguage,
                   isNineGridMode ? activeShot.nineGrid : undefined,
                   undefined,
-                  activeShot.cameraChoreography
+                  activeShot.cameraChoreography,
+                  project.eraContext,
+                  project.knowledgeBase
                 );
               }
               setEditModal({ 
@@ -1730,7 +1853,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       {/* Edit Modal */}
       <EditModal
         isOpen={!!editModal}
-        onClose={() => setEditModal(null)}
+        onClose={handleCloseEdit}
         onSave={handleSaveEdit}
         title={
           editModal?.type === 'action' ? '编辑叙事动作' :
@@ -1753,6 +1876,16 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         showAIGenerate={editModal?.type === 'action'}
         onAIGenerate={handleGenerateAIAction}
         isAIGenerating={isAIGenerating}
+        showKeyframes={editModal?.type === 'action'}
+        startImageUrl={editModal?.startImageUrl}
+        endImageUrl={editModal?.endImageUrl}
+        startPrompt={editModal?.startPrompt}
+        endPrompt={editModal?.endPrompt}
+        vlmStartAnalysis={editModal?.type === 'action' ? (isVlmLoading ? null : vlmData?.start || null) : undefined}
+        vlmEndAnalysis={editModal?.type === 'action' ? (isVlmLoading ? null : vlmData?.end || null) : undefined}
+        isVlmLoading={editModal?.type === 'action' ? isVlmLoading : false}
+        onImageClick={(url, title) => setPreviewImage({ url, title })}
+        onReAnalyzeVlm={handleReAnalyzeVlm}
       />
 
       {/* Image Preview Modal */}

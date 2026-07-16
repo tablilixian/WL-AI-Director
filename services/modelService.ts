@@ -258,13 +258,37 @@ function buildShotGenerationPrompt(scriptData: any): string {
 Script Data:
 ${JSON.stringify(scriptData, null, 2)}
 
+CRITICAL: CHARACTER PRESENCE CONSTRAINT
+Each character has a presence timeline throughout the script. A character can ONLY appear in shots where they are physically present based on the story context. Before assigning characters to a shot, analyze the story paragraphs and scene descriptions to determine which characters are actually in that location at that moment. DO NOT assign all characters to every shot.
+
+Rules for character presence:
+- A character enters a scene when the story describes their arrival or action
+- A character exits a scene when the story indicates they leave or the scene changes
+- Characters listed in a scene's storyParagraphs text are present; others are not
+- If a character has no dialogue or action in a scene, they should NOT be in that scene's shots
+- The same character may be present in some shots but absent from others within the same scene
+
+EMOTIONAL INTENSITY & SHOT ALLOCATION (RHYTHM WEIGHTING)
+Analyze the emotional intensity of each story paragraph and allocate shot count accordingly:
+- High-intensity paragraphs (climax, action, emotional outburst, critical dialogue) → MORE shots (3-5), each focused on a specific emotional beat
+- Medium-intensity paragraphs (important plot advancement, character interaction) → STANDARD shots (2-3)
+- Low-intensity paragraphs (transition, establishing, calm conversation) → FEWER shots (1-2)
+- Use the story text's language, punctuation, and context to gauge intensity — exclamation marks, dramatic verbs, and emotional descriptors indicate higher intensity
+- The total shot count should still be reasonable for the overall script length
+
 Generate detailed shots with:
-- sceneId: reference to scene
-- actionSummary: what happens in the shot
-- dialogue: any spoken lines
-- cameraMovement: camera direction
-- shotSize: shot type (wide, medium, close-up, etc.)
-- characters: array of character IDs in the shot
+- sceneId: reference to scene (must match a scene id from Script Data)
+- actionSummary: what happens in the shot (specific, visual, concise)
+- dialogue: any spoken lines in this specific shot
+- cameraMovement: camera direction — CHOOSE VARIETY based on shot's emotional tone:
+  * Action/Intense → dolly shot, tracking shot, handheld shot, crane shot, canted shot
+  * Emotional/Calm → static shot, slow motion shot, zoom in shot, circular shot
+  * Reveal/Discovery → pan left/right, tilt up/down, zoom out shot, pov shot
+  * Dynamic/Establish → tracking shot, steadicam shot, low/high angle, bird's eye view
+  * Interaction/Conversation → over the shoulder shot, two-shot, pan left/right
+  DO NOT use dolly or tracking for more than 30% of shots total; include crane, steadicam, pov, handheld, canted shots regularly.
+- shotSize: shot type (choose from: wide, medium, close-up, extreme wide, extreme close-up, over-the-shoulder, two-shot)
+- characters: array of character IDs in the shot (MUST respect character presence timeline)
 
 Return a valid JSON object:
 {

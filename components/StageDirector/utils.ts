@@ -129,12 +129,24 @@ export const buildKeyframePrompt = async (
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
   chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
   model?: string,
-  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[]
+  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[],
+  eraContext?: string,
+  knowledgeBase?: string
 ): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   console.log('🎨 [buildKeyframePrompt] visualStyle key:', visualStyle, '→ resolved style:', stylePrompt.substring(0, 60));
   const cameraGuide = await getCameraMovementCompositionGuide(cameraMovement, frameType, chatCompletion, model);
-  const compositionNote = `帧类型: ${frameType === 'start' ? '起始' : '结束'}帧，镜头运动: ${cameraMovement}
+
+  const isStart = frameType === 'start';
+  const frameTypeLabel = isStart ? '起始' : '结束';
+  const frameTypeZh = isStart ? '起始帧' : '结束帧';
+  const frameFocus = isStart
+    ? `场景建立与角色入场：侧重建构环境氛围、角色初始位置与姿态、动作发起的瞬间状态。`
+    : `动作收束与情绪落点：侧重动作结果、角色反应与表情、画面最终定格、情绪高潮的尾声。`;
+
+  const compositionNote = `帧类型: ${frameTypeLabel}帧，镜头运动: ${cameraMovement}
+帧类型差异化约束: ${frameTypeZh}必须侧重"${isStart ? '起始——场景确立、角色初始状态、动作开端' : '结束——动作达成的结果、角色情绪落点、画面最终构图'}"
+${frameFocus}
 构图指导: ${cameraGuide}`;
 
   // 角色外观描述（文字回退，当 API 不支持参考图时保证一致性）
@@ -179,6 +191,19 @@ ${list}`);
     propConsistencyGuide = '\n\n' + sections.join('\n\n');
   }
 
+  const domainKnowledgeSections: string[] = [];
+  if (eraContext) {
+    domainKnowledgeSections.push(`【时代背景】Era Context
+${eraContext}`);
+  }
+  if (knowledgeBase) {
+    domainKnowledgeSections.push(`【领域知识】Domain Knowledge
+${knowledgeBase}`);
+  }
+  const domainKnowledgeBlock = domainKnowledgeSections.length > 0
+    ? '\n\n' + domainKnowledgeSections.join('\n\n')
+    : '';
+
   return `${basePrompt}
 
 【视觉风格】Visual Style
@@ -186,7 +211,7 @@ ${stylePrompt}
 
 【构图】Composition
 ${compositionNote}
-
+${domainKnowledgeBlock}
 ${characterConsistencyGuide}${characterDescriptionsSection}${propConsistencyGuide}`;
 };
 
@@ -208,11 +233,13 @@ export const buildKeyframePromptWithAI = async (
   frameType: 'start' | 'end',
   enhanceWithAI: boolean = true,
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
-  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[]
+  characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[],
+  eraContext?: string,
+  knowledgeBase?: string
 ): Promise<string> => {
   // 如果不需要AI增强,直接使用模板构建
   if (!enhanceWithAI) {
-    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, characterDescriptions);
+    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, characterDescriptions, eraContext, knowledgeBase);
   }
   
   // 动态导入aiService以避免循环依赖
@@ -222,7 +249,7 @@ export const buildKeyframePromptWithAI = async (
     return enhanced;
   } catch (error) {
     logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
+    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, undefined, eraContext, knowledgeBase);
   }
 };
 
@@ -238,7 +265,9 @@ export const buildVideoPrompt = (
   language: string,
   nineGrid?: NineGridData,
   videoDuration?: number,
-  cameraChoreography?: CameraChoreography
+  cameraChoreography?: CameraChoreography,
+  eraContext?: string,
+  knowledgeBase?: string
 ): string => {
   const isChinese = language === '中文' || language === 'Chinese';
   const isAsyncVideoModel = videoModel === 'sora-2' || videoModel.toLowerCase().startsWith('veo_3_1-fast');
@@ -248,6 +277,14 @@ export const buildVideoPrompt = (
   if (cameraChoreography) {
     effectiveCameraMovement = renderCameraChoreographyPrompt(cameraChoreography, actionSummary, videoDuration || 8);
   }
+
+  // 领域知识注入
+  const domainKnowledgeParts: string[] = [];
+  if (eraContext) domainKnowledgeParts.push(`Era Context: ${eraContext}`);
+  if (knowledgeBase) domainKnowledgeParts.push(`Domain Knowledge: ${knowledgeBase}`);
+  const domainKnowledgeBlock = domainKnowledgeParts.length > 0
+    ? `\n\n${domainKnowledgeParts.join('\n')}`
+    : '';
 
   // 九宫格分镜模式：有九宫格数据时，使用异步模型专用精简提示词
   // 保留9个面板的景别/角度顺序，但 description 截断到60字符以内，避免超过 Sora-2 的 8192 字符限制
@@ -272,7 +309,7 @@ export const buildVideoPrompt = (
       .replace('{panelDescriptions}', panelDescriptions)
       .replace(/\{secondsPerPanel\}/g, String(secondsPerPanel))
       .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', language);
+      .replace('{language}', language) + domainKnowledgeBlock;
   }
   
   // 普通模式
@@ -284,12 +321,12 @@ export const buildVideoPrompt = (
     return template
       .replace('{actionSummary}', actionSummary)
       .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', language);
+      .replace('{language}', language) + domainKnowledgeBlock;
   } else {
     return VIDEO_PROMPT_TEMPLATES.veo.simple
       .replace('{actionSummary}', actionSummary)
       .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', isChinese ? '中文' : language);
+      .replace('{language}', isChinese ? '中文' : language) + domainKnowledgeBlock;
   }
 };
 

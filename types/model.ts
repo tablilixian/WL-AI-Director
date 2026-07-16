@@ -20,7 +20,7 @@ export type AspectRatio = '16:9' | '9:16' | '1:1';
 /**
  * 视频时长类型（仅异步视频模式支持）
  */
-export type VideoDuration = 4 | 5 | 8 | 10 | 12;
+export type VideoDuration = number; // 3-15 秒，运行时由 model 的 supportedDurations 约束
 
 /**
  * 视频生成模式

@@ -198,6 +198,12 @@ export interface Shot {
   interval?: VideoInterval;
   videoModel?: string; // 视频模型 ID，由 modelRegistry 管理
   nineGrid?: NineGridData; // 可选的九宫格分镜预览数据（高级功能）
+  vlmAnalysis?: {
+    startAnalysis: string;
+    endAnalysis: string;
+    startKeyframeId: string;
+    endKeyframeId: string;
+  };
 }
 
 // ============================================
@@ -326,6 +332,11 @@ export interface ProjectState {
   visualStyle: string; // Visual style: live-action, anime, 3d-animation, etc.
   shotGenerationModel: string; // Model for shot generation
   
+  /** 领域知识：时代背景描述（如"抗日战争1940年华北"），注入AI提示词增强历史/文化准确性 */
+  eraContext?: string;
+  /** 领域知识：自定义知识库（如风格参考、文化细节、技术规范等），逐行注入 */
+  knowledgeBase?: string;
+  
   scriptData: ScriptData | null;
   shots: Shot[];
   isParsingScript: boolean;
@@ -387,7 +398,7 @@ export interface ConsistencyCheckResult {
 /**
  * 视频时长类型（仅异步视频模型支持）
  */
-export type VideoDuration = 4 | 8 | 12;
+export type VideoDuration = number; // 3-15 秒，运行时由 model 的 supportedDurations 约束
 
 /**
  * 将结构化运镜编排渲染为提示词段落

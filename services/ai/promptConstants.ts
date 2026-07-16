@@ -71,7 +71,7 @@ export const getDefaultQualityTags = (): string => DEFAULT_QUALITY_TAGS;
  * 为文生图 prompt 自动追加质量标签（如果尚未包含）
  */
 export const enhanceWithQualityTags = (prompt: string): string => {
-  const hasQualityTerms = /cinematic|8K|photorealistic|highly detailed|professional|sharp focus|film grain/i.test(prompt);
+  const hasQualityTerms = /cinematic|8K|photorealistic|highly detailed|professional|sharp focus|film grain|电影级|8K分辨率|超高清|专业光效|极致细节|电影质感|锐利对焦/i.test(prompt);
   if (hasQualityTerms) {
     return prompt;
   }
