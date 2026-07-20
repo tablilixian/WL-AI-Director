@@ -24,7 +24,7 @@ import {
   getSceneNegativePrompt,
   VISUAL_STYLE_PROMPTS_CN,
 } from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi, callDramaBackend360HdriApi } from '../adapters/imageAdapter';
+import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi, callDramaBackendVideoMkrGridApi, callDramaBackend360HdriApi } from '../adapters/imageAdapter';
 import { buildEraContextBlock } from './eraContext';
 
 // ============================================

@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3001,
+        port: 3005,
         host: '0.0.0.0',
         proxy: {
           // Drama Backend 代理 (解决 CORS)

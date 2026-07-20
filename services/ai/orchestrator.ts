@@ -4,6 +4,7 @@ import { generateVideoMsr, generateVideoMkr, generateVideoMkrGrid } from './visu
 import { unifiedImageService } from '../unifiedImageService';
 import { logger, LogCategory } from '../logger';
 import { retryOperation } from './apiCore';
+import { VIDEO_MKR_GRID_DEFAULT } from '../../config/sizeConfig';
 
 /** 统一视频生成请求参数 */
 export interface VideoGenerationRequest {
@@ -161,14 +162,24 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR Grid 宫格视频生成中...' });
 
+    // 百分比 → 实际帧索引（0 ~ totalFrames-1）
+    const totalFrames = req.duration * req.fps;
+    const frameIndexes = (req.frameIndexes || [0, 0, 0, 0]).map(pct =>
+      Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
+    );
+
+    // MKR Grid 后端不支持高分辨率，使用默认值 640×320
+    const width = VIDEO_MKR_GRID_DEFAULT.width;
+    const height = VIDEO_MKR_GRID_DEFAULT.height;
+
     const result = await retryOperation(
       () => generateVideoMkrGrid(
         req.prompt,
         req.refImage || '',
         req.gridType || 4,
-        req.frameIndexes || [0, 0, 0, 0],
-        req.width,
-        req.height,
+        frameIndexes,
+        width,
+        height,
         req.duration,
         req.fps
       ),

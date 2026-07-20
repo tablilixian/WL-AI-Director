@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Film, Edit2, MessageSquare, Sparkles, Loader2, Scissors, Grid3x3 } from 'lucide-react';
-import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration, NineGridData, NineGridPanel, VideoGenerationMode, TimedKeyframe, VideoPreset } from '../../types';
+import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration, NineGridData, NineGridPanel, VideoGenerationMode, TimedKeyframe, VideoPreset, FourGridDeduction } from '../../types';
 import SceneContext from './SceneContext';
 import KeyframeEditor from './KeyframeEditor';
 import VideoGenerator from './VideoGenerator';
@@ -45,6 +45,8 @@ interface ShotWorkbenchProps {
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
     aspectRatio: AspectRatio;
     duration: VideoDuration;
     modelId: string;
@@ -69,9 +71,13 @@ interface ShotWorkbenchProps {
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
   }) => void;
   onImageClick: (url: string, title: string) => void;
   onToggleKeyframeLock?: (type: 'start' | 'end') => void;
+  /** 保存四宫格推演数据到 shot.fourGrid */
+  onSaveFourGrid?: (fourGrid: FourGridDeduction) => void;
   // 九宫格分镜预览（高级功能）
   onGenerateNineGrid: () => void;
   onGenerateNineGridV2?: () => void; // V2 测试：风格帧 → image2storyboard
@@ -129,7 +135,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   nineGrid,
   onSelectNineGridPanel,
   onShowNineGrid,
-  onSaveAdvancedParams
+  onSaveAdvancedParams,
+  onSaveFourGrid,
 }) => {
   const scene = scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
   const activeCharacters = scriptData?.characters.filter(c => shot.characters.includes(c.id)) || [];
@@ -440,6 +447,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onDeletePreset={onDeletePreset}
           shotKeyframes={shotKeyframes}
           onSaveAdvancedParams={onSaveAdvancedParams}
+          onSaveFourGrid={onSaveFourGrid}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Video, Loader2, Edit2, Settings2, AlertTriangle } from 'lucide-react';
-import { Shot, AspectRatio, VideoDuration, VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe } from '../../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Video, Loader2, Edit2, Settings2 } from 'lucide-react';
+import { Shot, AspectRatio, VideoDuration, VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe, FourGridDeduction } from '../../types';
 import { getImageAspectRatio, getDefaultResolution } from './utils';
 import type { PipelineShotData } from './utils';
 import { VideoSettingsPanel } from '../AspectRatioSelector';
@@ -13,6 +13,7 @@ import {
 import { VideoModelDefinition } from '../../types/model';
 import { unifiedImageService } from '../../services/unifiedImageService';
 import AdvancedVideoPanel from './AdvancedVideoPanel';
+import DeductionModal from './DeductionModal';
 
 interface VideoGeneratorProps {
   shot: Shot;
@@ -27,6 +28,8 @@ interface VideoGeneratorProps {
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
     aspectRatio: AspectRatio;
     duration: VideoDuration;
     modelId: string;
@@ -42,6 +45,8 @@ interface VideoGeneratorProps {
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
   }) => void;
   // Pipeline 字段自动打通
   projectAspectRatio?: AspectRatio;  // 用于推断默认分辨率
@@ -52,6 +57,8 @@ interface VideoGeneratorProps {
   onDeletePreset?: (presetId: string) => void;
   // 悬空引用校验
   shotKeyframes?: Keyframe[];
+  // 四宫格推演持久化
+  onSaveFourGrid?: (fourGrid: FourGridDeduction) => void;
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({
@@ -71,6 +78,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   shotKeyframes,
   projectAspectRatio,
   onSaveAdvancedParams,
+  onSaveFourGrid,
 }) => {
   const normalizeModelId = (modelId?: string) => {
     if (!modelId) return modelId;
@@ -106,6 +114,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
   }>({
     mode: shot.interval?.mode || 'basic',
     fps: shot.interval?.fps || 30,
@@ -113,8 +123,34 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     height: shot.interval?.height || inferredResolution.height,
     timedKeyframes: shot.interval?.timedKeyframes || [],
     backgroundImage: shot.interval?.backgroundImage,
+    gridType: shot.interval?.gridType,
+    frameIndexes: shot.interval?.frameIndexes,
   });
   
+  // 推演弹框状态
+  const [showDeductionModal, setShowDeductionModal] = useState(false);
+  const [fourGrid, setFourGrid] = useState<FourGridDeduction | undefined>(shot.fourGrid);
+
+  const startKf = shot.keyframes?.find(k => k.type === 'start');
+  const startKeyframeImageUrl = startKf?.imageUrl;
+
+  const handleSaveFourGrid = (data: FourGridDeduction) => {
+    setFourGrid(data);
+    onSaveFourGrid?.(data);
+  };
+
+  const handleConfirmFourGrid = (frameIndexes: number[]) => {
+    if (frameIndexes.length > 0) {
+      setAdvancedParams(prev => ({ ...prev, frameIndexes }));
+    }
+  };
+
+  // 用 ref 稳定引用，避免父组件内联回调重渲染导致 cleanup 死循环
+  const saveRef = useRef(onSaveAdvancedParams);
+  const paramsRef = useRef(advancedParams);
+  saveRef.current = onSaveAdvancedParams;
+  paramsRef.current = advancedParams;
+
   // 当前选中的模型
   const selectedModel = videoModels.find(m => m.id === selectedModelId) as VideoModelDefinition | undefined;
   const modelType: 'sora' | 'veo' = selectedModel?.params.mode === 'async' ? 'sora' : 'veo';
@@ -185,21 +221,22 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       }
     : undefined;
 
-  // 九宫格模式下强制锁定基本 Tab
+  // 九宫格模式下自动切换到高级 Tab 以配置网格参数
   useEffect(() => {
     if (isNineGridMode) {
-      setActiveTab('basic');
+      setActiveTab('advanced');
     }
   }, [isNineGridMode]);
 
-  // 组件卸载前持久化高级参数，防止 Tab 切换丢失
+  // 组件卸载 / Tab 切换前持久化高级参数，防止丢失
+  // 使用 ref 避免 inline callback 重引用导致的死循环
   useEffect(() => {
     return () => {
-      if (onSaveAdvancedParams && activeTab === 'advanced') {
-        onSaveAdvancedParams(advancedParams);
+      if (saveRef.current && activeTab === 'advanced') {
+        saveRef.current(paramsRef.current);
       }
     };
-  }, [onSaveAdvancedParams, activeTab, advancedParams]);
+  }, [activeTab]);
 
   return (
     <div className="bg-[var(--bg-surface)] rounded-xl p-5 border border-[var(--border-primary)] space-y-4">
@@ -244,11 +281,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
 
       {/* nineGrid 锁定提示 */}
       {isNineGridMode && (
-        <div className="flex items-start gap-2 px-3 py-2 bg-[var(--warning-bg)]/30 border border-[var(--warning-border)] rounded-lg">
-          <AlertTriangle className="w-4 h-4 text-[var(--warning-text)] shrink-0 mt-0.5" />
-          <div className="text-[10px] text-[var(--warning-text)]">
-            <span className="font-bold">九宫格分镜模式已激活。</span>
-            <span className="block mt-0.5">当前使用九宫格整图作为起始帧，仅支持基本视频生成模式。如需使用高级模式，请先生成新的起始帧解除九宫格。</span>
+        <div className="flex items-start gap-2 px-3 py-2 bg-[var(--info-bg)]/30 border border-[var(--accent)]/30 rounded-lg">
+          <div className="text-[10px] text-[var(--text-secondary)]">
+            <span className="font-bold">网格分镜模式已激活。</span>
+            <span className="block mt-0.5">当前使用网格整图作为起始帧，可在高级面板中配置网格类型与帧位置。</span>
           </div>
         </div>
       )}
@@ -266,16 +302,13 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           基本
         </button>
         <button
-          disabled={isNineGridMode}
           onClick={() => setActiveTab('advanced')}
           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-t transition-colors flex items-center gap-1 ${
-            isNineGridMode
-              ? 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
-              : activeTab === 'advanced'
-                ? 'text-[var(--text-primary)] border-b-2 border-[var(--accent)] bg-[var(--bg-elevated)]'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            activeTab === 'advanced'
+              ? 'text-[var(--text-primary)] border-b-2 border-[var(--accent)] bg-[var(--bg-elevated)]'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
           }`}
-          title={isNineGridMode ? '九宫格模式下仅支持基本模式' : '高级视频生成'}
+          title="高级视频生成"
         >
           <Settings2 className="w-3 h-3" />
           高级
@@ -292,6 +325,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
             initialHeight={advancedParams.height}
             initialTimedKeyframes={advancedParams.timedKeyframes}
             initialBackground={advancedParams.backgroundImage}
+            initialGridType={advancedParams.gridType}
+            initialFrameIndexes={advancedParams.frameIndexes}
             isNineGridMode={isNineGridMode}
             videoPresets={videoPresets}
             onSavePreset={onSavePreset}
@@ -299,6 +334,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
             onDeletePreset={onDeletePreset}
             shotKeyframes={shotKeyframes}
             pipelineShotData={pipelineShotData}
+            fourGrid={fourGrid}
+            onOpenDeduction={() => setShowDeductionModal(true)}
             onParamsChange={(params) => setAdvancedParams(prev => ({ ...prev, ...params }))}
           />
         </div>
@@ -432,6 +469,16 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           * 未检测到结束帧，将使用单图生成模式 (Image-to-Video)
         </div>
       )}
+
+      <DeductionModal
+        isOpen={showDeductionModal}
+        onClose={() => setShowDeductionModal(false)}
+        startKeyframeImageUrl={startKeyframeImageUrl}
+        initialFourGrid={fourGrid}
+        gridType={advancedParams.gridType || 4}
+        onSave={handleSaveFourGrid}
+        onConfirm={handleConfirmFourGrid}
+      />
     </div>
   );
 };

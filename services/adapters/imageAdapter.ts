@@ -1785,34 +1785,43 @@ export const callDramaBackendVideoMkrGridApi = async (
 
   console.log(`[VMKRG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
-  const response = await retryOperation(async () => {
-    const res = await fetch(`${baseUrl}/api/v1/generate/image2videomkrgrid`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时
 
-    if (!res.ok) {
-      let errorMessage = `HTTP ${res.status}`;
-      try {
-        const errorText = await res.text();
-        console.error(`[VMKRG:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
-        if (errorText) {
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
-          } catch {
-            errorMessage = errorText.slice(0, 200);
+  let response: any;
+  try {
+    response = await retryOperation(async () => {
+      const res = await fetch(`${baseUrl}/api/v1/generate/image2videomkrgrid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        let errorMessage = `HTTP ${res.status}`;
+        try {
+          const errorText = await res.text();
+          console.error(`[VMKRG:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+            } catch {
+              errorMessage = errorText.slice(0, 200);
+            }
           }
+        } catch {
+          errorMessage = `HTTP ${res.status}`;
         }
-      } catch {
-        errorMessage = `HTTP ${res.status}`;
+        throw new Error(`[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`);
       }
-      throw new Error(`[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`);
-    }
 
-    return await res.json();
-  });
+      return await res.json();
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const videoUrl = response.full_url;
   if (!videoUrl) {

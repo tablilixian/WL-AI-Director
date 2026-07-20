@@ -183,6 +183,18 @@ export interface NineGridData {
   styleFrameUrl?: string;    // 风格帧图片
 }
 
+export interface FourGridDeduction {
+  status: 'idle' | 'analyzing' | 'analysis_done' | 'generating' | 'completed' | 'failed';
+  narrativeDirection?: string;
+  vlmAnalysis?: string;
+  descriptions: string[];
+  selectedIndexes: number[];
+  imageUrl?: string;
+  imageId?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export interface Shot {
   id: string;
   sceneId: string;
@@ -198,6 +210,7 @@ export interface Shot {
   interval?: VideoInterval;
   videoModel?: string; // 视频模型 ID，由 modelRegistry 管理
   nineGrid?: NineGridData; // 可选的九宫格分镜预览数据（高级功能）
+  fourGrid?: FourGridDeduction;
   vlmAnalysis?: {
     startAnalysis: string;
     endAnalysis: string;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe } from '../../types';
-import { Upload, Save, FolderOpen, Trash2, AlertTriangle, Camera, Film, Type } from 'lucide-react';
+import { VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe, FourGridDeduction } from '../../types';
+import { Upload, Save, FolderOpen, Trash2, AlertTriangle, Camera, Film, Type, Sparkles } from 'lucide-react';
 import { validateTimedKeyframes } from '../../services/videoPresetManager';
 import { PipelineShotData } from './utils';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface AdvancedVideoPanelProps {
   initialMode?: VideoGenerationMode;
@@ -11,6 +12,8 @@ interface AdvancedVideoPanelProps {
   initialHeight?: number;
   initialTimedKeyframes?: TimedKeyframe[];
   initialBackground?: string;
+  initialGridType?: number;
+  initialFrameIndexes?: number[];
   isNineGridMode: boolean;
   onParamsChange: (params: {
     mode: VideoGenerationMode;
@@ -19,6 +22,8 @@ interface AdvancedVideoPanelProps {
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
   }) => void;
   // 预设系统
   videoPresets?: VideoPreset[];
@@ -29,13 +34,24 @@ interface AdvancedVideoPanelProps {
   shotKeyframes?: Keyframe[];
   // Pipeline 字段自动打通：shot 现有字段预览
   pipelineShotData?: PipelineShotData;
+  // 四宫格推演（mkr-grid 模式）
+  fourGrid?: FourGridDeduction;
+  onOpenDeduction?: () => void;
+}
+
+/** 根据 gridType 生成均匀分布的百分比帧位置 (0~100) */
+function calcEvenFrameIndexes(gridType: number): number[] {
+  if (gridType <= 1) return [0];
+  return Array.from({ length: gridType }, (_, i) =>
+    Math.round((i / (gridType - 1)) * 100)
+  );
 }
 
 const MODE_OPTIONS: { value: VideoGenerationMode; label: string; desc: string }[] = [
-  { value: 'basic', label: '基本模式', desc: '首尾帧 + 运动强度' },
-  { value: 'msr', label: 'MSR 多帧超分', desc: '多帧超分辨率增强' },
-  { value: 'mkr', label: 'MKR 多关键帧', desc: '多关键帧时间轴控制' },
-  { value: 'mkr-grid', label: 'MKR Grid 宫格', desc: '宫格分镜视频' },
+  { value: 'basic', label: '基本模式', desc: '线性播放' },
+  { value: 'mkr', label: 'MKR 中间帧', desc: '+ 中间帧插入' },
+  { value: 'msr', label: 'MSR 背景参考', desc: '+ 背景参考图' },
+  { value: 'mkr-grid', label: 'MKR Grid', desc: '+ 网格多帧拼接' },
 ];
 
 const RESOLUTION_PRESETS = [
@@ -52,6 +68,8 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
   initialHeight = 1080,
   initialTimedKeyframes = [],
   initialBackground,
+  initialGridType = 4,
+  initialFrameIndexes,
   isNineGridMode,
   onParamsChange,
   videoPresets = [],
@@ -60,17 +78,25 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
   onDeletePreset,
   shotKeyframes,
   pipelineShotData,
+  fourGrid,
+  onOpenDeduction,
 }) => {
   const [mode, setMode] = useState<VideoGenerationMode>(initialMode);
   const [fps, setFps] = useState(initialFps);
   const [width, setWidth] = useState(initialWidth);
   const [height, setHeight] = useState(initialHeight);
   const [timedKeyframes, setTimedKeyframes] = useState<TimedKeyframe[]>(initialTimedKeyframes);
+  const [gridType, setGridType] = useState(initialGridType);
+  const [frameIndexes, setFrameIndexes] = useState<number[]>(
+    initialFrameIndexes || calcEvenFrameIndexes(initialGridType)
+  );
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [presetDesc, setPresetDesc] = useState('');
   // 悬空引用状态
   const [danglingWarning, setDanglingWarning] = useState<{ count: number; allInvalid: boolean } | null>(null);
+
+  const { src: fourGridSrc, loading: fourGridLoading } = useImageLoader(fourGrid?.imageUrl);
 
   // 初始化时执行悬空引用校验
   useEffect(() => {
@@ -104,6 +130,14 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
     }
   }, []); // 只在挂载时执行一次
 
+  // 当 isNineGridMode 为 true 时自动切换到 mkr-grid 模式
+  useEffect(() => {
+    if (isNineGridMode && mode !== 'mkr-grid') {
+      setMode('mkr-grid');
+      notify({ mode: 'mkr-grid' });
+    }
+  }, [isNineGridMode]);
+
   const notify = (updates: Partial<{
     mode: VideoGenerationMode;
     fps: number;
@@ -111,6 +145,8 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
   }>) => {
     onParamsChange({
       mode: updates.mode ?? mode,
@@ -119,14 +155,109 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
       height: updates.height ?? height,
       timedKeyframes: updates.timedKeyframes ?? timedKeyframes,
       backgroundImage: updates.backgroundImage ?? initialBackground,
+      gridType: updates.gridType ?? gridType,
+      frameIndexes: updates.frameIndexes ?? frameIndexes,
     });
   };
 
   return (
     <div className="space-y-4">
-      {isNineGridMode && (
-        <div className="px-3 py-2 bg-[var(--warning-bg)]/30 border border-[var(--warning-border)] rounded-lg text-[10px] text-[var(--warning-text)]">
-          九宫格模式下仅支持基本模式。请先生成新的首帧以解除九宫格。
+      {(isNineGridMode || mode === 'mkr-grid') && (
+        <div className="space-y-3 p-3 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-lg">
+          <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">
+            MKR Grid 网格配置
+          </label>
+          <div className="flex gap-2">
+            {[4, 6, 9].map(g => (
+              <button
+                key={g}
+                onClick={() => {
+                  setGridType(g);
+                  const idx = calcEvenFrameIndexes(g);
+                  setFrameIndexes(idx);
+                  notify({ gridType: g, frameIndexes: idx });
+                }}
+                className={`px-3 py-1 text-xs rounded border transition-colors ${
+                  gridType === g
+                    ? 'border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--accent-text)]'
+                    : 'border-[var(--border-primary)] text-[var(--text-muted)] hover:border-[var(--border-secondary)]'
+                }`}
+              >
+                {g}格 ({g === 4 ? '2×2' : g === 6 ? '2×3' : '3×3'})
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {frameIndexes.map((pct, i) => (
+              <div key={i} className="flex items-center gap-1 text-[9px]">
+                <span className="text-[var(--text-tertiary)] w-3 shrink-0">{i + 1}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={pct}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    const updated = frameIndexes.map((p, j) => j === i ? v : p);
+                    setFrameIndexes(updated);
+                    notify({ frameIndexes: updated });
+                  }}
+                  className="w-12 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-1 py-0.5 text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <span className="text-[var(--text-muted)]">%</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 推演区块 */}
+          <div className="border-t border-[var(--border-primary)] pt-3 space-y-3">
+            <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              画面推演
+            </label>
+
+            {fourGrid?.status === 'completed' && fourGrid.imageUrl ? (
+              <div className="space-y-2">
+                <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
+                  <div className="p-2">
+                    {fourGridSrc ? (
+                      <img src={fourGridSrc} className="w-full rounded object-cover" alt="四宫格推演结果" style={{ maxHeight: 120 }} />
+                    ) : fourGridLoading ? (
+                      <div className="w-full text-center text-[9px] text-[var(--text-muted)] py-3">加载中...</div>
+                    ) : (
+                      <div className="w-full text-center text-[9px] text-[var(--text-muted)] py-3">图片加载失败</div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onOpenDeduction}
+                    className="flex-1 px-2 py-1 text-[9px] font-bold rounded border border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--accent-text)] hover:opacity-80 transition-opacity"
+                  >
+                    查看 / 重新推演
+                  </button>
+                </div>
+              </div>
+            ) : fourGrid?.status === 'analysis_done' ? (
+              <div className="space-y-2">
+                <p className="text-[9px] text-[var(--text-muted)]">分镜描述已生成，点击继续生成宫格图</p>
+                <button
+                  onClick={onOpenDeduction}
+                  className="w-full px-2 py-1 text-[9px] font-bold rounded border border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--accent-text)] hover:opacity-80 transition-opacity"
+                >
+                  继续推演
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenDeduction}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded border border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--accent-text)] hover:opacity-80 transition-opacity"
+              >
+                <Sparkles className="w-3 h-3" />
+                开始推演
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -184,21 +315,24 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
           生成模式
         </label>
         <div className="grid grid-cols-2 gap-2">
-          {MODE_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => { setMode(opt.value); notify({ mode: opt.value }); }}
-              disabled={opt.value !== 'basic' && isNineGridMode}
-              className={`p-2 rounded-lg border text-left transition-all ${
-                mode === opt.value
-                  ? 'border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--text-primary)]'
-                  : 'border-[var(--border-primary)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:border-[var(--border-secondary)]'
-              } ${opt.value !== 'basic' && isNineGridMode ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-            >
-              <div className="text-xs font-bold">{opt.label}</div>
-              <div className="text-[9px] mt-0.5 opacity-70">{opt.desc}</div>
-            </button>
-          ))}
+          {MODE_OPTIONS.map(opt => {
+            const disabled = isNineGridMode && opt.value !== 'basic' && opt.value !== 'mkr-grid';
+            return (
+              <button
+                key={opt.value}
+                onClick={() => { setMode(opt.value); notify({ mode: opt.value }); }}
+                disabled={disabled}
+                className={`p-2 rounded-lg border text-left transition-all ${
+                  mode === opt.value
+                    ? 'border-[var(--accent)] bg-[var(--accent-bg)] text-[var(--text-primary)]'
+                    : 'border-[var(--border-primary)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:border-[var(--border-secondary)]'
+                } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div className="text-xs font-bold">{opt.label}</div>
+                <div className="text-[9px] mt-0.5 opacity-70">{opt.desc}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

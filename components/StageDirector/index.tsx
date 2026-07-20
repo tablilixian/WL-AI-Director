@@ -496,6 +496,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     height: number;
     timedKeyframes: TimedKeyframe[];
     backgroundImage?: string;
+    gridType?: number;
+    frameIndexes?: number[];
     aspectRatio: AspectRatio;
     duration: VideoDuration;
     modelId: string;
@@ -509,13 +511,16 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     }
 
     const projectLanguage = project.language || project.scriptData?.language || '中文';
-    const isNineGridMode = params.mode === 'mkr-grid';
+    const isGridMode = params.mode === 'mkr-grid';
+    const gridPromptData = isGridMode
+      ? (shot.fourGrid?.status === 'completed' ? undefined : shot.nineGrid)
+      : undefined;
     const videoPrompt = buildVideoPrompt(
       shot.actionSummary,
       shot.cameraMovement,
       params.modelId,
       projectLanguage,
-      isNineGridMode ? shot.nineGrid : undefined,
+      gridPromptData,
       params.duration,
       shot.cameraChoreography,
       project.eraContext,
@@ -540,6 +545,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         height: params.height,
         backgroundImage: params.backgroundImage,
         timedKeyframes: params.timedKeyframes,
+        gridType: params.gridType,
+        frameIndexes: params.frameIndexes,
       }
     }));
 
@@ -591,16 +598,19 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
           break;
         }
         case 'mkr-grid': {
-          if (!shot.nineGrid?.imageUrl) {
-            throw new Error('九宫格分镜尚未生成，请先生成九宫格');
+          const gridImageUrl = shot.fourGrid?.status === 'completed' && shot.fourGrid?.imageUrl
+            ? shot.fourGrid.imageUrl
+            : shot.nineGrid?.imageUrl;
+          if (!gridImageUrl) {
+            throw new Error('网格分镜图尚未生成，请先完成推演或生成九宫格');
           }
-          const refImage = await unifiedImageService.resolveForApi(shot.nineGrid.imageUrl);
+          const refImage = await unifiedImageService.resolveForApi(gridImageUrl);
           orchRequest = {
             mode: 'mkr-grid',
             prompt: videoPrompt,
             refImage,
-            gridType: shot.interval?.gridType || 4,
-            frameIndexes: shot.interval?.frameIndexes || [0, 0, 0, 0],
+            gridType: params.gridType || shot.interval?.gridType || 4,
+            frameIndexes: params.frameIndexes || shot.interval?.frameIndexes || [0, 0, 0, 0],
             modelId: params.modelId,
             aspectRatio: params.aspectRatio,
             duration: params.duration,
@@ -1781,18 +1791,39 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             }}
             onSaveAdvancedParams={(params) => {
               if (!activeShot) return;
-              updateShot(activeShot.id, (s) => ({
-                ...s,
-                interval: s.interval ? {
-                  ...s.interval,
-                  mode: params.mode,
-                  fps: params.fps,
-                  width: params.width,
-                  height: params.height,
-                  backgroundImage: params.backgroundImage,
-                  timedKeyframes: params.timedKeyframes,
-                } : undefined
-              }));
+              updateShot(activeShot.id, (s) => {
+                const startKf = s.keyframes?.find(k => k.type === 'start');
+                const endKf = s.keyframes?.find(k => k.type === 'end');
+                return {
+                  ...s,
+                  interval: s.interval ? {
+                    ...s.interval,
+                    mode: params.mode,
+                    fps: params.fps,
+                    width: params.width,
+                    height: params.height,
+                    backgroundImage: params.backgroundImage,
+                    timedKeyframes: params.timedKeyframes,
+                    gridType: params.gridType,
+                    frameIndexes: params.frameIndexes,
+                  } : {
+                    id: generateId(`int-${s.id}`),
+                    mode: params.mode,
+                    fps: params.fps,
+                    width: params.width,
+                    height: params.height,
+                    backgroundImage: params.backgroundImage,
+                    timedKeyframes: params.timedKeyframes,
+                    gridType: params.gridType,
+                    frameIndexes: params.frameIndexes,
+                    startKeyframeId: startKf?.id || '',
+                    endKeyframeId: endKf?.id || '',
+                    duration: 0,
+                    motionStrength: 0,
+                    status: 'pending',
+                  }
+                };
+              });
             }}
             onEditCameraChoreography={() => setShowChoreographyModal(true)}
             onEditVideoPrompt={() => {
@@ -1802,8 +1833,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
                 const selectedModel = activeShot.videoModel || DEFAULTS.videoModel;
                 const projectLanguage = project.language || project.scriptData?.language || '中文';
                 const startKf = activeShot.keyframes?.find(k => k.type === 'start');
+                const hasFourGrid = activeShot.fourGrid?.status === 'completed' && !!activeShot.fourGrid?.imageUrl;
                 // 首帧等于九宫格图时触发九宫格分镜模式
-                const isNineGridMode = (activeShot.nineGrid?.status === 'completed'
+                const isNineGridMode = !hasFourGrid && (activeShot.nineGrid?.status === 'completed'
                     && activeShot.nineGrid?.imageUrl
                     && startKf?.imageUrl === activeShot.nineGrid.imageUrl);
                 promptValue = buildVideoPrompt(
@@ -1830,6 +1862,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             nineGrid={activeShot.nineGrid}
             onSelectNineGridPanel={handleSelectNineGridPanel}
             onShowNineGrid={() => setShowNineGrid(true)}
+            onSaveFourGrid={(fourGrid) => {
+              if (activeShot) updateShot(activeShot.id, s => ({ ...s, fourGrid }));
+            }}
           />
         )}
       </div>
