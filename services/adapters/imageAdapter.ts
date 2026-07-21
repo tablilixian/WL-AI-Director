@@ -1882,18 +1882,15 @@ export const callDramaBackendVideoMkrApi = async (
     fps: options.videoMkrFps || 30,
   };
 
-  // 处理 MKR 关键帧图片
+  // 处理 MKR 关键帧图片 — 后端要求平铺的 image_i / frame_index_i 字段
   if (options.videoMkrImages && options.videoMkrImages.length > 0) {
-    const images = [];
-    for (const item of options.videoMkrImages) {
+    for (let i = 0; i < options.videoMkrImages.length; i++) {
+      const item = options.videoMkrImages[i];
       const filename = await uploadImageToDramaBackend(item.image, baseUrl, tid);
-      images.push({
-        image: filename,
-        frame_index: item.frame_index,
-      });
-      console.log(`[VMKR:${tid}] 关键帧上传成功 -> image: ${filename}, frame_index: ${item.frame_index}`);
+      requestBody[`image_${i + 1}`] = filename;
+      requestBody[`frame_index_${i + 1}`] = item.frame_index;
+      console.log(`[VMKR:${tid}] 关键帧 ${i + 1} 上传成功 -> image_${i + 1}: ${filename}, frame_index_${i + 1}: ${item.frame_index}`);
     }
-    requestBody.images = images;
   }
 
   console.log(`[VMKR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
