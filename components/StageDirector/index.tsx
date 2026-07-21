@@ -54,6 +54,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   const [isSplittingShot, setIsSplittingShot] = useState(false); // 是否正在拆分镜头
   const [showNineGrid, setShowNineGrid] = useState(false); // 是否显示九宫格预览弹窗
   const [toastMessage, setToastMessage] = useState('');
+  const [generationProgress, setGenerationProgress] = useState<{ percent: number; message: string } | null>(null);
   
   // 关键帧生成使用的横竖屏比例（优先读取工程级配置，向后兼容全局）
   const [keyframeAspectRatio, setKeyframeAspectRatioState] = useState<AspectRatio>(() => project.aspectRatio ?? getUserAspectRatio());
@@ -385,7 +386,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         && shot.nineGrid?.imageUrl 
         && sKf?.imageUrl === shot.nineGrid.imageUrl);
     
-    const videoPrompt = buildVideoPrompt(
+    // 用户手动编辑过提示词则优先使用，否则动态构建
+    const videoPrompt = shot.interval?.videoPrompt || buildVideoPrompt(
       shot.actionSummary,
       shot.cameraMovement,
       selectedModel,
@@ -515,7 +517,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     const gridPromptData = isGridMode
       ? (shot.fourGrid?.status === 'completed' ? undefined : shot.nineGrid)
       : undefined;
-    const videoPrompt = buildVideoPrompt(
+    // 用户手动编辑过提示词则优先使用，否则动态构建
+    const videoPrompt = shot.interval?.videoPrompt || buildVideoPrompt(
       shot.actionSummary,
       shot.cameraMovement,
       params.modelId,
@@ -644,7 +647,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
 
       // 统一调度
       const result = await videoOrchestrator.generate(orchRequest, (progress) => {
-        // 进度回调：可在此更新 UI 状态
+        setGenerationProgress({ percent: progress.percent, message: progress.message });
         logger.debug(LogCategory.AI, `🎬 Orchestrator 进度: ${progress.percent}% — ${progress.message}`);
       });
 
@@ -675,12 +678,15 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         } : undefined,
       }));
 
+      setGenerationProgress(null);
+
       try {
         await saveProjectToCloud(updatedProject);
       } catch (error) {
         console.error('❌ 保存视频失败:', error);
       }
     } catch (e: any) {
+      setGenerationProgress(null);
       console.error(e);
       updateShot(shot.id, (s) => ({
         ...s,
@@ -1865,6 +1871,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
             onSaveFourGrid={(fourGrid) => {
               if (activeShot) updateShot(activeShot.id, s => ({ ...s, fourGrid }));
             }}
+            generationProgress={generationProgress}
+            projectLanguage={project.language || project.scriptData?.language || '中文'}
+            projectEraContext={project.eraContext}
           />
         )}
       </div>

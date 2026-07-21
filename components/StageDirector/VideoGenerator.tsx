@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Video, Loader2, Edit2, Settings2 } from 'lucide-react';
 import { Shot, AspectRatio, VideoDuration, VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe, FourGridDeduction } from '../../types';
-import { getImageAspectRatio, getDefaultResolution } from './utils';
+import { getImageAspectRatio, getDefaultResolution, buildVideoPrompt } from './utils';
 import type { PipelineShotData } from './utils';
 import { VideoSettingsPanel } from '../AspectRatioSelector';
 import { 
@@ -14,6 +14,8 @@ import { VideoModelDefinition } from '../../types/model';
 import { unifiedImageService } from '../../services/unifiedImageService';
 import AdvancedVideoPanel from './AdvancedVideoPanel';
 import DeductionModal from './DeductionModal';
+import VideoConfirmDialog from './VideoConfirmDialog';
+import { useAlert } from '../GlobalAlert';
 
 interface VideoGeneratorProps {
   shot: Shot;
@@ -59,6 +61,11 @@ interface VideoGeneratorProps {
   shotKeyframes?: Keyframe[];
   // 四宫格推演持久化
   onSaveFourGrid?: (fourGrid: FourGridDeduction) => void;
+  // 视频生成实时进度
+  generationProgress?: { percent: number; message: string } | null;
+  // 项目上下文（用于提示词拼装来源展示）
+  projectLanguage?: string;
+  projectEraContext?: string;
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({
@@ -79,7 +86,12 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   projectAspectRatio,
   onSaveAdvancedParams,
   onSaveFourGrid,
+  generationProgress,
+  projectLanguage,
+  projectEraContext,
 }) => {
+  const { showAlert } = useAlert();
+
   const normalizeModelId = (modelId?: string) => {
     if (!modelId) return modelId;
     return modelId.toLowerCase() === 'veo_3_1-fast-4k' ? 'veo_3_1-fast' : modelId;
@@ -129,7 +141,25 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   
   // 推演弹框状态
   const [showDeductionModal, setShowDeductionModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [fourGrid, setFourGrid] = useState<FourGridDeduction | undefined>(shot.fourGrid);
+
+  // 切换镜头时同步状态
+  useEffect(() => {
+    setFourGrid(shot.fourGrid);
+    setShowDeductionModal(false);
+    setAdvancedParams(prev => ({
+      ...prev,
+      mode: shot.interval?.mode || 'basic',
+      fps: shot.interval?.fps || 30,
+      width: shot.interval?.width || inferredResolution.width,
+      height: shot.interval?.height || inferredResolution.height,
+      timedKeyframes: shot.interval?.timedKeyframes || [],
+      backgroundImage: shot.interval?.backgroundImage,
+      gridType: shot.interval?.gridType,
+      frameIndexes: shot.interval?.frameIndexes,
+    }));
+  }, [shot.id]);
 
   const startKf = shot.keyframes?.find(k => k.type === 'start');
   const startKeyframeImageUrl = startKf?.imageUrl;
@@ -140,9 +170,16 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   };
 
   const handleConfirmFourGrid = (frameIndexes: number[]) => {
-    if (frameIndexes.length > 0) {
-      setAdvancedParams(prev => ({ ...prev, frameIndexes }));
+    const grid = advancedParams.gridType || 4;
+    if (frameIndexes.length === 0) {
+      showAlert('请至少选择一个分镜', { type: 'warning' });
+      return;
     }
+    if (frameIndexes.length !== grid) {
+      showAlert(`选择了 ${frameIndexes.length} 个分镜但当前网格是 ${grid} 格`, { type: 'warning' });
+      return;
+    }
+    setAdvancedParams(prev => ({ ...prev, frameIndexes }));
   };
 
   // 用 ref 稳定引用，避免父组件内联回调重渲染导致 cleanup 死循环
@@ -194,6 +231,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   }, [shot.interval?.videoUrl]);
 
   const handleGenerate = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmGenerate = () => {
+    setShowConfirmDialog(false);
     if (activeTab === 'advanced') {
       onGenerateAdvanced({ ...advancedParams, aspectRatio, duration, modelId: effectiveModelId });
     } else {
@@ -210,6 +252,35 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   };
 
   const canGenerate = hasStartFrame;
+
+  // 始终根据当前配置动态构建提示词（反映最新修改）
+  const videoPrompt = useMemo(() => {
+    return buildVideoPrompt(
+      shot.actionSummary || '',
+      shot.cameraMovement || '',
+      effectiveModelId,
+      projectLanguage || '中文',
+      isNineGridMode ? (shot.nineGrid ?? undefined) : undefined,
+      duration,
+      shot.cameraChoreography,
+      projectEraContext,
+    );
+  }, [shot.actionSummary, shot.cameraMovement, effectiveModelId, projectLanguage, isNineGridMode, shot.nineGrid, duration, shot.cameraChoreography, projectEraContext]);
+
+  // 确认弹框需要的衍生数据
+  const timedKeyframeImages = advancedParams.mode === 'mkr' && advancedParams.timedKeyframes
+    ? advancedParams.timedKeyframes.map(tk => {
+        const kf = shot.keyframes?.find(k => k.id === tk.keyframeId);
+        return { positionPercent: tk.positionPercent, imageUrl: kf?.imageUrl };
+      })
+    : undefined;
+  const refGridImageUrl = fourGrid?.status === 'completed' && fourGrid?.imageUrl
+    ? fourGrid.imageUrl
+    : (shot.nineGrid?.status === 'completed' ? shot.nineGrid?.imageUrl : undefined);
+  const totalFrames = duration * advancedParams.fps;
+  const actualFrameIndexes = advancedParams.frameIndexes?.map(pct =>
+    Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
+  );
 
   // Pipeline 字段自动打通：构建 shot 现有字段预览数据
   const pipelineShotData: PipelineShotData | undefined = (shot.shotSize || shot.cameraMovement || shot.actionSummary || shot.cameraChoreography)
@@ -462,6 +533,21 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           <>{hasVideo ? '重新生成视频' : '开始生成视频'}</>
         )}
       </button>
+
+      {/* 生成进度条 */}
+      {generationProgress && (
+        <div className="space-y-1.5">
+          <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[var(--accent)] transition-all duration-300"
+              style={{ width: `${generationProgress.percent}%` }}
+            />
+          </div>
+          <p className="text-[9px] text-[var(--text-muted)] text-center font-mono">
+            {generationProgress.message} ({generationProgress.percent}%)
+          </p>
+        </div>
+      )}
       
       {/* Status Messages */}
       {!hasEndFrame && (
@@ -478,6 +564,39 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         gridType={advancedParams.gridType || 4}
         onSave={handleSaveFourGrid}
         onConfirm={handleConfirmFourGrid}
+      />
+
+      <VideoConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmGenerate}
+        shotId={shot.id}
+        shotIndex={parseInt(shot.id.split('-')[1] || '0', 10)}
+        cameraMovement={shot.cameraMovement}
+        shotSize={shot.shotSize}
+        actionSummary={shot.actionSummary}
+        cameraChoreography={shot.cameraChoreography}
+        mode={activeTab === 'advanced' ? advancedParams.mode : 'basic'}
+        modelName={selectedModel?.name || effectiveModelId}
+        modelProvider={selectedModel?.providerId || ''}
+        aspectRatio={aspectRatio}
+        duration={duration}
+        fps={activeTab === 'advanced' ? advancedParams.fps : 30}
+        width={activeTab === 'advanced' ? advancedParams.width : inferredResolution.width}
+        height={activeTab === 'advanced' ? advancedParams.height : inferredResolution.height}
+        videoPrompt={videoPrompt}
+        language={projectLanguage || '中文'}
+        eraContext={projectEraContext}
+        fourGridDescriptions={fourGrid?.descriptions}
+        nineGridPanels={shot.nineGrid?.panels}
+        startKeyframeImageUrl={startKeyframeImageUrl}
+        endKeyframeImageUrl={shot.keyframes?.find(k => k.type === 'end')?.imageUrl}
+        refGridImageUrl={refGridImageUrl}
+        backgroundImage={advancedParams.backgroundImage}
+        timedKeyframeImages={timedKeyframeImages}
+        gridType={advancedParams.gridType}
+        frameIndexes={actualFrameIndexes}
+        frameIndexesPercent={advancedParams.frameIndexes}
       />
     </div>
   );

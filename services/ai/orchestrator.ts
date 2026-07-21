@@ -162,6 +162,15 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR Grid 宫格视频生成中...' });
 
+    const gridType = req.gridType || 4;
+    const rawIndexes = req.frameIndexes || [];
+    if (rawIndexes.length === 0) {
+      throw new Error('MKR Grid: frameIndexes 为空，请至少选择一个分镜');
+    }
+    if (rawIndexes.length !== gridType) {
+      throw new Error(`MKR Grid: frameIndexes 数量 (${rawIndexes.length}) 与 gridType (${gridType}) 不匹配`);
+    }
+
     // 百分比 → 实际帧索引（0 ~ totalFrames-1）
     const totalFrames = req.duration * req.fps;
     const frameIndexes = (req.frameIndexes || [0, 0, 0, 0]).map(pct =>

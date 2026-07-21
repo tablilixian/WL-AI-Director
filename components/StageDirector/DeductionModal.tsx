@@ -281,8 +281,9 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                         图片加载失败
                       </div>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] text-sm">
-                        无首帧图片
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] text-sm gap-2">
+                        <span>无首帧图片</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)]">请先生成镜头的首帧关键帧</span>
                       </div>
                     )}
                   </div>
@@ -335,6 +336,16 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                   <div className="mt-4 h-2 bg-gray-700 rounded-full overflow-hidden max-w-md mx-auto">
                     <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${progress}%` }} />
                   </div>
+                </div>
+              ) : !startKeyframeImageUrl ? (
+                <div className="space-y-2">
+                  <button
+                    disabled
+                    className="w-full py-2.5 bg-amber-600/50 text-white/50 text-sm font-medium rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    请先关闭弹窗，生成镜头的首帧关键帧
+                  </button>
                 </div>
               ) : (
                 <button

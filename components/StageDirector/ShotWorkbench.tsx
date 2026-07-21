@@ -78,6 +78,11 @@ interface ShotWorkbenchProps {
   onToggleKeyframeLock?: (type: 'start' | 'end') => void;
   /** 保存四宫格推演数据到 shot.fourGrid */
   onSaveFourGrid?: (fourGrid: FourGridDeduction) => void;
+  /** 视频生成实时进度 */
+  generationProgress?: { percent: number; message: string } | null;
+  /** 项目上下文（用于弹框中提示词拼装来源展示） */
+  projectLanguage?: string;
+  projectEraContext?: string;
   // 九宫格分镜预览（高级功能）
   onGenerateNineGrid: () => void;
   onGenerateNineGridV2?: () => void; // V2 测试：风格帧 → image2storyboard
@@ -137,6 +142,9 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onShowNineGrid,
   onSaveAdvancedParams,
   onSaveFourGrid,
+  generationProgress,
+  projectLanguage,
+  projectEraContext,
 }) => {
   const scene = scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
   const activeCharacters = scriptData?.characters.filter(c => shot.characters.includes(c.id)) || [];
@@ -448,6 +456,9 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           shotKeyframes={shotKeyframes}
           onSaveAdvancedParams={onSaveAdvancedParams}
           onSaveFourGrid={onSaveFourGrid}
+          generationProgress={generationProgress}
+          projectLanguage={projectLanguage}
+          projectEraContext={projectEraContext}
         />
       </div>
     </div>
