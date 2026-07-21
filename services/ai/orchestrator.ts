@@ -4,7 +4,7 @@ import { generateVideoMsr, generateVideoMkr, generateVideoMkrGrid } from './visu
 import { unifiedImageService } from '../unifiedImageService';
 import { logger, LogCategory } from '../logger';
 import { retryOperation } from './apiCore';
-import { VIDEO_MKR_GRID_DEFAULT } from '../../config/sizeConfig';
+import { VIDEO_MKR_GRID_DEFAULT, VIDEO_MSR_DEFAULT, VIDEO_MKR_DEFAULT } from '../../config/sizeConfig';
 
 /** 统一视频生成请求参数 */
 export interface VideoGenerationRequest {
@@ -117,13 +117,17 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MSR 多帧超分生成中...' });
 
+    // MSR 后端不支持高分辨率，使用默认值
+    const width = VIDEO_MSR_DEFAULT.width;
+    const height = VIDEO_MSR_DEFAULT.height;
+
     const result = await retryOperation(
       () => generateVideoMsr(
         req.prompt,
         req.referenceImages || [],
         req.backgroundImage || '',
-        req.width,
-        req.height,
+        width,
+        height,
         req.duration,
         req.fps
       ),
@@ -140,12 +144,16 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR 多关键帧生成中...' });
 
+    // MKR 后端不支持高分辨率，使用默认值
+    const width = VIDEO_MKR_DEFAULT.width;
+    const height = VIDEO_MKR_DEFAULT.height;
+
     const result = await retryOperation(
       () => generateVideoMkr(
         req.prompt,
         req.timedImages || [],
-        req.width,
-        req.height,
+        width,
+        height,
         req.duration,
         req.fps
       ),
