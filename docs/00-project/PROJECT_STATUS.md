@@ -51,6 +51,8 @@ updated: 2026-06-01
 | E01 | E 系列剩余项目 | - | ⏳ 待确认 | 需要重新评估必要性 |
 | 用户设置页面 | 昵称/API Key/修改密码 UI | P2 | 📝 待做 | `updateProfile` + `changePassword` 已实现，缺 UI |
 | 密码重置引导 | 登录页提示查看本地日志获取密码重置链接 | P2 | 📝 待做 | 无邮件服务，需引导用户看日志 |
+| 推演状态切换镜头过期 | VideoGenerator 的 fourGrid state 在切换 activeShot 后不更新 | P0 | 🐛 待修 | `useState(shot.fourGrid)` 只初始化不同步 |
+| 视频生成实时进度 | orchestrator progress callback 未显示到 UI | P1 | 🚧 待做 | 当前仅 `logger.debug` |
 
 ---
 
@@ -64,7 +66,7 @@ updated: 2026-06-01
 | 模型配置 (ModelConfig) | ✅ 完成 | 统一注册中心，三级 API Key，直接调用 AI API |
 | 剧本阶段 (StageScript) | ✅ 完成 | 剧本解析、分镜生成、提示词 |
 | 资产阶段 (StageAssets) | ✅ 完成 | 角色/场景/道具 + 资产库（本地+PB 双写） |
-| 导演工作台 (StageDirector) | ✅ 完成 | 关键帧、九宫格、视频生成（videoAdapter 直调 AI） |
+| 导演工作台 (StageDirector) | ✅ 完成 | 关键帧、九宫格、推演（DeductionModal）、视频生成（advanced mode + orchestrator 调度） |
 | 提示词管理 (StagePrompts) | ✅ 完成 | 按类型分组、编辑、优化 |
 | 成片导出 (StageExport) | ✅ 完成 | EDL/FCPXML/ZIP 导出 |
 | 画布 (Canvas) | ✅ 完成 | 跨项目隔离、load 去重、防抖保存 |
@@ -76,6 +78,11 @@ updated: 2026-06-01
 
 | 日期 | 变更 | 类型 |
 |------|------|------|
+| 2026-07-21 | mkr-grid 推演→视频全链路：DeductionModal + 接口修复 | ✨ 功能 |
+| 2026-07-21 | 修复 callDramaBackendVideoMkrGridApi 缺失导入 | 🐛 修复 |
+| 2026-07-21 | 修复 frame_indexs 百分比未转帧序号 + 分辨率强制 640×320 | 🐛 修复 |
+| 2026-07-21 | 修复 fetch 无超时导致永久挂起（AbortController + 10min） | 🐛 修复 |
+| 2026-07-21 | 修复四宫格图片保存使用 raw local:xxx 而非 blob URL | 🐛 修复 |
 | 2026-07-16 | P0/P1/P2 批量优化项完成（A/B/C/E 系列 + F 三合一增强） | ✨ 优化 |
 | 2026-07-16 | 视频时长 3-15s 自由选择，滑块 UI | ✨ 功能 |
 | 2026-07-16 | VLM 增强动作建议 + 画面分析结果持久化 | ✨ 功能 |

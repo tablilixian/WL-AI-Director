@@ -1,6 +1,7 @@
 # 推演 → 宫格 → 视频 一体化流程设计
 
 > 设计日期: 2026-07-16  
+> 最后更新: 2026-07-21  
 > 覆盖范围: StageDirector + Canvas 推演能力 + Video Generation Advanced Mode
 
 ---
@@ -19,12 +20,14 @@
 | **MKR Grid 视频** | `image2videomkrgrid` | image + gridType + frameIndexes | 视频 |
 | **MKR 多关键帧视频** | `image2videomkr` | images[{image, frame_index}] | 视频 |
 
-### 缺口
+### 已解决（2026-07-21）
 
-1. **推演流程在 Canvas 中（创意画布），不在 StageDirector（导演工作台）** —— 用户不能在视频生成界面直接做推演
-2. **MKR Grid 的 gridType/frameIndexes 无 UI 控件** —— 写死 4 和 [0,0,0,0]
-3. **推演结果与视频生成未打通** —— 推演生成的宫格图不会自动进入视频生成流程
-4. **image2videomkrgrid 的 gridType/frameIndexes 语义需要与推演联动** —— 宫格是 AI 生成的，用户需要选择哪些格参与视频
+| # | 缺口 | 解决方式 | 文件 |
+|---|------|----------|------|
+| 1 | 推演流程在 Canvas，不在 StageDirector | 新增 DeductionModal（VLM→LLM→storyboard 三阶段），通过 AdvancedVideoPanel 的"开始推演"按钮打开 | `DeductionModal.tsx` |
+| 2 | gridType/frameIndexes 无 UI 控件 | AdvancedVideoPanel mkr-grid 模式下新增网格选择（4/6/9 格）+ 百分比微调输入 | `AdvancedVideoPanel.tsx` |
+| 3 | 推演结果未打通视频生成 | `onSaveFourGrid` → `updateShot.fourGrid`；`handleAdvancedGenerateVideo` 的 mkr-grid case 读取 `fourGrid.imageUrl` | `index.tsx` |
+| 4 | gridType/frameIndexes 语义未联动 | 确认时 `frameIndexes` 传入 `handleConfirmFourGrid` → `advancedParams.frameIndexes` → orchestrator 转换百分比为帧序号 | `VideoGenerator.tsx`, `orchestrator.ts` |
 
 ---
 
@@ -222,3 +225,27 @@ Step 4: 完善体验
   ─ 允许导出单个格子
   ─ 时间占比可视化
 ```
+
+---
+
+## 七、代码审计（2026-07-21 实现后）
+
+### 已知问题
+
+| 优先级 | 问题 | 影响 | 建议修复 |
+|--------|------|------|----------|
+| P0 | **`fourGrid` 状态在切换镜头时过期** — `VideoGenerator` 用 `useState(shot.fourGrid)` 只在挂载时初始化，切换 `activeShot` 后不更新 | 用户看到的是上一个镜头的推演数据 | 改用 `useMemo` 或在 `useEffect` 中监听 `shot.id` 变化同步 |
+| P1 | **视频生成无实时进度** — orchestrator 的 progress callback 只 `logger.debug()`，用户看到的是二态（"生成中"/"完成"） | 长视频生成（3+ 分钟）用户不知进度 | 上层组件将 `progress.percent` 显示为进度条 |
+| P1 | **frameIndexes 与 gridType 无长度校验** — 确认前未检查 `selectedIndexes.length === gridType` | API 可能收到错误参数的 frame_indexs | 在 `handleConfirmFourGrid` 或 `handleAdvancedGenerateVideo` 中加断言 |
+| P2 | **gridType 双源可能不同步** — DeductionModal 按自己的 `gridType` prop 生成 N 个描述，AdvancedVideoPanel 有独立的 grid 选择器 | 用户生成 6 格描述但选择 4 格——描述数 > 格数 | 统一 gridType 源或加联动逻辑 |
+| P2 | **`gridPromptData` 反直觉逻辑** — `fourGrid.completed ? undefined : nineGrid` 无注释说明设计意图 | 维护者困惑 | 加行内注释 |
+
+### 测试建议
+
+| 场景 | 预期行为 |
+|------|----------|
+| 无首帧时打开推演 | 「开始推演」按钮 disabled，展示"无首帧图片" |
+| 第一次完成推演→关闭→重新打开 | 恢复为 `phase: 'preview'`，保留四宫格图和描述 |
+| 切换镜头后再次打开推演 | 使用新镜头的首帧 + 新镜头的 `fourGrid`（当前 P0 bug） |
+| 取消部分格子勾选后确认 | 视频生成使用 `selectedIndexes` 中的帧索引 |
+| 视频生成进行中关闭/切换镜头 | 应展示适当的提示或取消（当前未实现） |
