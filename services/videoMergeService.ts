@@ -23,9 +23,9 @@ const DEFAULT_OPTIONS: MergeOptions = {
 };
 
 const RESOLUTION_MAP = {
-  '720p': { width: 1280, height: 720 },
-  '1080p': { width: 1920, height: 1080 },
-  '4K': { width: 3840, height: 2160 }
+  '720p': { width: 1280, height: 704 },
+  '1080p': { width: 1920, height: 1088 },
+  '4K': { width: 3840, height: 2176 }
 };
 
 class VideoMergeService {

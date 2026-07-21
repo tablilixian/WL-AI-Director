@@ -15,9 +15,9 @@ export type AspectRatioKey = '16:9' | '9:16' | '1:1';
 
 /** Sora / BigModel 异步视频 */
 export const VIDEO_SORA_SIZE: Record<AspectRatioKey, { width: number; height: number; size: string }> = {
-  '16:9': { width: 1280, height: 720, size: '1280x720' },
-  '9:16': { width: 720, height: 1280, size: '720x1280' },
-  '1:1':  { width: 720, height: 720,  size: '720x720' },
+  '16:9': { width: 1280, height: 704, size: '1280x704' },
+  '9:16': { width: 704, height: 1280, size: '704x1280' },
+  '1:1':  { width: 704, height: 704,  size: '704x704' },
 };
 
 /** Drama Backend 视频 (image2videomsr) — 当前为 640p 级别 */
@@ -39,8 +39,8 @@ export const VIDEO_MKR_GRID_DEFAULT = { width: 640, height: 320 };
 
 /** BigModel CogView (文生图) */
 export const IMAGE_COGVIEW_SIZE: Record<AspectRatioKey, string> = {
-  '16:9': '1280x720',
-  '9:16': '720x1280',
+  '16:9': '1280x704',
+  '9:16': '704x1280',
   '1:1':  '1024x1024',
 };
 export const IMAGE_COGVIEW_FALLBACK = '1024x1024';
@@ -51,7 +51,7 @@ export const IMAGE_DRAMA_SIZE: Record<AspectRatioKey, { width: number; height: n
   '9:16': { width: 576, height: 1024 },
   '1:1':  { width: 768, height: 768 },
 };
-export const IMAGE_DRAMA_FALLBACK = { width: 1024, height: 720 };
+export const IMAGE_DRAMA_FALLBACK = { width: 1024, height: 704 };
 
 /** IP A 风格迁移 (复用 Drama Backend 尺寸) */
 export const IMAGE_IPA_SIZE = IMAGE_DRAMA_SIZE;
@@ -62,7 +62,7 @@ export const IMAGE_ANIME_SIZE = IMAGE_DRAMA_SIZE;
 export const IMAGE_ANIME_FALLBACK = IMAGE_DRAMA_FALLBACK;
 
 /** 图像分割网格 */
-export const IMAGE_SPLITE_GRID = { targetWidth: 1024, targetHeight: 720 };
+export const IMAGE_SPLITE_GRID = { targetWidth: 1024, targetHeight: 704 };
 
 // ============================================================
 //  三、分镜 / Storyboard
@@ -89,21 +89,21 @@ export const STORYBOARD_4GRID = {
 
 export const CANVAS_LAYER = {
   /** MKR 视频节点 */
-  MKR_VIDEO: { width: 640, height: 360 },
+  MKR_VIDEO: { width: 640, height: 384 },
   /** 全景图 */
-  PANORAMA: { width: 640, height: 360 },
+  PANORAMA: { width: 640, height: 384 },
   /** 全景截图缩略图 */
-  PANORAMA_SNAPSHOT: { width: 320, height: 180 },
+  PANORAMA_SNAPSHOT: { width: 320, height: 192 },
   /** 图片生成占位符 */
-  IMAGE_PLACEHOLDER: { width: 400, height: 300 },
+  IMAGE_PLACEHOLDER: { width: 448, height: 320 },
   /** 视频生成占位符 */
-  VIDEO_PLACEHOLDER: { width: 640, height: 360 },
+  VIDEO_PLACEHOLDER: { width: 640, height: 384 },
   /** 文本分析结果 (VisualLanguagePanel) */
-  TEXT_ANALYSIS: { width: 320, height: 200 },
+  TEXT_ANALYSIS: { width: 320, height: 192 },
   /** 模板占位符 */
-  TEMPLATE_PLACEHOLDER: { width: 400, height: 300 },
+  TEMPLATE_PLACEHOLDER: { width: 448, height: 320 },
   /** Prompt 提示层 */
-  PROMPT_LAYER: { width: 280, height: 180 },
+  PROMPT_LAYER: { width: 320, height: 192 },
 };
 
 // ============================================================
@@ -112,13 +112,13 @@ export const CANVAS_LAYER = {
 
 /** 视频合并分辨率预设 */
 export const EXPORT_RESOLUTION_MAP = {
-  '720p':  { width: 1280, height: 720,  label: '720p' },
-  '1080p': { width: 1920, height: 1080, label: '1080p' },
-  '4K':    { width: 3840, height: 2160, label: '4K' },
+  '720p':  { width: 1280, height: 704,  label: '720p' },
+  '1080p': { width: 1920, height: 1088, label: '1080p' },
+  '4K':    { width: 3840, height: 2176, label: '4K' },
 } as const;
 
 /** FCPXML 导出默认分辨率 */
-export const FCPXML_DEFAULT = { width: 1920, height: 1080 };
+export const FCPXML_DEFAULT = { width: 1920, height: 1088 };
 
 // ============================================================
 //  六、UI 侧视频尺寸预设
@@ -126,21 +126,21 @@ export const FCPXML_DEFAULT = { width: 1920, height: 1080 };
 
 /** GenerateVideoPanel 尺寸选项 (带宽高比推断) */
 export const UI_VIDEO_SIZE_PRESETS = [
-  { label: '横屏 1080p', width: 1920, height: 1080, aspectRatio: '16:9' },
-  { label: '横屏 720p',  width: 1280, height: 720,  aspectRatio: '16:9' },
+  { label: '横屏 1080p', width: 1920, height: 1088, aspectRatio: '16:9' },
+  { label: '横屏 720p',  width: 1280, height: 704,  aspectRatio: '16:9' },
   { label: '测试 640p',  width: 640,  height: 320,  aspectRatio: '2:1' },
-  { label: '竖屏 1080p', width: 1080, height: 1920, aspectRatio: '9:16' },
-  { label: '竖屏 720p',  width: 720,  height: 1280, aspectRatio: '9:16' },
-  { label: '方形 1080p', width: 1080, height: 1080, aspectRatio: '1:1' },
-  { label: '方形 720p',  width: 720,  height: 720,  aspectRatio: '1:1' },
+  { label: '竖屏 1080p', width: 1088, height: 1920, aspectRatio: '9:16' },
+  { label: '竖屏 720p',  width: 704,  height: 1280, aspectRatio: '9:16' },
+  { label: '方形 1080p', width: 1088, height: 1088, aspectRatio: '1:1' },
+  { label: '方形 720p',  width: 704,  height: 704,  aspectRatio: '1:1' },
 ] as const;
 
 /** MkrVideoConfigBar 尺寸选项 */
 export const UI_MKR_SIZE_PRESETS = [
-  { label: '横屏 720p', width: 1280, height: 720 },
+  { label: '横屏 720p', width: 1280, height: 704 },
   { label: '测试 640p', width: 640,  height: 320 },
-  { label: '竖屏 720p', width: 720,  height: 1280 },
-  { label: '方形 720p', width: 720,  height: 720 },
+  { label: '竖屏 720p', width: 704,  height: 1280 },
+  { label: '方形 720p', width: 704,  height: 704 },
 ] as const;
 
 // ============================================================
@@ -154,7 +154,7 @@ export const PANORAMA_OUTPUT = { width: 2048, height: 1024 };
 export const SCENE_IMPORT_FALLBACK = { width: 1024, height: 576 };
 
 /** 小地图空画布默认边界 */
-export const MINIMAP_EMPTY_BOUNDS = { width: 1000, height: 1000 };
+export const MINIMAP_EMPTY_BOUNDS = { width: 1024, height: 1024 };
 
 /** StoryboardDeductionPanel 加载失败降级尺寸 */
 export const STORYBOARD_FALLBACK_SIZE = { width: 1024, height: 576 };

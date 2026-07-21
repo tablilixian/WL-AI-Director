@@ -41,10 +41,10 @@ export interface VideoNodeConfig {
 export const GRID_TYPES = [4, 6, 9] as const;
 
 export const VIDEO_SIZE_PRESETS = [
-  { label: '横屏 720p', width: 1280, height: 720 },
+  { label: '横屏 720p', width: 1280, height: 704 },
   { label: '测试 640p', width: 640, height: 320 },
-  { label: '竖屏 720p', width: 720, height: 1280 },
-  { label: '方形 720p', width: 720, height: 720 },
+  { label: '竖屏 720p', width: 704, height: 1280 },
+  { label: '方形 720p', width: 704, height: 704 },
 ] as const;
 
 export const CAMERA_PRESETS = [
