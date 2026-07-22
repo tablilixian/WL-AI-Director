@@ -560,13 +560,20 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       switch (params.mode) {
         case 'msr': {
           const startImageBase64 = await unifiedImageService.resolveForApi(sKf?.imageUrl);
-          const bg = params.backgroundImage
-            ? await unifiedImageService.resolveForApi(params.backgroundImage)
+          const endImageBase64 = eKf?.imageUrl
+            ? await unifiedImageService.resolveForApi(eKf.imageUrl)
             : '';
+          // background = 当前分镜的场景概念图
+          const scene = project.scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
+          const bg = scene?.imageUrl
+            ? await unifiedImageService.resolveForApi(scene.imageUrl)
+            : '';
+          const refImages = [startImageBase64];
+          if (endImageBase64) refImages.push(endImageBase64);
           orchRequest = {
             mode: 'msr',
             prompt: videoPrompt,
-            referenceImages: [startImageBase64],
+            referenceImages: refImages,
             backgroundImage: bg,
             modelId: params.modelId,
             aspectRatio: params.aspectRatio,

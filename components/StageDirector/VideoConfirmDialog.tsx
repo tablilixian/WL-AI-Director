@@ -96,7 +96,7 @@ function buildJsonPreview(props: VideoConfirmDialogProps): string {
         ...base,
         background: '<上传后文件名>',
         image1: '<上传后文件名>',
-        ...(props.mode === 'msr' ? { image2: '<上传后文件名>', image3: '<上传后文件名>', image4: '<上传后文件名>' } : {}),
+        ...(props.mode === 'msr' ? { image2: '<上传后文件名>' } : {}),
       }, null, 2);
     case 'mkr':
       return JSON.stringify({
@@ -408,8 +408,8 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               {mode !== 'mkr-grid' && startKeyframeImageUrl && (
                 <ImageThumb url={startKeyframeImageUrl} label="首帧" sublabel={mode === 'basic' ? 'background' : 'reference'} />
               )}
-              {mode === 'basic' && endKeyframeImageUrl && (
-                <ImageThumb url={endKeyframeImageUrl} label="尾帧" sublabel="image1" />
+              {(mode === 'basic' || mode === 'msr') && endKeyframeImageUrl && (
+                <ImageThumb url={endKeyframeImageUrl} label={mode === 'msr' ? '尾帧 image2' : '尾帧'} sublabel="image2" />
               )}
 
               {/* mkr 关键帧 */}

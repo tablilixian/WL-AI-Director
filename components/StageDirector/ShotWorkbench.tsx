@@ -459,6 +459,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           generationProgress={generationProgress}
           projectLanguage={projectLanguage}
           projectEraContext={projectEraContext}
+          sceneImageUrl={scene?.imageUrl}
         />
       </div>
     </div>

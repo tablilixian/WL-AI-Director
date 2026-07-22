@@ -66,6 +66,8 @@ interface VideoGeneratorProps {
   // 项目上下文（用于提示词拼装来源展示）
   projectLanguage?: string;
   projectEraContext?: string;
+  // 场景概念图（MSR 模式作为 background）
+  sceneImageUrl?: string;
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({
@@ -89,6 +91,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   generationProgress,
   projectLanguage,
   projectEraContext,
+  sceneImageUrl,
 }) => {
   const { showAlert } = useAlert();
 
@@ -610,7 +613,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         startKeyframeImageUrl={startKeyframeImageUrl}
         endKeyframeImageUrl={shot.keyframes?.find(k => k.type === 'end')?.imageUrl}
         refGridImageUrl={refGridImageUrl}
-        backgroundImage={advancedParams.backgroundImage}
+        backgroundImage={advancedParams.mode === 'msr' ? (sceneImageUrl || advancedParams.backgroundImage) : advancedParams.backgroundImage}
         timedKeyframeImages={timedKeyframeImages}
         gridType={advancedParams.gridType}
         frameIndexes={actualFrameIndexes}
