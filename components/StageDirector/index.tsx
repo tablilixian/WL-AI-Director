@@ -578,15 +578,27 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
           break;
         }
         case 'mkr': {
-          const timedImages = await Promise.all(
-            (params.timedKeyframes || []).map(async (tk) => {
-              const kf = shot.keyframes?.find(k => k.id === tk.keyframeId);
-              const image = kf?.imageUrl
-                ? await unifiedImageService.resolveForApi(kf.imageUrl)
-                : '';
-              return { image, frame_index: tk.positionPercent };
-            })
-          );
+          const timedImages: { image: string; frame_index: number }[] = [];
+          const addedKeyframeIds = new Set<string>();
+
+          const addKf = async (kfId: string | undefined, pos: number) => {
+            if (!kfId || addedKeyframeIds.has(kfId)) return;
+            const kf = shot.keyframes?.find(k => k.id === kfId);
+            if (!kf?.imageUrl) return;
+            addedKeyframeIds.add(kfId);
+            timedImages.push({
+              image: await unifiedImageService.resolveForApi(kf.imageUrl),
+              frame_index: pos,
+            });
+          };
+
+          // 首帧 (position 0%) + 尾帧 (position 100%) 始终传入
+          await addKf(shot.interval?.startKeyframeId, 0);
+          await addKf(shot.interval?.endKeyframeId, 100);
+          // 用户配置的中间帧（自动跳过已传的首尾帧）
+          for (const tk of (params.timedKeyframes || [])) {
+            await addKf(tk.keyframeId, tk.positionPercent);
+          }
           orchRequest = {
             mode: 'mkr',
             prompt: videoPrompt,
