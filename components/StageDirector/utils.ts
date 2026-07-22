@@ -27,9 +27,9 @@ export const getImageAspectRatio = (ratio: AspectRatio): string => {
  */
 export const getDefaultResolution = (ratio: AspectRatio): { width: number; height: number } => {
   switch (ratio) {
-    case '16:9': return { width: 1920, height: 1088 };
-    case '9:16': return { width: 1088, height: 1920 };
-    case '1:1': return { width: 1088, height: 1088 };
+    case '16:9': return { width: 640, height: 320 };
+    case '9:16': return { width: 320, height: 640 };
+    case '1:1': return { width: 512, height: 512 };
   }
 };
 

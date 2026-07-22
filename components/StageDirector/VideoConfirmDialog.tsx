@@ -56,7 +56,6 @@ interface VideoConfirmDialogProps {
 
   // 模式专属参数
   gridType?: number;
-  frameIndexes?: number[];
   frameIndexesPercent?: number[];
 }
 
@@ -80,7 +79,7 @@ function formatShotId(id: string, index: number): string {
   return `SHOT-${String(index + 1).padStart(3, '0')}`;
 }
 
-function buildJsonPreview(props: VideoConfirmDialogProps): string {
+function buildJsonPreview(props: VideoConfirmDialogProps, actualFrameIndexes?: number[]): string {
   const base = {
     prompt: props.videoPrompt,
     width: props.width,
@@ -111,7 +110,7 @@ function buildJsonPreview(props: VideoConfirmDialogProps): string {
         ...base,
         image: '<上传后文件名>',
         gridtype: props.gridType || 4,
-        frame_indexs: props.frameIndexes || [],
+        frame_indexs: actualFrameIndexes || [],
       }, null, 2);
   }
 }
@@ -169,7 +168,6 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
     backgroundImage,
     timedKeyframeImages,
     gridType,
-    frameIndexes,
     frameIndexesPercent,
   } = props;
 
@@ -178,6 +176,10 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
 
   const modeInfo = MODE_LABELS[mode];
   const totalFrames = duration * fps;
+  // 根据百分比和总帧数计算实际帧索引（与 orchestrator 公式一致）
+  const actualFrameIndexes = frameIndexesPercent?.map(pct =>
+    Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
+  );
 
   if (!isOpen) return null;
 
@@ -240,7 +242,7 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                 </div>
                 <div className="text-[10px] text-[var(--text-tertiary)] mt-1">帧索引 (frame_indexs):</div>
                 <div className="flex flex-wrap gap-2">
-                  {(frameIndexes || []).map((idx, i) => (
+                  {(actualFrameIndexes || []).map((idx, i) => (
                     <div key={i} className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded text-[10px] font-mono text-[var(--text-primary)]">
                       #{i + 1}: {idx}
                       {frameIndexesPercent && (
@@ -424,10 +426,6 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                 <ImageThumb url={backgroundImage} label="背景参考图" sublabel="background" />
               )}
 
-              {/* 网格模式额外显示首帧缩略图（如果有） */}
-              {mode === 'mkr-grid' && startKeyframeImageUrl && (
-                <ImageThumb url={startKeyframeImageUrl} label="首帧" sublabel="start" />
-              )}
             </div>
 
             {mode === 'mkr-grid' && !refGridImageUrl && (
@@ -449,7 +447,7 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
             </button>
             {showJsonPreview && (
               <pre className="bg-[var(--bg-base)] rounded p-3 border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-primary)] overflow-x-auto whitespace-pre">
-                {buildJsonPreview(props)}
+                {buildJsonPreview(props, actualFrameIndexes)}
               </pre>
             )}
           </div>

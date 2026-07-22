@@ -663,7 +663,7 @@ export const getDefaultVideoDuration = (): VideoDuration => {
   if (videoModel) {
     return videoModel.params.defaultDuration;
   }
-  return 10;
+  return 15;
 };
 
 /**

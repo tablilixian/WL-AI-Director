@@ -126,13 +126,15 @@ export const FCPXML_DEFAULT = { width: 1920, height: 1088 };
 
 /** GenerateVideoPanel 尺寸选项 (带宽高比推断) */
 export const UI_VIDEO_SIZE_PRESETS = [
-  { label: '横屏 1080p', width: 1920, height: 1088, aspectRatio: '16:9' },
+  { label: '横屏 640p',  width: 640,  height: 320,  aspectRatio: '16:9' },
   { label: '横屏 720p',  width: 1280, height: 704,  aspectRatio: '16:9' },
-  { label: '测试 640p',  width: 640,  height: 320,  aspectRatio: '2:1' },
-  { label: '竖屏 1080p', width: 1088, height: 1920, aspectRatio: '9:16' },
+  { label: '横屏 1080p', width: 1920, height: 1088, aspectRatio: '16:9' },
+  { label: '竖屏 640p',  width: 320,  height: 640,  aspectRatio: '9:16' },
   { label: '竖屏 720p',  width: 704,  height: 1280, aspectRatio: '9:16' },
-  { label: '方形 1080p', width: 1088, height: 1088, aspectRatio: '1:1' },
+  { label: '竖屏 1080p', width: 1088, height: 1920, aspectRatio: '9:16' },
+  { label: '方形小',     width: 512,  height: 512,  aspectRatio: '1:1' },
   { label: '方形 720p',  width: 704,  height: 704,  aspectRatio: '1:1' },
+  { label: '方形 1080p', width: 1088, height: 1088, aspectRatio: '1:1' },
 ] as const;
 
 /** MkrVideoConfigBar 尺寸选项 */

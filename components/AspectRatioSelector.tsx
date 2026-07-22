@@ -29,19 +29,19 @@ export const AspectRatioSelector: React.FC<AspectRatioSelectorProps> = ({
       value: '16:9', 
       label: '横屏', 
       icon: <Monitor className="w-4 h-4" />,
-      desc: '1280x720'
+      desc: '640x320'
     },
     { 
       value: '9:16', 
       label: '竖屏', 
       icon: <Smartphone className="w-4 h-4" />,
-      desc: '720x1280'
+      desc: '320x640'
     },
     { 
       value: '1:1', 
       label: '方形', 
       icon: <Square className="w-4 h-4" />,
-      desc: '720x720'
+      desc: '512x512'
     },
   ];
 

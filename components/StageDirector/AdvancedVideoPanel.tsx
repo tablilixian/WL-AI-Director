@@ -55,6 +55,7 @@ const MODE_OPTIONS: { value: VideoGenerationMode; label: string; desc: string }[
 ];
 
 const RESOLUTION_PRESETS = [
+  { label: '640p', w: 640, h: 320 },
   { label: '720p', w: 1280, h: 720 },
   { label: '1080p', w: 1920, h: 1080 },
   { label: '2K', w: 2560, h: 1440 },
@@ -64,8 +65,8 @@ const RESOLUTION_PRESETS = [
 const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
   initialMode = 'basic',
   initialFps = 30,
-  initialWidth = 1920,
-  initialHeight = 1080,
+  initialWidth = 640,
+  initialHeight = 320,
   initialTimedKeyframes = [],
   initialBackground,
   initialGridType = 4,
@@ -361,18 +362,28 @@ const AdvancedVideoPanel: React.FC<AdvancedVideoPanelProps> = ({
               type="number"
               value={width}
               onChange={(e) => { const v = Number(e.target.value); setWidth(v); notify({ width: v }); }}
+              onBlur={() => {
+                const snapped = Math.round(width / 64) * 64;
+                if (snapped !== width) { setWidth(snapped); notify({ width: snapped }); }
+              }}
               className="flex-1 w-0 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
               placeholder="宽"
-              min={256}
+              min={64}
+              step={64}
             />
             <span className="self-center text-[var(--text-muted)] text-xs">×</span>
             <input
               type="number"
               value={height}
               onChange={(e) => { const v = Number(e.target.value); setHeight(v); notify({ height: v }); }}
+              onBlur={() => {
+                const snapped = Math.round(height / 64) * 64;
+                if (snapped !== height) { setHeight(snapped); notify({ height: snapped }); }
+              }}
               className="flex-1 w-0 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
               placeholder="高"
-              min={256}
+              min={64}
+              step={64}
             />
           </div>
           <div className="flex gap-1 flex-wrap">

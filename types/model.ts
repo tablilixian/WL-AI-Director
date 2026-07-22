@@ -635,8 +635,8 @@ export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
       mode: 'sync',
       defaultAspectRatio: '16:9',
       supportedAspectRatios: ['16:9', '9:16', '1:1'],
-      defaultDuration: 5,
-      supportedDurations: [5, 10],
+      defaultDuration: 15,
+      supportedDurations: [5, 10, 15],
     },
   },
 ];

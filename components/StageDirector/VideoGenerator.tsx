@@ -299,9 +299,6 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     ? fourGrid.imageUrl
     : (shot.nineGrid?.status === 'completed' ? shot.nineGrid?.imageUrl : undefined);
   const totalFrames = duration * advancedParams.fps;
-  const actualFrameIndexes = advancedParams.frameIndexes?.map(pct =>
-    Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
-  );
 
   // Pipeline 字段自动打通：构建 shot 现有字段预览数据
   const pipelineShotData: PipelineShotData | undefined = (shot.shotSize || shot.cameraMovement || shot.actionSummary || shot.cameraChoreography)
@@ -616,7 +613,6 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         backgroundImage={advancedParams.mode === 'msr' ? (sceneImageUrl || advancedParams.backgroundImage) : advancedParams.backgroundImage}
         timedKeyframeImages={timedKeyframeImages}
         gridType={advancedParams.gridType}
-        frameIndexes={actualFrameIndexes}
         frameIndexesPercent={advancedParams.frameIndexes}
       />
     </div>
