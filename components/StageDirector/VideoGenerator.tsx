@@ -119,6 +119,24 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // 从 shot 现有字段推断高级面板默认值
   const inferredResolution = getDefaultResolution(projectAspectRatio || '16:9');
+
+  // 构建完整 timedKeyframes：首帧(0%) + 尾帧(100%) + 已保存的中间帧，去重
+  const buildTimedKeyframes = (shot: Shot): TimedKeyframe[] => {
+    const result: TimedKeyframe[] = [];
+    const seenIds = new Set<string>();
+    const add = (kfId: string | undefined, pos: number) => {
+      if (!kfId || seenIds.has(kfId)) return;
+      seenIds.add(kfId);
+      result.push({ keyframeId: kfId, positionPercent: pos });
+    };
+    add(shot.interval?.startKeyframeId, 0);
+    add(shot.interval?.endKeyframeId, 100);
+    for (const tk of (shot.interval?.timedKeyframes || [])) {
+      add(tk.keyframeId, tk.positionPercent);
+    }
+    return result;
+  };
+
   const [advancedParams, setAdvancedParams] = useState<{
     mode: VideoGenerationMode;
     fps: number;
@@ -133,7 +151,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     fps: shot.interval?.fps || 30,
     width: shot.interval?.width || inferredResolution.width,
     height: shot.interval?.height || inferredResolution.height,
-    timedKeyframes: shot.interval?.timedKeyframes || [],
+    timedKeyframes: buildTimedKeyframes(shot),
     backgroundImage: shot.interval?.backgroundImage,
     gridType: shot.interval?.gridType,
     frameIndexes: shot.interval?.frameIndexes,
@@ -154,7 +172,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       fps: shot.interval?.fps || 30,
       width: shot.interval?.width || inferredResolution.width,
       height: shot.interval?.height || inferredResolution.height,
-      timedKeyframes: shot.interval?.timedKeyframes || [],
+      timedKeyframes: buildTimedKeyframes(shot),
       backgroundImage: shot.interval?.backgroundImage,
       gridType: shot.interval?.gridType,
       frameIndexes: shot.interval?.frameIndexes,
