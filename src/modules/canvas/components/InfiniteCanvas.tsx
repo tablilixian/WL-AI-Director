@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Film, Sparkles, Plus, Orbit } from 'lucide-react';
+import { Film, Sparkles, Plus, Orbit, X } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -97,6 +97,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     sourceLayerIds: string[];
     config: GenerationConfig;
   } | null>(null);
+  const [showAiVideoReGen, setShowAiVideoReGen] = useState(false);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -108,6 +109,13 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   const [, forceRender] = useState(0);
   const isConnectingRef = useRef(false);
+
+  useEffect(() => {
+    const layer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
+    if (!(layer?.type === 'video' && layer?.operationType === 'image-to-video')) {
+      setShowAiVideoReGen(false);
+    }
+  }, [selectedLayerId]);
 
   const createMkrNode = useCallback((sourceImageIds: string[]) => {
     const currentLayers = useCanvasStore.getState().layers;
@@ -889,14 +897,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         );
       })()}
 
-      {/* 视频节点面板：选中视频层时显示统一配置 */}
+      {/* 视频节点面板：选中 MKR 视频层时显示 */}
       {(() => {
         const videoLayer = selectedLayerId
           ? layers.find(
               l =>
                 l.id === selectedLayerId &&
                 l.type === 'video' &&
-                (l.operationType === 'image-to-video' || l.operationType === 'mkr-video')
+                l.operationType === 'mkr-video'
             )
           : null;
         if (!videoLayer || !canvasRef.current) return null;
@@ -904,6 +912,95 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         if (hasImageBar) return null;
 
         return <VideoNodePanel layerId={videoLayer.id} />;
+      })()}
+
+{/* AI 生成视频 - 底部信息栏 */}
+      {(() => {
+        const videoLayer = selectedLayerId
+          ? layers.find(
+              l =>
+                l.id === selectedLayerId &&
+                l.type === 'video' &&
+                l.operationType === 'image-to-video'
+            )
+          : null;
+        if (!videoLayer || !canvasRef.current) return null;
+
+        const sourceIds = videoLayer.sourceLayerIds || [];
+        const sourceLayers = sourceIds.map(id => layers.find(l => l.id === id)).filter(Boolean) as LayerData[];
+
+        return (
+          <div className="fixed bottom-0 left-0 right-0 z-[200] flex justify-center pb-4 pointer-events-none">
+            <div className="w-[95vw] max-w-[1100px] bg-gray-800/95 backdrop-blur-sm rounded-t-xl border border-gray-700 shadow-2xl pointer-events-auto">
+              <div className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <Film className="w-4 h-5 text-green-400" />
+                  <span className="text-sm text-gray-300">AI 生成视频</span>
+                  {sourceLayers.length > 0 && (
+                    <span className="text-gray-500 text-sm">(来源 {sourceLayers.length} 张图片)</span>
+                  )}
+                  {sourceLayers.length > 0 && (
+                    <div className="flex items-center -space-x-2">
+                      {sourceLayers.slice(0, 5).map(l => (
+                        <div key={l.id} className="w-7 h-7 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700">
+                          {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="w-px h-5 bg-gray-700" />
+                  <span className="text-[10px] text-gray-500">
+                    {videoLayer.duration ? `${Math.round(videoLayer.duration)}s` : ''}
+                    {videoLayer.width && videoLayer.height ? ` · ${Math.round(videoLayer.width)}×${Math.round(videoLayer.height)}` : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAiVideoReGen(true)}
+                    className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors font-medium"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    重新生成
+                  </button>
+                  <button
+                    onClick={() => clearSelection()}
+                    className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* AI 生成视频 - 重新生成弹窗 */}
+      {showAiVideoReGen && (() => {
+        const videoLayer = selectedLayerId
+          ? layers.find(
+              l =>
+                l.id === selectedLayerId &&
+                l.type === 'video' &&
+                l.operationType === 'image-to-video'
+            )
+          : null;
+        if (!videoLayer) return null;
+
+        let initialConfig: GenerationConfig | undefined;
+        try {
+          if (videoLayer.generationPrompt) {
+            initialConfig = JSON.parse(videoLayer.generationPrompt) as GenerationConfig;
+          }
+        } catch {}
+
+        return (
+          <GenerateVideoPanel
+            selectedLayerIds={videoLayer.sourceLayerIds || []}
+            initialConfig={initialConfig}
+            onClose={() => setShowAiVideoReGen(false)}
+          />
+        );
       })()}
 
       {/* 多图操作栏：当选中 2+ 图片时显示 */}

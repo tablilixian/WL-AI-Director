@@ -87,7 +87,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           title: '生成中...',
           isLoading: true,
           createdAt: Date.now(),
-          operationType: 'text-to-image'
+          operationType: 'text-to-image',
+          generationPrompt: prompt
         });
 
         const imageUrl = await canvasModelService.generateImage({
@@ -128,7 +129,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           height: Math.round(dimensions.height),
           title: prompt.slice(0, 30),
           isLoading: false,
-          progress: 100
+          progress: 100,
+          generationPrompt: prompt
         });
       } else if (mode === 'video') {
         const placeholderId = crypto.randomUUID();
@@ -144,7 +146,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           title: '生成视频中...',
           isLoading: true,
           createdAt: Date.now(),
-          operationType: 'text-to-image'
+          operationType: 'text-to-video',
+          generationPrompt: prompt
         });
 
         const videoUrl = await canvasModelService.generateVideo({
@@ -183,7 +186,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({ selectedLayerId }) => {
           height: videoHeight,
           title: prompt.slice(0, 30),
           isLoading: false,
-          progress: 100
+          progress: 100,
+          generationPrompt: prompt
         });
       }
 

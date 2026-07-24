@@ -77,7 +77,8 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
         isLoading: false,
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
-        operationType: 'image-to-image'
+        operationType: 'image-to-image',
+        generationPrompt: prompt
       });
 
       updateLayer(selectedLayer.id, { isLoading: false, progress: 100 });
