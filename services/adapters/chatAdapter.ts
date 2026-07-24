@@ -62,11 +62,21 @@ const isNewapiModel = (modelId: string): boolean => {
 };
 
 /**
+ * 检查是否为 WLDramaLLM 模型
+ */
+const isWLDramaLLMModel = (modelId: string): boolean => {
+  return modelId.startsWith('wldramallm-');
+};
+
+/**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
  */
 const getDevApiBaseUrl = (modelId: string): string => {
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
+  }
+  if (isWLDramaLLMModel(modelId)) {
+    return '/wldramallm';
   }
   // NewAPI 使用直连方式（localhost 或生产环境）
   return getApiBaseUrlForModel(modelId);
@@ -212,6 +222,11 @@ export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ 
   // Ollama 本地服务无需验证 API Key
   if (baseUrl && (baseUrl.includes('localhost:11434') || baseUrl.includes('127.0.0.1:11434'))) {
     return { success: true, message: 'Ollama 本地服务无需 API Key' };
+  }
+
+  // WLDramaLLM 自建服务无需验证 API Key
+  if (baseUrl && baseUrl.includes('117.50.108.73:8080')) {
+    return { success: true, message: 'WLDramaLLM 自建服务无需 API Key' };
   }
 
   try {

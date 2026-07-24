@@ -38,6 +38,13 @@ const isBigModelVideoModel = (modelId: string): boolean => {
 };
 
 /**
+ * 检查是否为 WLDramaLLM 模型
+ */
+const isWLDramaLLMModel = (modelId: string): boolean => {
+  return modelId.startsWith('wldramallm-');
+};
+
+/**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
  * 注意：BigModel 视频模型使用视频代理，其他 BigModel 模型使用普通代理
  */
@@ -47,6 +54,9 @@ const getDevApiBaseUrl = (modelId: string): string => {
   }
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
+  }
+  if (isWLDramaLLMModel(modelId)) {
+    return '/wldramallm';
   }
   return getApiBaseUrlForModel(modelId);
 };
@@ -151,7 +161,7 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
 
   if (resolvedModel) {
     // 本地部署的模型（如 Ollama）无需 API Key
-    if (isLocalProvider(resolvedModel.providerId) || resolvedModel.providerId === 'wldrama') {
+    if (isLocalProvider(resolvedModel.providerId) || resolvedModel.providerId === 'wldrama' || resolvedModel.providerId === 'wldramallm') {
       return '';
     }
 
@@ -330,17 +340,17 @@ export const chatCompletion = async (
   const apiKey = checkApiKey('chat', resolvedModel);
   const requestModel = resolveRequestModel('chat', resolvedModel);
 
+  const resolved = resolveModel('chat', resolvedModel);
+
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
     temperature: temperature
   };
 
-  if (responseFormat === 'json_object') {
+  if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }
-
-  const resolved = resolveModel('chat', resolvedModel);
   const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -355,6 +365,10 @@ export const chatCompletion = async (
       if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
+      if (resolved?.providerId === 'wldramallm') {
+        console.log('[WLDramaLLM Request]', JSON.stringify(requestBody, null, 2));
+      }
+
       const response = await fetch(`${apiBase}${endpoint}`, {
         method: 'POST',
         headers,
@@ -392,6 +406,7 @@ export const chatCompletionStream = async (
   const resolvedModel = model || getDefaultChatModelId();
   const apiKey = checkApiKey('chat', resolvedModel);
   const requestModel = resolveRequestModel('chat', resolvedModel);
+  const resolved = resolveModel('chat', resolvedModel);
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
@@ -399,11 +414,9 @@ export const chatCompletionStream = async (
     stream: true
   };
 
-  if (responseFormat === 'json_object') {
+  if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }
-
-  const resolved = resolveModel('chat', resolvedModel);
   const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -418,6 +431,10 @@ export const chatCompletionStream = async (
       if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
+      if (resolved?.providerId === 'wldramallm') {
+        console.log('[WLDramaLLM Stream Request]', JSON.stringify(requestBody, null, 2));
+      }
+
       const response = await fetch(`${apiBase}${endpoint}`, {
         method: 'POST',
         headers,

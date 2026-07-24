@@ -60,8 +60,8 @@ export const LayerDetailPanel: React.FC<LayerDetailPanelProps> = ({ onClose }) =
 
   if (!selectedLayer) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={onClose}>
+        <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
           <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">图层详情</h3>
           <p className="text-sm text-[var(--text-muted)] mb-4">
             请先选中一个图层，然后再查看详细信息。
@@ -111,8 +111,8 @@ export const LayerDetailPanel: React.FC<LayerDetailPanelProps> = ({ onClose }) =
   const operationHistory = getOperationHistory(selectedLayer);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={onClose}>
+      <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">图层详情</h3>
           <button

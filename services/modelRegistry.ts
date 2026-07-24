@@ -557,13 +557,13 @@ export const getActiveModelsConfig = (): ActiveModels => {
 };
 
 /**
- * 检查是否为本地部署的提供商（如 Ollama），不需要 API Key
+ * 检查是否为本地/自建部署的提供商，不需要 API Key
  */
 export const isLocalProvider = (providerId: string): boolean => {
   const provider = getProviderById(providerId);
   if (!provider) return false;
   const hostname = new URL(provider.baseUrl).hostname;
-  return hostname === 'localhost' || hostname === '127.0.0.1';
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '117.50.108.73';
 };
 
 /**

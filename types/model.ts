@@ -473,6 +473,19 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
   },
+  // WLDramaLLM Chat Model
+  {
+    id: 'wldramallm-default',
+    name: 'WLDramaLLM 对话模型',
+    type: 'chat',
+    providerId: 'wldramallm',
+    apiModel: 'qwen3.5-9b-nvfp4-mtp',
+    endpoint: '/v1/chat/completions',
+    description: '自建 WLDramaLLM 对话模型服务，端口 8080',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
 ];
 
 /**
@@ -670,6 +683,13 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     id: 'ollama',
     name: 'Ollama (本地部署)',
     baseUrl: 'http://localhost:11434',
+    isBuiltIn: true,
+    isDefault: false,
+  },
+  {
+    id: 'wldramallm',
+    name: 'WLDramaLLM (自建 LLM 服务)',
+    baseUrl: 'http://117.50.108.73:8080',
     isBuiltIn: true,
     isDefault: false,
   },

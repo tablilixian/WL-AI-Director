@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/video-proxy\//, ''),
           },
+          // WLDramaLLM 代理 (解决 CORS)
+          '/wldramallm': {
+            target: 'http://117.50.108.73:8080',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/wldramallm/, ''),
+          },
         },
       },
       plugins: [react(), imageProxyPlugin()],
