@@ -345,9 +345,12 @@ export const chatCompletion = async (
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
-    temperature: temperature
+    max_tokens: maxTokens
   };
 
+  if (resolved?.providerId !== 'wldramallm') {
+    requestBody.temperature = temperature;
+  }
   if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }
@@ -399,6 +402,7 @@ export const chatCompletionStream = async (
   prompt: string,
   model?: string,
   temperature: number = 0.7,
+  maxTokens: number = 8192,
   responseFormat: 'json_object' | undefined = undefined,
   timeout: number = 600000,
   onDelta?: (delta: string) => void
@@ -410,10 +414,13 @@ export const chatCompletionStream = async (
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
-    temperature: temperature,
+    max_tokens: maxTokens,
     stream: true
   };
 
+  if (resolved?.providerId !== 'wldramallm') {
+    requestBody.temperature = temperature;
+  }
   if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }

@@ -473,7 +473,7 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
   },
-  // WLDramaLLM Chat Model
+  // WLDramaLLM Chat Models
   {
     id: 'wldramallm-default',
     name: 'WLDramaLLM 对话模型',
@@ -482,6 +482,18 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     apiModel: 'qwen3.5-9b-nvfp4-mtp',
     endpoint: '/v1/chat/completions',
     description: '自建 WLDramaLLM 对话模型服务，端口 8080',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  {
+    id: 'wldramallm-large',
+    name: 'WLDramaLLM 大模型',
+    type: 'chat',
+    providerId: 'wldramallm',
+    apiModel: 'qwopus3.6-27b-v2-mtp-nvfp4',
+    endpoint: '/v1/chat/completions',
+    description: '自建 WLDramaLLM 大模型 (qwopus3.6-27b)，更强推理能力',
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },

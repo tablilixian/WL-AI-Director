@@ -668,7 +668,7 @@ ${existingScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.8, undefined, 600000, onDelta));
+    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.8, 4096, undefined, 600000, onDelta));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
@@ -775,7 +775,7 @@ ${originalScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.7, undefined, 600000, onDelta));
+    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.7, 8192, undefined, 600000, onDelta));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
