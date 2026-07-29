@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Loader2, ArrowLeft, Play, RefreshCw } from 'lucide-react';
 import type { StoryboardResultData, DeductionData, VlmAnalysisData, VideoResultData, KeyframePromptData } from '../../types/flow';
 import { getGridTimings } from '../../types/flow';
@@ -74,7 +74,16 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
         deductionData, vlmData, initialData?.duration || 15
       )
   );
-  const [videoUrl, setVideoUrl] = useState<string | null>(initialData?.videoUrl || null);
+  const [videoRef, setVideoRef] = useState<string | null>(initialData?.videoUrl || null);
+  const [playableUrl, setPlayableUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (videoRef) {
+      import('../../../../../services/unifiedImageService').then(({ unifiedImageService }) =>
+        unifiedImageService.resolveForDisplay(videoRef).then(setPlayableUrl)
+      );
+    }
+  }, [videoRef]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,8 +121,11 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
       });
 
       const { unifiedImageService } = await import('../../../../../services/unifiedImageService');
-      const playableUrl = await unifiedImageService.resolveForDisplay(videoResult);
-      setVideoUrl(playableUrl);
+      // 将 video:xxx 引用保存为持久化 videoUrl，blob URL 只用于显示
+      const videoRef = videoResult.startsWith('video:') ? videoResult : await unifiedImageService.saveVideoToLocal(videoResult);
+      const displayUrl = await unifiedImageService.resolveForDisplay(videoRef);
+      setPlayableUrl(displayUrl);
+      setVideoRef(videoRef);
     } catch (err: any) {
       setError(err.message || '视频生成失败');
     } finally {
@@ -122,7 +134,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
   }, [keyframePrompts, isProcessing, duration, fps]);
 
   const handleConfirm = () => {
-    onSave({ keyframePrompts, videoUrl, duration, fps });
+    onSave({ keyframePrompts, videoUrl: videoRef, duration, fps });
     onNext();
   };
 
@@ -201,7 +213,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
         </div>
       </div>
 
-      {!videoUrl && !isProcessing && (
+      {!playableUrl && !isProcessing && (
         <button
           onClick={handleGenerate}
           className="w-full py-3 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
@@ -218,7 +230,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
         </div>
       )}
 
-      {videoUrl && (
+      {playableUrl && (
         <>
           <div className="bg-[var(--bg-base)] rounded-lg border border-green-500/30 overflow-hidden">
             <div className="px-4 py-2 bg-green-500/10 border-b border-green-500/20 flex items-center justify-between">
@@ -235,7 +247,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
             </div>
             <div className="p-3">
               <video
-                src={videoUrl}
+                src={playableUrl}
                 controls
                 className="w-full rounded-lg bg-black max-h-52"
                 poster={keyframePrompts[0]?.imageUrl}

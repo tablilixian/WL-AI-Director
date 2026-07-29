@@ -46,13 +46,17 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
   };
 
   const buildUserPrompt = () => {
-    if (customUserPrompt.trim()) return customUserPrompt.trim();
-
     const selected = DEFAULT_ASPECTS.filter(a => selectedAspects.includes(a.key));
     const questions = selected.map(a => `${a.defaultLabel}：${a.defaultQuestion}`).join('\n');
     const labels = selected.map(a => `${a.defaultLabel}: <描述>`).join('\n');
 
-    return `分析这张画面的以下要素，每项用一句话描述：\n${questions}\n\n输出格式（每行一个）：\n${labels}`;
+    const autoPrompt = `分析这张画面的以下要素，每项用一句话描述：\n${questions}\n\n输出格式（每行一个）：\n${labels}`;
+
+    if (customUserPrompt.trim()) {
+      return `${autoPrompt}\n\n补充要求：\n${customUserPrompt.trim()}`;
+    }
+
+    return autoPrompt;
   };
 
   const handleAnalyze = useCallback(async () => {

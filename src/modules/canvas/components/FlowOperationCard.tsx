@@ -43,8 +43,8 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
     return createPortal(
       <div className="fixed inset-0 z-[300] flex items-center justify-center" onClick={onClose}>
         <div className="absolute inset-0 bg-black/50" />
-        <div className="relative bg-[var(--bg-layer)] rounded-xl border border-[var(--border-primary)] shadow-2xl p-6 max-w-sm" onClick={e => e.stopPropagation()}>
-          <p className="text-sm text-[var(--text-muted)]">图层数据异常</p>
+        <div className="relative bg-gray-900 rounded-xl border border-gray-700 shadow-2xl p-6 max-w-sm" onClick={e => e.stopPropagation()}>
+          <p className="text-sm text-gray-400">图层数据异常</p>
           <button onClick={onClose} className="mt-3 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg">关闭</button>
         </div>
       </div>,
@@ -66,27 +66,51 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
   const handleExportVideo = async () => {
     if (!flow?.video?.videoUrl) return;
     try {
-      const playableUrl = await unifiedImageService.resolveForDisplay(flow.video.videoUrl);
-      const baseX = flowLayer.x;
-      const baseY = flowLayer.y + flowLayer.height + 30;
-      addLayer({
-        id: crypto.randomUUID(),
-        type: 'video',
-        x: baseX, y: baseY,
-        width: 640, height: 360,
-        src: playableUrl,
-        imageId: flow.video.videoUrl.replace('video:', ''),
-        title: '推演→视频',
-        createdAt: Date.now(),
-        sourceLayerIds: [flowLayerId],
-        operationType: 'story-deduction-video',
-        duration: flow.video.duration,
-        generationPrompt: flowLayer.generationPrompt,
-      });
-      updateLayer(flowLayerId, {
-        imageId: flow.video.thumbnailUrl || undefined,
-      });
-    } catch {}
+      const videoRef = flow.video.videoUrl;
+      const videoId = videoRef.startsWith('video:') ? videoRef.replace('video:', '') : null;
+
+      if (!videoId) {
+        const savedRef = await unifiedImageService.saveVideoToLocal(videoRef);
+        const playableUrl = await unifiedImageService.resolveForDisplay(savedRef);
+        const finalVideoId = savedRef.replace('video:', '');
+        const baseX = flowLayer.x;
+        const baseY = flowLayer.y + flowLayer.height + 30;
+        addLayer({
+          id: crypto.randomUUID(),
+          type: 'video',
+          x: baseX, y: baseY,
+          width: 640, height: 360,
+          src: playableUrl,
+          imageId: finalVideoId,
+          title: '推演→视频',
+          createdAt: Date.now(),
+          sourceLayerIds: [flowLayerId],
+          operationType: 'story-deduction-video',
+          duration: flow.video.duration,
+          generationPrompt: flowLayer.generationPrompt,
+        });
+      } else {
+        const playableUrl = await unifiedImageService.resolveForDisplay(videoRef);
+        const baseX = flowLayer.x;
+        const baseY = flowLayer.y + flowLayer.height + 30;
+        addLayer({
+          id: crypto.randomUUID(),
+          type: 'video',
+          x: baseX, y: baseY,
+          width: 640, height: 360,
+          src: playableUrl,
+          imageId: videoId,
+          title: '推演→视频',
+          createdAt: Date.now(),
+          sourceLayerIds: [flowLayerId],
+          operationType: 'story-deduction-video',
+          duration: flow.video.duration,
+          generationPrompt: flowLayer.generationPrompt,
+        });
+      }
+    } catch (e) {
+      console.error('[FlowOperationCard] 导出视频失败:', e);
+    }
   };
 
   const fullReset = () => {
@@ -108,37 +132,37 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
     <div className="fixed inset-0 z-[300] flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
       <div
-        className="relative bg-[var(--bg-layer)] rounded-xl border border-[var(--border-primary)] shadow-2xl max-w-sm w-full overflow-hidden"
+        className="relative bg-gray-900 rounded-xl border border-gray-700 shadow-2xl max-w-sm w-full overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-5 py-3 border-b border-[var(--border-primary)] flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-gray-700 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" /> 推演→视频
           </h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${isDone ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
+            <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${isDone ? 'bg-green-800 text-green-300' : 'bg-amber-900 text-amber-300'}`}>
               {isDone ? '✅ 已完成' : '⚡ 进行中'}
             </div>
             {!isDone && (
-              <span className="text-[9px] text-[var(--text-tertiary)]">{currentStepLabel}</span>
+              <span className="text-[9px] text-gray-500">{currentStepLabel}</span>
             )}
           </div>
 
-          <div className="flex gap-3 p-3 bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)]">
-            <div className="w-16 h-12 bg-[var(--bg-hover)] rounded overflow-hidden flex-shrink-0 border border-[var(--border-primary)]">
+          <div className="flex gap-3 p-3 bg-gray-800 rounded-lg border border-gray-700">
+            <div className="w-16 h-12 bg-gray-700 rounded overflow-hidden flex-shrink-0 border border-gray-700">
               {sourceThumbnail && <img src={sourceThumbnail} className="w-full h-full object-cover" />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-[var(--text-secondary)] truncate">{sourceLayer?.title || '源图片'}</p>
-              <p className="text-[9px] text-[var(--text-tertiary)]">创建于 {new Date(flowLayer.createdAt).toLocaleDateString()}</p>
+              <p className="text-[11px] text-gray-300 truncate">{sourceLayer?.title || '源图片'}</p>
+              <p className="text-[9px] text-gray-500">创建于 {new Date(flowLayer.createdAt).toLocaleDateString()}</p>
               {!isDone && (
-                <div className="mt-1.5 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <div className="mt-1.5 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                   <div className="h-full bg-amber-500 rounded-full" style={{ width: `${((phaseIndex + 1) / 5) * 100}%` }} />
                 </div>
               )}
@@ -146,13 +170,13 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
           </div>
 
           {(isDone && videoThumbnail) && (
-            <div className="rounded-lg overflow-hidden border border-[var(--border-primary)]">
+            <div className="rounded-lg overflow-hidden border border-gray-700">
               <img src={videoThumbnail} className="w-full h-28 object-cover" alt="预览" />
             </div>
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-[var(--border-primary)] flex gap-2">
+        <div className="px-5 py-3 border-t border-gray-700 flex gap-2">
           {!isDone && (
             <button onClick={() => { onResume(flowLayerId); onClose(); }}
               className="flex-1 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 flex items-center justify-center gap-1.5">
@@ -167,14 +191,14 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
           )}
           {isDone && !showResetConfirm && (
             <button onClick={() => setShowResetConfirm(true)}
-              className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-sm rounded-lg hover:text-[var(--text-primary)] flex items-center justify-center gap-1.5">
+              className="flex-1 py-2 border border-gray-600 text-gray-300 text-sm rounded-lg hover:text-white flex items-center justify-center gap-1.5">
               <RefreshCw className="w-3.5 h-3.5" /> 重新生成
             </button>
           )}
           {isDone && showResetConfirm && (
             <div className="flex gap-2 w-full">
               <button onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs rounded-lg hover:text-[var(--text-primary)]">
+                className="flex-1 py-2 border border-gray-600 text-gray-300 text-xs rounded-lg hover:text-white">
                 取消
               </button>
               <button onClick={() => { setShowResetConfirm(false); fullReset(); }}
@@ -184,7 +208,7 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
             </div>
           )}
           <button onClick={handleDelete}
-            className="p-2 border border-red-500/30 text-red-400 text-sm rounded-lg hover:bg-red-500/10">
+            className="p-2 border border-red-400/40 text-red-400 text-sm rounded-lg hover:bg-red-800">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>

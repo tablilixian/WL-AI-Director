@@ -102,6 +102,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   } | null>(null);
   const [showAiVideoReGen, setShowAiVideoReGen] = useState(false);
   const [showFlowOperationCard, setShowFlowOperationCard] = useState(false);
+  const [flowCardLayerId, setFlowCardLayerId] = useState<string | null>(null);
   const [showFlowPanel, setShowFlowPanel] = useState(false);
   const [activeFlowLayerId, setActiveFlowLayerId] = useState<string | null>(null);
   const [showStoryDeductionFlow, setShowStoryDeductionFlow] = useState(false);
@@ -258,6 +259,18 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     setShowFlowPanel(true);
   }, []);
 
+  const handleLayerClick = useCallback((layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (layer?.operationType === 'story-deduction-flow') {
+      setFlowCardLayerId(layerId);
+    }
+  }, [layers]);
+
+  const handleCloseFlowOperationCard = useCallback(() => {
+    setFlowCardLayerId(null);
+    clearSelection();
+  }, [clearSelection]);
+
   const handleCloseFlowPanel = useCallback(() => {
     setShowFlowPanel(false);
     setActiveFlowLayerId(null);
@@ -268,18 +281,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     const sourceLayer = currentLayers.find(l => l.id === sourceLayerId);
     if (!sourceLayer) return;
 
-    // 检查是否已有该源图的 flow 图层
-    const existingFlow = currentLayers.find(l =>
+    // 计算新 flow 的位置：在源图下方，如果有已有的 flow 则往下叠
+    const existingFlows = currentLayers.filter(l =>
       l.operationType === 'story-deduction-flow' &&
-      l.generationPrompt?.includes(sourceLayerId)
+      l.generationPrompt?.includes(`"sourceLayerId":"${sourceLayerId}"`)
     );
-    if (existingFlow) {
-      setActiveFlowLayerId(existingFlow.id);
-      setShowFlowOperationCard(true);
-      return;
-    }
+    const baseY = sourceLayer.y + sourceLayer.height + 30;
+    const flowY = baseY + existingFlows.length * 340;
 
-    // 创建新 flow 占位图层
     const flowId = crypto.randomUUID();
     const flowState: FlowState = {
       phase: 'analyze',
@@ -293,11 +302,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       id: flowId,
       type: 'image',
       x: sourceLayer.x,
-      y: sourceLayer.y + sourceLayer.height + 30,
-      width: 180,
-      height: 120,
+      y: flowY,
+      width: 640,
+      height: 320,
       src: '',
-      title: '推演→视频',
+      title: `推演→视频 ${existingFlows.length + 1}`,
       createdAt: Date.now(),
       sourceLayerIds: [sourceLayerId],
       operationType: 'story-deduction-flow',
@@ -937,25 +946,20 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               onPromptLinkRequest={handlePromptLinkRequest}
               onContextMenuRequest={handleContextMenuRequest}
               onConnectionStart={handleConnectionStart}
+              onClick={handleLayerClick}
             />
           ))}
         </div>
       </div>
 
-      {/* 推演流程操作卡 */}
-      {(() => {
-        const flowLayer = selectedLayerId
-          ? layers.find(l => l.id === selectedLayerId && l.operationType === 'story-deduction-flow')
-          : undefined;
-        if (!flowLayer || !canvasRef.current) return null;
-        return (
-          <FlowOperationCard
-            flowLayerId={flowLayer.id}
-            onResume={handleResumeFlow}
-            onClose={() => clearSelection()}
-          />
-        );
-      })()}
+      {/* 推演流程操作卡 — 点击时弹出 */}
+      {flowCardLayerId && (
+        <FlowOperationCard
+          flowLayerId={flowCardLayerId}
+          onResume={handleResumeFlow}
+          onClose={handleCloseFlowOperationCard}
+        />
+      )}
 
       {/* 推演流程面板 */}
       {showFlowPanel && activeFlowLayerId && (
