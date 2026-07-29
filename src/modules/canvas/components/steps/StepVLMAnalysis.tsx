@@ -15,7 +15,7 @@ interface StepVLMAnalysisProps {
 const DEFAULT_SYSTEM_PROMPT = '你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张画面，输出结构化的分析结果。';
 
 export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId, initialData, onSave, onNext, onBack }) => {
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
 
   const [selectedAspects, setSelectedAspects] = useState<string[]>(
     () => initialData?.selectedAspects || DEFAULT_ASPECTS.slice(0, 6).map(a => a.key)
