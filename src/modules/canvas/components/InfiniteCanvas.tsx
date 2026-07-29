@@ -21,10 +21,13 @@ import { CanvasSettingsPanel } from './CanvasSettingsPanel';
 import { PromptLinkPanel } from './PromptLinkPanel';
 import { SaveToLibraryDialog } from './SaveToLibraryDialog';
 import { ImageActionMenu } from './ImageActionMenu';
+import { FlowOperationCard } from './FlowOperationCard';
+import { StoryDeductionFlowPanel } from './StoryDeductionFlowPanel';
 import { GenerateVideoPanel, type GenerationConfig } from './GenerateVideoPanel';
 import { VideoNodePanel } from './VideoNodePanel';
 import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
+import type { FlowState } from '../types/flow';
 import type { ProjectState } from '../../../../types';
 
 interface InfiniteCanvasProps {
@@ -98,6 +101,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     config: GenerationConfig;
   } | null>(null);
   const [showAiVideoReGen, setShowAiVideoReGen] = useState(false);
+  const [showFlowOperationCard, setShowFlowOperationCard] = useState(false);
+  const [showFlowPanel, setShowFlowPanel] = useState(false);
+  const [activeFlowLayerId, setActiveFlowLayerId] = useState<string | null>(null);
+  const [showStoryDeductionFlow, setShowStoryDeductionFlow] = useState(false);
+  const [storyDeductionFlowLayerId, setStoryDeductionFlowLayerId] = useState<string | null>(null);
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -243,6 +251,61 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       setStitchLoading(false);
     }
   }, [addLayer, stitchLoading]);
+
+  const handleResumeFlow = useCallback((flowLayerId: string) => {
+    setActiveFlowLayerId(flowLayerId);
+    setShowFlowOperationCard(false);
+    setShowFlowPanel(true);
+  }, []);
+
+  const handleCloseFlowPanel = useCallback(() => {
+    setShowFlowPanel(false);
+    setActiveFlowLayerId(null);
+  }, []);
+
+  const handleStartFlow = useCallback((sourceLayerId: string) => {
+    const { layers: currentLayers } = useCanvasStore.getState();
+    const sourceLayer = currentLayers.find(l => l.id === sourceLayerId);
+    if (!sourceLayer) return;
+
+    // 检查是否已有该源图的 flow 图层
+    const existingFlow = currentLayers.find(l =>
+      l.operationType === 'story-deduction-flow' &&
+      l.generationPrompt?.includes(sourceLayerId)
+    );
+    if (existingFlow) {
+      setActiveFlowLayerId(existingFlow.id);
+      setShowFlowOperationCard(true);
+      return;
+    }
+
+    // 创建新 flow 占位图层
+    const flowId = crypto.randomUUID();
+    const flowState: FlowState = {
+      phase: 'analyze',
+      sourceLayerId,
+      vlmAnalysis: null,
+      deduction: null,
+      storyboard: null,
+      video: null,
+    };
+    addLayer({
+      id: flowId,
+      type: 'image',
+      x: sourceLayer.x,
+      y: sourceLayer.y + sourceLayer.height + 30,
+      width: 180,
+      height: 120,
+      src: '',
+      title: '推演→视频',
+      createdAt: Date.now(),
+      sourceLayerIds: [sourceLayerId],
+      operationType: 'story-deduction-flow',
+      generationPrompt: JSON.stringify(flowState),
+    });
+    setActiveFlowLayerId(flowId);
+    setShowFlowPanel(true);
+  }, [addLayer]);
 
   const handleEdgeSelect = useCallback((edgeId: string | null) => {
     setSelectedEdgeId(edgeId);
@@ -879,9 +942,40 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         </div>
       </div>
 
-      {/* 单图操作菜单 */}
+      {/* 推演流程操作卡 */}
       {(() => {
-        const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image') : undefined;
+        const flowLayer = selectedLayerId
+          ? layers.find(l => l.id === selectedLayerId && l.operationType === 'story-deduction-flow')
+          : undefined;
+        if (!flowLayer || !canvasRef.current) return null;
+        return (
+          <FlowOperationCard
+            flowLayerId={flowLayer.id}
+            onResume={handleResumeFlow}
+            onClose={() => clearSelection()}
+          />
+        );
+      })()}
+
+      {/* 推演流程面板 */}
+      {showFlowPanel && activeFlowLayerId && (
+        <StoryDeductionFlowPanel
+          flowLayerId={activeFlowLayerId}
+          onClose={handleCloseFlowPanel}
+        />
+      )}
+
+      {/* 推演流程面板（从 ImageActionMenu 打开） */}
+      {showStoryDeductionFlow && (
+        <StoryDeductionFlowPanel
+          flowLayerId={storyDeductionFlowLayerId!}
+          onClose={() => { setShowStoryDeductionFlow(false); setStoryDeductionFlowLayerId(null); }}
+        />
+      )}
+
+      {/* 单图操作菜单 — 仅对普通图片（非 flow 图层） */}
+      {(() => {
+        const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image' && l.operationType !== 'story-deduction-flow') : undefined;
         if (!imgLayer || !canvasRef.current) return null;
         const cr = canvasRef.current.getBoundingClientRect();
         return (
@@ -893,6 +987,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               width: imgLayer.width * scale,
               height: imgLayer.height * scale,
             }}
+            onStartFlow={handleStartFlow}
           />
         );
       })()}

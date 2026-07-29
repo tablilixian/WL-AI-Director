@@ -36,6 +36,7 @@ export type ImageAction =
   | 'storyboard-deduction'
   | 'story-deduction-ai'
   | 'story-deduction'
+  | 'story-deduction-flow'
   | 'lighting'
   | 'split-9grid'
   | 'split-4grid'
@@ -61,11 +62,12 @@ interface ActionGroup {
 interface ImageActionMenuProps {
   layer: LayerData;
   screenRect: { top: number; left: number; width: number; height: number };
+  onStartFlow?: (sourceLayerId: string) => void;
 }
 
 const GROUP_DIVIDER = <div className="w-px h-5 bg-gray-600 mx-1" />;
 
-export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenRect }) => {
+export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenRect, onStartFlow }) => {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ImageAction | null>(null);
   const [showSplitPanel, setShowSplitPanel] = useState(false);
@@ -89,6 +91,9 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
     closeAll();
     if (action === 'generate-video') {
       setShowGenerateVideo(true);
+    } else if (action === 'story-deduction-flow') {
+      onStartFlow?.(layer.id);
+      return;
     } else if (action === 'split-9grid' || action === 'split-4grid' || action === 'split-25grid') {
       const gt = action === 'split-9grid' ? '9grid' : action === 'split-4grid' ? '4grid' : '25grid';
       setSplitGridType(gt);
@@ -174,6 +179,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       label: '剧情推演',
       icon: <Grid3x3 className="w-3.5 h-3.5" />,
       items: [
+        { id: 'story-deduction-flow', label: '🎬 推演→视频' },
         { id: 'story-deduction-ai', label: '四宫格推演' },
         { id: 'story-deduction', label: '推演后续剧情' },
         { id: 'storyboard-deduction', label: '旧版推演' },
@@ -301,6 +307,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
           onClose={() => setShowGenerateVideo(false)}
         />
       )}
+
     </>
   );
 };

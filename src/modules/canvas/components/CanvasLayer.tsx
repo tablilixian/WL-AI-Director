@@ -11,7 +11,7 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
-import { Film, Orbit, BadgeHelp } from 'lucide-react';
+import { Film, Orbit, BadgeHelp, Sparkles } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 import { InlinePanoramaViewer } from './InlinePanoramaViewer';
 import { isLikelyPanoramaImage } from '../utils/panoramaUtils';
@@ -65,6 +65,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   useEffect(() => {
+    if (layer.operationType === 'story-deduction-flow') return;
     let objectUrl: string | null = null;
     
     const resolve = async () => {
@@ -219,6 +220,65 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   }, [isDragging, isResizing, layer, layers, updateLayer, calculateSnap]);
 
   const renderContent = () => {
+    // 推演流程占位图层 — 渲染卡片 UI
+    if (layer.operationType === 'story-deduction-flow') {
+      let flowPhase = 'select';
+      try {
+        const f = layer.generationPrompt ? JSON.parse(layer.generationPrompt) : null;
+        if (f?.phase) flowPhase = f.phase;
+      } catch {}
+      const isDone = flowPhase === 'done';
+      const steps = ['select', 'analyze', 'deduce', 'storyboard', 'video', 'done'];
+      const phaseIdx = steps.indexOf(flowPhase);
+      const stepLabels = ['选择', '分析', '推演', '宫格', '视频'];
+
+      return (
+        <div className={`w-full h-full rounded-lg overflow-hidden relative ${isDone ? 'border-2 border-green-500/60' : 'border-2 border-gray-600/60'}`}>
+          {/* 上半部分 — 缩略图区域 */}
+          <div className="absolute inset-0 bg-[var(--bg-base)]">
+            {/* 源图缩略图 */}
+            {(() => {
+              const srcLayerId = (() => { try { const f = layer.generationPrompt ? JSON.parse(layer.generationPrompt) : null; return f?.sourceLayerId; } catch { return null; } })();
+              const srcLayer = srcLayerId ? layers.find(l => l.id === srcLayerId) : null;
+              if (srcLayer?.src) return <img src={srcLayer.src} className="w-full h-full object-cover opacity-40" />;
+              return null;
+            })()}
+          </div>
+
+          {/* 内容 */}
+          <div className="relative z-10 w-full h-full flex flex-col justify-between p-2">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 text-[9px] font-bold text-amber-300 drop-shadow-md">
+                <Sparkles className="w-2.5 h-2.5" /> 推演
+              </span>
+              <div className={`w-2 h-2 rounded-full ${isDone ? 'bg-green-400' : 'bg-amber-400'} shadow-sm`} />
+            </div>
+
+            {!isDone && (
+              <div className="space-y-1">
+                <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${((phaseIdx + 1) / 5) * 100}%` }} />
+                </div>
+                <div className="flex items-center gap-1">
+                  {stepLabels.map((label, i) => (
+                    <div key={i} className={`flex-1 text-[6px] text-center font-medium ${i <= phaseIdx ? 'text-amber-300' : 'text-gray-500'}`}>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isDone && (
+              <div className="text-center">
+                <span className="text-[8px] font-bold text-green-400 drop-shadow-md">✅ 已完成</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     switch (layer.type) {
       case 'image':
         if (!resolvedSrc) {

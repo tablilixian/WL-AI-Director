@@ -98,7 +98,7 @@ export interface LayerData {
   // 来源追踪
   sourceLayerId?: string; // 来源图层 ID（单来源）
   sourceLayerIds?: string[]; // 来源图层 ID 列表（多来源，如风格迁移需要目标图+风格参考图）
-  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'mkr-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint' | 'visual-language' | 'panorama-generation' | 'panorama-screenshot'; // 操作类型
+  operationType?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'mkr-video' | 'style-transfer' | 'direct-style-transfer' | 'ipa-style-transfer' | 'background-replace' | 'expand' | 'background-remove' | 'variant' | 'import' | 'drawing' | 'multi-angle' | 'three-view' | 'storyboard-deduction' | 'lighting' | '9grid' | '4grid' | '25grid' | 'inpaint' | 'visual-language' | 'panorama-generation' | 'panorama-screenshot' | 'story-deduction-flow' | 'story-deduction-video'; // 操作类型
   // 宫格生成数据（用于后续宫格拆分）
   gridData?: GridGenerationData;
   // 生成信息
