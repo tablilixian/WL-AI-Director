@@ -51,13 +51,11 @@ async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; ima
 interface PromptLayerProps {
   layer: PromptLayerData;
   isSelected: boolean;
-  onDragStart?: (e: React.MouseEvent) => void;
 }
 
 export const PromptLayer: React.FC<PromptLayerProps> = ({ 
   layer, 
-  isSelected,
-  onDragStart 
+  isSelected
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
@@ -258,7 +256,6 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
           ? `0 0 20px ${promptConfig.nodeColor}40` 
           : `0 4px 20px rgba(0, 0, 0, 0.5)`
       }}
-      onMouseDown={onDragStart}
     >
       <div 
         className="px-3 py-2 flex items-center justify-between cursor-move"

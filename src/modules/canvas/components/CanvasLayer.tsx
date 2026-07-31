@@ -50,8 +50,11 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(layer.title);
+  const [editingText, setEditingText] = useState<string | null>(null);
+  const skipTextBlurRef = useRef(false);
   const [resolvedSrc, setResolvedSrc] = useState<string>('');
   const [isZoomed, setIsZoomed] = useState(false);
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [showPanorama, setShowPanorama] = useState(false);
   const [inline3d, setInline3d] = useState(layer.type === 'panorama' ? (layer as any).displayMode === '3d' : false);
   const [isProbablyPanorama, setIsProbablyPanorama] = useState(false);
@@ -65,6 +68,13 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     childPositions: [] as { id: string; x: number; y: number }[] 
   });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const dragMovedRef = useRef(false);
+
+  // 交互/可编辑元素按下时不启动图层拖拽，保证文本选择、按钮点击等功能不被拖拽打断
+  const isInteractiveTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    return !!target.closest('textarea, input, button, select, a, [contenteditable="true"]');
+  }, []);
 
   useEffect(() => {
     if (layer.operationType === 'story-deduction-flow') return;
@@ -83,6 +93,14 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         
         const resolved = await resolveImageSrc(srcToResolve);
         console.log('[CanvasLayer] 解析结果:', layer.id, 'resolved:', resolved?.substring(0, 50));
+        setResolvedSrc(resolved);
+        if (resolved.startsWith('blob:') && resolved !== layer.src) {
+          objectUrl = resolved;
+        }
+      } else if (layer.type === 'video') {
+        // 视频：同样解析本地引用（video:xxx / local:xxx / blob:），保证持久化后能恢复
+        const srcToResolve = layer.src || (layer.imageId ? `video:${layer.imageId}` : '');
+        const resolved = await resolveImageSrc(srcToResolve);
         setResolvedSrc(resolved);
         if (resolved.startsWith('blob:') && resolved !== layer.src) {
           objectUrl = resolved;
@@ -107,6 +125,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     const multiSelect = e.ctrlKey || e.metaKey;
     selectLayer(layer.id, multiSelect);
     if (layer.locked) return;
+    // 交互元素（文本编辑/按钮等）按下时不启动拖拽，仅选中
+    if (isInteractiveTarget(e.target)) return;
+    dragMovedRef.current = false;
     setIsDragging(true);
     
     const childLayers = layers.filter(l => l.parentId === layer.id);
@@ -119,7 +140,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       layerY: layer.y,
       childPositions
     };
-  }, [layer.id, layer.x, layer.y, layer.locked, layers, selectLayer]);
+  }, [layer.id, layer.x, layer.y, layer.locked, layers, selectLayer, isInteractiveTarget]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, corner: string) => {
     if (layer.locked) return;
@@ -143,6 +164,13 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     e.stopPropagation();
     if (layer.type === 'image' && resolvedSrc) {
       setIsZoomed(true);
+    }
+  }, [layer.type, resolvedSrc]);
+
+  const handleVideoDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (layer.type === 'video' && resolvedSrc) {
+      setVideoPreviewOpen(true);
     }
   }, [layer.type, resolvedSrc]);
 
@@ -178,6 +206,27 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     }
   }, [handleRenameSubmit, layer.title]);
 
+  const handleTextEditSubmit = useCallback(() => {
+    if (skipTextBlurRef.current) {
+      skipTextBlurRef.current = false;
+      return;
+    }
+    if (editingText !== null) {
+      updateLayer(layer.id, { text: editingText });
+    }
+    setEditingText(null);
+  }, [editingText, layer.id, updateLayer]);
+
+  const handleTextEditKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleTextEditSubmit();
+    } else if (e.key === 'Escape') {
+      skipTextBlurRef.current = true;
+      setEditingText(null);
+    }
+  }, [handleTextEditSubmit]);
+
   useEffect(() => {
     if (!isDragging && !isResizing) return;
 
@@ -185,6 +234,10 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       if (isDragging) {
         const deltaX = (e.clientX - dragStartRef.current.x);
         const deltaY = (e.clientY - dragStartRef.current.y);
+        // 移动超过阈值视为真实拖动，用于抑制鼠标抬起后的 click，避免拖完后误触发图层点击
+        if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+          dragMovedRef.current = true;
+        }
         const newX = dragStartRef.current.layerX + deltaX;
         const newY = dragStartRef.current.layerY + deltaY;
         const snapped = calculateSnap(layer, newX, newY);
@@ -342,13 +395,29 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           );
         }
         return (
-          <video
-            src={resolvedSrc}
-            className="w-full h-full object-contain"
-            controls={isSelected}
-            loop
-            muted
-          />
+          <div
+            className="relative w-full h-full group/video"
+            onDoubleClick={handleVideoDoubleClick}
+            title="双击预览视频"
+          >
+            {/* pointer-events: none 让视频不拦截鼠标事件，保证图层可拖拽/可选中 */}
+            <video
+              src={resolvedSrc}
+              className="w-full h-full object-contain pointer-events-none select-none"
+              loop
+              muted
+              playsInline
+              draggable={false}
+            />
+            {/* 悬停提示：可双击全屏预览 */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-150 group-hover/video:opacity-100">
+              <div className="w-10 h-10 rounded-full bg-black/60 border border-white/40 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </div>
+          </div>
         );
       case 'sticky':
         return (
@@ -365,10 +434,25 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           </div>
         );
       case 'text':
+        if (editingText !== null) {
+          return (
+            <textarea
+              className="w-full h-full bg-transparent resize-none outline-none text-center"
+              style={{ color: layer.color || '#ffffff', fontSize: layer.fontSize || 24 }}
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              onBlur={handleTextEditSubmit}
+              onKeyDown={handleTextEditKeyDown}
+              autoFocus
+            />
+          );
+        }
         return (
           <div
             className="w-full h-full flex items-center justify-center"
             style={{ color: layer.color || '#ffffff', fontSize: layer.fontSize || 24 }}
+            onDoubleClick={() => setEditingText(layer.text || '')}
+            title="双击编辑文字"
           >
             {layer.text || 'Text'}
           </div>
@@ -469,6 +553,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   return (
     <div
       ref={layerRef}
+      data-layer-id={layer.id}
       className={`group absolute transition-shadow duration-150 ${
         isSelected ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:ring-1 hover:ring-gray-500'
       } ${layer.locked ? 'cursor-not-allowed' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
@@ -485,6 +570,10 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       onContextMenu={handleContextMenu}
       onClick={(e) => {
         e.stopPropagation();
+        if (dragMovedRef.current) {
+          dragMovedRef.current = false;
+          return;
+        }
         onClick?.(layer.id);
       }}
     >
@@ -593,6 +682,38 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         document.body
       )}
 
+      {videoPreviewOpen && resolvedSrc && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+          onClick={() => setVideoPreviewOpen(false)}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <video
+              src={resolvedSrc}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl bg-black"
+              controls
+              autoPlay
+              loop
+            />
+            <button
+              className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setVideoPreviewOpen(false); }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
+              {layer.title}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {isSelected && !isResizing && !layer.locked && (
         <>
           <ResizeHandle position="nw" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
@@ -650,22 +771,25 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
         </div>
       </div>
-      <div
-        className={`absolute z-10 transition-opacity duration-150 ${
-          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
-        style={{ right: '-10px', top: '50%', transform: 'translateY(-50%)' }}
-        title="拖拽到其它图层建立输出连线"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          onConnectionStart?.(layer.id, e.clientX, e.clientY);
-        }}
-      >
-        <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all cursor-crosshair hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+      {/* 输出连线把手：仅图片/全景图可作为连线源，其余图层不显示 */}
+      {(layer.type === 'image' || layer.type === 'panorama') && (
+        <div
+          className={`absolute z-10 transition-opacity duration-150 ${
+            isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          style={{ right: '-10px', top: '50%', transform: 'translateY(-50%)' }}
+          title="拖拽到其它图层建立输出连线"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onConnectionStart?.(layer.id, e.clientX, e.clientY);
+          }}
+        >
+          <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all cursor-crosshair hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -268,7 +268,7 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
 
   return (
     <>
-      {!activePanel && !showSplitPanel && createPortal(menu, document.body)}
+      {!activePanel && !showSplitPanel && !showGenerateVideo && createPortal(menu, document.body)}
 
       {activePanel && createPortal(
         <>

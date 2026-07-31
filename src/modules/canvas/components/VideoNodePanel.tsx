@@ -15,6 +15,7 @@ import {
 
 interface VideoNodePanelProps {
   layerId: string;
+  onClose?: () => void;
 }
 
 function parseConfig(layer: LayerData | undefined): VideoNodeConfig | null {
@@ -39,7 +40,7 @@ function saveConfig(layerId: string, config: VideoNodeConfig) {
   updateLayer(layerId, { generationPrompt: JSON.stringify(config) });
 }
 
-export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
+export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId, onClose }) => {
   const { layers, selectLayer, updateLayer } = useCanvasStore();
   const layer = layers.find(l => l.id === layerId);
 
@@ -298,7 +299,7 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
                 重新生成
               </button>
               <button
-                onClick={() => selectLayer(null)}
+                onClick={() => onClose ? onClose() : selectLayer(null)}
                 className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
@@ -368,7 +369,7 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
               </div>
             )}
             <button
-              onClick={() => selectLayer(null)}
+              onClick={() => onClose ? onClose() : selectLayer(null)}
               className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -483,7 +484,7 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId }) => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => selectLayer(null)}
+                onClick={() => onClose ? onClose() : selectLayer(null)}
                 className="px-2.5 py-1 text-[10px] text-gray-400 hover:text-white transition-colors"
                 disabled={isGenerating}
               >
