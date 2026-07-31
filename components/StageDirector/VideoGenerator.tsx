@@ -575,6 +575,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       )}
 
       <DeductionModal
+        key={shot.id}
         isOpen={showDeductionModal}
         onClose={() => setShowDeductionModal(false)}
         startKeyframeImageUrl={startKeyframeImageUrl}

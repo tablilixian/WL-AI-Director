@@ -6,6 +6,24 @@ import { logger, LogCategory } from '../logger';
 import { retryOperation } from './apiCore';
 import { VIDEO_MKR_GRID_DEFAULT, VIDEO_MSR_DEFAULT, VIDEO_MKR_DEFAULT } from '../../config/sizeConfig';
 
+function withProgressSimulation<T>(
+  fn: () => Promise<T>,
+  onProgress: (pct: number, msg: string) => void,
+  startPct: number,
+  endPct: number,
+  label: string,
+  intervalMs = 2000,
+): Promise<T> {
+  const timer = setInterval(() => {
+    const current = Date.now() - startTime;
+    const simulated = Math.min(startPct + (endPct - startPct) * Math.min(current / 120000, 1), endPct - 5);
+    onProgress(Math.round(simulated), `${label} (${Math.round(simulated)}%)`);
+  }, intervalMs);
+  const startTime = Date.now();
+
+  return fn().finally(() => clearInterval(timer));
+}
+
 /** 统一视频生成请求参数 */
 export interface VideoGenerationRequest {
   mode: VideoGenerationMode;
@@ -117,24 +135,20 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MSR 多帧超分生成中...' });
 
-    // MSR 后端不支持高分辨率，使用默认值
     const width = VIDEO_MSR_DEFAULT.width;
     const height = VIDEO_MSR_DEFAULT.height;
 
-    const result = await retryOperation(
-      () => generateVideoMsr(
-        req.prompt,
-        req.referenceImages || [],
-        req.backgroundImage || '',
-        width,
-        height,
-        req.duration,
-        req.fps
+    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+
+    const result = await withProgressSimulation(
+      () => retryOperation(
+        () => generateVideoMsr(req.prompt, req.referenceImages || [], req.backgroundImage || '', width, height, req.duration, req.fps),
+        MAX_RETRIES
       ),
-      MAX_RETRIES
+      notify, 5, 85, 'MSR 多帧超分生成中'
     );
 
-    onProgress?.({ stage: 'generating', percent: 85, message: 'MSR 生成完成' });
+    notify(85, 'MSR 生成完成');
     return result;
   }
 
@@ -144,23 +158,20 @@ export class VideoGenerationOrchestrator {
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR 多关键帧生成中...' });
 
-    // MKR 后端不支持高分辨率，使用默认值
     const width = VIDEO_MKR_DEFAULT.width;
     const height = VIDEO_MKR_DEFAULT.height;
 
-    const result = await retryOperation(
-      () => generateVideoMkr(
-        req.prompt,
-        req.timedImages || [],
-        width,
-        height,
-        req.duration,
-        req.fps
+    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+
+    const result = await withProgressSimulation(
+      () => retryOperation(
+        () => generateVideoMkr(req.prompt, req.timedImages || [], width, height, req.duration, req.fps),
+        MAX_RETRIES
       ),
-      MAX_RETRIES
+      notify, 5, 85, 'MKR 多关键帧生成中'
     );
 
-    onProgress?.({ stage: 'generating', percent: 85, message: 'MKR 生成完成' });
+    notify(85, 'MKR 生成完成');
     return result;
   }
 
@@ -179,31 +190,25 @@ export class VideoGenerationOrchestrator {
       throw new Error(`MKR Grid: frameIndexes 数量 (${rawIndexes.length}) 与 gridType (${gridType}) 不匹配`);
     }
 
-    // 百分比 → 实际帧索引（0 ~ totalFrames-1）
     const totalFrames = req.duration * req.fps;
     const frameIndexes = (req.frameIndexes || [0, 0, 0, 0]).map(pct =>
       Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
     );
 
-    // MKR Grid 后端不支持高分辨率，使用默认值 640×320
     const width = VIDEO_MKR_GRID_DEFAULT.width;
     const height = VIDEO_MKR_GRID_DEFAULT.height;
 
-    const result = await retryOperation(
-      () => generateVideoMkrGrid(
-        req.prompt,
-        req.refImage || '',
-        req.gridType || 4,
-        frameIndexes,
-        width,
-        height,
-        req.duration,
-        req.fps
+    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+
+    const result = await withProgressSimulation(
+      () => retryOperation(
+        () => generateVideoMkrGrid(req.prompt, req.refImage || '', req.gridType || 4, frameIndexes, width, height, req.duration, req.fps),
+        MAX_RETRIES
       ),
-      MAX_RETRIES
+      notify, 5, 85, 'MKR Grid 宫格视频生成中'
     );
 
-    onProgress?.({ stage: 'generating', percent: 85, message: 'MKR Grid 生成完成' });
+    notify(85, 'MKR Grid 生成完成');
     return result;
   }
 }
