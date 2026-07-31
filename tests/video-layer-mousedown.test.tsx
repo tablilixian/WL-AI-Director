@@ -104,4 +104,75 @@ describe('视频图层鼠标按下交互', () => {
     expect(screen.queryByText('视频生成')).toBeNull();
     expect(screen.queryByText('视频已生成')).toBeNull();
   });
+
+  it('单击（按下+抬起未拖动）MKR 视频节点时打开视频生成配置面板', async () => {
+    const mkrLayer: LayerData = {
+      id: 'mkr-video-2',
+      type: 'video',
+      x: 100,
+      y: 100,
+      width: 640,
+      height: 360,
+      src: '',
+      title: 'MKR视频节点',
+      createdAt: Date.now(),
+      operationType: 'mkr-video',
+      sourceLayerIds: ['img-1'],
+    };
+    useCanvasStore.getState().addLayer(mkrLayer);
+
+    render(<InfiniteCanvas className="w-full h-[800px]" />);
+
+    const layerEl = document.querySelector('[data-layer-id="mkr-video-2"]') as HTMLElement | null;
+    expect(layerEl).toBeTruthy();
+
+    fireEvent.mouseDown(layerEl!, { button: 0, clientX: 200, clientY: 200 });
+    fireEvent.mouseUp(layerEl!, { button: 0, clientX: 200, clientY: 200 });
+    fireEvent.click(layerEl!);
+
+    await waitFor(() => {
+      expect(screen.getByText('视频生成')).toBeTruthy();
+    });
+  });
+
+  it('点击图片菜单「多关键帧视频 (MKR)」创建节点后，自动打开视频生成面板', async () => {
+    const imgLayer: LayerData = {
+      id: 'img-1',
+      type: 'image',
+      x: 100,
+      y: 100,
+      width: 320,
+      height: 180,
+      src: 'local:mock',
+      title: '源图片',
+      createdAt: Date.now(),
+    };
+    useCanvasStore.getState().addLayer(imgLayer);
+
+    render(<InfiniteCanvas className="w-full h-[800px]" />);
+
+    const layerEl = document.querySelector('[data-layer-id="img-1"]') as HTMLElement | null;
+    expect(layerEl).toBeTruthy();
+
+    fireEvent.mouseDown(layerEl!, { button: 0 });
+    fireEvent.mouseUp(layerEl!);
+
+    await waitFor(() => {
+      expect(useCanvasStore.getState().selectedLayerId).toBe('img-1');
+    });
+
+    const groupBtn = screen.getByText('基于此图生成');
+    fireEvent.click(groupBtn);
+
+    const mkrItem = screen.getByText('多关键帧视频 (MKR)');
+    fireEvent.click(mkrItem);
+
+    const mkrLayer = useCanvasStore.getState().layers.find(l => l.operationType === 'mkr-video');
+    expect(mkrLayer).toBeTruthy();
+    expect(useCanvasStore.getState().selectedLayerId).toBe(mkrLayer!.id);
+
+    await waitFor(() => {
+      expect(screen.getByText('视频生成')).toBeTruthy();
+    });
+  });
 });

@@ -176,7 +176,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     // Select the new node after it's added (it will be the last layer)
     const newLayers = useCanvasStore.getState().layers;
     const newNode = newLayers[newLayers.length - 1];
-    if (newNode) selectLayer(newNode.id);
+    if (newNode) {
+      selectLayer(newNode.id);
+      setVideoNodePanelLayerId(newNode.id);
+    }
   }, [addLayer, selectLayer]);
 
   const [stitchLoading, setStitchLoading] = useState(false);
@@ -271,6 +274,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     const layer = layers.find(l => l.id === layerId);
     if (layer?.operationType === 'story-deduction-flow') {
       setFlowCardLayerId(layerId);
+    }
+    // 单击 MKR 视频节点打开视频生成配置面板（按下/拖动不触发）
+    if (layer?.type === 'video' && layer?.operationType === 'mkr-video') {
+      setVideoNodePanelLayerId(layerId);
     }
   }, [layers]);
 
@@ -1000,6 +1007,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               height: imgLayer.height * scale,
             }}
             onStartFlow={handleStartFlow}
+            onMkrNodeCreated={(id) => setVideoNodePanelLayerId(id)}
           />
         );
       })()}

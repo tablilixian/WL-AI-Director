@@ -63,11 +63,12 @@ interface ImageActionMenuProps {
   layer: LayerData;
   screenRect: { top: number; left: number; width: number; height: number };
   onStartFlow?: (sourceLayerId: string) => void;
+  onMkrNodeCreated?: (layerId: string) => void;
 }
 
 const GROUP_DIVIDER = <div className="w-px h-5 bg-gray-600 mx-1" />;
 
-export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenRect, onStartFlow }) => {
+export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenRect, onStartFlow, onMkrNodeCreated }) => {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ImageAction | null>(null);
   const [showSplitPanel, setShowSplitPanel] = useState(false);
@@ -124,7 +125,10 @@ export const ImageActionMenu: React.FC<ImageActionMenuProps> = ({ layer, screenR
       });
       const newLayers = useCanvasStore.getState().layers;
       const newNode = newLayers[newLayers.length - 1];
-      if (newNode) selectLayer(newNode.id);
+      if (newNode) {
+        selectLayer(newNode.id);
+        onMkrNodeCreated?.(newNode.id);
+      }
     } else {
       setActivePanel(action);
     }
