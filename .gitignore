@@ -41,3 +41,6 @@ public/ffmpeg/
 # Playwright
 test-results/
 playwright-report/
+
+# Agent / IDE local data (memory, logs, caches — not project source)
+.workbuddy/
