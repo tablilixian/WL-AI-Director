@@ -71,7 +71,6 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
 
       if (!videoId) {
         const savedRef = await unifiedImageService.saveVideoToLocal(videoRef);
-        const playableUrl = await unifiedImageService.resolveForDisplay(savedRef);
         const finalVideoId = savedRef.replace('video:', '');
         const baseX = flowLayer.x;
         const baseY = flowLayer.y + flowLayer.height + 30;
@@ -80,7 +79,7 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
           type: 'video',
           x: baseX, y: baseY,
           width: 640, height: 360,
-          src: playableUrl,
+          src: savedRef,
           imageId: finalVideoId,
           title: '推演→视频',
           createdAt: Date.now(),
@@ -90,7 +89,6 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
           generationPrompt: flowLayer.generationPrompt,
         });
       } else {
-        const playableUrl = await unifiedImageService.resolveForDisplay(videoRef);
         const baseX = flowLayer.x;
         const baseY = flowLayer.y + flowLayer.height + 30;
         addLayer({
@@ -98,7 +96,7 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({ flowLayerI
           type: 'video',
           x: baseX, y: baseY,
           width: 640, height: 360,
-          src: playableUrl,
+          src: videoRef,
           imageId: videoId,
           title: '推演→视频',
           createdAt: Date.now(),

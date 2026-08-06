@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Sparkles, Loader2, ArrowLeft, Check } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Sparkles, Loader2, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { useCanvasStore } from '../../hooks/useCanvasState';
 import type { DeductionData, StoryboardResultData } from '../../types/flow';
 
@@ -16,12 +16,75 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
   const { layers } = useCanvasStore();
   const sourceLayer = layers.find(l => l.id === sourceLayerId);
 
-  const [compositeUrl, setCompositeUrl] = useState<string | null>(initialData?.compositeImageUrl || null);
-  const [splitImages, setSplitImages] = useState<{ gridIndex: number; src: string }[]>(initialData?.splitImages || []);
+  // 持久引用 (local:img_xxx) — 保存到 flow state，刷新后仍有效
+  const [compositeRef, setCompositeRef] = useState<string | null>(initialData?.compositeImageUrl || null);
+  const [splitImageRefs, setSplitImageRefs] = useState<{ gridIndex: number; src: string }[]>(initialData?.splitImages || []);
+  // 显示用 URL (blob:xxx) — 仅当前会话有效，刷新后需重新解析
+  const [compositeDisplayUrl, setCompositeDisplayUrl] = useState<string>('');
+  const [splitDisplayUrls, setSplitDisplayUrls] = useState<Record<number, string>>({});
+  // 旧数据过期检测：如果存的是 blob: URL 说明是修复前的旧流程，刷新后已失效
+  const [compositeExpired, setCompositeExpired] = useState(false);
+  const [splitExpired, setSplitExpired] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const activePanels = deductionData.panels.filter(p => p.checked);
+
+  // 挂载时 / 持久引用变化时，解析为 display URL
+  useEffect(() => {
+    if (!compositeRef) {
+      setCompositeDisplayUrl('');
+      setCompositeExpired(false);
+      return;
+    }
+    // 旧数据检测：blob: URL 在刷新后已失效
+    if (compositeRef.startsWith('blob:')) {
+      setCompositeDisplayUrl('');
+      setCompositeExpired(true);
+      return;
+    }
+    let cancelled = false;
+    import('../../../../../services/unifiedImageService').then(({ unifiedImageService }) => {
+      unifiedImageService.resolveForDisplay(compositeRef).then(url => {
+        if (!cancelled) {
+          setCompositeDisplayUrl(url);
+          setCompositeExpired(false);
+        }
+      });
+    });
+    return () => { cancelled = true; };
+  }, [compositeRef]);
+
+  useEffect(() => {
+    if (splitImageRefs.length === 0) {
+      setSplitDisplayUrls({});
+      setSplitExpired(false);
+      return;
+    }
+    // 旧数据检测：任何 src 是 blob: URL 说明是修复前的旧流程
+    if (splitImageRefs.some(img => img.src?.startsWith('blob:'))) {
+      setSplitDisplayUrls({});
+      setSplitExpired(true);
+      return;
+    }
+    let cancelled = false;
+    import('../../../../../services/unifiedImageService').then(({ unifiedImageService }) => {
+      Promise.all(
+        splitImageRefs.map(async (img) => ({
+          gridIndex: img.gridIndex,
+          url: await unifiedImageService.resolveForDisplay(img.src),
+        }))
+      ).then(results => {
+        if (cancelled) return;
+        const map: Record<number, string> = {};
+        results.forEach(r => { map[r.gridIndex] = r.url; });
+        setSplitDisplayUrls(map);
+        setSplitExpired(false);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [splitImageRefs]);
 
   const handleGenerate = useCallback(async () => {
     if (!sourceLayer?.src || isProcessing) return;
@@ -50,10 +113,8 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
         itemWidth: 1024,
       });
 
-      setCompositeUrl(resultUrl);
-
-      const displayUrl = await unifiedImageService.resolveForDisplay(resultUrl);
-      setCompositeUrl(displayUrl);
+      // 保存持久引用，display URL 由 useEffect 自动解析
+      setCompositeRef(resultUrl);
 
       if (!resultUrl) throw new Error('缺少合成图');
       const { callDramaBackendSpliteGridApi } = await import('../../../../../services/adapters/imageAdapter');
@@ -66,16 +127,15 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
           spliteGridColumn: 2,
         });
         if (Array.isArray(splitResult) && splitResult.length === 4) {
-          const loaded = await Promise.all(
-            splitResult.map(async (url: string, i: number) => ({
-              gridIndex: i,
-              src: await unifiedImageService.resolveForDisplay(url),
-            }))
-          );
-          setSplitImages(loaded);
+          // 保存持久引用 (local:img_xxx)，display URL 由 useEffect 自动解析
+          const loaded = splitResult.map((url: string, i: number) => ({
+            gridIndex: i,
+            src: url,
+          }));
+          setSplitImageRefs(loaded);
         }
       } catch {
-        setSplitImages([]);
+        setSplitImageRefs([]);
       }
     } catch (err: any) {
       setError(err.message || '生成失败');
@@ -85,7 +145,8 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
   }, [sourceLayer, activePanels, isProcessing]);
 
   const handleConfirm = () => {
-    onSave({ compositeImageUrl: compositeUrl || '', splitImages });
+    // 保存持久引用到 flow state
+    onSave({ compositeImageUrl: compositeRef || '', splitImages: splitImageRefs });
     onNext();
   };
 
@@ -98,7 +159,7 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
         </div>
       )}
 
-      {!compositeUrl && !isProcessing && (
+      {!compositeRef && !isProcessing && (
         <button
           onClick={handleGenerate}
           className="w-full py-3 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
@@ -115,7 +176,7 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
         </div>
       )}
 
-      {compositeUrl && (
+      {compositeRef && (
         <>
           <div className="bg-[var(--bg-base)] rounded-lg border border-green-500/30 overflow-hidden">
             <div className="px-4 py-2 bg-green-500/10 border-b border-green-500/20 flex items-center justify-between">
@@ -129,24 +190,52 @@ export const StepStoryboard: React.FC<StepStoryboardProps> = ({ sourceLayerId, d
               </button>
             </div>
             <div className="p-3">
-              <img src={compositeUrl} className="w-full rounded-lg" alt="四宫格" />
+              {compositeDisplayUrl ? (
+                <img src={compositeDisplayUrl} className="w-full rounded-lg" alt="四宫格" />
+              ) : compositeExpired ? (
+                <div className="w-full aspect-video bg-red-500/5 rounded-lg flex flex-col items-center justify-center gap-2 border border-red-500/20">
+                  <AlertCircle className="w-6 h-6 text-red-400" />
+                  <p className="text-xs text-red-400">图片已过期（旧数据）</p>
+                  <button onClick={handleGenerate} disabled={isProcessing}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 underline flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> 重新生成
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full aspect-video bg-[var(--bg-hover)] rounded-lg flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-[var(--text-muted)] animate-spin" />
+                </div>
+              )}
             </div>
           </div>
 
-          {splitImages.length > 0 && (
+          {splitImageRefs.length > 0 && (
             <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
               <div className="px-4 py-2 bg-gray-800 border-b border-[var(--border-primary)]">
                 <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">切分后的 4 张关键帧</span>
               </div>
               <div className="p-3">
-                <div className="grid grid-cols-4 gap-2">
-                  {splitImages.map((img, i) => (
-                    <div key={i} className="aspect-video bg-[var(--bg-hover)] rounded overflow-hidden border border-[var(--border-primary)]">
-                      <img src={img.src} className="w-full h-full object-cover" alt={`关键帧${i + 1}`} />
-                      <div className="text-center text-[9px] text-[var(--text-muted)] py-0.5">帧{i + 1}</div>
-                    </div>
-                  ))}
-                </div>
+                {splitExpired ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-red-400">
+                    <AlertCircle className="w-4 h-4" />
+                    关键帧已过期，请重新生成宫格图
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {splitImageRefs.map((img, i) => (
+                      <div key={i} className="aspect-video bg-[var(--bg-hover)] rounded overflow-hidden border border-[var(--border-primary)]">
+                        {splitDisplayUrls[img.gridIndex] ? (
+                          <img src={splitDisplayUrls[img.gridIndex]} className="w-full h-full object-cover" alt={`关键帧${i + 1}`} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Loader2 className="w-3 h-3 text-[var(--text-muted)] animate-spin" />
+                          </div>
+                        )}
+                        <div className="text-center text-[9px] text-[var(--text-muted)] py-0.5">帧{i + 1}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

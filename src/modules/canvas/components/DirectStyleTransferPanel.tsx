@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { ResolvedImage } from './ResolvedImage';
 
 interface DirectStyleTransferPanelProps {
   selectedLayerId: string | null;
@@ -190,7 +191,7 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
             </div>
             <div className="flex items-center gap-3">
               <div className="w-20 h-20 rounded-lg overflow-hidden border border-blue-500/30 shrink-0">
-                <img src={selectedTargetLayer.src} alt={selectedTargetLayer.title} className="w-full h-full object-cover" />
+                <ResolvedImage src={selectedTargetLayer.src} alt={selectedTargetLayer.title} className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate font-medium">{selectedTargetLayer.title}</p>

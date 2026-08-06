@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Sparkles, Loader2, ArrowLeft, Settings2 } from 'lucide-react';
 import { useCanvasStore } from '../../hooks/useCanvasState';
+import { OptimizableTextarea } from '../shared/OptimizableTextarea';
+import { optimizeVLMSystemPrompt, optimizeVLMUserPrompt } from '../../services/promptOptimizer';
 import type { VlmAnalysisData } from '../../types/flow';
 import { DEFAULT_ASPECTS } from '../../types/flow';
 
@@ -27,6 +29,13 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
     initialData?.customUserPrompt || ''
   );
 
+  // AI 优化后的提示词
+  const [optimizedSystemPrompt, setOptimizedSystemPrompt] = useState('');
+  const [optimizedUserPrompt, setOptimizedUserPrompt] = useState('');
+
+  const effectiveSystemPrompt = optimizedSystemPrompt || customSystemPrompt;
+  const effectiveUserPrompt = optimizedUserPrompt || customUserPrompt;
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawOutput, setRawOutput] = useState(initialData?.rawOutput || '');
@@ -52,8 +61,8 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
 
     const autoPrompt = `分析这张画面的以下要素，每项用一句话描述：\n${questions}\n\n输出格式（每行一个）：\n${labels}`;
 
-    if (customUserPrompt.trim()) {
-      return `${autoPrompt}\n\n补充要求：\n${customUserPrompt.trim()}`;
+    if (effectiveUserPrompt.trim()) {
+      return `${autoPrompt}\n\n补充要求：\n${effectiveUserPrompt.trim()}`;
     }
 
     return autoPrompt;
@@ -77,7 +86,7 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
 
       const output = await callDramaBackendVLApi({
         prompt: userPrompt,
-        systemPrompt: customSystemPrompt,
+        systemPrompt: effectiveSystemPrompt,
         referenceImages: [resolvedUrl],
       });
 
@@ -113,7 +122,7 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
     } finally {
       setIsProcessing(false);
     }
-  }, [sourceLayerId, selectedAspects, customSystemPrompt, customUserPrompt, isProcessing, buildUserPrompt]);
+  }, [sourceLayerId, selectedAspects, effectiveSystemPrompt, effectiveUserPrompt, isProcessing, buildUserPrompt]);
 
   const handleConfirm = () => {
     const editedAnalysis = Object.entries(schema)
@@ -128,8 +137,8 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
       rawOutput,
       editedAnalysis,
       schema,
-      customSystemPrompt,
-      customUserPrompt,
+      customSystemPrompt: effectiveSystemPrompt,
+      customUserPrompt: effectiveUserPrompt,
       selectedAspects,
       retryCount,
     });
@@ -176,24 +185,48 @@ export const StepVLMAnalysis: React.FC<StepVLMAnalysisProps> = ({ sourceLayerId,
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-medium text-[var(--text-tertiary)] block mb-1">系统提示词（System Prompt）</label>
-                <textarea
+                <OptimizableTextarea
+                  label="系统提示词（System Prompt）"
                   value={customSystemPrompt}
-                  onChange={e => setCustomSystemPrompt(e.target.value)}
+                  onChange={setCustomSystemPrompt}
+                  onOptimizedChange={setOptimizedSystemPrompt}
+                  onOptimize={async () => {
+                    const result = await optimizeVLMSystemPrompt({
+                      rawSystemPrompt: customSystemPrompt,
+                      selectedAspectLabels: DEFAULT_ASPECTS
+                        .filter(a => selectedAspects.includes(a.key))
+                        .map(a => a.label),
+                    });
+                    return result.optimizedSystemPrompt;
+                  }}
                   rows={2}
-                  className="w-full px-2 py-1.5 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] resize-none focus:border-amber-500 outline-none font-mono"
+                  placeholder="你是一个专业的影视镜头分析师..."
+                  optimizedLabel="优化后的 System Prompt"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-medium text-[var(--text-tertiary)] block mb-1">
-                  用户提示词（留空则根据选择的维度自动生成）
-                </label>
-                <textarea
+                <OptimizableTextarea
+                  label="用户提示词（留空则根据选择的维度自动生成）"
                   value={customUserPrompt}
-                  onChange={e => setCustomUserPrompt(e.target.value)}
+                  onChange={setCustomUserPrompt}
+                  onOptimizedChange={setOptimizedUserPrompt}
+                  onOptimize={async () => {
+                    if (!customUserPrompt.trim()) {
+                      throw new Error('请先输入补充要求再优化');
+                    }
+                    const result = await optimizeVLMUserPrompt({
+                      rawUserPrompt: customUserPrompt,
+                      selectedAspectLabels: DEFAULT_ASPECTS
+                        .filter(a => selectedAspects.includes(a.key))
+                        .map(a => a.label),
+                    });
+                    return result.optimizedUserPrompt;
+                  }}
                   rows={3}
                   placeholder="留空自动生成..."
-                  className="w-full px-2 py-1.5 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] resize-none focus:border-amber-500 outline-none font-mono"
+                  optimizedLabel="优化后的补充要求"
+                  disabled={false}
+                  disabledReason={!customUserPrompt.trim() ? '请先输入补充要求' : undefined}
                 />
               </div>
               <div className="text-[9px] text-[var(--text-tertiary)] bg-[var(--bg-hover)] p-2 rounded">

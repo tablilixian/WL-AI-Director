@@ -46,7 +46,6 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         const imgId = `panorama_upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const blob = new Blob([await uploadFile.arrayBuffer()], { type: uploadFile.type });
         await imageStorageService.saveImage(imgId, blob);
-        const resolvedUrl = URL.createObjectURL(blob);
 
         addLayer({
           id: crypto.randomUUID(),
@@ -55,7 +54,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
           y: 200,
           width: 640,
           height: 360,
-          src: resolvedUrl,
+          src: `local:${imgId}`,
           imageId: imgId,
           title: `全景图 ${uploadFile.name}`,
           createdAt: Date.now(),
@@ -112,33 +111,39 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
       }
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
-      let resolvedUrl = panoramaSrc;
+      let displayUrl = '';
+      let finalSrc = '';
       let imageId: string | undefined;
 
       if (panoramaSrc.startsWith('local:')) {
-        const localId = panoramaSrc.replace('local:', '');
-        imageId = localId;
-        const blob = await imageStorageService.getImage(localId);
-        if (blob) {
-          const reader = new FileReader();
-          resolvedUrl = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        }
+        imageId = panoramaSrc.replace('local:', '');
+        finalSrc = panoramaSrc;
+        const blob = await imageStorageService.getImage(imageId);
+        if (blob) displayUrl = URL.createObjectURL(blob);
       } else if (panoramaSrc.startsWith('data:')) {
+        const imgId = `panorama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const response = await fetch(panoramaSrc);
+        const blob = await response.blob();
+        await imageStorageService.saveImage(imgId, blob);
+        imageId = imgId;
+        finalSrc = `local:${imgId}`;
+        displayUrl = panoramaSrc;
+      } else {
+        // http(s): 或 blob: 外部 URL — 保存到 IndexedDB，避免持久化临时 URL
         try {
-          const imgId = `panorama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           const response = await fetch(panoramaSrc);
           const blob = await response.blob();
+          const imgId = `panorama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
+          finalSrc = `local:${imgId}`;
+          displayUrl = URL.createObjectURL(blob);
         } catch (e) {
-          console.warn('[PanoramaPanel] 保存到 IndexedDB 失败:', e);
+          console.warn('[PanoramaPanel] 外部 URL 保存到 IndexedDB 失败:', e);
+          imageId = undefined;
+          finalSrc = panoramaSrc;
+          displayUrl = panoramaSrc;
         }
-        resolvedUrl = panoramaSrc;
-      } else {
-        resolvedUrl = await unifiedImageService.resolveForDisplay(panoramaSrc);
       }
 
       const baseX = baseLayer ? baseLayer.x + baseLayer.width + 40 : 200;
@@ -148,7 +153,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         const imgEl = new Image();
         imgEl.onload = () => resolve(imgEl);
         imgEl.onerror = () => reject(new Error('图片加载失败'));
-        imgEl.src = resolvedUrl;
+        imgEl.src = displayUrl;
       });
 
       addLayer({
@@ -158,7 +163,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         y: baseY,
         width: img.naturalWidth,
         height: img.naturalHeight,
-        src: resolvedUrl,
+        src: finalSrc,
         imageId,
         title: `全景图 ${new Date().toLocaleTimeString()}`,
         createdAt: Date.now(),

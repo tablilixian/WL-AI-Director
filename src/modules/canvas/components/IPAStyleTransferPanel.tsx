@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { AspectRatio } from '../../../../types/model';
+import { ResolvedImage } from './ResolvedImage';
 
 interface IPAStyleTransferPanelProps {
   selectedLayerId: string | null;
@@ -195,7 +196,7 @@ export const IPAStyleTransferPanel: React.FC<IPAStyleTransferPanelProps> = ({ se
                       }`}
                       title={l.title}
                     >
-                      <img src={l.src} alt={l.title} className="w-full h-full object-cover" />
+                      <ResolvedImage src={l.src} alt={l.title} className="w-full h-full object-cover" />
                       {isSelected && (
                         <span className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${tagColors[selIndex]}`}>
                           {tagLabels[selIndex]}

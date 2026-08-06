@@ -9,6 +9,7 @@ import { StepStoryboard } from './steps/StepStoryboard';
 import { StepVideo } from './steps/StepVideo';
 import type { FlowState, FlowPhase } from '../types/flow';
 import { INITIAL_FLOW_STATE } from '../types/flow';
+import { ResolvedImage } from './ResolvedImage';
 
 interface StoryDeductionFlowPanelProps {
   flowLayerId: string;
@@ -16,7 +17,7 @@ interface StoryDeductionFlowPanelProps {
 }
 
 const PHASE_LABELS: Record<FlowPhase, string> = {
-  select: '选择图片',
+  select: '确认源图',
   analyze: 'AI 分析',
   deduce: '剧情推演',
   storyboard: '宫格生成',
@@ -226,7 +227,7 @@ export const StoryDeductionFlowPanel: React.FC<StoryDeductionFlowPanelProps> = (
               </div>
               <div className="rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
                 {sourceLayer?.src && (
-                  <img src={sourceLayer.src} className="w-full object-cover" alt="源" />
+                  <ResolvedImage src={sourceLayer.src} className="w-full object-cover" alt="源" />
                 )}
               </div>
               <div className="text-[10px] text-gray-400 truncate">{sourceLayer?.title || ''}</div>

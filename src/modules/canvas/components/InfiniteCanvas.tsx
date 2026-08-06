@@ -10,6 +10,7 @@ import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
 import { Minimap } from './Minimap';
 import { CanvasToolbar } from './CanvasToolbar';
+import { ResolvedImage } from './ResolvedImage';
 import { LayerPanel } from './LayerPanel';
 import { PromptBar } from './PromptBar';
 
@@ -1074,7 +1075,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
                       className="w-8 h-8 rounded-full border-2 border-gray-800 overflow-hidden bg-gray-700"
                     >
                       {l.src && (
-                        <img src={l.src} alt="" className="w-full h-full object-cover" />
+                        <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />
                       )}
                     </div>
                   );

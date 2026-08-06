@@ -22,6 +22,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
   const [error, setError] = useState<string | null>(null);
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
   const [resultImageId, setResultImageId] = useState<string | null>(null);
+  const [resultImageRef, setResultImageRef] = useState<string | null>(null);
   const { layers, addLayer } = useCanvasStore();
 
   const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
@@ -77,6 +78,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
       });
 
       setProgress(85);
+      setResultImageRef(resultUrl);
       const displayUrl = await unifiedImageService.resolveForDisplay(resultUrl);
       setResultImageUrl(displayUrl);
       // 提取实际保存的 imageId
@@ -91,7 +93,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
   };
 
   const handleSaveToCanvas = async () => {
-    if (!resultImageUrl || !selectedLayer) return;
+    if (!resultImageRef || !selectedLayer) return;
 
     // 获取图片实际尺寸，确保图层与图片完全匹配，不留空白
     const actualDimensions = await new Promise<{ width: number; height: number }>((resolve) => {
@@ -108,7 +110,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
       y: selectedLayer.y + selectedLayer.height + 40,
       width: actualDimensions.width,
       height: actualDimensions.height,
-      src: resultImageUrl,
+      src: resultImageRef,
       imageId: resultImageId || `storyboard_4grid_${Date.now()}`,
       title: `${selectedLayer.title} - 四宫格推演`,
       createdAt: Date.now(),
@@ -255,7 +257,7 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setVlOutput(''); setResultImageUrl(null); }}
+                  onClick={() => { setVlOutput(''); setResultImageUrl(null); setResultImageRef(null); }}
                   className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-sm rounded-lg hover:text-[var(--text-primary)] transition-colors"
                 >
                   重新分析

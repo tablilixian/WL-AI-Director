@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Sparkles, Loader2, ArrowLeft, Play, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, ArrowLeft, Play, RefreshCw, RotateCcw, AlertCircle } from 'lucide-react';
 import type { StoryboardResultData, DeductionData, VlmAnalysisData, VideoResultData, KeyframePromptData } from '../../types/flow';
 import { getGridTimings } from '../../types/flow';
+import { optimizeVideoFramePrompt } from '../../services/promptOptimizer';
 
 interface StepVideoProps {
   sourceLayerId: string;
@@ -77,15 +78,109 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
   const [videoRef, setVideoRef] = useState<string | null>(initialData?.videoUrl || null);
   const [playableUrl, setPlayableUrl] = useState<string>('');
 
+  // 关键帧缩略图 display URL（从 local:xxx 持久引用解析为 blob:xxx 用于渲染）
+  const [displayImageUrls, setDisplayImageUrls] = useState<Record<number, string>>({});
+  // 旧数据过期检测
+  const [framesExpired, setFramesExpired] = useState(false);
+  const [videoExpired, setVideoExpired] = useState(false);
+
   useEffect(() => {
     if (videoRef) {
+      // 旧数据检测：blob: URL 在刷新后已失效
+      if (videoRef.startsWith('blob:')) {
+        setPlayableUrl('');
+        setVideoExpired(true);
+        return;
+      }
+      setVideoExpired(false);
       import('../../../../../services/unifiedImageService').then(({ unifiedImageService }) =>
         unifiedImageService.resolveForDisplay(videoRef).then(setPlayableUrl)
       );
     }
   }, [videoRef]);
+
+  // 解析关键帧 imageUrl (local:img_xxx) 为 display URL (blob:xxx)
+  useEffect(() => {
+    if (keyframePrompts.length === 0) return;
+    // 旧数据检测：任何 imageUrl 是 blob: URL 说明是修复前的旧流程
+    if (keyframePrompts.some(kp => kp.imageUrl?.startsWith('blob:'))) {
+      setDisplayImageUrls({});
+      setFramesExpired(true);
+      return;
+    }
+    setFramesExpired(false);
+    let cancelled = false;
+    import('../../../../../services/unifiedImageService').then(({ unifiedImageService }) => {
+      Promise.all(
+        keyframePrompts.map(async (kp, i) => ({
+          index: i,
+          url: kp.imageUrl ? await unifiedImageService.resolveForDisplay(kp.imageUrl) : '',
+        }))
+      ).then(results => {
+        if (cancelled) return;
+        const map: Record<number, string> = {};
+        results.forEach(r => { map[r.index] = r.url; });
+        setDisplayImageUrls(map);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [keyframePrompts]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 逐帧 Prompt 优化状态
+  const [originalPrompts, setOriginalPrompts] = useState<Record<number, string>>({});
+  const [optimizingFrame, setOptimizingFrame] = useState<number | null>(null);
+  const [frameOptimizeError, setFrameOptimizeError] = useState<string | null>(null);
+
+  const handleOptimizeFrame = useCallback(async (frameIndex: number) => {
+    const kp = keyframePrompts[frameIndex];
+    if (!kp) return;
+
+    setOptimizingFrame(frameIndex);
+    setFrameOptimizeError(null);
+
+    // 保存原始 prompt 以便撤销
+    setOriginalPrompts(prev => {
+      if (prev[frameIndex] !== undefined) return prev; // 已有备份，不覆盖
+      return { ...prev, [frameIndex]: kp.visualPrompt };
+    });
+
+    try {
+      const styleContext = vlmData
+        ? Object.entries(vlmData.schema)
+            .filter(([k]) => ['style', 'colorPalette', 'lighting', 'atmosphere', 'composition'].includes(k))
+            .map(([, v]) => v)
+            .filter(Boolean)
+            .join(', ')
+        : '';
+
+      const result = await optimizeVideoFramePrompt({
+        rawPrompt: kp.visualPrompt,
+        frameIndex,
+        cameraMovement: kp.cameraMovement,
+        action: kp.action,
+        styleContext,
+      });
+      updatePrompt(frameIndex, 'visualPrompt', result.optimizedPrompt);
+    } catch (err: any) {
+      setFrameOptimizeError(err.message || '帧 prompt 优化失败');
+    } finally {
+      setOptimizingFrame(null);
+    }
+  }, [keyframePrompts, vlmData]);
+
+  const handleUndoFrameOptimize = useCallback((frameIndex: number) => {
+    const original = originalPrompts[frameIndex];
+    if (original !== undefined) {
+      updatePrompt(frameIndex, 'visualPrompt', original);
+      setOriginalPrompts(prev => {
+        const next = { ...prev };
+        delete next[frameIndex];
+        return next;
+      });
+    }
+  }, [originalPrompts]);
 
   const updatePrompt = (index: number, field: keyof KeyframePromptData, value: string | number) => {
     setKeyframePrompts(prev => prev.map((kp, i) => i === index ? { ...kp, [field]: value } : kp));
@@ -182,8 +277,12 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
                 </span>
               </div>
               <div className="flex gap-2">
-                <div className="w-14 h-10 bg-[var(--bg-hover)] rounded overflow-hidden flex-shrink-0 border border-[var(--border-primary)]">
-                  {kp.imageUrl && <img src={kp.imageUrl} className="w-full h-full object-cover" />}
+                <div className="w-14 h-10 bg-[var(--bg-hover)] rounded overflow-hidden flex-shrink-0 border border-[var(--border-primary)] flex items-center justify-center">
+                  {framesExpired ? (
+                    <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                  ) : displayImageUrls[i] ? (
+                    <img src={displayImageUrls[i]} className="w-full h-full object-cover" />
+                  ) : null}
                 </div>
                 <div className="flex-1 space-y-1">
                   <textarea
@@ -192,6 +291,34 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
                     rows={2}
                     className="w-full px-2 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] resize-none focus:border-amber-500 outline-none font-mono"
                   />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleOptimizeFrame(i)}
+                      disabled={optimizingFrame !== null}
+                      className="inline-flex items-center gap-1 text-[9px] text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="AI 优化此帧 Prompt，使其更具电影感"
+                    >
+                      {optimizingFrame === i ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3" />
+                      )}
+                      优化此帧
+                    </button>
+                    {originalPrompts[i] !== undefined && (
+                      <button
+                        onClick={() => handleUndoFrameOptimize(i)}
+                        className="inline-flex items-center gap-1 text-[9px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                        title="撤销优化，恢复原始 prompt"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        撤销
+                      </button>
+                    )}
+                    {frameOptimizeError && optimizingFrame === null && (
+                      <span className="text-[9px] text-red-400">{frameOptimizeError}</span>
+                    )}
+                  </div>
                   <div className="flex gap-1.5">
                     <input
                       value={kp.cameraMovement}
@@ -214,13 +341,21 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
       </div>
 
       {!playableUrl && !isProcessing && (
-        <button
-          onClick={handleGenerate}
-          className="w-full py-3 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
-        >
-          <Sparkles className="w-4 h-4" />
-          AI 生成 {duration} 秒视频
-        </button>
+        <>
+          {videoExpired && (
+            <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span className="text-xs text-red-400">视频已过期（旧数据），请重新生成</span>
+            </div>
+          )}
+          <button
+            onClick={handleGenerate}
+            className="w-full py-3 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            AI 生成 {duration} 秒视频
+          </button>
+        </>
       )}
 
       {isProcessing && (
@@ -250,7 +385,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({ sourceLayerId, vlmData, de
                 src={playableUrl}
                 controls
                 className="w-full rounded-lg bg-black max-h-52"
-                poster={keyframePrompts[0]?.imageUrl}
+                poster={displayImageUrls[0]}
               />
             </div>
           </div>

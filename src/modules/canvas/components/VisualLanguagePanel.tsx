@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { Sparkles, Copy, Check, X, Brain, ChevronDown } from 'lucide-react';
+import { ResolvedImage } from './ResolvedImage';
 
 interface VisualLanguagePanelProps {
   selectedLayerId: string;
@@ -104,7 +105,7 @@ export const VisualLanguagePanel: React.FC<VisualLanguagePanelProps> = ({ select
           <div className="flex items-center gap-3 bg-gray-800/60 rounded-lg border border-gray-700/50 p-2.5">
             <div className="w-12 h-12 rounded overflow-hidden bg-gray-700 flex-shrink-0">
               {selectedLayer.src && (
-                <img src={selectedLayer.src} alt={selectedLayer.title} className="w-full h-full object-cover" />
+                <ResolvedImage src={selectedLayer.src} alt={selectedLayer.title} className="w-full h-full object-cover" />
               )}
             </div>
             <div className="min-w-0">

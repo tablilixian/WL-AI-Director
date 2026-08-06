@@ -34,6 +34,7 @@ export const DeductionPanel: React.FC<DeductionPanelProps> = ({ selectedLayerId,
   const [deductionResult, setDeductionResult] = useState<any>(null);
   const [nextFrameText, setNextFrameText] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedImageRef, setGeneratedImageRef] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentAction, setCurrentAction] = useState('');
@@ -108,6 +109,7 @@ export const DeductionPanel: React.FC<DeductionPanelProps> = ({ selectedLayerId,
       });
 
       setProgress(95);
+      setGeneratedImageRef(resultUrl);
       const displayUrl = await unifiedImageService.resolveForDisplay(resultUrl);
       setGeneratedImageUrl(displayUrl);
       setProgress(100);
@@ -120,7 +122,7 @@ export const DeductionPanel: React.FC<DeductionPanelProps> = ({ selectedLayerId,
   };
 
   const handleSaveToCanvas = () => {
-    if (!generatedImageUrl || !selectedLayer) return;
+    if (!generatedImageRef || !selectedLayer) return;
     addLayer({
       id: crypto.randomUUID(),
       type: 'image',
@@ -128,8 +130,8 @@ export const DeductionPanel: React.FC<DeductionPanelProps> = ({ selectedLayerId,
       y: selectedLayer.y,
       width: selectedLayer.width,
       height: selectedLayer.height,
-      src: generatedImageUrl,
-      imageId: `deduction_${Date.now()}`,
+      src: generatedImageRef,
+      imageId: generatedImageRef.startsWith('local:') ? generatedImageRef.substring(6) : `deduction_${Date.now()}`,
       title: `${selectedLayer.title} - 推演结果`,
       createdAt: Date.now(),
       sourceLayerId: selectedLayer.id,
@@ -143,6 +145,7 @@ export const DeductionPanel: React.FC<DeductionPanelProps> = ({ selectedLayerId,
     setDeductionResult(null);
     setNextFrameText('');
     setGeneratedImageUrl(null);
+    setGeneratedImageRef(null);
     setError(null);
     setProgress(0);
   };

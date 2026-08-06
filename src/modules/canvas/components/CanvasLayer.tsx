@@ -11,6 +11,7 @@ import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { ResolvedImage } from './ResolvedImage';
 import { Film, Orbit, BadgeHelp, Sparkles } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 import { InlinePanoramaViewer } from './InlinePanoramaViewer';
@@ -293,7 +294,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         <div className={`w-full h-full rounded-lg overflow-hidden relative ${isDone ? 'border-2 border-green-500' : 'border-2 border-gray-600'}`}>
           {/* 源图背景 (100% 不透明) */}
           {srcLayer?.src && (
-            <img src={srcLayer.src} className="absolute inset-0 w-full h-full object-cover" />
+            <ResolvedImage src={srcLayer.src} className="absolute inset-0 w-full h-full object-cover" />
           )}
           {/* 暗色渐变遮罩保证文字可读 */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-gray-900/40" />
@@ -628,7 +629,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
                   id: crypto.randomUUID(),
                   type: 'image',
                   x, y, width: 320, height: 180,
-                  src: URL.createObjectURL(blob),
+                  src: `local:${imageId}`,
                   imageId,
                   title: `全景截图 - ${r.label}`,
                   createdAt: Date.now(),

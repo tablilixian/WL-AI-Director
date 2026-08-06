@@ -6,6 +6,7 @@ import { CameraChoreography, renderCameraChoreographyPrompt } from '../../../../
 import { CAMERA_MOVEMENT_TYPES, CAMERA_SHOT_SIZES, CAMERA_ANGLES, CAMERA_SUBJECT_POSITIONS, CAMERA_FOCUS_TYPES, CAMERA_MOVEMENT_SPEEDS } from '../../../../components/StageDirector/constants';
 import { Plus, GripVertical, Trash2, ChevronDown, Sparkles, Camera, Sun, Mic, Settings, Film, Clock, X, Maximize2, Eye, EyeOff, Layout } from 'lucide-react';
 import { UI_VIDEO_SIZE_PRESETS } from '../../../../config/sizeConfig';
+import { ResolvedImage } from './ResolvedImage';
 
 interface GenerateVideoPanelProps {
   selectedLayerIds: string[];
@@ -692,11 +693,13 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
       const { videoStorageService } = await import('../../../../services/imageStorageService');
       let resolvedUrl = videoUrl;
+      let finalSrc = videoUrl;
       let videoId: string | undefined;
 
       if (videoUrl.startsWith('local:')) {
         const localId = videoUrl.replace('local:', '');
         videoId = localId;
+        finalSrc = videoUrl;
         const blob = await videoStorageService.getVideo(localId);
         if (blob) {
           resolvedUrl = URL.createObjectURL(blob);
@@ -704,6 +707,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       } else if (videoUrl.startsWith('video:')) {
         const localId = videoUrl.replace('video:', '');
         videoId = localId;
+        finalSrc = videoUrl;
         const blob = await videoStorageService.getVideo(localId);
         if (blob) {
           resolvedUrl = URL.createObjectURL(blob);
@@ -714,6 +718,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         const vidId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await videoStorageService.saveVideo(vidId, blob);
         videoId = vidId;
+        finalSrc = `video:${vidId}`;
       }
 
       const generationConfig: GenerationConfig = {
@@ -762,7 +767,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         y: (firstLayer?.y || 100) + (firstLayer?.height || 400) + 40,
         width: finalWidth,
         height: finalHeight,
-        src: resolvedUrl,
+        src: finalSrc,
         imageId: videoId,
         title: 'AI生成视频',
         createdAt: Date.now(),
@@ -830,7 +835,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                 onClick={() => handleItemClick(activePreviewLayer.id)}
                 onDoubleClick={() => handleItemDoubleClick(activePreviewLayer.id)}
               >
-                <img
+                <ResolvedImage
                   src={activePreviewLayer.src}
                   alt={activePreviewLayer.title}
                   className="w-full h-auto max-h-[180px] object-contain"
@@ -928,7 +933,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                   <div className="flex items-start gap-2">
                     <div className="w-9 h-9 rounded overflow-hidden bg-gray-700 flex-shrink-0">
                       {layer.src && (
-                        <img
+                        <ResolvedImage
                           src={layer.src}
                           alt={layer.title}
                           className="w-full h-full object-cover"
@@ -988,7 +993,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                     onClick={() => { addImageToSequence(l.id); setShowCanvasImagePicker(false); }}
                     className="relative group/img aspect-[4/3] rounded overflow-hidden bg-gray-700 border border-transparent hover:border-purple-500 transition-all"
                   >
-                    <img src={l.src} alt={l.title} className="w-full h-full object-cover" />
+                    <ResolvedImage src={l.src} alt={l.title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center">
                       <Plus className="w-3 h-3 text-white opacity-0 group-hover/img:opacity-100 transition-opacity" />
                     </div>
@@ -2300,7 +2305,7 @@ ${preview}`,
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <img
+            <ResolvedImage
               src={lightboxImage.src}
               alt={lightboxImage.title}
               className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain"

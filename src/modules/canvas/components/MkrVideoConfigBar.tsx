@@ -4,6 +4,7 @@ import { canvasModelService } from '../services/canvasModelService';
 import { X, Sparkles, Plus, Trash2, ChevronUp, ChevronDown, Film, Grid } from 'lucide-react';
 import type { LayerData } from '../types/canvas';
 import { UI_MKR_SIZE_PRESETS } from '../../../../config/sizeConfig';
+import { ResolvedImage } from './ResolvedImage';
 
 interface MkrVideoConfigBarProps {
   layerId: string;
@@ -164,7 +165,6 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
     setProgressLabel('准备生成...');
 
     try {
-      const { videoStorageService } = await import('../../../../services/imageStorageService');
       let videoUrl: string;
 
       if (config.mode === 'grid') {
@@ -223,23 +223,17 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
       setProgressLabel('处理视频文件...');
       setProgress(90);
 
-      let resolvedUrl = videoUrl;
+      let finalSrc = videoUrl;
       let videoId: string | undefined;
 
       if (videoUrl.startsWith('video:')) {
-        const localId = videoUrl.replace('video:', '');
-        videoId = localId;
-        const blob = await videoStorageService.getVideo(localId);
-        if (blob) resolvedUrl = URL.createObjectURL(blob);
+        videoId = videoUrl.replace('video:', '');
       } else if (videoUrl.startsWith('local:')) {
-        const localId = videoUrl.replace('local:', '');
-        videoId = localId;
-        const blob = await videoStorageService.getVideo(localId);
-        if (blob) resolvedUrl = URL.createObjectURL(blob);
+        videoId = videoUrl.replace('local:', '');
       }
 
       updateLayer(layer.id, {
-        src: resolvedUrl,
+        src: finalSrc,
         imageId: videoId,
         title: 'MKR视频',
         isLoading: false,
@@ -328,7 +322,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                       style={{ left: `${pct}%` }}
                     >
                       <div className="w-[30px] h-[30px] rounded overflow-hidden border-2 border-purple-500 bg-gray-700 shadow-md">
-                        {src && <img src={src} alt="" className="w-full h-full object-cover" />}
+                        {src && <ResolvedImage src={src} alt="" className="w-full h-full object-cover" />}
                       </div>
                       <span className={`text-[7px] font-mono whitespace-nowrap bg-gray-900/80 px-1 rounded ${
                         kf.frameIndex === -1 ? 'text-green-400' : 'text-purple-300'
@@ -376,7 +370,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                             {idx + 1}
                           </span>
                           <div className="w-8 h-8 rounded overflow-hidden bg-gray-700 flex-shrink-0">
-                            {src && <img src={src} alt={title} className="w-full h-full object-cover" />}
+                            {src && <ResolvedImage src={src} alt={title} className="w-full h-full object-cover" />}
                           </div>
                         </div>
 
@@ -479,7 +473,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                       }`}
                       title={l.title}
                     >
-                      {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
+                      {l.src && <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />}
                     </div>
                   ))}
                 </div>
@@ -618,7 +612,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                       className="w-5 h-5 rounded overflow-hidden bg-gray-700 border border-gray-600 hover:border-purple-500 transition-all relative group/img"
                       title={`添加 ${l.title}`}
                     >
-                      {l.src && <img src={l.src} alt="" className="w-full h-full object-cover" />}
+                      {l.src && <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />}
                       <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/50 transition-colors flex items-center justify-center">
                         <Plus className="w-2.5 h-2.5 text-white opacity-0 group-hover/img:opacity-100 transition-opacity" />
                       </div>

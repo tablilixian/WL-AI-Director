@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Sparkles, Loader2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCanvasStore } from '../../hooks/useCanvasState';
 import type { DeductionData, StoryboardPanelData } from '../../types/flow';
+import { OptimizableTextarea } from '../shared/OptimizableTextarea';
+import { optimizeStoryDirection } from '../../services/promptOptimizer';
 
 interface StepDeductionProps {
   sourceLayerId: string;
@@ -31,6 +33,7 @@ export const StepDeduction: React.FC<StepDeductionProps> = ({ sourceLayerId, ini
   const sourceLayer = layers.find(l => l.id === sourceLayerId);
 
   const [narrativeDirection, setNarrativeDirection] = useState(initialData?.narrativeDirection || '');
+  const [optimizedNarrativeDirection, setOptimizedNarrativeDirection] = useState('');
   const [panels, setPanels] = useState<StoryboardPanelData[]>(initialData?.panels || makeDefaultPanels());
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,9 @@ export const StepDeduction: React.FC<StepDeductionProps> = ({ sourceLayerId, ini
     setIsProcessing(true);
     setError(null);
 
+    // 优先使用 AI 优化后的结果
+    const effectiveDirection = optimizedNarrativeDirection || narrativeDirection;
+
     try {
       const { chat } = await import('../../../../../services/modelService');
 
@@ -55,12 +61,17 @@ export const StepDeduction: React.FC<StepDeductionProps> = ({ sourceLayerId, ini
 ${vlmRawAnalysis || '（无分析数据）'}
 
 剧情方向：
-${narrativeDirection || '（未提供，请基于画面分析做合理的剧情推演）'}
+${effectiveDirection || '（未提供，请基于画面分析做合理的剧情推演）'}
 
 要求：
 - 第1个分镜延续当前画面，往后推演故事
 - 每个分镜包含：景别、机位角度、主体位置、动作描述、光照、对白
-- 4个分镜之间要有叙事递进关系，形成起承转合
+- 4帧是同一段画面在时间轴上的连续取样点，根据剧情方向自行判断4个分镜之间的逻辑关系——可能是固定机位的时间推进、氛围的渐进变化、慢动作的时间拉伸等，不要预设固定模板
+- 景别、机位、主体位置是三个独立维度，必须分开理解：
+  · 景别 = 相机的焦段/取景范围设定（如全景、中景、特写），描述的是镜头设定本身，不是画面中主体此刻看起来多大
+  · 机位 = 相机的物理位置和拍摄角度（如平视、仰拍、俯拍、固定、运动）
+  · 主体位置 = 主体在画面中的位置和远近（如居中、左侧1/3、远处、近处、紧贴镜头）
+- 关键规则：当机位为固定镜头时，4帧的景别必须保持完全一致，主体的运动感和远近变化只能通过"主体位置"和"动作"两个字段来传达，绝不能通过改变景别来表现主体靠近或远离
 - 还要描述每个分镜到下一个分镜的转场效果
 - 保持角色、场景、光影风格一致
 
@@ -158,10 +169,11 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
     } finally {
       setIsProcessing(false);
     }
-  }, [narrativeDirection, vlmRawAnalysis, isProcessing]);
+  }, [narrativeDirection, optimizedNarrativeDirection, vlmRawAnalysis, isProcessing]);
 
   const handleConfirm = () => {
-    onSave({ narrativeDirection, panels });
+    const effectiveDirection = optimizedNarrativeDirection || narrativeDirection;
+    onSave({ narrativeDirection: effectiveDirection, panels });
     onNext();
   };
 
@@ -177,15 +189,44 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
       )}
 
       <div>
-        <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-          剧情方向 <span className="text-[var(--text-muted)] font-normal">（描述剧情走向）</span>
-        </label>
-        <textarea
+        <OptimizableTextarea
           value={narrativeDirection}
-          onChange={e => setNarrativeDirection(e.target.value)}
-          placeholder="例如：主角发现密道，决定探索..."
+          onChange={setNarrativeDirection}
+          onOptimizedChange={setOptimizedNarrativeDirection}
+          onOptimize={async () => {
+            const result = await optimizeStoryDirection({
+              rawDirection: narrativeDirection,
+              vlmAnalysis: vlmRawAnalysis,
+            });
+            return result.optimizedDirection;
+          }}
+          placeholder="用你的话描述想要的画面。例如：骑兵从山谷远处跑来，镜头固定不动..."
           rows={2}
-          className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border-primary)] rounded-lg text-sm text-[var(--text-primary)] resize-none focus:border-amber-500 outline-none"
+          label="剧情方向"
+          optimizedLabel="AI 优化后的剧情方向"
+          hint={
+            <div className="space-y-2">
+              <p className="text-[var(--text-muted)]">不确定怎么写？参考这些范例：</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
+                  <p className="font-medium text-[var(--text-secondary)] text-[11px]">固定机位</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">骑兵队列从山谷远处跑来，镜头固定不动</p>
+                </div>
+                <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
+                  <p className="font-medium text-[var(--text-secondary)] text-[11px]">空间递进</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">深夜书房，主角发现古书后蓝光亮起</p>
+                </div>
+                <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
+                  <p className="font-medium text-[var(--text-secondary)] text-[11px]">氛围渐变</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">雨夜街角，一把红伞逐渐消失在雾中</p>
+                </div>
+                <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
+                  <p className="font-medium text-[var(--text-secondary)] text-[11px]">时间拉伸</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">爆炸瞬间，碎片飞溅的慢镜头</p>
+                </div>
+              </div>
+            </div>
+          }
         />
       </div>
 
