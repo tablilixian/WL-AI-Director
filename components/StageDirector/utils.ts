@@ -1,4 +1,13 @@
-import { Shot, ProjectState, Keyframe, NineGridPanel, NineGridData, AspectRatio, CameraChoreography, renderCameraChoreographyPrompt } from '../../types';
+import {
+  Shot,
+  ProjectState,
+  Keyframe,
+  NineGridPanel,
+  NineGridData,
+  AspectRatio,
+  CameraChoreography,
+  renderCameraChoreographyPrompt,
+} from '../../types';
 
 /** Pipeline 字段自动打通：从 shot 现有字段带入的预览数据 */
 export interface PipelineShotData {
@@ -16,9 +25,12 @@ import { logger, LogCategory } from '../../services/logger';
  */
 export const getImageAspectRatio = (ratio: AspectRatio): string => {
   switch (ratio) {
-    case '16:9': return '16 / 9';
-    case '9:16': return '9 / 16';
-    case '1:1': return '1 / 1';
+    case '16:9':
+      return '16 / 9';
+    case '9:16':
+      return '9 / 16';
+    case '1:1':
+      return '1 / 1';
   }
 };
 
@@ -27,9 +39,12 @@ export const getImageAspectRatio = (ratio: AspectRatio): string => {
  */
 export const getDefaultResolution = (ratio: AspectRatio): { width: number; height: number } => {
   switch (ratio) {
-    case '16:9': return { width: 640, height: 320 };
-    case '9:16': return { width: 320, height: 640 };
-    case '1:1': return { width: 512, height: 512 };
+    case '16:9':
+      return { width: 640, height: 320 };
+    case '9:16':
+      return { width: 320, height: 640 };
+    case '1:1':
+      return { width: 512, height: 512 };
   }
 };
 
@@ -48,28 +63,31 @@ export interface RefImagesResult {
  * 增强版：如果角色有九宫格造型图，将整张九宫格图作为额外参考传入，
  * 并通过 hasTurnaround 标记告知调用方，以便在提示词中正确描述。
  */
-export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['scriptData']): RefImagesResult => {
+export const getRefImagesForShot = (
+  shot: Shot,
+  scriptData: ProjectState['scriptData'],
+): RefImagesResult => {
   const referenceImages: string[] = [];
   let hasTurnaround = false;
-  
+
   if (!scriptData) return { images: referenceImages, hasTurnaround };
-  
+
   // 1. 场景参考图（环境/氛围） - 优先级最高
-  const scene = scriptData.scenes.find(s => String(s.id) === String(shot.sceneId));
+  const scene = scriptData.scenes.find((s) => String(s.id) === String(shot.sceneId));
   if (scene?.imageUrl) {
     referenceImages.push(scene.imageUrl);
   }
 
   // 2. 角色参考图（外观）
   if (shot.characters) {
-    shot.characters.forEach(charId => {
-      const char = scriptData.characters.find(c => String(c.id) === String(charId));
+    shot.characters.forEach((charId) => {
+      const char = scriptData.characters.find((c) => String(c.id) === String(charId));
       if (!char) return;
 
       // 检查是否为此镜头选择了特定变体
       const varId = shot.characterVariations?.[charId];
       if (varId) {
-        const variation = char.variations?.find(v => v.id === varId);
+        const variation = char.variations?.find((v) => v.id === varId);
         if (variation?.imageUrl) {
           referenceImages.push(variation.imageUrl);
           return;
@@ -92,14 +110,14 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
 
   // 3. 道具参考图（物品一致性）
   if (shot.props && scriptData.props) {
-    shot.props.forEach(propId => {
-      const prop = scriptData.props.find(p => String(p.id) === String(propId));
+    shot.props.forEach((propId) => {
+      const prop = scriptData.props.find((p) => String(p.id) === String(propId));
       if (prop?.imageUrl) {
         referenceImages.push(prop.imageUrl);
       }
     });
   }
-  
+
   return { images: referenceImages, hasTurnaround };
 };
 
@@ -107,13 +125,20 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
  * 获取镜头关联的道具信息（用于提示词注入）
  * hasImage 标记该道具是否有参考图，用于提示词中区分"参考图一致性"和"文字描述约束"
  */
-export const getPropsInfoForShot = (shot: Shot, scriptData: ProjectState['scriptData']): { name: string; description: string; hasImage: boolean }[] => {
+export const getPropsInfoForShot = (
+  shot: Shot,
+  scriptData: ProjectState['scriptData'],
+): { name: string; description: string; hasImage: boolean }[] => {
   if (!scriptData || !shot.props || !scriptData.props) return [];
-  
+
   return shot.props
-    .map(propId => scriptData.props.find(p => String(p.id) === String(propId)))
+    .map((propId) => scriptData.props.find((p) => String(p.id) === String(propId)))
     .filter((p): p is NonNullable<typeof p> => !!p)
-    .map(p => ({ name: p.name, description: p.description || p.visualPrompt || '', hasImage: !!p.imageUrl }));
+    .map((p) => ({
+      name: p.name,
+      description: p.description || p.visualPrompt || '',
+      hasImage: !!p.imageUrl,
+    }));
 };
 
 /**
@@ -127,15 +152,31 @@ export const buildKeyframePrompt = async (
   cameraMovement: string,
   frameType: 'start' | 'end',
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
-  chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
+  chatCompletion?: (
+    prompt: string,
+    model?: string,
+    temperature?: number,
+    maxTokens?: number,
+    responseFormat?: 'json_object',
+  ) => Promise<string>,
   model?: string,
   characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[],
   eraContext?: string,
-  knowledgeBase?: string
+  knowledgeBase?: string,
 ): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
-  console.log('🎨 [buildKeyframePrompt] visualStyle key:', visualStyle, '→ resolved style:', stylePrompt.substring(0, 60));
-  const cameraGuide = await getCameraMovementCompositionGuide(cameraMovement, frameType, chatCompletion, model);
+  console.log(
+    '🎨 [buildKeyframePrompt] visualStyle key:',
+    visualStyle,
+    '→ resolved style:',
+    stylePrompt.substring(0, 60),
+  );
+  const cameraGuide = await getCameraMovementCompositionGuide(
+    cameraMovement,
+    frameType,
+    chatCompletion,
+    model,
+  );
 
   const isStart = frameType === 'start';
   const frameTypeLabel = isStart ? '起始' : '结束';
@@ -152,9 +193,12 @@ ${frameFocus}
   // 角色外观描述（文字回退，当 API 不支持参考图时保证一致性）
   let characterDescriptionsSection = '';
   if (characterDescriptions && characterDescriptions.length > 0) {
-    const descLines = characterDescriptions.map(c =>
-      `- ${c.name}: ${c.visualPrompt || '未提供详细描述'}${c.hasImage ? '（已提供参考图）' : ''}`
-    ).join('\n');
+    const descLines = characterDescriptions
+      .map(
+        (c) =>
+          `- ${c.name}: ${c.visualPrompt || '未提供详细描述'}${c.hasImage ? '（已提供参考图）' : ''}`,
+      )
+      .join('\n');
     characterDescriptionsSection = `\n\n【角色外观】CHARACTER APPEARANCE
 当前镜头涉及以下角色，外观描述必须严格遵循：
 ${descLines}`;
@@ -169,13 +213,13 @@ ${descLines}`;
   // 道具一致性要求（仅在有道具时添加）
   let propConsistencyGuide = '';
   if (propsInfo && propsInfo.length > 0) {
-    const propsWithImage = propsInfo.filter(p => p.hasImage);
-    const propsWithoutImage = propsInfo.filter(p => !p.hasImage);
+    const propsWithImage = propsInfo.filter((p) => p.hasImage);
+    const propsWithoutImage = propsInfo.filter((p) => !p.hasImage);
 
-    let sections: string[] = [];
+    const sections: string[] = [];
 
     if (propsWithImage.length > 0) {
-      const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      const list = propsWithImage.map((p) => `- ${p.name}: ${p.description}`).join('\n');
       sections.push(`【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
 以下道具已提供参考图，画面中出现时必须严格遵循：
 • 外形、颜色、材质、细节必须与参考图一致
@@ -183,7 +227,7 @@ ${list}`);
     }
 
     if (propsWithoutImage.length > 0) {
-      const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      const list = propsWithoutImage.map((p) => `- ${p.name}: ${p.description}`).join('\n');
       sections.push(`以下道具无参考图，请根据文字描述准确呈现：
 ${list}`);
     }
@@ -200,9 +244,8 @@ ${eraContext}`);
     domainKnowledgeSections.push(`【领域知识】Domain Knowledge
 ${knowledgeBase}`);
   }
-  const domainKnowledgeBlock = domainKnowledgeSections.length > 0
-    ? '\n\n' + domainKnowledgeSections.join('\n\n')
-    : '';
+  const domainKnowledgeBlock =
+    domainKnowledgeSections.length > 0 ? '\n\n' + domainKnowledgeSections.join('\n\n') : '';
 
   return `${basePrompt}
 
@@ -235,21 +278,50 @@ export const buildKeyframePromptWithAI = async (
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
   characterDescriptions?: { name: string; visualPrompt: string; hasImage: boolean }[],
   eraContext?: string,
-  knowledgeBase?: string
+  knowledgeBase?: string,
 ): Promise<string> => {
   // 如果不需要AI增强,直接使用模板构建
   if (!enhanceWithAI) {
-    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, characterDescriptions, eraContext, knowledgeBase);
+    return await buildKeyframePrompt(
+      basePrompt,
+      visualStyle,
+      cameraMovement,
+      frameType,
+      propsInfo,
+      undefined,
+      undefined,
+      characterDescriptions,
+      eraContext,
+      knowledgeBase,
+    );
   }
-  
+
   // 动态导入aiService以避免循环依赖
   try {
     const { enhanceKeyframePrompt } = await import('../../services/aiService');
-    const enhanced = await enhanceKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, undefined, propsInfo);
+    const enhanced = await enhanceKeyframePrompt(
+      basePrompt,
+      visualStyle,
+      cameraMovement,
+      frameType,
+      undefined,
+      propsInfo,
+    );
     return enhanced;
   } catch (error) {
     logger.error(LogCategory.AI, 'AI增强失败,使用基础提示词:', error);
-    return await buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo, undefined, undefined, undefined, eraContext, knowledgeBase);
+    return await buildKeyframePrompt(
+      basePrompt,
+      visualStyle,
+      cameraMovement,
+      frameType,
+      propsInfo,
+      undefined,
+      undefined,
+      undefined,
+      eraContext,
+      knowledgeBase,
+    );
   }
 };
 
@@ -261,72 +333,94 @@ export const buildKeyframePromptWithAI = async (
 export const buildVideoPrompt = (
   actionSummary: string,
   cameraMovement: string,
-  videoModel: 'sora-2' | 'veo' | 'veo_3_1-fast' | 'veo_3_1-fast-4K' | 'veo_3_1_t2v_fast_landscape' | 'veo_3_1_t2v_fast_portrait' | 'veo_3_1_i2v_s_fast_fl_landscape' | 'veo_3_1_i2v_s_fast_fl_portrait' | string,
+  videoModel:
+    | 'sora-2'
+    | 'veo'
+    | 'veo_3_1-fast'
+    | 'veo_3_1-fast-4K'
+    | 'veo_3_1_t2v_fast_landscape'
+    | 'veo_3_1_t2v_fast_portrait'
+    | 'veo_3_1_i2v_s_fast_fl_landscape'
+    | 'veo_3_1_i2v_s_fast_fl_portrait'
+    | string,
   language: string,
   nineGrid?: NineGridData,
   videoDuration?: number,
   cameraChoreography?: CameraChoreography,
   eraContext?: string,
-  knowledgeBase?: string
+  knowledgeBase?: string,
 ): string => {
   const isChinese = language === '中文' || language === 'Chinese';
-  const isAsyncVideoModel = videoModel === 'sora-2' || videoModel.toLowerCase().startsWith('veo_3_1-fast');
+  const isAsyncVideoModel =
+    videoModel === 'sora-2' || videoModel.toLowerCase().startsWith('veo_3_1-fast');
 
   // 如果有结构化运镜编排，替换 cameraMovement 为渲染后的运镜段落
   let effectiveCameraMovement = cameraMovement;
   if (cameraChoreography) {
-    effectiveCameraMovement = renderCameraChoreographyPrompt(cameraChoreography, actionSummary, videoDuration || 8);
+    effectiveCameraMovement = renderCameraChoreographyPrompt(
+      cameraChoreography,
+      actionSummary,
+      videoDuration || 8,
+    );
   }
 
   // 领域知识注入
   const domainKnowledgeParts: string[] = [];
   if (eraContext) domainKnowledgeParts.push(`Era Context: ${eraContext}`);
   if (knowledgeBase) domainKnowledgeParts.push(`Domain Knowledge: ${knowledgeBase}`);
-  const domainKnowledgeBlock = domainKnowledgeParts.length > 0
-    ? `\n\n${domainKnowledgeParts.join('\n')}`
-    : '';
+  const domainKnowledgeBlock =
+    domainKnowledgeParts.length > 0 ? `\n\n${domainKnowledgeParts.join('\n')}` : '';
 
   // 九宫格分镜模式：有九宫格数据时，使用异步模型专用精简提示词
   // 保留9个面板的景别/角度顺序，但 description 截断到60字符以内，避免超过 Sora-2 的 8192 字符限制
   if (nineGrid && nineGrid.panels.length > 0 && isAsyncVideoModel) {
     const DESC_MAX_LEN = 60;
-    const panelDescriptions = nineGrid.panels.map((p, idx) => {
-      const desc = p.description.length > DESC_MAX_LEN 
-        ? p.description.slice(0, DESC_MAX_LEN) + '...' 
-        : p.description;
-      return `${idx + 1}. ${p.shotSize}/${p.cameraAngle} - ${desc}`;
-    }).join('\n');
-    
+    const panelDescriptions = nineGrid.panels
+      .map((p, idx) => {
+        const desc =
+          p.description.length > DESC_MAX_LEN
+            ? p.description.slice(0, DESC_MAX_LEN) + '...'
+            : p.description;
+        return `${idx + 1}. ${p.shotSize}/${p.cameraAngle} - ${desc}`;
+      })
+      .join('\n');
+
     const totalDuration = videoDuration || 8;
     const secondsPerPanel = Math.max(0.5, Math.round((totalDuration / 9) * 10) / 10);
-    
+
     const templateGroup = VIDEO_PROMPT_TEMPLATES.sora2NineGrid;
-    
+
     const template = isChinese ? templateGroup.chinese : templateGroup.english;
-    
-    return template
-      .replace('{actionSummary}', actionSummary)
-      .replace('{panelDescriptions}', panelDescriptions)
-      .replace(/\{secondsPerPanel\}/g, String(secondsPerPanel))
-      .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', language) + domainKnowledgeBlock;
+
+    return (
+      template
+        .replace('{actionSummary}', actionSummary)
+        .replace('{panelDescriptions}', panelDescriptions)
+        .replace(/\{secondsPerPanel\}/g, String(secondsPerPanel))
+        .replace('{cameraMovement}', effectiveCameraMovement)
+        .replace('{language}', language) + domainKnowledgeBlock
+    );
   }
-  
+
   // 普通模式
   if (isAsyncVideoModel) {
-    const template = isChinese 
-      ? VIDEO_PROMPT_TEMPLATES.sora2.chinese 
+    const template = isChinese
+      ? VIDEO_PROMPT_TEMPLATES.sora2.chinese
       : VIDEO_PROMPT_TEMPLATES.sora2.english;
-    
-    return template
-      .replace('{actionSummary}', actionSummary)
-      .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', language) + domainKnowledgeBlock;
+
+    return (
+      template
+        .replace('{actionSummary}', actionSummary)
+        .replace('{cameraMovement}', effectiveCameraMovement)
+        .replace('{language}', language) + domainKnowledgeBlock
+    );
   } else {
-    return VIDEO_PROMPT_TEMPLATES.veo.simple
-      .replace('{actionSummary}', actionSummary)
-      .replace('{cameraMovement}', effectiveCameraMovement)
-      .replace('{language}', isChinese ? '中文' : language) + domainKnowledgeBlock;
+    return (
+      VIDEO_PROMPT_TEMPLATES.veo.simple
+        .replace('{actionSummary}', actionSummary)
+        .replace('{cameraMovement}', effectiveCameraMovement)
+        .replace('{language}', isChinese ? '中文' : language) + domainKnowledgeBlock
+    );
   }
 };
 
@@ -367,7 +461,7 @@ export const generateId = (prefix: string): string => {
  * 延迟执行
  */
 export const delay = (ms: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 /**
@@ -395,7 +489,7 @@ export const createKeyframe = (
   visualPrompt: string,
   imageUrl?: string,
   status: 'pending' | 'generating' | 'completed' | 'failed' = 'pending',
-  visualPromptSource?: 'auto' | 'manual'
+  visualPromptSource?: 'auto' | 'manual',
 ): Keyframe => {
   return {
     id,
@@ -403,7 +497,7 @@ export const createKeyframe = (
     visualPrompt,
     imageUrl,
     status,
-    visualPromptSource
+    visualPromptSource,
   };
 };
 
@@ -413,17 +507,17 @@ export const createKeyframe = (
 export const updateKeyframeInShot = (
   shot: Shot,
   type: 'start' | 'end',
-  keyframe: Keyframe
+  keyframe: Keyframe,
 ): Shot => {
   const newKeyframes = [...(shot.keyframes || [])];
-  const idx = newKeyframes.findIndex(k => k.type === type);
-  
+  const idx = newKeyframes.findIndex((k) => k.type === type);
+
   if (idx >= 0) {
     newKeyframes[idx] = keyframe;
   } else {
     newKeyframes.push(keyframe);
   }
-  
+
   return { ...shot, keyframes: newKeyframes };
 };
 
@@ -448,11 +542,7 @@ export const generateSubShotIds = (originalShotId: string, count: number): strin
  * @param subShotId - 子镜头ID
  * @returns 新的Shot对象
  */
-export const createSubShot = (
-  originalShot: Shot,
-  subShotData: any,
-  subShotId: string
-): Shot => {
+export const createSubShot = (originalShot: Shot, subShotData: any, subShotId: string): Shot => {
   // 处理关键帧数组
   const keyframes: any[] = [];
   if (subShotData.keyframes && Array.isArray(subShotData.keyframes)) {
@@ -462,12 +552,12 @@ export const createSubShot = (
           id: `${subShotId}-${kf.type}`, // 如 "shot-1-1-start", "shot-1-1-end"
           type: kf.type,
           visualPrompt: kf.visualPrompt,
-          status: 'pending' // 初始状态为pending，等待用户生成图像
+          status: 'pending', // 初始状态为pending，等待用户生成图像
         });
       }
     });
   }
-  
+
   return {
     id: subShotId,
     sceneId: originalShot.sceneId, // 继承原镜头的场景ID
@@ -478,7 +568,7 @@ export const createSubShot = (
     characters: [...originalShot.characters], // 继承角色列表
     characterVariations: { ...originalShot.characterVariations }, // 继承角色变体映射
     keyframes: keyframes, // 使用AI生成的关键帧（包含visualPrompt）
-    videoModel: originalShot.videoModel // 继承视频模型设置
+    videoModel: originalShot.videoModel, // 继承视频模型设置
   };
 };
 
@@ -492,22 +582,22 @@ export const createSubShot = (
 export const replaceShotWithSubShots = (
   shots: Shot[],
   originalShotId: string,
-  subShots: Shot[]
+  subShots: Shot[],
 ): Shot[] => {
-  const originalIndex = shots.findIndex(s => s.id === originalShotId);
-  
+  const originalIndex = shots.findIndex((s) => s.id === originalShotId);
+
   if (originalIndex === -1) {
     logger.error(LogCategory.AI, `未找到ID为 ${originalShotId} 的镜头`);
     return shots;
   }
-  
+
   // 创建新数组，在原位置插入子镜头
   const newShots = [
     ...shots.slice(0, originalIndex),
     ...subShots,
-    ...shots.slice(originalIndex + 1)
+    ...shots.slice(originalIndex + 1),
   ];
-  
+
   return newShots;
 };
 
@@ -530,11 +620,17 @@ export const buildPromptFromNineGridPanel = async (
   visualStyle: string,
   cameraMovement: string,
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
-  chatCompletion?: (prompt: string, model?: string, temperature?: number, maxTokens?: number, responseFormat?: string) => Promise<string>,
-  model?: string
+  chatCompletion?: (
+    prompt: string,
+    model?: string,
+    temperature?: number,
+    maxTokens?: number,
+    responseFormat?: 'json_object',
+  ) => Promise<string>,
+  model?: string,
 ): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
-  
+
   // 角色一致性要求
   const characterConsistencyGuide = `【角色一致性要求】CHARACTER CONSISTENCY REQUIREMENTS
 如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
@@ -544,13 +640,13 @@ export const buildPromptFromNineGridPanel = async (
   // 道具一致性要求（仅在有道具时添加）
   let propConsistencyGuide = '';
   if (propsInfo && propsInfo.length > 0) {
-    const propsWithImage = propsInfo.filter(p => p.hasImage);
-    const propsWithoutImage = propsInfo.filter(p => !p.hasImage);
+    const propsWithImage = propsInfo.filter((p) => p.hasImage);
+    const propsWithoutImage = propsInfo.filter((p) => !p.hasImage);
 
-    let sections: string[] = [];
+    const sections: string[] = [];
 
     if (propsWithImage.length > 0) {
-      const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      const list = propsWithImage.map((p) => `- ${p.name}: ${p.description}`).join('\n');
       sections.push(`【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
 以下道具已提供参考图，画面中出现时必须严格遵循：
 • 外形、颜色、材质、细节必须与参考图一致
@@ -558,7 +654,7 @@ ${list}`);
     }
 
     if (propsWithoutImage.length > 0) {
-      const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      const list = propsWithoutImage.map((p) => `- ${p.name}: ${p.description}`).join('\n');
       sections.push(`以下道具无参考图，请根据文字描述准确呈现：
 ${list}`);
     }
@@ -566,7 +662,12 @@ ${list}`);
     propConsistencyGuide = '\n\n' + sections.join('\n\n');
   }
 
-  const startGuide = await getCameraMovementCompositionGuide(cameraMovement, 'start', chatCompletion, model);
+  const startGuide = await getCameraMovementCompositionGuide(
+    cameraMovement,
+    'start',
+    chatCompletion,
+    model,
+  );
 
   return `${panel.description}
 
@@ -594,7 +695,7 @@ ${characterConsistencyGuide}${propConsistencyGuide}`;
  */
 export const cropPanelFromNineGrid = (
   nineGridImageUrl: string,
-  panelIndex: number
+  panelIndex: number,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -606,30 +707,34 @@ export const cropPanelFromNineGrid = (
           reject(new Error('无法创建 Canvas 上下文'));
           return;
         }
-        
+
         // 计算裁剪区域：3x3 网格
-        const col = panelIndex % 3;        // 列 (0, 1, 2)
+        const col = panelIndex % 3; // 列 (0, 1, 2)
         const row = Math.floor(panelIndex / 3); // 行 (0, 1, 2)
-        
+
         const panelWidth = img.width / 3;
         const panelHeight = img.height / 3;
-        
+
         const sx = col * panelWidth;
         const sy = row * panelHeight;
-        
+
         // 设置输出 canvas 尺寸为单个面板大小
         canvas.width = Math.round(panelWidth);
         canvas.height = Math.round(panelHeight);
-        
+
         // 裁剪并绘制
         ctx.drawImage(
           img,
-          Math.round(sx), Math.round(sy),   // 源坐标
-          Math.round(panelWidth), Math.round(panelHeight), // 源尺寸
-          0, 0,                               // 目标坐标
-          canvas.width, canvas.height          // 目标尺寸
+          Math.round(sx),
+          Math.round(sy), // 源坐标
+          Math.round(panelWidth),
+          Math.round(panelHeight), // 源尺寸
+          0,
+          0, // 目标坐标
+          canvas.width,
+          canvas.height, // 目标尺寸
         );
-        
+
         // 转换为 base64
         const croppedBase64 = canvas.toDataURL('image/png');
         resolve(croppedBase64);

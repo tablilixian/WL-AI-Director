@@ -79,14 +79,12 @@ export const loadRegistry = (): ModelRegistryState => {
         'veo_3_1_i2v_s_fast_fl_landscape',
         'veo_3_1_i2v_s_fast_fl_portrait',
       ];
-      
+
       // 确保内置模型和提供商始终存在
-      const builtInProviderIds = BUILTIN_PROVIDERS.map(p => p.id);
-      const builtInModelIds = ALL_BUILTIN_MODELS.map(m => m.id);
-      
+
       // 合并内置提供商
-      const existingProviderIds = parsed.providers.map(p => p.id);
-      BUILTIN_PROVIDERS.forEach(bp => {
+      const existingProviderIds = parsed.providers.map((p) => p.id);
+      BUILTIN_PROVIDERS.forEach((bp) => {
         if (!existingProviderIds.includes(bp.id)) {
           parsed.providers.unshift(bp);
         }
@@ -94,17 +92,16 @@ export const loadRegistry = (): ModelRegistryState => {
 
       // 按 baseUrl 去重提供商（保留先出现的项，通常为内置）
       const seenBaseUrls = new Set<string>();
-      parsed.providers = parsed.providers.filter(p => {
+      parsed.providers = parsed.providers.filter((p) => {
         const key = normalizeBaseUrl(p.baseUrl);
         if (seenBaseUrls.has(key)) return false;
         seenBaseUrls.add(key);
         return true;
       });
-      
+
       // 合并内置模型，并确保内置模型的参数与代码保持同步
-      const existingModelIds = parsed.models.map(m => m.id);
-      ALL_BUILTIN_MODELS.forEach(bm => {
-        const existingIndex = parsed.models.findIndex(m => m.id === bm.id);
+      ALL_BUILTIN_MODELS.forEach((bm) => {
+        const existingIndex = parsed.models.findIndex((m) => m.id === bm.id);
         if (existingIndex === -1) {
           // 内置模型不存在，添加
           parsed.models.push(bm);
@@ -113,7 +110,12 @@ export const loadRegistry = (): ModelRegistryState => {
           const existing = parsed.models[existingIndex];
           // 用户可调整的偏好参数（defaultAspectRatio, temperature, maxTokens, defaultDuration 等）
           // 结构性参数（supportedAspectRatios, supportedDurations, mode 等）始终从代码同步
-          const USER_PREF_KEYS = ['defaultAspectRatio', 'temperature', 'maxTokens', 'defaultDuration'];
+          const USER_PREF_KEYS = [
+            'defaultAspectRatio',
+            'temperature',
+            'maxTokens',
+            'defaultDuration',
+          ];
           const mergedParams = { ...(bm as any).params };
           const existingParams = (existing as any).params;
           if (existingParams) {
@@ -132,7 +134,7 @@ export const loadRegistry = (): ModelRegistryState => {
       });
 
       // 迁移缺失的 apiModel（优先从 id 或 providerId 前缀推断）
-      parsed.models = parsed.models.map(m => {
+      parsed.models = parsed.models.map((m) => {
         if (m.apiModel) return m;
         if (m.providerId && m.id.startsWith(`${m.providerId}:`)) {
           return { ...m, apiModel: m.id.slice(m.providerId.length + 1) };
@@ -142,24 +144,35 @@ export const loadRegistry = (): ModelRegistryState => {
 
       // 清理 antsk 提供商（已废弃）
       const antskProviderIds = ['antsk'];
-      const removedAntskProviders = parsed.providers.filter(p => antskProviderIds.includes(p.id)).length;
-      parsed.providers = parsed.providers.filter(p => !antskProviderIds.includes(p.id));
+      const removedAntskProviders = parsed.providers.filter((p) =>
+        antskProviderIds.includes(p.id),
+      ).length;
+      parsed.providers = parsed.providers.filter((p) => !antskProviderIds.includes(p.id));
 
       // 清理所有 antsk 模型
       const antskModelCountBefore = parsed.models.length;
-      parsed.models = parsed.models.filter(m => m.providerId !== 'antsk');
+      parsed.models = parsed.models.filter((m) => m.providerId !== 'antsk');
       const antskModelsRemoved = antskModelCountBefore - parsed.models.length;
 
       // 清理旧的已废弃视频模型
       const modelCountBefore = parsed.models.length;
       parsed.models = parsed.models.filter(
-        m => !(m.type === 'video' && deprecatedVideoModelIds.includes(m.id))
+        (m) => !(m.type === 'video' && deprecatedVideoModelIds.includes(m.id)),
       );
       const modelsRemoved = modelCountBefore - parsed.models.length;
 
       // 迁移激活模型：若指向已删除的厂商模型，切换到替代模型
       let activeModelMigrated = false;
-      const antskModelIds = ['gpt-5.1', 'gpt-5.2', 'gpt-41', 'claude-sonnet-4-5-20250929', 'veo', 'veo_3_1-fast', 'sora-2', 'gemini-3-pro-image-preview'];
+      const antskModelIds = [
+        'gpt-5.1',
+        'gpt-5.2',
+        'gpt-41',
+        'claude-sonnet-4-5-20250929',
+        'veo',
+        'veo_3_1-fast',
+        'sora-2',
+        'gemini-3-pro-image-preview',
+      ];
       if (parsed.activeModels.chat && antskModelIds.includes(parsed.activeModels.chat)) {
         parsed.activeModels.chat = 'glm-4-flash';
         activeModelMigrated = true;
@@ -177,18 +190,26 @@ export const loadRegistry = (): ModelRegistryState => {
         parsed.activeModels.image = 'dramabackend';
         activeModelMigrated = true;
       }
-      
+
       // 同步全局 API Key
       parsed.globalApiKey = localStorage.getItem(API_KEY_STORAGE_KEY) || parsed.globalApiKey;
-      
+
       registryState = parsed;
 
       // 如果发生了迁移，立即回写 localStorage，避免每次加载都重复执行
-      if (removedAntskProviders > 0 || antskModelsRemoved > 0 || modelsRemoved > 0 || activeModelMigrated) {
+      if (
+        removedAntskProviders > 0 ||
+        antskModelsRemoved > 0 ||
+        modelsRemoved > 0 ||
+        activeModelMigrated
+      ) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-          logger.debug(LogCategory.MODEL, `🔄 模型注册中心迁移完成：移除 ${removedAntskProviders} 个废弃厂商，${antskModelsRemoved} 个废弃模型`);
-        } catch (e) {
+          logger.debug(
+            LogCategory.MODEL,
+            `🔄 模型注册中心迁移完成：移除 ${removedAntskProviders} 个废弃厂商，${antskModelsRemoved} 个废弃模型`,
+          );
+        } catch {
           // 回写失败不影响运行，下次加载仍会重新迁移
         }
       }
@@ -246,14 +267,14 @@ export const getProviders = (): ModelProvider[] => {
  * 根据 ID 获取提供商
  */
 export const getProviderById = (id: string): ModelProvider | undefined => {
-  return getProviders().find(p => p.id === id);
+  return getProviders().find((p) => p.id === id);
 };
 
 /**
  * 获取默认提供商
  */
 export const getDefaultProvider = (): ModelProvider => {
-  return getProviders().find(p => p.isDefault) || BUILTIN_PROVIDERS[0];
+  return getProviders().find((p) => p.isDefault) || BUILTIN_PROVIDERS[0];
 };
 
 /**
@@ -262,7 +283,7 @@ export const getDefaultProvider = (): ModelProvider => {
 export const addProvider = (provider: Omit<ModelProvider, 'id' | 'isBuiltIn'>): ModelProvider => {
   const state = loadRegistry();
   const normalized = normalizeBaseUrl(provider.baseUrl);
-  const existing = state.providers.find(p => normalizeBaseUrl(p.baseUrl) === normalized);
+  const existing = state.providers.find((p) => normalizeBaseUrl(p.baseUrl) === normalized);
   if (existing) return existing;
   const newProvider: ModelProvider = {
     ...provider,
@@ -279,7 +300,7 @@ export const addProvider = (provider: Omit<ModelProvider, 'id' | 'isBuiltIn'>): 
  */
 export const updateProvider = (id: string, updates: Partial<ModelProvider>): boolean => {
   const state = loadRegistry();
-  const index = state.providers.findIndex(p => p.id === id);
+  const index = state.providers.findIndex((p) => p.id === id);
   if (index === -1) return false;
 
   // 内置提供商不能修改某些属性
@@ -299,15 +320,15 @@ export const updateProvider = (id: string, updates: Partial<ModelProvider>): boo
  */
 export const removeProvider = (id: string): boolean => {
   const state = loadRegistry();
-  const provider = state.providers.find(p => p.id === id);
-  
+  const provider = state.providers.find((p) => p.id === id);
+
   // 不能删除内置提供商
   if (!provider || provider.isBuiltIn) return false;
-  
+
   // 删除该提供商的所有模型
-  state.models = state.models.filter(m => m.providerId !== id);
-  state.providers = state.providers.filter(p => p.id !== id);
-  
+  state.models = state.models.filter((m) => m.providerId !== id);
+  state.providers = state.providers.filter((p) => p.id !== id);
+
   saveRegistry(state);
   return true;
 };
@@ -322,7 +343,7 @@ export const removeProvider = (id: string): boolean => {
 export const getModels = (type?: ModelType): ModelDefinition[] => {
   const models = loadRegistry().models;
   if (type) {
-    return models.filter(m => m.type === type);
+    return models.filter((m) => m.type === type);
   }
   return models;
 };
@@ -352,7 +373,7 @@ export const getVideoModels = (): VideoModelDefinition[] => {
  * 根据 ID 获取模型
  */
 export const getModelById = (id: string): ModelDefinition | undefined => {
-  return getModels().find(m => m.id === id);
+  return getModels().find((m) => m.id === id);
 };
 
 /**
@@ -402,33 +423,38 @@ export const setActiveModel = (type: ModelType, modelId: string): boolean => {
  * 注册新模型
  * @param model - 模型定义（可包含自定义 id，不包含 isBuiltIn）
  */
-export const registerModel = (model: Omit<ModelDefinition, 'isBuiltIn'> & { id?: string }): ModelDefinition => {
+export const registerModel = (
+  model: Omit<ModelDefinition, 'id' | 'isBuiltIn'> & { id?: string },
+): ModelDefinition => {
   const state = loadRegistry();
-  
+
   const providedId = (model as any).id?.trim();
   const apiModel = (model as any).apiModel?.trim();
-  const baseId = providedId || (apiModel ? `${model.providerId}:${apiModel}` : `model_${Date.now()}`);
+  const baseId =
+    providedId || (apiModel ? `${model.providerId}:${apiModel}` : `model_${Date.now()}`);
   let modelId = baseId;
 
   // 若未显式提供 ID，则自动生成唯一 ID（允许 API 模型名重复）
   if (!providedId) {
     let suffix = 1;
-    while (state.models.some(m => m.id === modelId)) {
+    while (state.models.some((m) => m.id === modelId)) {
       modelId = `${baseId}_${suffix++}`;
     }
-  } else if (state.models.some(m => m.id === modelId)) {
+  } else if (state.models.some((m) => m.id === modelId)) {
     throw new Error(`模型 ID "${modelId}" 已存在，请使用其他 ID`);
   }
-  
+
   const newModel = {
     ...model,
     id: modelId,
-    apiModel: apiModel || (model.providerId && modelId.startsWith(`${model.providerId}:`)
-      ? modelId.slice(model.providerId.length + 1)
-      : modelId),
+    apiModel:
+      apiModel ||
+      (model.providerId && modelId.startsWith(`${model.providerId}:`)
+        ? modelId.slice(model.providerId.length + 1)
+        : modelId),
     isBuiltIn: false,
   } as ModelDefinition;
-  
+
   state.models.push(newModel);
   saveRegistry(state);
   return newModel;
@@ -439,7 +465,7 @@ export const registerModel = (model: Omit<ModelDefinition, 'isBuiltIn'> & { id?:
  */
 export const updateModel = (id: string, updates: Partial<ModelDefinition>): boolean => {
   const state = loadRegistry();
-  const index = state.models.findIndex(m => m.id === id);
+  const index = state.models.findIndex((m) => m.id === id);
   if (index === -1) return false;
 
   // 内置模型只能修改 isEnabled 和 params
@@ -461,20 +487,20 @@ export const updateModel = (id: string, updates: Partial<ModelDefinition>): bool
  */
 export const removeModel = (id: string): boolean => {
   const state = loadRegistry();
-  const model = state.models.find(m => m.id === id);
-  
+  const model = state.models.find((m) => m.id === id);
+
   // 不能删除内置模型
   if (!model || model.isBuiltIn) return false;
-  
+
   // 如果删除的是当前激活的模型，切换到同类型的第一个启用模型
   if (state.activeModels[model.type] === id) {
-    const fallback = state.models.find(m => m.type === model.type && m.id !== id && m.isEnabled);
+    const fallback = state.models.find((m) => m.type === model.type && m.id !== id && m.isEnabled);
     if (fallback) {
       state.activeModels[model.type] = fallback.id;
     }
   }
-  
-  state.models = state.models.filter(m => m.id !== id);
+
+  state.models = state.models.filter((m) => m.id !== id);
   saveRegistry(state);
   return true;
 };
@@ -494,10 +520,12 @@ export const toggleModelEnabled = (id: string, enabled: boolean): boolean => {
  * 获取全局 API Key
  */
 export const getGlobalApiKey = (): string | undefined => {
-  return loadRegistry().globalApiKey
-    || localStorage.getItem(API_KEY_STORAGE_KEY)
-    || localStorage.getItem(OLD_API_KEY_STORAGE_KEY)
-    || undefined;
+  return (
+    loadRegistry().globalApiKey ||
+    localStorage.getItem(API_KEY_STORAGE_KEY) ||
+    localStorage.getItem(OLD_API_KEY_STORAGE_KEY) ||
+    undefined
+  );
 };
 
 /**
@@ -517,18 +545,18 @@ export const setGlobalApiKey = (apiKey: string): void => {
 export const getApiKeyForModel = (modelId: string): string | undefined => {
   const model = getModelById(modelId);
   if (!model) return getGlobalApiKey();
-  
+
   // 1. 优先使用模型专属 API Key
   if (model.apiKey) {
     return model.apiKey;
   }
-  
+
   // 2. 其次使用提供商的 API Key
   const provider = getProviderById(model.providerId);
   if (provider?.apiKey) {
     return provider.apiKey;
   }
-  
+
   // 3. 最后使用全局 API Key
   return getGlobalApiKey();
 };
@@ -539,7 +567,7 @@ export const getApiKeyForModel = (modelId: string): string | undefined => {
 export const getApiBaseUrlForModel = (modelId: string): string => {
   const model = getModelById(modelId);
   if (!model) return BUILTIN_PROVIDERS[0].baseUrl.replace(/\/+$/, '');
-  
+
   const provider = getProviderById(model.providerId);
   const baseUrl = provider?.baseUrl || BUILTIN_PROVIDERS[0].baseUrl;
   return baseUrl.replace(/\/+$/, '');
@@ -585,37 +613,40 @@ export const isModelAvailable = (modelId: string): boolean => {
 export const getApiKeySource = (modelId: string): string => {
   const model = getModelById(modelId);
   if (!model) return '全局 API Key';
-  
+
   if (model.apiKey) return '模型专属 API Key';
-  
+
   const provider = getProviderById(model.providerId);
   if (provider?.apiKey) return `提供商 API Key (${provider.name})`;
-  
+
   return '全局 API Key';
 };
 
 /**
  * 验证 API Key 是否可用
  */
-export const validateApiKey = (type: ModelType, modelId?: string): {
+export const validateApiKey = (
+  type: ModelType,
+  modelId?: string,
+): {
   isValid: boolean;
   source: string;
   message?: string;
 } => {
-  const apiKey = getApiKeyForModel(modelId);
-  const source = getApiKeySource(modelId);
-  
+  const apiKey = getApiKeyForModel(modelId ?? '');
+  const source = getApiKeySource(modelId ?? '');
+
   if (!apiKey) {
     return {
       isValid: false,
       source,
-      message: `API Key 缺失，请在${source}中配置`
+      message: `API Key 缺失，请在${source}中配置`,
     };
   }
-  
+
   return {
     isValid: true,
-    source
+    source,
   };
 };
 
@@ -650,7 +681,7 @@ export const setUserAspectRatio = (ratio: AspectRatio): void => {
   const activeModel = getActiveImageModel();
   if (activeModel) {
     updateModel(activeModel.id, {
-      params: { ...activeModel.params, defaultAspectRatio: ratio }
+      params: { ...activeModel.params, defaultAspectRatio: ratio },
     } as any);
   }
 };

@@ -3,14 +3,13 @@
  * 包含关键帧优化、动作生成、镜头拆分、九宫格分镜等功能
  */
 
-import { AspectRatio, NineGridPanel } from "../../types";
+import { AspectRatio, NineGridPanel } from '../../types';
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   cleanJsonString,
   chatCompletion,
-  getActiveChatModel,
   resolveModel,
   getDefaultChatModelId,
 } from './apiCore';
@@ -31,10 +30,13 @@ export const optimizeBothKeyframes = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterInfo: string[],
   visualStyle: string,
-  model?: string
+  model?: string,
 ): Promise<{ startPrompt: string; endPrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型: ${resolvedModel}`,
+  );
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
@@ -150,7 +152,9 @@ ${styleDesc}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 2048, 'json_object'));
+    const result = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.7, 2048, 'json_object'),
+    );
     const duration = Date.now() - startTime;
 
     const cleaned = cleanJsonString(result);
@@ -164,7 +168,7 @@ ${styleDesc}
 
     return {
       startPrompt: parsed.startFrame.trim(),
-      endPrompt: parsed.endFrame.trim()
+      endPrompt: parsed.endFrame.trim(),
     };
   } catch (error: any) {
     console.error('❌ AI关键帧优化失败:', error);
@@ -182,16 +186,20 @@ export const optimizeKeyframePrompt = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterInfo: string[],
   visualStyle: string,
-  model?: string
+  model?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log(`🎨 optimizeKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, resolvedModel);
+  console.log(
+    `🎨 optimizeKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`,
+    resolvedModel,
+  );
   const startTime = Date.now();
 
   const frameLabel = frameType === 'start' ? '起始帧' : '结束帧';
-  const frameFocus = frameType === 'start'
-    ? '初始状态、起始姿态、预备动作、场景建立'
-    : '最终状态、结束姿态、动作完成、情绪高潮';
+  const frameFocus =
+    frameType === 'start'
+      ? '初始状态、起始姿态、预备动作、场景建立'
+      : '最终状态、结束姿态、动作完成、情绪高潮';
 
   const styleDesc = getStylePromptCN(visualStyle);
 
@@ -220,21 +228,25 @@ ${styleDesc}
 作为${frameLabel}，你需要重点描述：**${frameFocus}**
 
 ### ${frameType === 'start' ? '起始帧' : '结束帧'}特殊要求：
-${frameType === 'start' ? `
+${
+  frameType === 'start'
+    ? `
 • 建立清晰的初始场景和人物状态
 • 为即将发生的动作预留视觉空间和动势
 • 设定光影和色调基调
 • 展现角色的起始表情、姿态和位置
 • 根据镜头运动（${cameraMovement}）设置合适的初始构图
 • 营造场景氛围，让观众明确故事的起点
-` : `
+`
+    : `
 • 展现动作完成后的最终状态和结果
 • 体现镜头运动（${cameraMovement}）带来的视角和构图变化
 • 展现角色的情绪变化、最终姿态和位置
 • 可以有戏剧性的光影和色彩变化
 • 达到视觉高潮或情绪释放点
 • 为下一个镜头的衔接做准备
-`}
+`
+}
 
 ### 必须包含的视觉元素：
 
@@ -338,7 +350,7 @@ export const generateActionSuggestion = async (
   cameraMovement: string,
   model?: string,
   startImageUrl?: string,
-  endImageUrl?: string
+  endImageUrl?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   console.log('🎬 generateActionSuggestion 调用 - 使用模型:', resolvedModel);
@@ -364,17 +376,29 @@ export const generateActionSuggestion = async (
 
 **首帧文字描述（叙事意图）：**
 ${startFramePrompt}
-${startVlmAnalysis ? `
+${
+  startVlmAnalysis
+    ? `
 **首帧实际画面分析（VLM 视觉识别）：**
-${startVlmAnalysis}` : ''}
+${startVlmAnalysis}`
+    : ''
+}
 
 **尾帧文字描述（叙事意图）：**
 ${endFramePrompt}
-${endVlmAnalysis ? `
+${
+  endVlmAnalysis
+    ? `
 **尾帧实际画面分析（VLM 视觉识别）：**
-${endVlmAnalysis}` : ''}
-${hasVlmResult ? `
-📌 **对照指南**：文字描述是叙事意图，实际画面分析是真实视觉事实。请以文字描述的叙事意图为主线，同时尊重实际画面的视觉事实（角色实际位置、表情、光影、构图等）。如果两者有差异，以实际画面为准来生成连贯的动作过渡。` : ''}
+${endVlmAnalysis}`
+    : ''
+}
+${
+  hasVlmResult
+    ? `
+📌 **对照指南**：文字描述是叙事意图，实际画面分析是真实视觉事实。请以文字描述的叙事意图为主线，同时尊重实际画面的视觉事实（角色实际位置、表情、光影、构图等）。如果两者有差异，以实际画面为准来生成连贯的动作过渡。`
+    : ''
+}
 
 ## 任务要求
 1. **时长适配**：动作设计必须在 ${hasVlmResult ? '给定' : '8-10'} 秒内完成，避免过于复杂的多步骤动作
@@ -418,7 +442,7 @@ export const splitShotIntoSubShots = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterNames: string[],
   visualStyle: string,
-  model?: string
+  model?: string,
 ): Promise<{ subShots: any[] }> => {
   const resolvedModel = model || getDefaultChatModelId();
   console.log('✂️ splitShotIntoSubShots 调用 - 使用模型:', resolvedModel);
@@ -441,9 +465,13 @@ export const splitShotIntoSubShots = async (
 **原始动作描述：**
 ${shot.actionSummary}
 
-${shot.dialogue ? `**对白：** "${shot.dialogue}"
+${
+  shot.dialogue
+    ? `**对白：** "${shot.dialogue}"
 
-⚠️ **对白处理说明**：原始镜头包含对白。请在拆分时，将对白放在最合适的子镜头中（通常是角色说话的中景或近景镜头），并在该子镜头的actionSummary中明确提及对白内容。其他子镜头不需要包含对白。` : ''}
+⚠️ **对白处理说明**：原始镜头包含对白。请在拆分时，将对白放在最合适的子镜头中（通常是角色说话的中景或近景镜头），并在该子镜头的actionSummary中明确提及对白内容。其他子镜头不需要包含对白。`
+    : ''
+}
 
 ## 拆分要求
 
@@ -530,7 +558,9 @@ ${shot.dialogue ? `**对白：** "${shot.dialogue}"
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, 4096, 'json_object'));
+    const result = await retryOperation(() =>
+      chatCompletion(prompt, model, 0.7, 4096, 'json_object'),
+    );
     const duration = Date.now() - startTime;
 
     const cleaned = cleanJsonString(result);
@@ -542,10 +572,21 @@ ${shot.dialogue ? `**对白：** "${shot.dialogue}"
 
     // 验证每个子镜头
     for (const subShot of parsed.subShots) {
-      if (!subShot.shotSize || !subShot.cameraMovement || !subShot.actionSummary || !subShot.visualFocus) {
-        throw new Error('子镜头缺少必需字段（shotSize、cameraMovement、actionSummary、visualFocus）');
+      if (
+        !subShot.shotSize ||
+        !subShot.cameraMovement ||
+        !subShot.actionSummary ||
+        !subShot.visualFocus
+      ) {
+        throw new Error(
+          '子镜头缺少必需字段（shotSize、cameraMovement、actionSummary、visualFocus）',
+        );
       }
-      if (!subShot.keyframes || !Array.isArray(subShot.keyframes) || subShot.keyframes.length === 0) {
+      if (
+        !subShot.keyframes ||
+        !Array.isArray(subShot.keyframes) ||
+        subShot.keyframes.length === 0
+      ) {
         throw new Error('子镜头缺少关键帧数组（keyframes）');
       }
       for (const kf of subShot.keyframes) {
@@ -565,9 +606,9 @@ ${shot.dialogue ? `**对白：** "${shot.dialogue}"
       resourceId: `shot-split-${shot.id}-${Date.now()}`,
       resourceName: `镜头拆分 - ${shot.actionSummary.substring(0, 30)}...`,
       status: 'success',
-      model: model,
+      model: model ?? '',
       prompt: prompt.substring(0, 200) + '...',
-      duration: duration
+      duration: duration,
     });
 
     return parsed;
@@ -579,10 +620,10 @@ ${shot.dialogue ? `**对白：** "${shot.dialogue}"
       resourceId: `shot-split-${shot.id}-${Date.now()}`,
       resourceName: `镜头拆分 - ${shot.actionSummary.substring(0, 30)}...`,
       status: 'failed',
-      model: model,
+      model: model ?? '',
       prompt: prompt.substring(0, 200) + '...',
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`镜头拆分失败: ${error.message}`);
@@ -602,21 +643,28 @@ export const enhanceKeyframePrompt = async (
   cameraMovement: string,
   frameType: 'start' | 'end',
   model?: string,
-  propsInfo?: { name: string; description: string; hasImage: boolean }[]
+  propsInfo?: { name: string; description: string; hasImage: boolean }[],
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log(`🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, resolvedModel);
+  console.log(
+    `🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`,
+    resolvedModel,
+  );
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
   const frameLabel = frameType === 'start' ? '起始帧' : '结束帧';
-  const frameDesc = frameType === 'start'
-    ? '建立清晰的初始状态和场景氛围，人物/物体的起始位置、姿态和表情要明确，为后续运动预留视觉空间和动势'
-    : '展现动作完成后的最终状态，人物/物体的终点位置、姿态和情绪变化，体现镜头运动带来的视角变化';
+  const frameDesc =
+    frameType === 'start'
+      ? '建立清晰的初始状态和场景氛围，人物/物体的起始位置、姿态和表情要明确，为后续运动预留视觉空间和动势'
+      : '展现动作完成后的最终状态，人物/物体的终点位置、姿态和情绪变化，体现镜头运动带来的视角变化';
 
-  const propsBlock = propsInfo && propsInfo.length > 0
-    ? propsInfo.map(p => `${p.name}: ${p.description}${p.hasImage ? ' (有参考图)' : ''}`).join('\n')
-    : '';
+  const propsBlock =
+    propsInfo && propsInfo.length > 0
+      ? propsInfo
+          .map((p) => `${p.name}: ${p.description}${p.hasImage ? ' (有参考图)' : ''}`)
+          .join('\n')
+      : '';
 
   const prompt = `
 Generate a complete keyframe prompt for IMAGE generation (not video). Output ONLY the formatted prompt below, no extra text.
@@ -647,11 +695,15 @@ ${propsBlock ? `Props:\n${propsBlock}` : ''}
 如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
 • 面部特征、发型、服装、体型必须与参考图完全一致
 • 这是最高优先级要求，不可妥协
-${propsBlock ? `
+${
+  propsBlock
+    ? `
 【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
 以下道具已提供参考图，画面中出现时必须严格遵循：
 • 外形、颜色、材质、细节必须与参考图一致
-${propsBlock}` : ''}
+${propsBlock}`
+    : ''
+}
 
 【摄影技术】Cinematography
 • 分辨率: 4K (3840×2160)
@@ -709,7 +761,7 @@ export const generateNineGridPanels = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterNames: string[],
   visualStyle: string,
-  model?: string
+  _model?: string,
 ): Promise<NineGridPanel[]> => {
   const startTime = Date.now();
   console.log('🎬 九宫格分镜 - 开始AI拆分视角...');
@@ -759,7 +811,9 @@ export const generateNineGridPanels = async (
   const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(fullPrompt, resolvedModel, 0.7, 4096, 'json_object'));
+    const responseText = await retryOperation(() =>
+      chatCompletion(fullPrompt, resolvedModel, 0.7, 4096, 'json_object'),
+    );
     const duration = Date.now() - startTime;
 
     const cleaned = cleanJsonString(responseText);
@@ -773,7 +827,7 @@ export const generateNineGridPanels = async (
           index: i,
           shotSize: '中景',
           cameraAngle: '平视',
-          description: `${actionSummary} - alternate angle ${i + 1}`
+          description: `${actionSummary} - alternate angle ${i + 1}`,
         });
       }
     } else if (panels.length > 9) {
@@ -797,15 +851,16 @@ export const generateNineGridImage = async (
   panels: NineGridPanel[],
   referenceImages: string[] = [],
   visualStyle: string,
-  aspectRatio: AspectRatio = '16:9',
-  shotId?: string
+  _aspectRatio: AspectRatio = '16:9',
+  shotId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   console.log('🎬 九宫格分镜 - 开始生成九宫格图片...');
 
   // 将 9 个 panel 描述拼接为多行 prompt（每行对应一个格子）
-  const panelLines = panels.map((panel, idx) =>
-    `Panel ${idx + 1}: [${panel.shotSize} / ${panel.cameraAngle}] ${panel.description}`
+  const panelLines = panels.map(
+    (panel, idx) =>
+      `Panel ${idx + 1}: [${panel.shotSize} / ${panel.cameraAngle}] ${panel.description}`,
   );
   const storyboardPrompt = panelLines.join('\n');
 
@@ -815,11 +870,11 @@ export const generateNineGridImage = async (
   try {
     const imageUrl = await generateStoryboardImage(
       storyboardPrompt,
-      panels.length,       // gridnum
-      STORYBOARD_ITEM_WIDTH,   // itemWidth
-      referenceImages[0],  // referenceImage (只传第一张)
+      panels.length, // gridnum
+      STORYBOARD_ITEM_WIDTH, // itemWidth
+      referenceImages[0], // referenceImage (只传第一张)
       'ninegrid',
-      shotId
+      shotId,
     );
     const duration = Date.now() - startTime;
 

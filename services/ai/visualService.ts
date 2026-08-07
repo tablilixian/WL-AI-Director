@@ -3,28 +3,37 @@
  * 包含美术指导文档生成、角色/场景视觉提示词生成、图像生成
  */
 
-import { Character, Scene, AspectRatio, ArtDirection, CharacterTurnaroundPanel, Prop } from "../../types";
+import {
+  Character,
+  Scene,
+  AspectRatio,
+  ArtDirection,
+  CharacterTurnaroundPanel,
+  Prop,
+} from '../../types';
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
   cleanJsonString,
   chatCompletion,
-  checkApiKey,
-  getApiBase,
   getActiveModel,
-  resolveModel,
   logScriptProgress,
-  getActiveChatModel,
   getDefaultChatModelId,
 } from './apiCore';
+import { getStylePrompt, VISUAL_STYLE_PROMPTS_CN } from './promptConstants';
 import {
-  getStylePrompt,
-  getNegativePrompt,
-  getSceneNegativePrompt,
-  VISUAL_STYLE_PROMPTS_CN,
-} from './promptConstants';
-import { callImageApi, callDramaBackendVLApi, callDramaBackendSpliteGridApi, callDramaBackendInpaintApi, callDramaBackendStyleTransferApi, callDramaBackendIPAStyleTransferApi, callDramaBackendPromptEnhanceApi, callDramaBackendVideoMsrApi, callDramaBackendVideoMkrApi, callDramaBackendVideoMkrGridApi, callDramaBackend360HdriApi } from '../adapters/imageAdapter';
+  callImageApi,
+  callDramaBackendVLApi,
+  callDramaBackendSpliteGridApi,
+  callDramaBackendInpaintApi,
+  callDramaBackendStyleTransferApi,
+  callDramaBackendPromptEnhanceApi,
+  callDramaBackendVideoMsrApi,
+  callDramaBackendVideoMkrApi,
+  callDramaBackendVideoMkrGridApi,
+  callDramaBackend360HdriApi,
+} from '../adapters/imageAdapter';
 import { buildEraContextBlock } from './eraContext';
 
 // ============================================
@@ -43,10 +52,13 @@ export const generateArtDirection = async (
   scenes: { location: string; time: string; atmosphere: string }[],
   visualStyle: string,
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<ArtDirection> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateArtDirection 调用 - 生成全局美术指导文档，使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateArtDirection 调用 - 生成全局美术指导文档，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在生成全局美术指导文档（Art Direction）...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -103,7 +115,9 @@ Output ONLY valid JSON with this exact structure:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'),
+    );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -137,15 +151,16 @@ export const generateImage = async (
   referenceImages: string[] = [],
   aspectRatio: AspectRatio = '16:9',
   isVariation: boolean = false,
-  hasTurnaround: boolean = false,
+  _hasTurnaround: boolean = false,
   resourceType?: string,
   resourceId?: string,
-  negativePrompt?: string
+  negativePrompt?: string,
 ): Promise<string> => {
   const startTime = Date.now();
 
   const activeImageModel = getActiveModel('image');
-  const imageModelId = activeImageModel?.apiModel || activeImageModel?.id || 'gemini-3-pro-image-preview';
+  const imageModelId =
+    activeImageModel?.apiModel || activeImageModel?.id || 'gemini-3-pro-image-preview';
 
   try {
     let finalPrompt = prompt;
@@ -162,7 +177,9 @@ Requirements:
 - Body proportions should remain consistent`;
       } else {
         // 当prompt已包含角色/场景一致性要求时（AI增强版或含结构化段落），不再重复包裹
-        const hasConsistencySection = /角色一致性|CHARACTER CONSISTENCY|Scene consistency/i.test(prompt);
+        const hasConsistencySection = /角色一致性|CHARACTER CONSISTENCY|Scene consistency/i.test(
+          prompt,
+        );
         if (hasConsistencySection) {
           finalPrompt = prompt;
         } else {
@@ -179,7 +196,10 @@ Scene consistency requirements:
       }
     }
 
-    logger.debug(LogCategory.AI, `📝 图像生成提示词:\n${'='.repeat(80)}\n${finalPrompt}\n${'='.repeat(80)}`);
+    logger.debug(
+      LogCategory.AI,
+      `📝 图像生成提示词:\n${'='.repeat(80)}\n${finalPrompt}\n${'='.repeat(80)}`,
+    );
 
     const imageUrl = await callImageApi({
       prompt: finalPrompt,
@@ -197,7 +217,7 @@ Scene consistency requirements:
       status: 'success',
       model: imageModelId,
       prompt: prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     return imageUrl;
@@ -210,7 +230,7 @@ Scene consistency requirements:
       model: imageModelId,
       prompt: prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw error;
@@ -239,7 +259,7 @@ export const CHARACTER_TURNAROUND_LAYOUT = {
     { index: 6, viewAngle: '背面', shotSize: '全身', description: '' },
     { index: 7, viewAngle: '背面', shotSize: '半身特写', description: '' },
     { index: 8, viewAngle: '背面', shotSize: '面部特写', description: '' },
-  ]
+  ],
 };
 
 /**
@@ -248,13 +268,22 @@ export const CHARACTER_TURNAROUND_LAYOUT = {
  */
 export const generateCharacterTurnaroundPanels = async (
   character: Character,
-  artDirection: ArtDirection,
+  artDirection?: ArtDirection,
   visualStyle: string = 'anime',
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<CharacterTurnaroundPanel[]> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计，使用模型: ${resolvedModel}`);
+  if (!artDirection) {
+    logger.warn(
+      LogCategory.AI,
+      '⚠️ generateCharacterTurnaroundPanels 未收到 artDirection，将使用默认风格降级生成九宫格',
+    );
+  }
+  logger.debug(
+    LogCategory.AI,
+    `🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在生成角色九宫格造型设计...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -270,8 +299,7 @@ Your task is to create a 3x3 TURNAROUND SHEET (9 panels) showing the SAME charac
 - Visual Style: ${visualStyle} (${stylePrompt})
 - Visual Prompt: ${character.visualPrompt || 'Not provided'}
 
-## Art Direction Guidelines
-${artDirection.consistencyAnchors}
+${buildArtDirectionBlock(artDirection, 'Character')}
 
 ## Turnaround Sheet Layout
 You must create descriptions for 9 panels with these exact specifications:
@@ -326,7 +354,9 @@ Language: ${language}
 Write all descriptions in ${language}.`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'),
+    );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -356,21 +386,22 @@ Write all descriptions in ${language}.`;
 export const generateCharacterTurnaroundImage = async (
   panels: CharacterTurnaroundPanel[],
   character: Character,
-  artDirection: ArtDirection,
+  artDirection?: ArtDirection,
   visualStyle: string = 'anime',
   aspectRatio: AspectRatio = '1:1',
-  language: string = '中文',
-  model?: string
+  _language: string = '中文',
+  model?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片，使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在生成角色九宫格图片...');
 
-  const stylePrompt = getStylePrompt(visualStyle);
-
-  const panelDescriptions = panels.map(p => 
-    `[${p.index + 1}] ${p.viewAngle} ${p.shotSize}: ${p.description}`
-  ).join('\n');
+  const panelDescriptions = panels
+    .map((p) => `[${p.index + 1}] ${p.viewAngle} ${p.shotSize}: ${p.description}`)
+    .join('\n');
 
   const prompt = `Character turnaround reference sheet with 9 EQUAL-SIZED panels in a perfect 3x3 grid.
 
@@ -402,7 +433,10 @@ CRITICAL REQUIREMENTS:
 
 Generate ONE square image with a perfect3x3 grid of 9 equal-sized panels.`;
 
-  logger.debug(LogCategory.AI, `📝 九宫格生成提示词:\n${'='.repeat(80)}\n${prompt}\n${'='.repeat(80)}`);
+  logger.debug(
+    LogCategory.AI,
+    `📝 九宫格生成提示词:\n${'='.repeat(80)}\n${prompt}\n${'='.repeat(80)}`,
+  );
 
   try {
     const imageUrl = await callImageApi({
@@ -427,15 +461,50 @@ Generate ONE square image with a perfect3x3 grid of 9 equal-sized panels.`;
  * 生成角色视觉提示词
  * 基于角色信息和美术指导，生成详细的视觉描述
  */
+function buildArtDirectionBlock(
+  artDirection: ArtDirection | undefined,
+  designLabel: string,
+): string {
+  if (!artDirection) {
+    return '## Art Direction\n(未配置全局美术指导，沿用默认风格约束)';
+  }
+  return `## Art Direction Guidelines
+${artDirection.consistencyAnchors}
+
+## ${designLabel} Design Rules
+${artDirection.characterDesignRules.proportions}
+${artDirection.characterDesignRules.eyeStyle}
+${artDirection.characterDesignRules.lineWeight}
+${artDirection.characterDesignRules.detailLevel}
+
+## Color Palette Guidelines
+- Primary: ${artDirection.colorPalette.primary}
+- Secondary: ${artDirection.colorPalette.secondary}
+- Accent: ${artDirection.colorPalette.accent}
+- Skin Tones: ${artDirection.colorPalette.skinTones}
+- Saturation: ${artDirection.colorPalette.saturation}
+- Temperature: ${artDirection.colorPalette.temperature}
+
+## Lighting & Texture
+- Lighting Style: ${artDirection.lightingStyle}
+- Texture Style: ${artDirection.textureStyle}
+
+## Mood Keywords
+${artDirection.moodKeywords.join(', ')}`;
+}
+
 export const generateCharacterVisualPrompt = async (
   character: Character,
-  artDirection: ArtDirection,
+  artDirection?: ArtDirection,
   visualStyle: string = 'anime',
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -455,29 +524,7 @@ Your task is to create a detailed visual prompt for generating a character image
 【标志性姿态】必须展现角色的标志性姿态：${character.signaturePose?.polished || character.signaturePose?.original || '待补充'}
 【微动作特征】角色必须携带其微动作特征：${character.microAction?.polished || character.microAction?.original || '无特殊微动作'}
 
-## Art Direction Guidelines
-${artDirection.consistencyAnchors}
-
-## Character Design Rules
-${artDirection.characterDesignRules.proportions}
-${artDirection.characterDesignRules.eyeStyle}
-${artDirection.characterDesignRules.lineWeight}
-${artDirection.characterDesignRules.detailLevel}
-
-## Color Palette Guidelines
-- Primary: ${artDirection.colorPalette.primary}
-- Secondary: ${artDirection.colorPalette.secondary}
-- Accent: ${artDirection.colorPalette.accent}
-- Skin Tones: ${artDirection.colorPalette.skinTones}
-- Saturation: ${artDirection.colorPalette.saturation}
-- Temperature: ${artDirection.colorPalette.temperature}
-
-## Lighting & Texture
-- Lighting Style: ${artDirection.lightingStyle}
-- Texture Style: ${artDirection.textureStyle}
-
-## Mood Keywords
-${artDirection.moodKeywords.join(', ')}
+${buildArtDirectionBlock(artDirection, 'Character')}
 
 ## Your Task
 Create a comprehensive visual prompt that will be used to generate a character image.
@@ -519,7 +566,9 @@ Output JSON format:
 - visualPrompt: Length 200-400 words. Describe the character appearance in ${language}.
 - negativePrompt: Describe what should NOT appear (unwanted styles, distortions, etc.) in ${language}.`;
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 4096),
+    );
     let visualPrompt = responseText.trim();
     let negativePrompt = '';
     try {
@@ -544,13 +593,16 @@ Output JSON format:
  */
 export const generateSceneVisualPrompt = async (
   scene: Scene,
-  artDirection: ArtDirection,
+  artDirection?: ArtDirection,
   language: string = '中文',
   model?: string,
-  visualStyle: string = 'anime'
+  visualStyle: string = 'anime',
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${visualStyle}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${visualStyle}`,
+  );
   logScriptProgress('正在生成场景视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -565,29 +617,7 @@ Your task is to create a detailed visual prompt for generating a scene/environme
 - Visual Style: ${visualStyle} (${stylePrompt})
 - Base Visual Prompt: ${scene.visualPrompt || 'Not provided'}
 
-## Art Direction Guidelines
-${artDirection.consistencyAnchors}
-
-## Scene Design Rules
-${artDirection.characterDesignRules.proportions}
-${artDirection.characterDesignRules.eyeStyle}
-${artDirection.characterDesignRules.lineWeight}
-${artDirection.characterDesignRules.detailLevel}
-
-## Color Palette Guidelines
-- Primary: ${artDirection.colorPalette.primary}
-- Secondary: ${artDirection.colorPalette.secondary}
-- Accent: ${artDirection.colorPalette.accent}
-- Skin Tones: ${artDirection.colorPalette.skinTones}
-- Saturation: ${artDirection.colorPalette.saturation}
-- Temperature: ${artDirection.colorPalette.temperature}
-
-## Lighting & Texture
-- Lighting Style: ${artDirection.lightingStyle}
-- Texture Style: ${artDirection.textureStyle}
-
-## Mood Keywords
-${artDirection.moodKeywords.join(', ')}
+${buildArtDirectionBlock(artDirection, 'Scene')}
 
 ## Your Task
 Create a comprehensive visual prompt that will be used to generate a scene/environment image.
@@ -633,7 +663,9 @@ Output JSON format:
 - negativePrompt: Describe scene-specific visual elements to avoid in ${language}.`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 4096),
+    );
     let visualPrompt = responseText.trim();
     let negativePrompt = '';
     try {
@@ -666,23 +698,33 @@ export const generateVisualPrompt = async (
   genre: string,
   visualStyle: string = 'anime',
   language: string = '中文',
-  artDirection: ArtDirection,
-  model?: string
+  artDirection?: ArtDirection,
+  model?: string,
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词，使用模型: ${resolvedModel}`);
+  if (!artDirection) {
+    logger.warn(
+      LogCategory.AI,
+      '⚠️ generateVisualPrompt 未收到 artDirection，将使用默认风格降级生成提示词',
+    );
+  }
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress(`正在生成${type === 'character' ? '角色' : '场景'}视觉提示词...`);
 
   const stylePrompt = getStylePrompt(visualStyle);
 
-  const itemInfo = type === 'character' 
-    ? `Name: ${(item as Character).name}
+  const itemInfo =
+    type === 'character'
+      ? `Name: ${(item as Character).name}
 Gender: ${(item as Character).gender}
 Age: ${(item as Character).age}
 Personality: ${(item as Character).personality}
 Signature Pose: ${(item as Character).signaturePose?.polished || (item as Character).signaturePose?.original || 'Not provided'}
 Micro Action: ${(item as Character).microAction?.polished || (item as Character).microAction?.original || 'Not provided'}`
-    : `Location: ${(item as Scene).location}
+      : `Location: ${(item as Scene).location}
 Time: ${(item as Scene).time}
 Atmosphere: ${(item as Scene).atmosphere}`;
 
@@ -693,36 +735,16 @@ Your task is to create a detailed visual prompt for generating a ${type} image i
 ${itemInfo}
 Visual Style: ${visualStyle} (${stylePrompt})
 
-## Art Direction Guidelines
-${artDirection.consistencyAnchors}
-
-## Design Rules
-${artDirection.characterDesignRules.proportions}
-${artDirection.characterDesignRules.eyeStyle}
-${artDirection.characterDesignRules.lineWeight}
-${artDirection.characterDesignRules.detailLevel}
-
-## Color Palette Guidelines
-- Primary: ${artDirection.colorPalette.primary}
-- Secondary: ${artDirection.colorPalette.secondary}
-- Accent: ${artDirection.colorPalette.accent}
-- Skin Tones: ${artDirection.colorPalette.skinTones}
-- Saturation: ${artDirection.colorPalette.saturation}
-- Temperature: ${artDirection.colorPalette.temperature}
-
-## Lighting & Texture
-- Lighting Style: ${artDirection.lightingStyle}
-- Texture Style: ${artDirection.textureStyle}
-
-## Mood Keywords
-${artDirection.moodKeywords.join(', ')}
+${buildArtDirectionBlock(artDirection, type === 'character' ? 'Character' : 'Scene')}
 
 ## Your Task
 Create a comprehensive visual prompt that will be used to generate a ${type} image.
 
 CRITICAL REQUIREMENTS:
 1. Describe the ${type} in DETAIL:
-   ${type === 'character' ? `
+   ${
+     type === 'character'
+       ? `
    - Facial features (eyes, nose, mouth, eyebrows, expression)
    - Hair (length, color, texture, style, accessories)
    - Body type and proportions
@@ -731,12 +753,14 @@ CRITICAL REQUIREMENTS:
    - 【MANDATORY】Include micro-actions: Must incorporate the character's distinctive micro-movements
    - 【MANDATORY】Silhouette & Linework: Describe S-grade silhouette, body curves, and line aesthetics
    - 【MANDATORY】Body Part Close-ups: Include specific body part details (eyes, lips, fingers, ankles, etc.)
-   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions` : `
+   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions`
+       : `
    - Environment details (background, foreground, middle ground)
    - Atmospheric elements (weather, lighting, mood)
    - Composition and framing
    - Objects and props in the scene
-   ⛔ STRICT RULE: This is a PURE SCENE IMAGE with NO characters. Do NOT describe any person, human figure, character, or crowd. Focus only on the empty environment.`}
+   ⛔ STRICT RULE: This is a PURE SCENE IMAGE with NO characters. Do NOT describe any person, human figure, character, or crowd. Focus only on the empty environment.`
+   }
    
 2. Apply Art Direction:
    - Follow the color palette guidelines
@@ -768,11 +792,17 @@ Output the result in the following JSON format:
     logger.debug(LogCategory.AI, `✅ ${type === 'character' ? '角色' : '场景'}视觉提示词生成完成`);
     return {
       visualPrompt: result.visualPrompt || '',
-      negativePrompt: result.negativePrompt || ''
+      negativePrompt: result.negativePrompt || '',
     };
   } catch (error: any) {
-    logger.error(LogCategory.AI, `❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`, error);
-    throw new Error(`${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`);
+    logger.error(
+      LogCategory.AI,
+      `❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`,
+      error,
+    );
+    throw new Error(
+      `${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`,
+    );
   }
 };
 
@@ -784,9 +814,12 @@ export const generateCharacterFromDesignImage = async (
   character: Character,
   designImageUrl: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
-  logger.debug(LogCategory.AI, `🎨 generateCharacterFromDesignImage 调用 - 基于设计图生成角色立绘图: ${character.name}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateCharacterFromDesignImage 调用 - 基于设计图生成角色立绘图: ${character.name}`,
+  );
 
   try {
     const imageUrl = await callImageApi({
@@ -815,7 +848,7 @@ export const generateStoryboardImage = async (
   itemWidth: number = 1024,
   referenceImage?: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -842,7 +875,7 @@ export const generateStoryboardImage = async (
       status: 'success',
       model: imageModelId,
       prompt: prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, '✅ 分镜图像生成完成');
@@ -856,7 +889,7 @@ export const generateStoryboardImage = async (
       model: imageModelId,
       prompt: prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`分镜图像生成失败: ${error.message}`);
@@ -876,7 +909,7 @@ export const generateSpliteGridImage = async (
   targetHeight: number = 720,
   resourceType?: string,
   resourceId?: string,
-  selectedIndices?: number[]
+  selectedIndices?: number[],
 ): Promise<string[]> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -884,19 +917,26 @@ export const generateSpliteGridImage = async (
 
   try {
     logger.debug(LogCategory.AI, `🔲 generateSpliteGridImage 调用 - 图像分割网格`);
-    logger.debug(LogCategory.AI, `📐 网格参数: ${row}行 x ${column}列, 目标尺寸: ${targetWidth}x${targetHeight}`);
+    logger.debug(
+      LogCategory.AI,
+      `📐 网格参数: ${row}行 x ${column}列, 目标尺寸: ${targetWidth}x${targetHeight}`,
+    );
 
-    const localUrls = await callDramaBackendSpliteGridApi({
-      prompt: '',
-      referenceImages: [imageUrl],
-      isSpliteGrid: true,
-      spliteGridRow: row,
-      spliteGridColumn: column,
-      spliteGridTargetWidth: targetWidth,
-      spliteGridTargetHeight: targetHeight,
-      resourceType,
-      resourceId,
-    }, undefined, selectedIndices);
+    const localUrls = await callDramaBackendSpliteGridApi(
+      {
+        prompt: '',
+        referenceImages: [imageUrl],
+        isSpliteGrid: true,
+        spliteGridRow: row,
+        spliteGridColumn: column,
+        spliteGridTargetWidth: targetWidth,
+        spliteGridTargetHeight: targetHeight,
+        resourceType,
+        resourceId,
+      },
+      undefined,
+      selectedIndices,
+    );
 
     addRenderLogWithTokens({
       type: 'keyframe',
@@ -905,7 +945,7 @@ export const generateSpliteGridImage = async (
       status: 'success',
       model: imageModelId,
       prompt: `split image into ${row}x${column} grid`,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 图像分割网格完成，共 ${localUrls.length} 张图片`);
@@ -919,7 +959,7 @@ export const generateSpliteGridImage = async (
       model: imageModelId,
       prompt: `split image into ${row}x${column} grid`,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`图像分割网格失败: ${error.message}`);
@@ -935,7 +975,7 @@ export const generateInpaintImage = async (
   imageUrl: string,
   prompt: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -960,7 +1000,7 @@ export const generateInpaintImage = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 图像修复完成: ${localUrl}`);
@@ -974,7 +1014,7 @@ export const generateInpaintImage = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`图像修复失败: ${error.message}`);
@@ -988,8 +1028,8 @@ export const generateInpaintImage = async (
  */
 export const generate360HdriImage = async (
   imageUrl?: string,
-  resourceType?: string,
-  resourceId?: string
+  _resourceType?: string,
+  _resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1008,7 +1048,7 @@ export const generate360HdriImage = async (
       status: 'success',
       model: imageModelId,
       prompt: '360 HDRI generation',
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 360° HDRI 全景生成完成: ${localUrl}`);
@@ -1022,7 +1062,7 @@ export const generate360HdriImage = async (
       model: imageModelId,
       prompt: '360 HDRI generation',
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`360° HDRI 全景生成失败: ${error.message}`);
@@ -1066,7 +1106,7 @@ export const generateStyleTransferImage = async (
       status: 'success',
       model: imageModelId,
       prompt: 'style transfer',
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 风格迁移完成: ${localUrl}`);
@@ -1080,7 +1120,7 @@ export const generateStyleTransferImage = async (
       model: imageModelId,
       prompt: 'style transfer',
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`风格迁移失败: ${error.message}`);
@@ -1096,7 +1136,7 @@ export const generateIPAStyleTransferImage = async (
   prompt: string,
   referenceImages: string[],
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1122,7 +1162,7 @@ export const generateIPAStyleTransferImage = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ IPA 风格迁移完成: ${localUrl}`);
@@ -1136,7 +1176,7 @@ export const generateIPAStyleTransferImage = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`IPA 风格迁移失败: ${error.message}`);
@@ -1151,7 +1191,7 @@ export const generateIPAStyleTransferImage = async (
 export const generateAnimeImage = async (
   prompt: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1175,7 +1215,7 @@ export const generateAnimeImage = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 动漫风格生成完成: ${localUrl}`);
@@ -1189,7 +1229,7 @@ export const generateAnimeImage = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`动漫风格生成失败: ${error.message}`);
@@ -1205,7 +1245,7 @@ export const generateVisualLanguage = async (
   prompt: string,
   referenceImage?: string,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1232,7 +1272,7 @@ export const generateVisualLanguage = async (
       status: 'success',
       model: imageModelId,
       prompt: prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, '✅ 视觉语言推理完成');
@@ -1246,7 +1286,7 @@ export const generateVisualLanguage = async (
       model: imageModelId,
       prompt: prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`视觉语言推理失败: ${error.message}`);
@@ -1259,8 +1299,8 @@ export const generateVisualLanguage = async (
  */
 export const generatePromptEnhanceImage = async (
   prompt: string,
-  resourceType?: string,
-  resourceId?: string
+  _resourceType?: string,
+  _resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1279,7 +1319,7 @@ export const generatePromptEnhanceImage = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 提示词增强完成，长度: ${enhancedPrompt.length} 字符`);
@@ -1293,7 +1333,7 @@ export const generatePromptEnhanceImage = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`提示词增强失败: ${error.message}`);
@@ -1306,31 +1346,37 @@ export async function generateVisualPrompts(
   artDirection: ArtDirection,
   language: string = '中文',
   model?: string,
-  visualStyle?: string
-): Promise<{ characters: Array<{ visualPrompt: string; negativePrompt: string }>; scenes: Array<{ visualPrompt: string; negativePrompt: string }> }> {
+  visualStyle?: string,
+): Promise<{
+  characters: Array<{ visualPrompt: string; negativePrompt: string }>;
+  scenes: Array<{ visualPrompt: string; negativePrompt: string }>;
+}> {
   const resolvedModel = model || getDefaultChatModelId();
   const resolvedVisualStyle = visualStyle || 'anime';
-  logger.debug(LogCategory.AI, `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${resolvedVisualStyle}`);
-
-  const characterPromises = characters.map(char => 
-    generateCharacterVisualPrompt(char, artDirection, language, resolvedModel)
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型: ${resolvedModel}, visualStyle: ${resolvedVisualStyle}`,
   );
 
-  const scenePromises = scenes.map(scene => 
-    generateSceneVisualPrompt(scene, artDirection, language, resolvedModel, resolvedVisualStyle)
+  const characterPromises = characters.map((char) =>
+    generateCharacterVisualPrompt(char, artDirection, language, resolvedModel),
+  );
+
+  const scenePromises = scenes.map((scene) =>
+    generateSceneVisualPrompt(scene, artDirection, language, resolvedModel, resolvedVisualStyle),
   );
 
   const [characterResults, sceneResults] = await Promise.all([
     Promise.all(characterPromises),
-    Promise.all(scenePromises)
+    Promise.all(scenePromises),
   ]);
 
   logger.debug(LogCategory.AI, '✅ 所有视觉提示词生成完成');
   return {
     characters: characterResults,
-    scenes: sceneResults
+    scenes: sceneResults,
   };
-};
+}
 
 /**
  * 批量生成角色视觉提示词（包含正负提示词）
@@ -1342,10 +1388,13 @@ export const generateAllCharacterPrompts = async (
   genre: string,
   visualStyle: string,
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<Array<{ visualPrompt: string; negativePrompt: string }>> => {
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词，使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在批量生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -1353,38 +1402,20 @@ export const generateAllCharacterPrompts = async (
   const prompt = `You are a world-class visual prompt engineer for ${visualStyle} productions.
 Your task is to create detailed visual prompts for multiple characters in a ${genre} production.
 
-## Art Direction Guidelines
-${artDirection.consistencyAnchors}
-
-## Character Design Rules
-${artDirection.characterDesignRules.proportions}
-${artDirection.characterDesignRules.eyeStyle}
-${artDirection.characterDesignRules.lineWeight}
-${artDirection.characterDesignRules.detailLevel}
-
-## Color Palette Guidelines
-- Primary: ${artDirection.colorPalette.primary}
-- Secondary: ${artDirection.colorPalette.secondary}
-- Accent: ${artDirection.colorPalette.accent}
-- Skin Tones: ${artDirection.colorPalette.skinTones}
-- Saturation: ${artDirection.colorPalette.saturation}
-- Temperature: ${artDirection.colorPalette.temperature}
-
-## Lighting & Texture
-- Lighting Style: ${artDirection.lightingStyle}
-- Texture Style: ${artDirection.textureStyle}
-
-## Mood Keywords
-${artDirection.moodKeywords.join(', ')}
+${buildArtDirectionBlock(artDirection, 'Character')}
 
 ## Characters
-${characters.map((c, i) => `
+${characters
+  .map(
+    (c, i) => `
 ${i + 1}. ${c.name}
    - Gender: ${c.gender}
    - Age: ${c.age}
    - Personality: ${c.personality}
    - Visual Style: ${visualStyle} (${stylePrompt})
-`).join('\n')}
+`,
+  )
+  .join('\n')}
 
 ## Your Task
 Create visual prompts for ALL characters above. For each character, generate:
@@ -1427,7 +1458,9 @@ Output ONLY valid JSON with this exact structure:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'),
+    );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -1437,7 +1470,7 @@ Output ONLY valid JSON with this exact structure:
 
     const results = parsed.results.map((r: any) => ({
       visualPrompt: r.visualPrompt || '',
-      negativePrompt: r.negativePrompt || ''
+      negativePrompt: r.negativePrompt || '',
     }));
 
     logger.debug(LogCategory.AI, '✅ 批量角色视觉提示词生成完成');
@@ -1459,7 +1492,7 @@ Output ONLY valid JSON with this exact structure:
 export const suggestVisualStyleFromScript = async (
   scriptText: string,
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<{ suggestedStyle: string; isCustom: boolean; confidence: string; reason: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
   logger.debug(LogCategory.AI, `🔍 suggestVisualStyleFromScript 调用 - 使用模型: ${resolvedModel}`);
@@ -1496,7 +1529,7 @@ Compare your extracted keywords against them. Ask yourself: is this an EXACT sem
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.3, 1024, 'json_object')
+      chatCompletion(prompt, resolvedModel, 0.3, 1024, 'json_object'),
     );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
@@ -1508,7 +1541,10 @@ Compare your extracted keywords against them. Ask yourself: is this an EXACT sem
       reason: parsed.reason || '',
     };
 
-    logger.debug(LogCategory.AI, `✅ 风格检测完成: ${result.suggestedStyle} (${result.confidence})`);
+    logger.debug(
+      LogCategory.AI,
+      `✅ 风格检测完成: ${result.suggestedStyle} (${result.confidence})`,
+    );
     return result;
   } catch (error: any) {
     logger.error(LogCategory.AI, '❌ 风格检测失败:', error);
@@ -1524,11 +1560,14 @@ export const generateAllPropPrompts = async (
   artDirection: ArtDirection | undefined,
   visualStyle: string = 'anime',
   language: string = '中文',
-  model?: string
+  model?: string,
 ): Promise<Array<{ visualPrompt: string; negativePrompt: string }>> => {
   if (!props.length) return [];
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🎨 generateAllPropPrompts 调用 - 生成道具视觉提示词，使用模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🎨 generateAllPropPrompts 调用 - 生成道具视觉提示词，使用模型: ${resolvedModel}`,
+  );
   logScriptProgress('正在生成道具视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -1539,7 +1578,9 @@ Your task is to create detailed visual prompts for key props/items in a producti
 ## Visual Style
 ${visualStyle} (${stylePrompt})
 
-${artDirection ? `
+${
+  artDirection
+    ? `
 ## Art Direction Guidelines
 ${artDirection.consistencyAnchors}
 
@@ -1555,14 +1596,20 @@ ${artDirection.consistencyAnchors}
 - Texture Style: ${artDirection.textureStyle}
 
 ## Mood Keywords
-${artDirection.moodKeywords.join(', ')}` : ''}
+${artDirection.moodKeywords.join(', ')}`
+    : ''
+}
 
 ## Props
-${props.map((p, i) => `
+${props
+  .map(
+    (p, i) => `
 ${i + 1}. ${p.name}
    - Category: ${p.category}
    - Description: ${p.description}
-`).join('\n')}
+`,
+  )
+  .join('\n')}
 
 ## Your Task
 For EACH prop listed above, create a detailed visual prompt describing how it looks in the ${visualStyle} style.
@@ -1586,7 +1633,9 @@ Output ONLY valid JSON with this exact structure:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'));
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'),
+    );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -1596,7 +1645,7 @@ Output ONLY valid JSON with this exact structure:
 
     const results = parsed.results.map((r: any) => ({
       visualPrompt: r.visualPrompt || '',
-      negativePrompt: r.negativePrompt || ''
+      negativePrompt: r.negativePrompt || '',
     }));
 
     logger.debug(LogCategory.AI, '✅ 批量道具视觉提示词生成完成');
@@ -1621,7 +1670,7 @@ export const generateVideoMsr = async (
   duration: number = 5,
   fps: number = 30,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1653,7 +1702,7 @@ export const generateVideoMsr = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MSR 完成: ${localVideoUrl}`);
@@ -1667,7 +1716,7 @@ export const generateVideoMsr = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`图像转视频 MSR 失败: ${error.message}`);
@@ -1687,7 +1736,7 @@ export const generateVideoMkr = async (
   duration: number = 12,
   fps: number = 30,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1718,7 +1767,7 @@ export const generateVideoMkr = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MKR 完成: ${localVideoUrl}`);
@@ -1732,7 +1781,7 @@ export const generateVideoMkr = async (
       model: imageModelId,
       prompt,
       error: error.message,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`图像转视频 MKR 失败: ${error.message}`);
@@ -1749,7 +1798,7 @@ export const generateVideoMkrGrid = async (
   duration: number = 12,
   fps: number = 30,
   resourceType?: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
   const activeImageModel = getActiveModel('image');
@@ -1782,7 +1831,7 @@ export const generateVideoMkrGrid = async (
       status: 'success',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MKR Grid 完成: ${localVideoUrl}`);
@@ -1795,7 +1844,7 @@ export const generateVideoMkrGrid = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     });
 
     throw new Error(`图像转视频 MKR Grid 失败: ${error.message}`);

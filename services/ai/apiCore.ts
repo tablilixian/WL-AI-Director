@@ -3,7 +3,7 @@
  * 统一的 API 调用、重试、错误处理、JSON 清理等工具函数
  */
 
-import { AspectRatio } from "../../types";
+import { AspectRatio } from '../../types';
 import { logger, LogCategory } from '../logger';
 import {
   getGlobalApiKey as getRegistryApiKey,
@@ -27,14 +27,21 @@ import { withConcurrencyLimit } from './concurrencyLimiter';
  * 检查是否为 BigModel 模型
  */
 const isBigModelModel = (modelId: string): boolean => {
-  return modelId.startsWith('glm-') || modelId.startsWith('cogview') || modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+  return (
+    modelId.startsWith('glm-') ||
+    modelId.startsWith('cogview') ||
+    modelId.startsWith('vidu') ||
+    modelId.startsWith('cogvideo')
+  );
 };
 
 /**
  * 检查是否为 BigModel 视频模型
  */
 const isBigModelVideoModel = (modelId: string): boolean => {
-  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox');
+  return (
+    modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox')
+  );
 };
 
 /**
@@ -114,31 +121,37 @@ export const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string)
   if (modelId) {
     const normalizedModelId = modelId.toLowerCase();
     const lookupId = normalizedModelId;
-    
+
     // 首先尝试通过 id 精确匹配
     const model = getModelById(lookupId);
     if (model && model.type === type) {
       logger.debug(LogCategory.AI, `[resolveModel] 通过 id 找到模型: ${model.id} ${model.name}`);
       return model;
     }
-    
+
     // 然后尝试通过 apiModel 匹配
-    const candidates = getModels(type).filter(m => m.apiModel === lookupId);
+    const candidates = getModels(type).filter((m) => m.apiModel === lookupId);
     if (candidates.length === 1) {
-      logger.debug(LogCategory.AI, `[resolveModel] 通过 apiModel 找到模型: ${candidates[0].id} ${candidates[0].name}`);
+      logger.debug(
+        LogCategory.AI,
+        `[resolveModel] 通过 apiModel 找到模型: ${candidates[0].id} ${candidates[0].name}`,
+      );
       return candidates[0];
     }
-    
+
     // 如果都找不到，记录警告并使用激活的模型
     logger.warn(LogCategory.AI, `[resolveModel] 未找到模型: ${modelId}, 将使用激活的模型`);
   }
-  
+
   const activeModel = getActiveModel(type);
   if (activeModel) {
-    logger.debug(LogCategory.AI, `[resolveModel] 使用激活的模型: ${activeModel.id} ${activeModel.name}`);
+    logger.debug(
+      LogCategory.AI,
+      `[resolveModel] 使用激活的模型: ${activeModel.id} ${activeModel.name}`,
+    );
     return activeModel;
   }
-  
+
   logger.warn(LogCategory.AI, '[resolveModel] 没有激活的模型，返回 undefined');
   return undefined;
 };
@@ -155,22 +168,35 @@ export const resolveRequestModel = (type: 'chat' | 'image' | 'video', modelId?: 
  * 检查并返回 API Key
  * @throws {ApiKeyError} 如果 API Key 缺失
  */
-export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: string): string => {
+export const checkApiKey = (
+  type: 'chat' | 'image' | 'video' = 'chat',
+  modelId?: string,
+): string => {
   const resolvedModel = resolveModel(type, modelId);
-  logger.debug(LogCategory.AI, `[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=${resolvedModel?.id} ${resolvedModel?.providerId}`);
+  logger.debug(
+    LogCategory.AI,
+    `[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=${resolvedModel?.id} ${resolvedModel?.providerId}`,
+  );
 
   if (resolvedModel) {
     // 本地部署的模型（如 Ollama）无需 API Key
-    if (isLocalProvider(resolvedModel.providerId) || resolvedModel.providerId === 'wldrama' || resolvedModel.providerId === 'wldramallm') {
+    if (
+      isLocalProvider(resolvedModel.providerId) ||
+      resolvedModel.providerId === 'wldrama' ||
+      resolvedModel.providerId === 'wldramallm'
+    ) {
       return '';
     }
 
     const modelApiKey = getApiKeyForModel(resolvedModel.id);
     const apiKeySource = getApiKeySource(resolvedModel.id);
-    logger.debug(LogCategory.AI, `[checkApiKey] modelApiKey found: ${!!modelApiKey}, source: ${apiKeySource}`);
-    
+    logger.debug(
+      LogCategory.AI,
+      `[checkApiKey] modelApiKey found: ${!!modelApiKey}, source: ${apiKeySource}`,
+    );
+
     if (modelApiKey) return modelApiKey;
-    
+
     // 如果没有找到 API Key，抛出更详细的错误
     const validation = validateApiKey(type, resolvedModel.id);
     if (!validation.isValid) {
@@ -182,7 +208,7 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
   logger.debug(LogCategory.AI, `[checkApiKey] registryKey found: ${!!registryKey}`);
   if (registryKey) return registryKey;
 
-  throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
+  throw new ApiKeyError('API Key 缺失，请在模型配置中设置 API Key。');
 };
 
 /**
@@ -196,7 +222,7 @@ export const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: 
       return getDevApiBaseUrl(resolvedModel.id);
     }
     return DEFAULT_API_BASE;
-  } catch (e) {
+  } catch {
     return DEFAULT_API_BASE;
   }
 };
@@ -208,7 +234,7 @@ export const getActiveChatModelName = (): string => {
   try {
     const model = getActiveChatModel();
     return model?.apiModel || model?.id || getDefaultChatModelId();
-  } catch (e) {
+  } catch {
     return getDefaultChatModelId();
   }
 };
@@ -220,12 +246,12 @@ export const getDefaultChatModelId = (): string => {
   try {
     const model = getActiveChatModel();
     if (model?.id) return model.id;
-    
+
     // 如果没有激活模型，返回第一个可用的模型
     const models = getModels('chat');
-    const enabledModel = models.find(m => m.isEnabled);
+    const enabledModel = models.find((m) => m.isEnabled);
     return enabledModel?.id || models[0]?.id || 'glm-4-flash';
-  } catch (e) {
+  } catch {
     return 'glm-4-flash';
   }
 };
@@ -244,7 +270,7 @@ export { getActiveModel, getActiveChatModel, getActiveVideoModel, getActiveImage
 export const retryOperation = async <T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 2000
+  baseDelay: number = 2000,
 ): Promise<T> => {
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
@@ -271,8 +297,11 @@ export const retryOperation = async <T>(
 
       if (isRetryableError && i < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, i);
-        logger.warn(LogCategory.AI, `请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试) ${e.message}`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        logger.warn(
+          LogCategory.AI,
+          `请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试) ${e.message}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw e;
@@ -285,7 +314,7 @@ export const retryOperation = async <T>(
  * 清理AI返回的JSON字符串，移除markdown代码块标记
  */
 export const cleanJsonString = (str: string): string => {
-  if (!str) return "{}";
+  if (!str) return '{}';
   let cleaned = str.trim();
   // Remove markdown code block markers
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
@@ -308,7 +337,7 @@ export const parseHttpError = async (response: Response): Promise<Error> => {
   try {
     const errorData = await response.json();
     errorMessage = errorData.error?.message || errorMessage;
-  } catch (e) {
+  } catch {
     try {
       const errorText = await response.text();
       if (errorText) errorMessage = errorText;
@@ -334,7 +363,7 @@ export const chatCompletion = async (
   temperature: number = 0.7,
   maxTokens: number = 8192,
   responseFormat?: 'json_object',
-  timeout: number = 600000
+  timeout: number = 600000,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   const apiKey = checkApiKey('chat', resolvedModel);
@@ -345,7 +374,7 @@ export const chatCompletion = async (
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: maxTokens
+    max_tokens: maxTokens,
   };
 
   if (resolved?.providerId !== 'wldramallm') {
@@ -354,7 +383,8 @@ export const chatCompletion = async (
   if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }
-  const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
+  const maxConcurrency =
+    (resolved?.type === 'chat' ? resolved.params.maxConcurrency : undefined) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -376,7 +406,7 @@ export const chatCompletion = async (
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -405,7 +435,7 @@ export const chatCompletionStream = async (
   maxTokens: number = 8192,
   responseFormat: 'json_object' | undefined = undefined,
   timeout: number = 600000,
-  onDelta?: (delta: string) => void
+  onDelta?: (delta: string) => void,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   const apiKey = checkApiKey('chat', resolvedModel);
@@ -415,7 +445,7 @@ export const chatCompletionStream = async (
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
     max_tokens: maxTokens,
-    stream: true
+    stream: true,
   };
 
   if (resolved?.providerId !== 'wldramallm') {
@@ -424,7 +454,8 @@ export const chatCompletionStream = async (
   if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
     requestBody.response_format = { type: 'json_object' };
   }
-  const maxConcurrency = (resolved?.type === 'chat' && resolved.params.maxConcurrency) ?? 5;
+  const maxConcurrency =
+    (resolved?.type === 'chat' ? resolved.params.maxConcurrency : undefined) ?? 5;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -446,7 +477,7 @@ export const chatCompletionStream = async (
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -483,12 +514,15 @@ export const chatCompletionStream = async (
               }
               try {
                 const payload = JSON.parse(dataStr);
-                const delta = payload?.choices?.[0]?.delta?.content || payload?.choices?.[0]?.message?.content || '';
+                const delta =
+                  payload?.choices?.[0]?.delta?.content ||
+                  payload?.choices?.[0]?.message?.content ||
+                  '';
                 if (delta) {
                   fullText += delta;
                   onDelta?.(delta);
                 }
-              } catch (e) {
+              } catch {
                 // 忽略解析失败的行
               }
             }
@@ -498,16 +532,16 @@ export const chatCompletionStream = async (
         }
       }
 
-    clearTimeout(timeoutId);
-    return fullText;
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error(`请求超时（${timeout}ms）`);
+      clearTimeout(timeoutId);
+      return fullText;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`请求超时（${timeout}ms）`);
+      }
+      throw error;
     }
-    throw error;
-  }
-});
+  });
 };
 
 // ============================================
@@ -522,7 +556,7 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
     const apiBase = getApiBase('chat');
     const resolvedModel = getDefaultChatModelId();
     const requestModel = resolveRequestModel('chat', resolvedModel);
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -536,8 +570,8 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
         model: requestModel,
         messages: [{ role: 'user', content: '仅返回1' }],
         temperature: 0.1,
-        max_tokens: 5
-      })
+        max_tokens: 5,
+      }),
     });
 
     if (!response.ok) {
@@ -545,7 +579,7 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
       try {
         const errorData = await response.json();
         errorMessage = errorData.error?.message || errorMessage;
-      } catch (e) {
+      } catch {
         // ignore
       }
       return { success: false, message: errorMessage };
@@ -572,7 +606,7 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
 export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
   // 处理 BigModel 视频 URL 代理
   let proxyUrl = url;
-  
+
   if (url.includes('aigc-files.bigmodel.cn')) {
     const videoPath = url.replace('https://aigc-files.bigmodel.cn/', '');
     proxyUrl = `/bigmodel-files/${videoPath}`;
@@ -589,43 +623,56 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
   try {
     // 使用代理下载
     const response = await fetch(proxyUrl);
-    
+
     // 检查响应状态
     const contentType = response.headers.get('content-type') || '';
-    logger.debug(LogCategory.VIDEO, `[Video] 代理响应状态: ${response.status}, 类型: ${contentType}`);
-    
+    logger.debug(
+      LogCategory.VIDEO,
+      `[Video] 代理响应状态: ${response.status}, 类型: ${contentType}`,
+    );
+
     // 如果返回的不是视频类型（包括 HTML 错误页面）
-    const isVideoType = contentType.startsWith('video/') || 
-                        contentType.includes('octet-stream') || 
-                        contentType.includes('application/octet-stream');
-    
+    const isVideoType =
+      contentType.startsWith('video/') ||
+      contentType.includes('octet-stream') ||
+      contentType.includes('application/octet-stream');
+
     if (!isVideoType) {
       // 尝试读取响应内容看看是什么
       const text = await response.text();
-      logger.error(LogCategory.VIDEO, `[Video] 代理返回非视频类型，内容前500字符: ${text.substring(0, 500)}`);
-      
+      logger.error(
+        LogCategory.VIDEO,
+        `[Video] 代理返回非视频类型，内容前500字符: ${text.substring(0, 500)}`,
+      );
+
       // 如果内容是 HTML，说明代理有问题
       if (text.trim().startsWith('<') || text.includes('<!DOCTYPE')) {
         throw new Error(`视频下载失败: 代理返回 HTML 错误页面，可能是代理配置问题或服务器错误`);
       }
-      
+
       // 如果不是 HTML，可能是其他错误
       throw new Error(`视频下载失败: 代理返回非视频类型内容 (${contentType})`);
     }
-    
+
     if (!response.ok) {
       throw new Error(`下载视频失败: HTTP ${response.status}`);
     }
-    
+
     // 获取 Blob 并转换
     const blob = await response.blob();
-    logger.debug(LogCategory.VIDEO, `[Video] 获取到视频 Blob, 大小: ${blob.size}, 类型: ${blob.type}`);
-    
+    logger.debug(
+      LogCategory.VIDEO,
+      `[Video] 获取到视频 Blob, 大小: ${blob.size}, 类型: ${blob.type}`,
+    );
+
     return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        logger.debug(LogCategory.VIDEO, `[Video] 视频转换为 base64 成功, 长度: ${base64String.length}`);
+        logger.debug(
+          LogCategory.VIDEO,
+          `[Video] 视频转换为 base64 成功, 长度: ${base64String.length}`,
+        );
         resolve(base64String);
       };
       reader.onerror = () => {
@@ -635,7 +682,7 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
     });
   } catch (error: any) {
     logger.error(LogCategory.VIDEO, '视频URL转base64失败:', error);
-    
+
     // 如果是 CORS 错误，给出更明确的提示
     if (error.message?.includes('Failed to fetch') || error.message?.includes('CORS')) {
       throw new Error(`视频下载失败: 存在 CORS 跨域问题，请确保视频服务器允许跨域访问`);
@@ -647,7 +694,11 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
 /**
  * 调整图片尺寸到指定宽高（cover模式，保持比例居中裁剪）
  */
-export const resizeImageToSize = async (base64Data: string, targetWidth: number, targetHeight: number): Promise<string> => {
+export const resizeImageToSize = async (
+  base64Data: string,
+  targetWidth: number,
+  targetHeight: number,
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
