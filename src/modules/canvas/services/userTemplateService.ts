@@ -42,20 +42,7 @@ const PB_BASE = pb.baseUrl;
 function authHeaders(): Record<string, string> {
   const token = pb.authStore.token;
   if (!token) return {};
-  return { 'Authorization': `Bearer ${token}` };
-}
-
-async function collectionExists(): Promise<boolean> {
-  const token = pb.authStore.token;
-  if (!token) return false;
-  try {
-    const res = await fetch(`${PB_BASE}/api/collections/user_templates/records?perPage=1`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function syncToPb(template: StyleTemplate): Promise<void> {

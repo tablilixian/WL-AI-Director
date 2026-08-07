@@ -3,7 +3,7 @@
  * 包含 Veo（同步）和 Sora（异步）模式的视频生成
  */
 
-import { AspectRatio, VideoDuration } from "../../types";
+import { AspectRatio, VideoDuration } from '../../types';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
@@ -11,7 +11,6 @@ import {
   getApiBase,
   resolveModel,
   resolveRequestModel,
-  parseHttpError,
   convertVideoUrlToBase64,
   resizeImageToSize,
   getVeoModelName,
@@ -34,7 +33,7 @@ const generateVideoAsync = async (
   aspectRatio: AspectRatio = '16:9',
   duration: VideoDuration = 8,
   modelName: string = 'sora-2',
-  resolvedModel?: any
+  resolvedModel?: any,
 ): Promise<string> => {
   const references = [startImageBase64, endImageBase64].filter(Boolean) as string[];
   const resolvedModelName = modelName || 'sora-2';
@@ -44,7 +43,10 @@ const generateVideoAsync = async (
     throw new Error('Sora-2 不支持首尾帧模式，请只传一张参考图。');
   }
 
-  logger.debug(LogCategory.VIDEO, `🎬 使用异步模式生成视频 (${resolvedModelName}, ${aspectRatio}, ${duration}秒)...`);
+  logger.debug(
+    LogCategory.VIDEO,
+    `🎬 使用异步模式生成视频 (${resolvedModelName}, ${aspectRatio}, ${duration}秒)...`,
+  );
 
   const videoSize = getSoraVideoSize(aspectRatio);
   const [VIDEO_WIDTH, VIDEO_HEIGHT] = videoSize.split('x').map(Number);
@@ -52,13 +54,16 @@ const generateVideoAsync = async (
   logger.debug(LogCategory.VIDEO, `📐 视频尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
 
   const apiBase = getApiBase('video', resolvedModelName);
-  
+
   // 判断是否为 BigModel 模型
   const isBigModel = resolvedModel?.providerId === 'bigmodel';
-  logger.debug(LogCategory.VIDEO, `[Video] isBigModel: ${isBigModel}, providerId: ${resolvedModel?.providerId}`);
+  logger.debug(
+    LogCategory.VIDEO,
+    `[Video] isBigModel: ${isBigModel}, providerId: ${resolvedModel?.providerId}`,
+  );
 
   let createResponse: Response;
-  
+
   if (isBigModel) {
     // BigModel: 使用 JSON 格式
     const requestBody: any = {
@@ -66,30 +71,33 @@ const generateVideoAsync = async (
       prompt: prompt,
       duration: duration,
       size: videoSize,
-      movement_amplitude: 'auto'
+      movement_amplitude: 'auto',
     };
-    
+
     // 添加图片（支持 base64）
     if (references.length >= 1) {
-      if (references.length >= 2 && (resolvedModelName.includes('vidu2') || resolvedModelName.includes('reference'))) {
+      if (
+        references.length >= 2 &&
+        (resolvedModelName.includes('vidu2') || resolvedModelName.includes('reference'))
+      ) {
         requestBody.image_url = [
           `data:image/png;base64,${references[0].replace(/^data:image\/[^;]+;base64,/, '')}`,
-          `data:image/png;base64,${references[1].replace(/^data:image\/[^;]+;base64,/, '')}`
+          `data:image/png;base64,${references[1].replace(/^data:image\/[^;]+;base64,/, '')}`,
         ];
       } else {
         requestBody.image_url = `data:image/png;base64,${references[0].replace(/^data:image\/[^;]+;base64,/, '')}`;
       }
     }
-    
+
     logger.debug(LogCategory.VIDEO, `[BigModel] Request: ${JSON.stringify(requestBody)}`);
-    
+
     createResponse = await fetch(`${apiBase}${resolvedModel?.endpoint || '/v1/videos'}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
     });
   } else {
     // AntSK: 使用 FormData 格式
@@ -122,7 +130,7 @@ const generateVideoAsync = async (
     createResponse = await fetch(`${apiBase}${resolvedModel?.endpoint || '/v1/videos'}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: formData,
     });
@@ -134,14 +142,14 @@ const generateVideoAsync = async (
       const errorData = await createResponse.json();
       errorMessage = errorData.error?.message || errorMessage;
       logger.error(LogCategory.VIDEO, `❌ API 错误详情:`, JSON.stringify(errorData, null, 2));
-    } catch (e) {
+    } catch {
       const errorText = await createResponse.text();
       if (errorText) {
         errorMessage = errorText;
         logger.error(LogCategory.VIDEO, `❌ API 错误文本:`, errorText);
       }
     }
-    
+
     if (createResponse.status === 400) {
       logger.error(LogCategory.VIDEO, `❌ 400 错误 - 提示词: "${prompt.substring(0, 100)}..."`);
       logger.error(LogCategory.VIDEO, `❌ 400 错误 - 尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
@@ -172,18 +180,19 @@ const generateVideoAsync = async (
   let videoUrlFromStatus: string | null = null;
 
   while (Date.now() - startTime < maxPollingTime) {
-    await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    await new Promise((resolve) => setTimeout(resolve, pollingInterval));
 
     // BigModel 使用 /async-result/{id}，其他模型使用 /videos/{id}
-    const statusEndpoint = resolvedModel?.providerId === 'bigmodel' 
-      ? '/api/paas/v4/async-result' 
-      : (resolvedModel?.endpoint || '/v1/videos');
+    const statusEndpoint =
+      resolvedModel?.providerId === 'bigmodel'
+        ? '/api/paas/v4/async-result'
+        : resolvedModel?.endpoint || '/v1/videos';
     const statusResponse = await fetch(`${apiBase}${statusEndpoint}/${taskId}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      }
+        Accept: 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
 
     if (!statusResponse.ok) {
@@ -191,11 +200,11 @@ const generateVideoAsync = async (
       logger.error(LogCategory.VIDEO, `❌ 查询任务状态失败: HTTP ${statusResponse.status}`);
       logger.error(LogCategory.VIDEO, `❌ 错误详情: ${errorText}`);
       logger.error(LogCategory.VIDEO, `❌ 请求URL: ${apiBase}${statusEndpoint}/${taskId}`);
-      
+
       if (statusResponse.status === 400) {
         throw new Error(`查询任务状态失败 (400): ${errorText}`);
       }
-      
+
       logger.warn(LogCategory.VIDEO, '⚠️ 查询任务状态失败，继续重试...');
       continue;
     }
@@ -205,16 +214,25 @@ const generateVideoAsync = async (
     const status = statusData.task_status || statusData.status;
     const isBigModel = resolvedModel?.providerId === 'bigmodel';
 
-    logger.debug(LogCategory.VIDEO, `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`);
-    logger.debug(LogCategory.VIDEO, `📋 ${resolvedModelName} 完整响应数据: ${JSON.stringify(statusData, null, 2)}`);
+    logger.debug(
+      LogCategory.VIDEO,
+      `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`,
+    );
+    logger.debug(
+      LogCategory.VIDEO,
+      `📋 ${resolvedModelName} 完整响应数据: ${JSON.stringify(statusData, null, 2)}`,
+    );
 
     if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
       // BigModel 返回 video_result 数组
       if (isBigModel && statusData.video_result && statusData.video_result.length > 0) {
-        let rawUrl = statusData.video_result[0].url || statusData.video_result[0];
+        const rawUrl = statusData.video_result[0].url || statusData.video_result[0];
         // 如果是 UCloud URL，通过代理下载
         if (rawUrl.includes('ufileos.com')) {
-          const videoPath = rawUrl.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
+          const videoPath = rawUrl.replace(
+            'https://maas-watermark-prod-new.cn-wlcb.ufileos.com/',
+            '',
+          );
           videoUrlFromStatus = `/video-proxy/${videoPath}`;
           logger.debug(LogCategory.VIDEO, `[BigModel] 视频 URL (代理): ${videoUrlFromStatus}`);
         } else {
@@ -226,7 +244,11 @@ const generateVideoAsync = async (
         if (statusData.id && statusData.id.startsWith('video_')) {
           videoId = statusData.id;
         } else {
-          videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+          videoId =
+            statusData.output_video ||
+            statusData.video_id ||
+            statusData.outputs?.[0]?.id ||
+            statusData.id;
         }
         if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
           videoId = statusData.outputs[0];
@@ -235,7 +257,10 @@ const generateVideoAsync = async (
       logger.debug(LogCategory.VIDEO, `✅ 任务完成，视频: ${videoUrlFromStatus || videoId}`);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
-      logger.error(LogCategory.VIDEO, `❌ ${resolvedModelName} 任务失败，完整错误数据: ${JSON.stringify(statusData, null, 2)}`);
+      logger.error(
+        LogCategory.VIDEO,
+        `❌ ${resolvedModelName} 任务失败，完整错误数据: ${JSON.stringify(statusData, null, 2)}`,
+      );
       const errorMessage =
         statusData?.error?.message ||
         statusData?.error?.code ||
@@ -246,19 +271,26 @@ const generateVideoAsync = async (
         error: statusData?.error,
         message: statusData?.message,
         code: statusData?.error?.code,
-        fullData: statusData
+        fullData: statusData,
       });
       throw new Error(`视频生成失败: ${errorMessage}`);
     }
 
-    logger.debug(LogCategory.VIDEO, `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`);
+    logger.debug(
+      LogCategory.VIDEO,
+      `🔄 ${resolvedModelName} 任务状态: ${status}, 进度: ${statusData.progress}`,
+    );
 
     if (status === 'completed' || status === 'succeeded') {
       videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
       if (statusData.id && statusData.id.startsWith('video_')) {
         videoId = statusData.id;
       } else {
-        videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+        videoId =
+          statusData.output_video ||
+          statusData.video_id ||
+          statusData.outputs?.[0]?.id ||
+          statusData.id;
       }
       if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
         videoId = statusData.outputs[0];
@@ -267,10 +299,7 @@ const generateVideoAsync = async (
       break;
     } else if (status === 'failed' || status === 'error') {
       const errorMessage =
-        statusData?.error?.message ||
-        statusData?.error?.code ||
-        statusData?.message ||
-        '未知错误';
+        statusData?.error?.message || statusData?.error?.code || statusData?.message || '未知错误';
       throw new Error(`视频生成失败: ${errorMessage}`);
     }
   }
@@ -301,18 +330,21 @@ const generateVideoAsync = async (
       const downloadResponse = await fetch(`${apiBase}/v1/videos/${videoId}/content`, {
         method: 'GET',
         headers: {
-          'Accept': '*/*',
-          'Authorization': `Bearer ${apiKey}`
+          Accept: '*/*',
+          Authorization: `Bearer ${apiKey}`,
         },
-        signal: downloadController.signal
+        signal: downloadController.signal,
       });
 
       clearTimeout(downloadTimeoutId);
 
       if (!downloadResponse.ok) {
         if (downloadResponse.status >= 500 && attempt < maxDownloadRetries) {
-          logger.warn(LogCategory.VIDEO, `⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`);
-          await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+          logger.warn(
+            LogCategory.VIDEO,
+            `⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
           continue;
         }
         throw new Error(`下载视频失败: HTTP ${downloadResponse.status}`);
@@ -348,7 +380,7 @@ const generateVideoAsync = async (
       if (error.name === 'AbortError') {
         logger.warn(LogCategory.VIDEO, `⚠️ 下载超时，${5 * attempt}秒后重试...`);
         if (attempt < maxDownloadRetries) {
-          await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
           continue;
         }
         throw new Error('下载视频超时 (10分钟)');
@@ -357,7 +389,7 @@ const generateVideoAsync = async (
         throw error;
       }
       logger.warn(LogCategory.VIDEO, `⚠️ 下载出错: ${error.message}，${5 * attempt}秒后重试...`);
-      await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
     }
   }
 
@@ -378,7 +410,7 @@ export const generateVideo = async (
   endImageBase64?: string,
   model: string = 'veo',
   aspectRatio: AspectRatio = '16:9',
-  duration: VideoDuration = 8
+  duration: VideoDuration = 8,
 ): Promise<string> => {
   const resolvedVideoModel = resolveModel('video', model);
   const requestModel = resolveRequestModel('video', model) || model;
@@ -394,7 +426,7 @@ export const generateVideo = async (
         aspectRatio,
         duration: duration as any,
       },
-      resolvedVideoModel as any
+      resolvedVideoModel as any,
     );
     return resultUrl;
   }
@@ -416,7 +448,7 @@ export const generateVideo = async (
       aspectRatio,
       duration,
       requestModel || 'sora-2',
-      resolvedVideoModel
+      resolvedVideoModel,
     );
   }
 
@@ -433,9 +465,7 @@ export const generateVideo = async (
     actualModel = getVeoModelName(!!startImageBase64, '16:9');
   }
 
-  const messages: any[] = [
-    { role: 'user', content: prompt }
-  ];
+  const messages: any[] = [{ role: 'user', content: prompt }];
 
   const cleanStart = startImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
   const cleanEnd = endImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
@@ -445,8 +475,8 @@ export const generateVideo = async (
       { type: 'text', text: prompt },
       {
         type: 'image_url',
-        image_url: { url: `data:image/png;base64,${cleanStart}` }
-      }
+        image_url: { url: `data:image/png;base64,${cleanStart}` },
+      },
     ];
   }
 
@@ -454,7 +484,7 @@ export const generateVideo = async (
     if (Array.isArray(messages[0].content)) {
       messages[0].content.push({
         type: 'image_url',
-        image_url: { url: `data:image/png;base64,${cleanEnd}` }
+        image_url: { url: `data:image/png;base64,${cleanEnd}` },
       });
     }
   }
@@ -468,22 +498,21 @@ export const generateVideo = async (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: actualModel,
           messages: messages,
           stream: false,
-          temperature: 0.7
+          temperature: 0.7,
         }),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!res.ok) {
         if (res.status === 400) {
           throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
-        }
-        else if (res.status === 500) {
+        } else if (res.status === 500) {
           throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
         }
 
@@ -491,7 +520,7 @@ export const generateVideo = async (
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -510,7 +539,7 @@ export const generateVideo = async (
     const videoUrl = urlMatch ? urlMatch[1] : '';
 
     if (!videoUrl) {
-      throw new Error("视频生成失败 (No video URL returned)");
+      throw new Error('视频生成失败 (No video URL returned)');
     }
 
     logger.debug(LogCategory.VIDEO, '🎬 视频URL获取成功,正在转换为base64...');

@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
-import { unifiedImageService } from '../../../../services/unifiedImageService';
 import type { PanoramaGenerationMode } from '../types/canvas';
 
 interface PanoramaPanelProps {
@@ -20,8 +19,9 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasSelectedImage =
+    selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,7 +93,8 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
       } else {
         result = await canvasModelService.generateImage({
           prompt: prompt.trim() || '720 degree equirectangular panorama, seamless, wide angle view',
-          referenceImages: mode === 'image-to-panorama' && baseLayer?.src ? [baseLayer.src] : undefined,
+          referenceImages:
+            mode === 'image-to-panorama' && baseLayer?.src ? [baseLayer.src] : undefined,
           aspectRatio: '16:9',
           onProgress: (p) => setProgress(p),
         });
@@ -194,7 +195,9 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         justifyContent: 'center',
         background: 'rgba(0,0,0,0.5)',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         style={{
@@ -211,12 +214,20 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>720° 全景</h3>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 13, color: '#999', marginBottom: 6, display: 'block' }}>方式</label>
+          <label style={{ fontSize: 13, color: '#999', marginBottom: 6, display: 'block' }}>
+            方式
+          </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => setMode('image-to-panorama')} style={modeBtnStyle(mode === 'image-to-panorama')}>
+            <button
+              onClick={() => setMode('image-to-panorama')}
+              style={modeBtnStyle(mode === 'image-to-panorama')}
+            >
               基于此图生成
             </button>
-            <button onClick={() => setMode('text-to-panorama')} style={modeBtnStyle(mode === 'text-to-panorama')}>
+            <button
+              onClick={() => setMode('text-to-panorama')}
+              style={modeBtnStyle(mode === 'text-to-panorama')}
+            >
               文本生成
             </button>
             <button onClick={() => setMode('upload')} style={modeBtnStyle(mode === 'upload')}>
@@ -227,7 +238,9 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
 
         {mode === 'text-to-panorama' && (
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: '#999', marginBottom: 6, display: 'block' }}>提示词</label>
+            <label style={{ fontSize: 13, color: '#999', marginBottom: 6, display: 'block' }}>
+              提示词
+            </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -275,7 +288,11 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
             >
               {uploadPreview ? (
                 <div>
-                  <img src={uploadPreview} alt="preview" style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 4, marginBottom: 8 }} />
+                  <img
+                    src={uploadPreview}
+                    alt="preview"
+                    style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 4, marginBottom: 8 }}
+                  />
                   <div>{uploadFile?.name}</div>
                 </div>
               ) : (
@@ -289,7 +306,10 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         )}
 
         <div style={{ marginBottom: 16, fontSize: 12, color: '#888' }}>
-          {mode === 'image-to-panorama' && (hasSelectedImage ? `源图片: ${selectedLayer?.title || selectedLayerId?.slice(0, 8)}` : '请先选中一张图片')}
+          {mode === 'image-to-panorama' &&
+            (hasSelectedImage
+              ? `源图片: ${selectedLayer?.title || selectedLayerId?.slice(0, 8)}`
+              : '请先选中一张图片')}
           {mode === 'text-to-panorama' && 'AI 将以文本描述生成全景空间'}
           {mode === 'upload' && '支持 JPG / PNG 格式的等距柱状投影图'}
         </div>
@@ -297,7 +317,14 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         {isProcessing && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ height: 4, background: '#333', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ width: `${progress}%`, height: '100%', background: '#6366f1', transition: 'width 0.3s' }} />
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  background: '#6366f1',
+                  transition: 'width 0.3s',
+                }}
+              />
             </div>
             <div style={{ fontSize: 12, color: '#888', marginTop: 4, textAlign: 'center' }}>
               {progress > 0 ? `${progress}%` : '处理中...'}
@@ -323,7 +350,11 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
           </button>
           <button
             onClick={handleGenerate}
-            disabled={isProcessing || (mode === 'image-to-panorama' && !hasSelectedImage) || (mode === 'upload' && !uploadFile)}
+            disabled={
+              isProcessing ||
+              (mode === 'image-to-panorama' && !hasSelectedImage) ||
+              (mode === 'upload' && !uploadFile)
+            }
             style={{
               padding: '12px 24px',
               borderRadius: 8,

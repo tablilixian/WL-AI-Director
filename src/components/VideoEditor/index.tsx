@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Play, Pause, SkipBack, SkipForward, Scissors,
-  Download, Undo2, Redo2, Repeat, RotateCcw, FileJson, Sparkles, Volume2
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Scissors,
+  Download,
+  Undo2,
+  Redo2,
+  Repeat,
+  RotateCcw,
+  FileJson,
+  Sparkles,
+  Volume2,
 } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useTimelineStore } from '../../stores/timelineStore';
@@ -16,7 +27,6 @@ import { useHistoryCommands } from '../../hooks/useHistoryCommands';
 import { formatTime } from '../../utils/timeFormat';
 import { isTextClip } from '../../types/editor';
 import { ProjectState } from '../../../types';
-import { unifiedImageService } from '../../../services/unifiedImageService';
 import { ExportDialog } from './ExportDialog';
 import { GenerateSubtitleDialog } from './GenerateSubtitleDialog';
 import { BatchTTSDialog } from './BatchTTSDialog';
@@ -26,9 +36,7 @@ interface VideoEditorProps {
   project?: ProjectState;
 }
 
-export const VideoEditor: React.FC<VideoEditorProps> = ({
-  project,
-}) => {
+export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
   usePlayback();
 
   const {
@@ -45,7 +53,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     activeTool,
     setActiveTool,
     addTrack,
-    addClip,
+
     tracks,
     load,
     save,
@@ -62,7 +70,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const [showBatchTTS, setShowBatchTTS] = useState(false);
   const audioUnlockedRef = useRef(false);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
-  const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
 
   useEffect(() => {
     const el = previewWrapperRef.current;
@@ -90,16 +101,19 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const unlockAudio = useCallback(() => {
     if (audioUnlockedRef.current) return;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    ctx.resume().then(() => {
-      audioUnlockedRef.current = true;
-      console.log('[Audio] 已解锁');
-    }).catch(() => {});
+    ctx
+      .resume()
+      .then(() => {
+        audioUnlockedRef.current = true;
+        console.log('[Audio] 已解锁');
+      })
+      .catch(() => {});
   }, []);
 
   // ── Sync editorStore → timelineStore + playbackStore ──
   // (import, init, load, usePlayback animation all write to editorStore)
   const editorTrackHashRef = useRef('');
-  const editorTracks = useEditorStore(s => s.tracks);
+  const editorTracks = useEditorStore((s) => s.tracks);
   useEffect(() => {
     const hash = JSON.stringify(editorTracks);
     if (hash === editorTrackHashRef.current) return;
@@ -107,12 +121,18 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     useTimelineStore.setState({ tracks: JSON.parse(JSON.stringify(editorTracks)) });
   }, [editorTracks]);
 
-  const editorPlaybackRef = useRef({ currentTime: 0, duration: 0, playState: '', loop: false, playbackRate: 1 });
-  const edCurrentTime = useEditorStore(s => s.currentTime);
-  const edDuration = useEditorStore(s => s.duration);
-  const edPlayState = useEditorStore(s => s.playState);
-  const edLoop = useEditorStore(s => s.loop);
-  const edRate = useEditorStore(s => s.playbackRate);
+  const editorPlaybackRef = useRef({
+    currentTime: 0,
+    duration: 0,
+    playState: '',
+    loop: false,
+    playbackRate: 1,
+  });
+  const edCurrentTime = useEditorStore((s) => s.currentTime);
+  const edDuration = useEditorStore((s) => s.duration);
+  const edPlayState = useEditorStore((s) => s.playState);
+  const edLoop = useEditorStore((s) => s.loop);
+  const edRate = useEditorStore((s) => s.playbackRate);
   useEffect(() => {
     const ref = editorPlaybackRef.current;
     const changed =
@@ -122,7 +142,13 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       edLoop !== ref.loop ||
       edRate !== ref.playbackRate;
     if (!changed) return;
-    Object.assign(ref, { currentTime: edCurrentTime, duration: edDuration, playState: edPlayState, loop: edLoop, playbackRate: edRate });
+    Object.assign(ref, {
+      currentTime: edCurrentTime,
+      duration: edDuration,
+      playState: edPlayState,
+      loop: edLoop,
+      playbackRate: edRate,
+    });
     usePlaybackStore.setState({
       currentTime: edCurrentTime,
       duration: edDuration,
@@ -147,13 +173,13 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
       // Always ensure 3 default track types exist (video/audio/text)
       const tracksAfterLoad = useEditorStore.getState().tracks;
-      if (!tracksAfterLoad.some(t => t.type === 'video')) {
+      if (!tracksAfterLoad.some((t) => t.type === 'video')) {
         addTrack('video', '视频 1');
       }
-      if (!tracksAfterLoad.some(t => t.type === 'audio')) {
+      if (!tracksAfterLoad.some((t) => t.type === 'audio')) {
         addTrack('audio', '音频 1');
       }
-      if (!tracksAfterLoad.some(t => t.type === 'text')) {
+      if (!tracksAfterLoad.some((t) => t.type === 'text')) {
         addTrack('text', '字幕 1');
       }
     };
@@ -162,7 +188,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   }, [load, addTrack, clear, project?.id, initVersion]);
 
   useEffect(() => {
-    const hasClips = tracks.some(t => t.clips.length > 0);
+    const hasClips = tracks.some((t) => t.clips.length > 0);
     if (!hasClips) return;
 
     const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
@@ -179,9 +205,15 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   }, [save, tracks]);
 
   useEffect(() => {
-    console.log('[VideoEditor] 组件挂载，当前片段数:', tracks.reduce((sum, t) => sum + t.clips.length, 0));
+    console.log(
+      '[VideoEditor] 组件挂载，当前片段数:',
+      tracks.reduce((sum, t) => sum + t.clips.length, 0),
+    );
     return () => {
-      console.log('[VideoEditor] 组件卸载，当前片段数:', tracks.reduce((sum, t) => sum + t.clips.length, 0));
+      console.log(
+        '[VideoEditor] 组件卸载，当前片段数:',
+        tracks.reduce((sum, t) => sum + t.clips.length, 0),
+      );
     };
   }, []);
 
@@ -194,7 +226,11 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       if (e.code === 'Space') {
         e.preventDefault();
         if (playState !== 'playing') unlockAudio();
-        playState === 'playing' ? pause() : play();
+        if (playState === 'playing') {
+          pause();
+        } else {
+          play();
+        }
         return;
       }
 
@@ -217,12 +253,15 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
   const { splitAtPlayhead } = useTimelineSplit();
 
-  const handleToolChange = useCallback((tool: 'select' | 'trim' | 'split') => {
-    setActiveTool(tool);
-    if (tool === 'split') {
-      splitAtPlayhead();
-    }
-  }, [setActiveTool, splitAtPlayhead]);
+  const handleToolChange = useCallback(
+    (tool: 'select' | 'trim' | 'split') => {
+      setActiveTool(tool);
+      if (tool === 'split') {
+        splitAtPlayhead();
+      }
+    },
+    [setActiveTool, splitAtPlayhead],
+  );
 
   const handleExportJSON = useCallback(() => {
     const state = useEditorStore.getState();
@@ -232,13 +271,13 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
       updatedAt: state.updatedAt,
       duration: state.duration,
       zoom: state.zoom,
-      tracks: state.tracks.map(t => ({
+      tracks: state.tracks.map((t) => ({
         id: t.id,
         name: t.name,
         type: t.type,
         locked: t.locked,
         visible: t.visible,
-        clips: t.clips.map(c => ({
+        clips: t.clips.map((c) => ({
           id: c.id,
           name: c.name,
           sourceType: c.sourceType,
@@ -265,9 +304,9 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     console.log('[VideoEditor] 导出 JSON:', exportData);
   }, []);
 
-  const editingClipId = useTimelineStore(s => s.editingClipId);
-  const setEditingClipId = useTimelineStore(s => s.setEditingClipId);
-  const editingClip = tracks.flatMap(t => t.clips).find(c => c.id === editingClipId);
+  const editingClipId = useTimelineStore((s) => s.editingClipId);
+  const setEditingClipId = useTimelineStore((s) => s.setEditingClipId);
+  const editingClip = tracks.flatMap((t) => t.clips).find((c) => c.id === editingClipId);
 
   const handleOpenExport = useCallback(() => {
     setShowExport(true);
@@ -276,14 +315,35 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
   const handleReset = useCallback(async () => {
     if (window.confirm('确定要重置编辑器吗？这将清除所有编辑状态并重新导入项目视频。')) {
       await reset();
-      useTimelineStore.setState({ tracks: [], selectedClipIds: [], zoom: 50, scrollPosition: 0, activeTrackId: null, epoch: 0, _batchDepth: 0, _pendingEpochIncrement: false });
-      usePlaybackStore.setState({ currentTime: 0, duration: 0, playState: 'stopped', loop: false, playbackRate: 1 });
+      useTimelineStore.setState({
+        tracks: [],
+        selectedClipIds: [],
+        zoom: 50,
+        scrollPosition: 0,
+        activeTrackId: null,
+        epoch: 0,
+        _batchDepth: 0,
+        _pendingEpochIncrement: false,
+      });
+      usePlaybackStore.setState({
+        currentTime: 0,
+        duration: 0,
+        playState: 'stopped',
+        loop: false,
+        playbackRate: 1,
+      });
       useHistoryStore.getState().reset();
       importedRef.current = '';
       initializingRef.current = false;
       editorTrackHashRef.current = '';
-      Object.assign(editorPlaybackRef.current, { currentTime: 0, duration: 0, playState: '', loop: false, playbackRate: 1 });
-      setInitVersion(v => v + 1);
+      Object.assign(editorPlaybackRef.current, {
+        currentTime: 0,
+        duration: 0,
+        playState: '',
+        loop: false,
+        playbackRate: 1,
+      });
+      setInitVersion((v) => v + 1);
       console.log('[VideoEditor] 已重置编辑器');
     }
   }, [reset]);
@@ -305,16 +365,16 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
           <button
             onClick={() => {
               if (playState !== 'playing') unlockAudio();
-              playState === 'playing' ? pause() : play();
+              if (playState === 'playing') {
+                pause();
+              } else {
+                play();
+              }
             }}
             className="p-2 rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
             title={playState === 'playing' ? '暂停' : '播放'}
           >
-            {playState === 'playing' ? (
-              <Pause className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
+            {playState === 'playing' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
 
           <button
@@ -348,8 +408,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
             onChange={(e) => setPlaybackRate(Number(e.target.value))}
             className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-secondary)] focus:outline-none"
           >
-            {rates.map(rate => (
-              <option key={rate} value={rate}>{rate}x</option>
+            {rates.map((rate) => (
+              <option key={rate} value={rate}>
+                {rate}x
+              </option>
             ))}
           </select>
         </div>
@@ -469,7 +531,10 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0">
-          <div ref={previewWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black overflow-hidden min-h-0">
+          <div
+            ref={previewWrapperRef}
+            className="flex-1 flex items-center justify-center p-4 bg-black overflow-hidden min-h-0"
+          >
             {previewSize.width > 0 && (
               <PreviewCanvas width={previewSize.width} height={previewSize.height} />
             )}
@@ -493,10 +558,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         <Timeline />
       </div>
 
-      <ExportDialog
-        isOpen={showExport}
-        onClose={() => setShowExport(false)}
-      />
+      <ExportDialog isOpen={showExport} onClose={() => setShowExport(false)} />
 
       <GenerateSubtitleDialog
         isOpen={showSubtitleGen}
@@ -504,10 +566,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
         shots={project?.shots}
       />
 
-      <BatchTTSDialog
-        isOpen={showBatchTTS}
-        onClose={() => setShowBatchTTS(false)}
-      />
+      <BatchTTSDialog isOpen={showBatchTTS} onClose={() => setShowBatchTTS(false)} />
     </div>
   );
 };

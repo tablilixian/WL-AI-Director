@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ProjectState, Shot, Keyframe } from '../types';
+import { ProjectState, Keyframe } from '../types';
 import { InfiniteCanvas } from '../src/modules/canvas';
 import { canvasIntegrationService } from '../src/modules/canvas/services/canvasIntegrationService';
 import { useCanvasStore } from '../src/modules/canvas/hooks/useCanvasState';
@@ -20,13 +20,13 @@ interface StageCanvasProps {
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
 }
 
-const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => {
+const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showStyleTransfer, setShowStyleTransfer] = useState(false);
   const [showImageEdit, setShowImageEdit] = useState(false);
   const [showRemoveBackground, setShowRemoveBackground] = useState(false);
   const [showVariant, setShowVariant] = useState(false);
-  const [imageEditMode, setImageEditMode] = useState<'background' | 'expand'>('background');
+  const [imageEditMode] = useState<'background' | 'expand'>('background');
   const { layers, selectedLayerId } = useCanvasStore();
 
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -65,10 +65,10 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isProjectOpen]);
 
-  const getAllKeyframes = (): Keyframe[] => {
+  void ((): Keyframe[] => {
     if (!project.shots) return [];
-    return project.shots.flatMap(shot => shot.keyframes || []);
-  };
+    return project.shots.flatMap((shot) => shot.keyframes || []);
+  });
 
   const handleImportShots = async () => {
     if (!project.shots || project.shots.length === 0) {
@@ -76,26 +76,30 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       return;
     }
 
-    const shotsWithKeyframes = project.shots.filter(s => s.keyframes && s.keyframes.length > 0);
-    const keyframesWithImages = shotsWithKeyframes.flatMap(s => s.keyframes.filter(k => k.imageUrl));
+    const shotsWithKeyframes = project.shots.filter((s) => s.keyframes && s.keyframes.length > 0);
+    const keyframesWithImages = shotsWithKeyframes.flatMap((s) =>
+      s.keyframes.filter((k) => k.imageUrl),
+    );
 
     console.log('=== 分镜导入调试 ===');
     console.log('分镜总数:', project.shots.length);
     console.log('有关键帧的分镜:', shotsWithKeyframes.length);
     console.log('有图片的关键帧:', keyframesWithImages.length);
-    
+
     if (keyframesWithImages.length > 0) {
       console.log('第一个关键帧示例:', {
         id: keyframesWithImages[0].id,
         type: keyframesWithImages[0].type,
         status: keyframesWithImages[0].status,
         imageUrlLength: keyframesWithImages[0].imageUrl?.length,
-        imageUrlPrefix: keyframesWithImages[0].imageUrl?.substring(0, 50)
+        imageUrlPrefix: keyframesWithImages[0].imageUrl?.substring(0, 50),
       });
     }
 
     if (keyframesWithImages.length === 0) {
-      alert(`项目有 ${project.shots.length} 个分镜，但没有找到已生成的关键帧图片。\n\n请先在「导演工作台」生成关键帧图片后再导入。`);
+      alert(
+        `项目有 ${project.shots.length} 个分镜，但没有找到已生成的关键帧图片。\n\n请先在「导演工作台」生成关键帧图片后再导入。`,
+      );
       return;
     }
 
@@ -104,17 +108,17 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     setShowImportDialog(false);
   };
 
-
-
   const handleImportCharacters = async () => {
     if (!project.scriptData?.characters || project.scriptData.characters.length === 0) {
       alert('项目中没有角色数据');
       return;
     }
 
-    const charactersWithImage = project.scriptData.characters.filter(c => c.imageUrl);
+    const charactersWithImage = project.scriptData.characters.filter((c) => c.imageUrl);
     if (charactersWithImage.length === 0) {
-      alert(`项目有 ${project.scriptData.characters.length} 个角色，但没有生成定妆照。\n\n请先在「资产库」生成角色图片后再导入。`);
+      alert(
+        `项目有 ${project.scriptData.characters.length} 个角色，但没有生成定妆照。\n\n请先在「资产库」生成角色图片后再导入。`,
+      );
       return;
     }
 
@@ -137,7 +141,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         character.name,
         resolvedUrl,
         startX + col * (400 + spacing),
-        startY + row * (400 + spacing)
+        startY + row * (400 + spacing),
       );
       importedCount++;
     }
@@ -152,9 +156,11 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       return;
     }
 
-    const scenesWithImage = project.scriptData.scenes.filter(s => s.imageUrl);
+    const scenesWithImage = project.scriptData.scenes.filter((s) => s.imageUrl);
     if (scenesWithImage.length === 0) {
-      alert(`项目有 ${project.scriptData.scenes.length} 个场景，但没有生成概念图。\n\n请先在「资产库」生成场景图片后再导入。`);
+      alert(
+        `项目有 ${project.scriptData.scenes.length} 个场景，但没有生成概念图。\n\n请先在「资产库」生成场景图片后再导入。`,
+      );
       return;
     }
 
@@ -177,7 +183,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         `${scene.location} - ${scene.time}`,
         resolvedUrl,
         startX + col * (640 + spacing),
-        startY + row * (360 + spacing)
+        startY + row * (360 + spacing),
       );
       importedCount++;
     }
@@ -192,9 +198,11 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       return;
     }
 
-    const propsWithImage = project.scriptData.props.filter(p => p.imageUrl);
+    const propsWithImage = project.scriptData.props.filter((p) => p.imageUrl);
     if (propsWithImage.length === 0) {
-      alert(`项目有 ${project.scriptData.props.length} 个物品，但没有生成物品图。\n\n请先在「资产库」生成物品图片后再导入。`);
+      alert(
+        `项目有 ${project.scriptData.props.length} 个物品，但没有生成物品图。\n\n请先在「资产库」生成物品图片后再导入。`,
+      );
       return;
     }
 
@@ -217,7 +225,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         prop.name,
         resolvedUrl,
         startX + col * (300 + spacing),
-        startY + row * (300 + spacing)
+        startY + row * (300 + spacing),
       );
       importedCount++;
     }
@@ -228,7 +236,11 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
 
   async function resolveImageUrl(imageUrl: string): Promise<string> {
     if (!imageUrl) return '';
-    if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    if (
+      imageUrl.startsWith('data:') ||
+      imageUrl.startsWith('http://') ||
+      imageUrl.startsWith('https://')
+    ) {
       return imageUrl;
     }
     if (imageUrl.startsWith('local:')) {
@@ -262,7 +274,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   };
 
   const handleExportImages = async () => {
-    const imageLayers = layers.filter(l => l.type === 'image' && l.src);
+    const imageLayers = layers.filter((l) => l.type === 'image' && l.src);
     if (imageLayers.length === 0) {
       alert('画布中没有可导出的图片');
       return;
@@ -278,14 +290,14 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       alert(`已导出 ${imageLayers.length} 张图片`);
     }
   };
 
   const handleExportVideos = async () => {
-    const videoLayers = layers.filter(l => l.type === 'video' && l.src);
+    const videoLayers = layers.filter((l) => l.type === 'video' && l.src);
     if (videoLayers.length === 0) {
       alert('画布中没有可导出的视频');
       return;
@@ -297,7 +309,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         const layer = videoLayers[i];
         try {
           let videoUrl = layer.src;
-          
+
           if (layer.src.startsWith('video:')) {
             const { videoStorageService } = await import('../services/imageStorageService');
             const blob = await videoStorageService.getVideo(layer.src.replace('video:', ''));
@@ -312,12 +324,12 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          
+
           if (layer.src.startsWith('video:')) {
             URL.revokeObjectURL(videoUrl);
           }
-          
-          await new Promise(resolve => setTimeout(resolve, 100));
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (error) {
           console.error('导出视频失败:', error);
         }
@@ -332,7 +344,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       return;
     }
 
-    const layer = layers.find(l => l.id === selectedLayerId);
+    const layer = layers.find((l) => l.id === selectedLayerId);
     if (!layer) {
       alert('选中的图层不存在');
       return;
@@ -349,7 +361,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
     } else if (layer.type === 'video' && layer.src) {
       try {
         let videoUrl = layer.src;
-        
+
         if (layer.src.startsWith('video:')) {
           const { videoStorageService } = await import('../services/imageStorageService');
           const blob = await videoStorageService.getVideo(layer.src.replace('video:', ''));
@@ -364,11 +376,11 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         if (layer.src.startsWith('video:')) {
           URL.revokeObjectURL(videoUrl);
         }
-        
+
         alert('已导出选中的视频');
       } catch (error) {
         console.error('导出视频失败:', error);
@@ -419,7 +431,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       alert('画布截图已保存');
     } catch (error) {
       console.error('截图失败:', error);
@@ -428,8 +440,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
   };
 
   const handleExportAsZip = async () => {
-    const exportableLayers = layers.filter(l => 
-      (l.type === 'image' || l.type === 'video') && l.src
+    const exportableLayers = layers.filter(
+      (l) => (l.type === 'image' || l.type === 'video') && l.src,
     );
 
     if (exportableLayers.length === 0) {
@@ -472,13 +484,19 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
               filename = `${layer.title || `video_${i + 1}`}.mp4`;
             } else if (layer.src.startsWith('http')) {
               let downloadUrl = layer.src;
-              
+
               if (layer.src.includes('aigc-files.bigmodel.cn')) {
-                downloadUrl = layer.src.replace('https://aigc-files.bigmodel.cn', '/bigmodel-files');
+                downloadUrl = layer.src.replace(
+                  'https://aigc-files.bigmodel.cn',
+                  '/bigmodel-files',
+                );
               } else if (layer.src.includes('maas-watermark-prod-new.cn-wlcb.ufileos.com')) {
-                downloadUrl = layer.src.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com', '/video-proxy');
+                downloadUrl = layer.src.replace(
+                  'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',
+                  '/video-proxy',
+                );
               }
-              
+
               const response = await fetch(downloadUrl);
               blob = await response.blob();
               filename = `${layer.title || `video_${i + 1}`}.mp4`;
@@ -595,7 +613,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
             src: base64,
             imageId,
             title: file.name,
-            createdAt: Date.now()
+            createdAt: Date.now(),
           });
         };
         img.src = base64;
@@ -636,18 +654,80 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
               >
                 导出
-                <svg className={`w-3 h-3 transition-transform ${isExportOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg
+                  className={`w-3 h-3 transition-transform ${isExportOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
               {isExportOpen && (
-                <div className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => { handleExportImages(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出图片</button>
-                  <button onClick={() => { handleExportVideos(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出视频</button>
-                  <button onClick={() => { handleExportSelected(); setIsExportOpen(false); }} disabled={!selectedLayerId} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed">导出选中</button>
-                  <button onClick={() => { handleTakeScreenshot(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">画布截图</button>
-                  <button onClick={() => { handleExportToKeyframes(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出分镜</button>
-                  <button onClick={() => { handleExportAsZip(); setIsExportOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">打包下载</button>
+                <div
+                  className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => {
+                      handleExportImages();
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    导出图片
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportVideos();
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    导出视频
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportSelected();
+                      setIsExportOpen(false);
+                    }}
+                    disabled={!selectedLayerId}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    导出选中
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleTakeScreenshot();
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    画布截图
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportToKeyframes();
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    导出分镜
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportAsZip();
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    打包下载
+                  </button>
                 </div>
               )}
             </div>
@@ -658,15 +738,52 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-secondary)] text-xs rounded-lg hover:bg-[var(--bg-active)] transition-colors"
               >
                 项目
-                <svg className={`w-3 h-3 transition-transform ${isProjectOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg
+                  className={`w-3 h-3 transition-transform ${isProjectOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
               {isProjectOpen && (
-                <div className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => { handleSaveCanvas(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">保存画布</button>
-                  <button onClick={() => { handleExportJson(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">导出JSON</button>
-                  <button onClick={() => { handleRestoreCanvas(); setIsProjectOpen(false); }} className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">恢复画布</button>
+                <div
+                  className="absolute top-full right-0 mt-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 min-w-[140px] z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => {
+                      handleSaveCanvas();
+                      setIsProjectOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    保存画布
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportJson();
+                      setIsProjectOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    导出JSON
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRestoreCanvas();
+                      setIsProjectOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    恢复画布
+                  </button>
                 </div>
               )}
             </div>
@@ -713,7 +830,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-[var(--text-primary)]">角色定妆照</span>
                   <span className="text-xs text-[var(--text-muted)]">
-                    {project.scriptData?.characters?.filter(c => c.imageUrl).length || 0} / {project.scriptData?.characters?.length || 0} 个角色
+                    {project.scriptData?.characters?.filter((c) => c.imageUrl).length || 0} /{' '}
+                    {project.scriptData?.characters?.length || 0} 个角色
                   </span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
@@ -721,7 +839,9 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 </p>
                 <button
                   onClick={handleImportCharacters}
-                  disabled={!project.scriptData?.characters || project.scriptData.characters.length === 0}
+                  disabled={
+                    !project.scriptData?.characters || project.scriptData.characters.length === 0
+                  }
                   className="w-full py-2 bg-[var(--accent)] text-[var(--text-primary)] text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   导入角色
@@ -732,7 +852,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-[var(--text-primary)]">场景概念图</span>
                   <span className="text-xs text-[var(--text-muted)]">
-                    {project.scriptData?.scenes?.filter(s => s.imageUrl).length || 0} / {project.scriptData?.scenes?.length || 0} 个场景
+                    {project.scriptData?.scenes?.filter((s) => s.imageUrl).length || 0} /{' '}
+                    {project.scriptData?.scenes?.length || 0} 个场景
                   </span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
@@ -751,7 +872,8 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-[var(--text-primary)]">物品图</span>
                   <span className="text-xs text-[var(--text-muted)]">
-                    {project.scriptData?.props?.filter(p => p.imageUrl).length || 0} / {project.scriptData?.props?.length || 0} 个物品
+                    {project.scriptData?.props?.filter((p) => p.imageUrl).length || 0} /{' '}
+                    {project.scriptData?.props?.length || 0} 个物品
                   </span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
@@ -802,10 +924,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project, updateProject }) => 
       )}
 
       {showVariant && (
-        <VariantPanel
-          selectedLayerId={selectedLayerId}
-          onClose={() => setShowVariant(false)}
-        />
+        <VariantPanel selectedLayerId={selectedLayerId} onClose={() => setShowVariant(false)} />
       )}
     </div>
   );

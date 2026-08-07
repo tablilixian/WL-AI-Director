@@ -12,7 +12,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { PromptLayer } from './PromptLayer';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { ResolvedImage } from './ResolvedImage';
-import { Film, Orbit, BadgeHelp, Sparkles } from 'lucide-react';
+import { Film, Orbit, Sparkles } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 import { InlinePanoramaViewer } from './InlinePanoramaViewer';
 import { isLikelyPanoramaImage } from '../utils/panoramaUtils';
@@ -28,17 +28,17 @@ interface CanvasLayerProps {
 
 /**
  * 解析图片 URL 为显示用 URL（blob: 或 data:）
- * 
+ *
  * @deprecated 使用 unifiedImageService.resolveForDisplay() 代替
  */
 async function resolveImageSrc(src: string): Promise<string> {
   return await unifiedImageService.resolveForDisplay(src);
 }
 
-export const CanvasLayer: React.FC<CanvasLayerProps> = ({ 
-  layer, 
-  isSelected, 
-  onPromptLinkRequest, 
+export const CanvasLayer: React.FC<CanvasLayerProps> = ({
+  layer,
+  isSelected,
+
   onContextMenuRequest,
   onConnectionStart,
   onClick,
@@ -46,7 +46,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const { selectLayer, updateLayer, layers } = useCanvasStore();
   const { calculateSnap } = useSnapAlignment();
   const layerRef = useRef<HTMLDivElement>(null);
-  
+
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -57,16 +57,18 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [isZoomed, setIsZoomed] = useState(false);
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [showPanorama, setShowPanorama] = useState(false);
-  const [inline3d, setInline3d] = useState(layer.type === 'panorama' ? (layer as any).displayMode === '3d' : false);
+  const [inline3d, setInline3d] = useState(
+    layer.type === 'panorama' ? (layer as any).displayMode === '3d' : false,
+  );
   const [isProbablyPanorama, setIsProbablyPanorama] = useState(false);
   const imgNaturalRef = useRef({ w: 0, h: 0 });
-  
-  const dragStartRef = useRef({ 
-    x: 0, 
-    y: 0, 
-    layerX: 0, 
-    layerY: 0, 
-    childPositions: [] as { id: string; x: number; y: number }[] 
+
+  const dragStartRef = useRef({
+    x: 0,
+    y: 0,
+    layerX: 0,
+    layerY: 0,
+    childPositions: [] as { id: string; x: number; y: number }[],
   });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const dragMovedRef = useRef(false);
@@ -80,18 +82,27 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   useEffect(() => {
     if (layer.operationType === 'story-deduction-flow') return;
     let objectUrl: string | null = null;
-    
+
     const resolve = async () => {
       if (layer.type === 'image' || layer.type === 'drawing' || layer.type === 'panorama') {
-        console.log('[CanvasLayer] 解析图片/drawing:', layer.id, 'type:', layer.type, 'src:', layer.src?.substring(0, 30), 'imageId:', layer.imageId);
-        
+        console.log(
+          '[CanvasLayer] 解析图片/drawing:',
+          layer.id,
+          'type:',
+          layer.type,
+          'src:',
+          layer.src?.substring(0, 30),
+          'imageId:',
+          layer.imageId,
+        );
+
         let srcToResolve = layer.src;
-        
+
         // 如果 src 为空但有 imageId，则使用 imageId 构造 local 引用
         if (!srcToResolve && layer.imageId) {
           srcToResolve = `local:${layer.imageId}`;
         }
-        
+
         const resolved = await resolveImageSrc(srcToResolve);
         console.log('[CanvasLayer] 解析结果:', layer.id, 'resolved:', resolved?.substring(0, 50));
         setResolvedSrc(resolved);
@@ -110,9 +121,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         setResolvedSrc(layer.src);
       }
     };
-    
+
     resolve();
-    
+
     return () => {
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
@@ -120,76 +131,100 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     };
   }, [layer.src, layer.type, layer.imageId]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || e.shiftKey) return;
-    e.stopPropagation();
-    const multiSelect = e.ctrlKey || e.metaKey;
-    selectLayer(layer.id, multiSelect);
-    if (layer.locked) return;
-    // 交互元素（文本编辑/按钮等）按下时不启动拖拽，仅选中
-    if (isInteractiveTarget(e.target)) return;
-    dragMovedRef.current = false;
-    setIsDragging(true);
-    
-    const childLayers = layers.filter(l => l.parentId === layer.id);
-    const childPositions = childLayers.map(child => ({ id: child.id, x: child.x, y: child.y }));
-    
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      layerX: layer.x,
-      layerY: layer.y,
-      childPositions
-    };
-  }, [layer.id, layer.x, layer.y, layer.locked, layers, selectLayer, isInteractiveTarget]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0 || e.shiftKey) return;
+      e.stopPropagation();
+      const multiSelect = e.ctrlKey || e.metaKey;
+      selectLayer(layer.id, multiSelect);
+      if (layer.locked) return;
+      // 交互元素（文本编辑/按钮等）按下时不启动拖拽，仅选中
+      if (isInteractiveTarget(e.target)) return;
+      dragMovedRef.current = false;
+      setIsDragging(true);
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, corner: string) => {
-    if (layer.locked) return;
-    e.stopPropagation();
-    setIsResizing(true);
-    resizeStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      width: layer.width,
-      height: layer.height
-    };
-  }, [layer.width, layer.height, layer.locked]);
+      const childLayers = layers.filter((l) => l.parentId === layer.id);
+      const childPositions = childLayers.map((child) => ({ id: child.id, x: child.x, y: child.y }));
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsRenaming(true);
-    setNewTitle(layer.title);
-  }, [layer.title]);
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        layerX: layer.x,
+        layerY: layer.y,
+        childPositions,
+      };
+    },
+    [layer.id, layer.x, layer.y, layer.locked, layers, selectLayer, isInteractiveTarget],
+  );
 
-  const handleImageDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (layer.type === 'image' && resolvedSrc) {
-      setIsZoomed(true);
-    }
-  }, [layer.type, resolvedSrc]);
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, _corner: string) => {
+      if (layer.locked) return;
+      e.stopPropagation();
+      setIsResizing(true);
+      resizeStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        width: layer.width,
+        height: layer.height,
+      };
+    },
+    [layer.width, layer.height, layer.locked],
+  );
 
-  const handleVideoDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (layer.type === 'video' && resolvedSrc) {
-      setVideoPreviewOpen(true);
-    }
-  }, [layer.type, resolvedSrc]);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsRenaming(true);
+      setNewTitle(layer.title);
+    },
+    [layer.title],
+  );
 
-  const openPanoramaViewer = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (resolvedSrc && (layer.type === 'panorama' || (layer.type === 'image' && isProbablyPanorama))) {
-      setShowPanorama(true);
-    }
-  }, [layer.type, resolvedSrc, isProbablyPanorama]);
+  const handleImageDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (layer.type === 'image' && resolvedSrc) {
+        setIsZoomed(true);
+      }
+    },
+    [layer.type, resolvedSrc],
+  );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    selectLayer(layer.id);
-    if (onContextMenuRequest) {
-      onContextMenuRequest(layer.id, e.clientX, e.clientY);
-    }
-  }, [layer.id, selectLayer, onContextMenuRequest]);
+  const handleVideoDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (layer.type === 'video' && resolvedSrc) {
+        setVideoPreviewOpen(true);
+      }
+    },
+    [layer.type, resolvedSrc],
+  );
+
+  const openPanoramaViewer = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (
+        resolvedSrc &&
+        (layer.type === 'panorama' || (layer.type === 'image' && isProbablyPanorama))
+      ) {
+        setShowPanorama(true);
+      }
+    },
+    [layer.type, resolvedSrc, isProbablyPanorama],
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectLayer(layer.id);
+      if (onContextMenuRequest) {
+        onContextMenuRequest(layer.id, e.clientX, e.clientY);
+      }
+    },
+    [layer.id, selectLayer, onContextMenuRequest],
+  );
 
   const handleRenameSubmit = useCallback(() => {
     if (newTitle.trim()) {
@@ -198,14 +233,17 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     setIsRenaming(false);
   }, [layer.id, newTitle, updateLayer]);
 
-  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleRenameSubmit();
-    } else if (e.key === 'Escape') {
-      setIsRenaming(false);
-      setNewTitle(layer.title);
-    }
-  }, [handleRenameSubmit, layer.title]);
+  const handleRenameKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleRenameSubmit();
+      } else if (e.key === 'Escape') {
+        setIsRenaming(false);
+        setNewTitle(layer.title);
+      }
+    },
+    [handleRenameSubmit, layer.title],
+  );
 
   const handleTextEditSubmit = useCallback(() => {
     if (skipTextBlurRef.current) {
@@ -218,23 +256,26 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     setEditingText(null);
   }, [editingText, layer.id, updateLayer]);
 
-  const handleTextEditKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleTextEditSubmit();
-    } else if (e.key === 'Escape') {
-      skipTextBlurRef.current = true;
-      setEditingText(null);
-    }
-  }, [handleTextEditSubmit]);
+  const handleTextEditKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleTextEditSubmit();
+      } else if (e.key === 'Escape') {
+        skipTextBlurRef.current = true;
+        setEditingText(null);
+      }
+    },
+    [handleTextEditSubmit],
+  );
 
   useEffect(() => {
     if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        const deltaX = (e.clientX - dragStartRef.current.x);
-        const deltaY = (e.clientY - dragStartRef.current.y);
+        const deltaX = e.clientX - dragStartRef.current.x;
+        const deltaY = e.clientY - dragStartRef.current.y;
         // 移动超过阈值视为真实拖动，用于抑制鼠标抬起后的 click，避免拖完后误触发图层点击
         if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
           dragMovedRef.current = true;
@@ -245,10 +286,10 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         updateLayer(layer.id, { x: snapped.x, y: snapped.y });
 
         if (layer.type === 'group' && dragStartRef.current.childPositions.length > 0) {
-          dragStartRef.current.childPositions.forEach(childPos => {
-            updateLayer(childPos.id, { 
-              x: childPos.x + deltaX, 
-              y: childPos.y + deltaY 
+          dragStartRef.current.childPositions.forEach((childPos) => {
+            updateLayer(childPos.id, {
+              x: childPos.x + deltaX,
+              y: childPos.y + deltaY,
             });
           });
         }
@@ -284,17 +325,26 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         const f = layer.generationPrompt ? JSON.parse(layer.generationPrompt) : null;
         if (f?.phase) flowPhase = f.phase;
         if (f?.sourceLayerId) srcLayerId = f.sourceLayerId;
-      } catch {}
+      } catch {
+        /* empty */
+      }
       const isDone = flowPhase === 'done';
-      const phaseIdx = ['select', 'analyze', 'deduce', 'storyboard', 'video', 'done'].indexOf(flowPhase);
+      const phaseIdx = ['select', 'analyze', 'deduce', 'storyboard', 'video', 'done'].indexOf(
+        flowPhase,
+      );
       const stepLabels = ['选择', '分析', '推演', '宫格', '视频'];
-      const srcLayer = srcLayerId ? layers.find(l => l.id === srcLayerId) : null;
+      const srcLayer = srcLayerId ? layers.find((l) => l.id === srcLayerId) : null;
 
       return (
-        <div className={`w-full h-full rounded-lg overflow-hidden relative ${isDone ? 'border-2 border-green-500' : 'border-2 border-gray-600'}`}>
+        <div
+          className={`w-full h-full rounded-lg overflow-hidden relative ${isDone ? 'border-2 border-green-500' : 'border-2 border-gray-600'}`}
+        >
           {/* 源图背景 (100% 不透明) */}
           {srcLayer?.src && (
-            <ResolvedImage src={srcLayer.src} className="absolute inset-0 w-full h-full object-cover" />
+            <ResolvedImage
+              src={srcLayer.src}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
           )}
           {/* 暗色渐变遮罩保证文字可读 */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-gray-900/40" />
@@ -309,11 +359,19 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             {!isDone && (
               <div className="space-y-1">
                 <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${((phaseIdx + 1) / 5) * 100}%` }} />
+                  <div
+                    className="h-full bg-amber-500 rounded-full"
+                    style={{ width: `${((phaseIdx + 1) / 5) * 100}%` }}
+                  />
                 </div>
                 <div className="flex items-center gap-1">
                   {stepLabels.map((label, i) => (
-                    <div key={i} className={`flex-1 text-[6px] text-center font-medium drop-shadow ${i <= phaseIdx ? 'text-amber-300' : 'text-gray-400'}`}>{label}</div>
+                    <div
+                      key={i}
+                      className={`flex-1 text-[6px] text-center font-medium drop-shadow ${i <= phaseIdx ? 'text-amber-300' : 'text-gray-400'}`}
+                    >
+                      {label}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -333,9 +391,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
-              <div className="text-gray-500 text-sm">
-                {layer.src ? '加载中...' : '等待图片...'}
-              </div>
+              <div className="text-gray-500 text-sm">{layer.src ? '加载中...' : '等待图片...'}</div>
             </div>
           );
         }
@@ -346,12 +402,12 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
               alt={layer.title}
               className="w-full h-full object-contain"
               draggable={false}
-              onError={(e) => {
+              onError={(_e) => {
                 console.error('图片加载失败:', {
                   layerId: layer.id,
                   title: layer.title,
                   srcLength: layer.src?.length,
-                  srcPrefix: layer.src?.substring(0, 50)
+                  srcPrefix: layer.src?.substring(0, 50),
                 });
               }}
               onLoad={(e) => {
@@ -365,7 +421,10 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             {isProbablyPanorama && (
               <div
                 className="absolute top-1.5 right-1.5 bg-purple-600/80 text-white font-semibold rounded flex items-center gap-1 cursor-pointer"
-                onClick={(e) => { e.stopPropagation(); setShowPanorama(true); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPanorama(true);
+                }}
                 title="此图片看起来像全景图，点击以 720° 模式查看"
                 style={{
                   fontSize: `${Math.max(11, Math.round(layer.height / 28))}px`,
@@ -464,18 +523,14 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             className="w-full h-full border-2 border-dashed rounded-lg"
             style={{ borderColor: layer.color || '#6366f1' }}
           >
-            <span className="absolute top-2 left-2 text-xs text-gray-400">
-              {layer.title}
-            </span>
+            <span className="absolute top-2 left-2 text-xs text-gray-400">{layer.title}</span>
           </div>
         );
       case 'drawing':
         if (!resolvedSrc) {
           return (
             <div className="w-full h-full flex items-center justify-center bg-transparent">
-              <div className="text-gray-500 text-sm">
-                {layer.src ? '加载中...' : '绘制中...'}
-              </div>
+              <div className="text-gray-500 text-sm">{layer.src ? '加载中...' : '绘制中...'}</div>
             </div>
           );
         }
@@ -528,7 +583,10 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
             <button
               className="absolute bottom-1.5 right-1.5 bg-black/50 hover:bg-black/70 text-white font-semibold rounded flex items-center gap-1 transition-colors"
               title="内嵌 3D 查看"
-              onClick={(e) => { e.stopPropagation(); setInline3d(true); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setInline3d(true);
+              }}
               style={{
                 fontSize: `${Math.max(11, Math.round(layer.height / 28))}px`,
                 padding: `${Math.round(layer.height / 90)}px ${Math.round(layer.height / 50)}px`,
@@ -540,12 +598,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           </div>
         );
       case 'prompt':
-        return (
-          <PromptLayer
-            layer={layer as PromptLayerData}
-            isSelected={isSelected}
-          />
-        );
+        return <PromptLayer layer={layer as PromptLayerData} isSelected={isSelected} />;
       default:
         return null;
     }
@@ -565,7 +618,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         height: layer.height,
         zIndex: layer.zIndex ?? (isSelected ? 100 : 10),
         opacity: layer.opacity ?? 1,
-        display: layer.visible === false ? 'none' : 'block'
+        display: layer.visible === false ? 'none' : 'block',
       }}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
@@ -609,111 +662,140 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
 
       {renderContent()}
 
-      {showPanorama && resolvedSrc && createPortal(
-        <PanoramaViewer
-          panoramaSrc={resolvedSrc}
-          layerId={layer.type === 'panorama' ? layer.id : undefined}
-          initialCamera={(layer as any).cameraState}
-          onClose={() => setShowPanorama(false)}
-          onScreenshots={async (results) => {
-            const store = useCanvasStore.getState();
-            const pending: LayerData[] = [];
-            await Promise.all(results.map(async (r, i) => {
-              const x = layer.x + (i % 4) * 180;
-              const y = layer.y + layer.height + 60 + Math.floor(i / 4) * 160;
-              try {
-                const blob = await unifiedImageService.base64ToBlob(r.dataUrl);
-                const imageId = unifiedImageService.generateImageId();
-                await unifiedImageService.saveImage(imageId, blob);
-                pending.push({
-                  id: crypto.randomUUID(),
-                  type: 'image',
-                  x, y, width: 320, height: 180,
-                  src: `local:${imageId}`,
-                  imageId,
-                  title: `全景截图 - ${r.label}`,
-                  createdAt: Date.now(),
-                  operationType: 'panorama-screenshot',
-                } as LayerData);
-              } catch (e) {
-                console.error('[CanvasLayer] 截图保存失败:', e);
-                pending.push({
-                  id: crypto.randomUUID(),
-                  type: 'image',
-                  x, y, width: 320, height: 180,
-                  src: r.dataUrl,
-                  title: `全景截图 - ${r.label}`,
-                  createdAt: Date.now(),
-                  operationType: 'panorama-screenshot',
-                } as LayerData);
-              }
-            }));
-            store.addLayers(pending);
-            setShowPanorama(false);
-          }}
-        />,
-        document.body
-      )}
+      {showPanorama &&
+        resolvedSrc &&
+        createPortal(
+          <PanoramaViewer
+            panoramaSrc={resolvedSrc}
+            layerId={layer.type === 'panorama' ? layer.id : undefined}
+            initialCamera={(layer as any).cameraState}
+            onClose={() => setShowPanorama(false)}
+            onScreenshots={async (results) => {
+              const store = useCanvasStore.getState();
+              const pending: LayerData[] = [];
+              await Promise.all(
+                results.map(async (r, i) => {
+                  const x = layer.x + (i % 4) * 180;
+                  const y = layer.y + layer.height + 60 + Math.floor(i / 4) * 160;
+                  try {
+                    const blob = await unifiedImageService.base64ToBlob(r.dataUrl);
+                    const imageId = unifiedImageService.generateImageId();
+                    await unifiedImageService.saveImage(imageId, blob);
+                    pending.push({
+                      id: crypto.randomUUID(),
+                      type: 'image',
+                      x,
+                      y,
+                      width: 320,
+                      height: 180,
+                      src: `local:${imageId}`,
+                      imageId,
+                      title: `全景截图 - ${r.label}`,
+                      createdAt: Date.now(),
+                      operationType: 'panorama-screenshot',
+                    } as LayerData);
+                  } catch (e) {
+                    console.error('[CanvasLayer] 截图保存失败:', e);
+                    pending.push({
+                      id: crypto.randomUUID(),
+                      type: 'image',
+                      x,
+                      y,
+                      width: 320,
+                      height: 180,
+                      src: r.dataUrl,
+                      title: `全景截图 - ${r.label}`,
+                      createdAt: Date.now(),
+                      operationType: 'panorama-screenshot',
+                    } as LayerData);
+                  }
+                }),
+              );
+              store.addLayers(pending);
+              setShowPanorama(false);
+            }}
+          />,
+          document.body,
+        )}
 
-      {isZoomed && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center cursor-zoom-out"
-          onClick={() => setIsZoomed(false)}
-        >
-          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
-            <img
-              src={resolvedSrc}
-              alt={layer.title}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              draggable={false}
-            />
-            <button
-              className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
-              {layer.title}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {videoPreviewOpen && resolvedSrc && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
-          onClick={() => setVideoPreviewOpen(false)}
-        >
+      {isZoomed &&
+        createPortal(
           <div
-            className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center cursor-zoom-out"
+            onClick={() => setIsZoomed(false)}
           >
-            <video
-              src={resolvedSrc}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl bg-black"
-              controls
-              autoPlay
-              loop
-            />
-            <button
-              className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setVideoPreviewOpen(false); }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
-              {layer.title}
+            <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
+              <img
+                src={resolvedSrc}
+                alt={layer.title}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                draggable={false}
+              />
+              <button
+                className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsZoomed(false);
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
+                {layer.title}
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
+
+      {videoPreviewOpen &&
+        resolvedSrc &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+            onClick={() => setVideoPreviewOpen(false)}
+          >
+            <div
+              className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <video
+                src={resolvedSrc}
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl bg-black"
+                controls
+                autoPlay
+                loop
+              />
+              <button
+                className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVideoPreviewOpen(false);
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-xs text-white">
+                {layer.title}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {isSelected && !isResizing && !layer.locked && (
         <>
@@ -727,20 +809,28 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
       {layer.locked && (
         <div className="absolute top-1 right-1 p-1 bg-gray-800/80 rounded">
           <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
       )}
 
       {isSelected && (
         <>
-          <div 
+          <div
             className="absolute -top-6 left-0 px-2 py-0.5 bg-blue-500 text-white text-xs rounded truncate max-w-full flex items-center gap-1 cursor-pointer"
             onDoubleClick={handleDoubleClick}
           >
             {layer.locked && (
               <svg className="w-3 h-3 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                  clipRule="evenodd"
+                />
               </svg>
             )}
             {isRenaming ? (
@@ -769,7 +859,9 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         title="输入连线"
       >
         <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
         </div>
       </div>
       {/* 输出连线把手：仅图片/全景图可作为连线源，其余图层不显示 */}
@@ -787,7 +879,19 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           }}
         >
           <div className="w-8 h-8 rounded-full bg-gray-600/80 border-2 border-gray-500 flex items-center justify-center transition-all cursor-crosshair hover:bg-purple-500 hover:border-purple-400 hover:scale-125">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            <svg
+              className="w-4 h-4 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
           </div>
         </div>
       )}

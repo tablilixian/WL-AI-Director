@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Edit2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Character } from '../../types';
 import InlineEditor from './InlineEditor';
 
@@ -18,7 +18,7 @@ const CharacterList: React.FC<Props> = ({
   editingPrompt,
   onEdit,
   onSave,
-  onCancel
+  onCancel,
 }) => {
   return (
     <section>
@@ -26,12 +26,17 @@ const CharacterList: React.FC<Props> = ({
         <Users className="w-3 h-3" /> 演员表
       </h3>
       <div className="space-y-3">
-        {characters.map(c => (
-          <div key={c.id} className="group cursor-default p-3 rounded-lg hover:bg-[var(--nav-hover-bg)] transition-colors border border-transparent hover:border-[var(--border-primary)]">
+        {characters.map((c) => (
+          <div
+            key={c.id}
+            className="group cursor-default p-3 rounded-lg hover:bg-[var(--nav-hover-bg)] transition-colors border border-transparent hover:border-[var(--border-primary)]"
+          >
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-[var(--text-secondary)] font-medium group-hover:text-[var(--text-primary)]">{c.name}</span>
+                  <span className="text-sm text-[var(--text-secondary)] font-medium group-hover:text-[var(--text-primary)]">
+                    {c.name}
+                  </span>
                   <span className="text-[10px] text-[var(--text-muted)] font-mono">{c.gender}</span>
                 </div>
                 <InlineEditor

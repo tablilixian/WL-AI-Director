@@ -3,21 +3,10 @@
  * 独立的模型管理界面
  */
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Settings, MessageSquare, Image, Video, Key } from 'lucide-react';
-import { ModelType, ModelDefinition } from '../../types/model';
-import {
-  getRegistryState,
-  getModels,
-  getActiveModelsConfig,
-  setActiveModel,
-  updateModel,
-  registerModel,
-  removeModel,
-  getGlobalApiKey,
-  setGlobalApiKey,
-} from '../../services/modelRegistry';
-import { verifyApiKey } from '../../services/modelService';
+import { ModelType } from '../../types/model';
+import {} from '../../services/modelRegistry';
 import ModelList from './ModelList';
 import GlobalSettings from './GlobalSettings';
 
@@ -34,7 +23,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
   const modalRef = useRef<HTMLDivElement | null>(null);
   const pointerDownOutsideRef = useRef(false);
 
-  const refresh = () => setRefreshKey(k => k + 1);
+  const refresh = () => setRefreshKey((k) => k + 1);
 
   if (!isOpen) return null;
 
@@ -46,12 +35,14 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
   ];
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
       onPointerDown={(e) => {
         // 仅当按下发生在弹窗外部时，才允许后续抬起关闭。
         const targetNode = e.target as Node;
-        pointerDownOutsideRef.current = modalRef.current ? !modalRef.current.contains(targetNode) : true;
+        pointerDownOutsideRef.current = modalRef.current
+          ? !modalRef.current.contains(targetNode)
+          : true;
       }}
       onPointerUp={(e) => {
         // 避免在弹窗内选中文本/拖拽到外部抬起时误触发关闭
@@ -69,7 +60,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
       <div className="absolute inset-0 bg-[var(--bg-base)]/80 backdrop-blur-sm" />
 
       {/* 弹窗 */}
-      <div 
+      <div
         className="relative z-10 w-full max-w-2xl mx-4 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 max-h-[85vh] flex flex-col"
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
@@ -82,7 +73,9 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">模型配置</h2>
-              <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono">MODEL CONFIGURATION</p>
+              <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono">
+                MODEL CONFIGURATION
+              </p>
             </div>
           </div>
           <button
@@ -116,18 +109,13 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
           {activeTab === 'global' ? (
             <GlobalSettings onRefresh={refresh} />
           ) : (
-            <ModelList 
-              type={activeTab as ModelType} 
-              onRefresh={refresh}
-            />
+            <ModelList type={activeTab as ModelType} onRefresh={refresh} />
           )}
         </div>
 
         {/* 底部 */}
         <div className="px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--bg-sunken)] rounded-b-xl flex-shrink-0 flex items-center justify-between">
-          <p className="text-[10px] text-[var(--text-muted)] font-mono">
-            配置仅保存在本地浏览器
-          </p>
+          <p className="text-[10px] text-[var(--text-muted)] font-mono">配置仅保存在本地浏览器</p>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded-lg hover:bg-[var(--btn-primary-hover)] transition-colors"

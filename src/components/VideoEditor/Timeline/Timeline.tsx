@@ -8,7 +8,7 @@ import { useEditorStore } from '../../../stores/editorStore';
 import { useTimelineStore } from '../../../stores/timelineStore';
 import { usePlaybackStore } from '../../../stores/playbackStore';
 import { useSnapStore } from '../../../stores/snapStore';
-import { TRACK_HEIGHT, TRACK_HEADER_WIDTH, DEFAULT_ZOOM } from '../../../types/editor';
+import { TRACK_HEIGHT } from '../../../types/editor';
 import { timeToPixels, pixelsToTime, calculateTimelineWidth } from '../../../utils/timeCalculation';
 import { formatTime } from '../../../utils/timeFormat';
 import { TrackHeader } from './TrackHeader';
@@ -35,19 +35,19 @@ export const Timeline: React.FC<TimelineProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const tracks = useTimelineStore(s => s.tracks);
-  const zoom = useTimelineStore(s => s.zoom);
-  const scrollPosition = useTimelineStore(s => s.scrollPosition);
-  const selectedClipIds = useTimelineStore(s => s.selectedClipIds);
-  const setZoom = useTimelineStore(s => s.setZoom);
-  const setScrollPosition = useTimelineStore(s => s.setScrollPosition);
+  const tracks = useTimelineStore((s) => s.tracks);
+  const zoom = useTimelineStore((s) => s.zoom);
+  const scrollPosition = useTimelineStore((s) => s.scrollPosition);
+  const selectedClipIds = useTimelineStore((s) => s.selectedClipIds);
+  const setZoom = useTimelineStore((s) => s.setZoom);
+  const setScrollPosition = useTimelineStore((s) => s.setScrollPosition);
 
-  const currentTime = usePlaybackStore(s => s.currentTime);
-  const duration = usePlaybackStore(s => s.duration);
-  const playState = usePlaybackStore(s => s.playState);
-  const seek = usePlaybackStore(s => s.seek);
+  const currentTime = usePlaybackStore((s) => s.currentTime);
+  const duration = usePlaybackStore((s) => s.duration);
+  const playState = usePlaybackStore((s) => s.playState);
+  const seek = usePlaybackStore((s) => s.seek);
 
-  const activeSnap = useSnapStore(s => s.activeSnap);
+  const activeSnap = useSnapStore((s) => s.activeSnap);
 
   // Sync timelineStore → editorStore for backward compat (auto-save, export)
   const timelineTrackHashRef = useRef('');
@@ -76,34 +76,46 @@ export const Timeline: React.FC<TimelineProps> = ({
   }, [duration, zoom, viewportWidth]);
 
   // 处理滚动
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollPosition(e.currentTarget.scrollLeft);
-  }, [setScrollPosition]);
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      setScrollPosition(e.currentTarget.scrollLeft);
+    },
+    [setScrollPosition],
+  );
 
   // 处理缩放
-  const handleZoomChange = useCallback((delta: number) => {
-    const newZoom = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
-    setZoom(newZoom);
-  }, [zoom, minZoom, maxZoom, setZoom]);
+  const handleZoomChange = useCallback(
+    (delta: number) => {
+      const newZoom = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
+      setZoom(newZoom);
+    },
+    [zoom, minZoom, maxZoom, setZoom],
+  );
 
   // 处理滚轮缩放
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      handleZoomChange(-e.deltaY * 0.5);
-    }
-  }, [handleZoomChange]);
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        handleZoomChange(-e.deltaY * 0.5);
+      }
+    },
+    [handleZoomChange],
+  );
 
   // 处理时间线点击跳转
-  const handleTimelineClick = useCallback((e: React.MouseEvent) => {
-    if (!contentRef.current) return;
+  useCallback(
+    (e: React.MouseEvent) => {
+      if (!contentRef.current) return;
 
-    const rect = contentRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left + scrollPosition;
-    const clickTime = pixelsToTime(Math.max(0, x), zoom);
+      const rect = contentRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left + scrollPosition;
+      const clickTime = pixelsToTime(Math.max(0, x), zoom);
 
-    seek(Math.min(clickTime, duration));
-  }, [scrollPosition, zoom, seek, duration]);
+      seek(Math.min(clickTime, duration));
+    },
+    [scrollPosition, zoom, seek, duration],
+  );
 
   // 对齐选中片段到最早的位置
   const handleAlignClips = useCallback(() => {
@@ -118,7 +130,7 @@ export const Timeline: React.FC<TimelineProps> = ({
       }
     }
     if (clipTimes.length < 2) return;
-    const earliest = Math.min(...clipTimes.map(c => c.time));
+    const earliest = Math.min(...clipTimes.map((c) => c.time));
     withBatch(() => {
       for (const { id } of clipTimes) {
         updateClip(id, { startTime: earliest });
@@ -162,11 +174,10 @@ export const Timeline: React.FC<TimelineProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [seek, duration, handleZoomChange]);
 
-  
   const playheadX = timeToPixels(currentTime, zoom) - scrollPosition;
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="flex flex-col bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] select-none"
       style={{ height: Math.max(250, tracks.length * TRACK_HEIGHT + 80) }}
@@ -185,9 +196,7 @@ export const Timeline: React.FC<TimelineProps> = ({
               onChange={(e) => setZoom(Number(e.target.value))}
               className="w-24 h-1 bg-[var(--bg-hover)] rounded appearance-none cursor-pointer"
             />
-            <span className="text-xs text-[var(--text-secondary)] font-mono">
-              {zoom}px/s
-            </span>
+            <span className="text-xs text-[var(--text-secondary)] font-mono">{zoom}px/s</span>
           </div>
 
           <SnapControls />
@@ -217,29 +226,16 @@ export const Timeline: React.FC<TimelineProps> = ({
       </div>
 
       {/* 时间线内容 */}
-      <div 
-        className="flex-1 overflow-x-auto overflow-y-auto"
-        onScroll={handleScroll}
-      >
-        <div
-          ref={contentRef}
-          className="relative min-h-full flex"
-          style={{ width: totalWidth }}
-        >
+      <div className="flex-1 overflow-x-auto overflow-y-auto" onScroll={handleScroll}>
+        <div ref={contentRef} className="relative min-h-full flex" style={{ width: totalWidth }}>
           <div className="sticky left-0 z-20 flex-shrink-0">
             <div className="h-8 border-b border-[var(--border-subtle)]" />
             {tracks.map((track) => (
-              <TrackHeader
-                key={track.id}
-                track={track}
-                height={TRACK_HEIGHT}
-              />
+              <TrackHeader key={track.id} track={track} height={TRACK_HEIGHT} />
             ))}
           </div>
 
-          <div
-            className="flex-1 relative"
-          >
+          <div className="flex-1 relative">
             <Ruler
               width={totalWidth}
               height={32}

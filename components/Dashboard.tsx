@@ -1,7 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Database, Settings, Sun, Moon, LogOut, User, RefreshCw } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  Folder,
+  ChevronRight,
+  Calendar,
+  AlertTriangle,
+  X,
+  HelpCircle,
+  Cpu,
+  Archive,
+  Database,
+  Settings,
+  Sun,
+  Moon,
+  LogOut,
+  User,
+  RefreshCw,
+} from 'lucide-react';
 import { ProjectState, AssetLibraryItem } from '../types';
-import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB, exportIndexedDBData, importIndexedDBData, loadProjectFromDB, saveProjectToDB } from '../services/storageService';
+import {
+  exportIndexedDBData,
+  createNewProjectState,
+  importIndexedDBData,
+  loadProjectFromDB,
+  saveProjectToDB,
+} from '../services/storageService';
 import { hybridStorage } from '../services/hybridStorageService';
 import { AssetLibraryPage } from '../src/components/AssetLibrary';
 import { applyLibraryItemToProject } from '../services/assetLibraryService';
@@ -10,10 +35,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../src/components/LanguageSwitcher';
-import qrCodeImg from '../images/qrcode.jpg';
 import DebugExportModal from './DebugExportModal';
-import logger, { LogCategory } from '@/services/logger';
-import { getPreferences, getPreferenceSummary, resetPreferences, UserPreferences } from '../services/userPreferencesService';
+import { getPreferenceSummary, resetPreferences } from '../services/userPreferencesService';
 
 interface Props {
   onOpenProject: (projectId: string | ProjectState) => void;
@@ -44,17 +67,20 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       console.log('[Dashboard] ⚠️ 正在加载项目，跳过重复请求');
       return;
     }
-    
+
     console.log('[Dashboard] 📋 开始加载项目列表...');
     console.log('[Dashboard] 当前用户:', user?.id);
     isLoadingRef.current = true;
     setIsLoading(true);
-    
+
     try {
       console.log('[Dashboard] 📡 调用 hybridStorage.getAllProjects()...');
       const list = await hybridStorage.getAllProjects();
       console.log(`[Dashboard] ✅ 加载完成，获取到 ${list.length} 个项目`);
-      console.log('[Dashboard] 项目列表:', list.map(p => ({ id: p.id, title: p.title, version: p.version })));
+      console.log(
+        '[Dashboard] 项目列表:',
+        list.map((p) => ({ id: p.id, title: p.title, version: p.version })),
+      );
       setProjects(list);
     } catch (e) {
       console.error('[Dashboard] ❌ 加载项目失败:', e);
@@ -78,7 +104,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
         setIsLoading(false);
       }
     };
-    
+
     const intervalId = setInterval(checkStuck, 5000);
     return () => clearInterval(intervalId);
   }, [isLoading]);
@@ -101,7 +127,10 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     const handleRefresh = (event: CustomEvent<ProjectState[]>) => {
       console.log('[Dashboard] 📢 收到后台刷新事件，更新项目列表');
       console.log('[Dashboard] 新项目数量:', event.detail.length);
-      console.log('[Dashboard] 新项目列表:', event.detail.map(p => ({ id: p.id, title: p.title })));
+      console.log(
+        '[Dashboard] 新项目列表:',
+        event.detail.map((p) => ({ id: p.id, title: p.title })),
+      );
       setProjects(event.detail);
     };
     window.addEventListener('projects-refreshed', handleRefresh as EventListener);
@@ -135,33 +164,40 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       showAlert('无法删除项目: 项目ID无效', { type: 'error' });
       return;
     }
-    
+
     e.stopPropagation();
-    
+
     // 获取项目名称用于提示
-    const project = projects.find(p => p.id === id);
+    const project = projects.find((p) => p.id === id);
     const projectName = project?.title || '未命名项目';
-    
+
     try {
-        await hybridStorage.deleteProject(id);
-        // 强制重置 loading 状态，确保能刷新
-        isLoadingRef.current = false;
-        console.log('💾 重新加载项目列表...');
-        await loadProjects();
-        console.log(`✅ 项目 "${projectName}" 已成功删除`);
-        
-        // 可选：添加成功提示（如果不想打扰用户可以注释掉）
-        // alert(`项目 "${projectName}" 已删除`);
+      await hybridStorage.deleteProject(id);
+      // 强制重置 loading 状态，确保能刷新
+      isLoadingRef.current = false;
+      console.log('💾 重新加载项目列表...');
+      await loadProjects();
+      console.log(`✅ 项目 "${projectName}" 已成功删除`);
+
+      // 可选：添加成功提示（如果不想打扰用户可以注释掉）
+      // alert(`项目 "${projectName}" 已删除`);
     } catch (error) {
-        console.error("❌ 删除项目失败:", error);
-        showAlert(`删除项目失败: ${error instanceof Error ? error.message : '未知错误'}\n\n请检查浏览器控制台查看详细信息`, { type: 'error' });
+      console.error('❌ 删除项目失败:', error);
+      showAlert(
+        `删除项目失败: ${error instanceof Error ? error.message : '未知错误'}\n\n请检查浏览器控制台查看详细信息`,
+        { type: 'error' },
+      );
     } finally {
-        setDeleteConfirmId(null);
+      setDeleteConfirmId(null);
     }
   };
 
   const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return new Date(ts).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   };
 
   const handleSelectProjectAndImport = async (projectId: string, item: AssetLibraryItem) => {
@@ -171,7 +207,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       await saveProjectToDB(updated);
       onOpenProject(updated);
     } catch (error) {
-      showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     }
   };
 
@@ -197,7 +235,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       showAlert('导出完成，备份文件已下载。', { type: 'success' });
     } catch (error) {
       console.error('Export failed:', error);
-      showAlert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     } finally {
       setIsDataExporting(false);
     }
@@ -233,18 +273,24 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             setIsDataImporting(true);
             const result = await importIndexedDBData(payload, { mode: 'merge' });
             await loadProjects();
-            showAlert(`导入完成：项目 ${result.projects} 个，资产 ${result.assets} 个。`, { type: 'success' });
+            showAlert(`导入完成：项目 ${result.projects} 个，资产 ${result.assets} 个。`, {
+              type: 'success',
+            });
           } catch (error) {
             console.error('Import failed:', error);
-            showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+            showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+              type: 'error',
+            });
           } finally {
             setIsDataImporting(false);
           }
-        }
+        },
       });
     } catch (error) {
       console.error('Import failed:', error);
-      showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     }
   };
 
@@ -256,7 +302,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             <h1 className="text-3xl font-light text-[var(--text-primary)] tracking-tight mb-2 flex items-center gap-3">
               项目库
               <span className="text-[var(--text-muted)] text-lg">/</span>
-              <span className="text-[var(--text-muted)] text-sm font-mono tracking-widest uppercase">{t('dashboard.subtitle')}</span>
+              <span className="text-[var(--text-muted)] text-sm font-mono tracking-widest uppercase">
+                {t('dashboard.subtitle')}
+              </span>
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -268,7 +316,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               <span className="font-medium text-xs tracking-widest uppercase">{t('group.join')}</span>
             </button> */}
             {onShowOnboarding && (
-              <button 
+              <button
                 onClick={onShowOnboarding}
                 className="group flex items-center gap-2 px-4 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"
                 title={t('onboarding.viewGuide')}
@@ -305,10 +353,12 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               title={theme === 'dark' ? '切换亮色主题' : '切换暗色主题'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              <span className="font-medium text-xs tracking-widest uppercase">{theme === 'dark' ? '亮色' : '暗色'}</span>
+              <span className="font-medium text-xs tracking-widest uppercase">
+                {theme === 'dark' ? '亮色' : '暗色'}
+              </span>
             </button>
             <LanguageSwitcher />
-            <button 
+            <button
               onClick={handleCreate}
               className="group flex items-center gap-3 px-6 py-3 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors"
             >
@@ -324,99 +374,109 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            
             {/* Create New Card */}
-            <div 
+            <div
               onClick={handleCreate}
               className="group cursor-pointer border border-[var(--border-primary)] hover:border-[var(--border-secondary)] bg-[var(--bg-primary)] flex flex-col items-center justify-center min-h-[280px] transition-all"
             >
               <div className="w-12 h-12 border border-[var(--border-secondary)] flex items-center justify-center mb-6 group-hover:bg-[var(--bg-hover)] transition-colors">
                 <Plus className="w-5 h-5 text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)]" />
               </div>
-              <span className="text-[var(--text-muted)] font-mono text-[10px] uppercase tracking-widest group-hover:text-[var(--text-secondary)]">Create New Project</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] uppercase tracking-widest group-hover:text-[var(--text-secondary)]">
+                Create New Project
+              </span>
             </div>
 
             {/* Project List */}
             {projects.map((proj) => (
-              <div 
+              <div
                 key={proj.id}
                 onClick={() => onOpenProject(proj.id)}
                 className="group bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] p-0 flex flex-col cursor-pointer transition-all relative overflow-hidden h-[280px]"
               >
-                  {/* Delete Confirmation Overlay */}
-                  {deleteConfirmId === proj.id && (
-                    <div 
-                        className="absolute inset-0 z-20 bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6 space-y-4 animate-in fade-in duration-200"
-                        onClick={(e) => e.stopPropagation()} 
-                    >
-                        <div className="w-10 h-10 bg-[var(--error-hover-bg)] flex items-center justify-center rounded-full">
-                           <AlertTriangle className="w-5 h-5 text-[var(--error)]" />
-                        </div>
-                        <div className="text-center space-y-2">
-                            <p className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest">确认删除项目？</p>
-                            <p className="text-[var(--text-tertiary)] text-[10px] font-mono">此操作无法撤销</p>
-                            <div className="text-[9px] text-[var(--text-muted)] space-y-1 pt-2 border-t border-[var(--border-subtle)]">
-                              <p>将同时删除以下所有资源：</p>
-                              <p className="text-[var(--text-muted)] font-mono">· 角色和场景参考图</p>
-                              <p className="text-[var(--text-muted)] font-mono">· 所有关键帧图像</p>
-                              <p className="text-[var(--text-muted)] font-mono">· 所有生成的视频片段</p>
-                              <p className="text-[var(--text-muted)] font-mono">· 渲染历史记录</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2 w-full pt-2">
-                            <button 
-                                onClick={cancelDelete}
-                                className="flex-1 py-3 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-[10px] font-bold uppercase tracking-wider transition-colors border border-[var(--border-primary)]"
-                            >
-                                取消
-                            </button>
-                            <button 
-                                onClick={(e) => confirmDelete(e, proj.id)}
-                                className="flex-1 py-3 bg-[var(--error-hover-bg)] hover:bg-[var(--error-hover-bg-strong)] text-[var(--error-text)] hover:text-[var(--error-text)] text-[10px] font-bold uppercase tracking-wider transition-colors border border-[var(--error-border)]"
-                            >
-                                永久删除
-                            </button>
-                        </div>
-
+                {/* Delete Confirmation Overlay */}
+                {deleteConfirmId === proj.id && (
+                  <div
+                    className="absolute inset-0 z-20 bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6 space-y-4 animate-in fade-in duration-200"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="w-10 h-10 bg-[var(--error-hover-bg)] flex items-center justify-center rounded-full">
+                      <AlertTriangle className="w-5 h-5 text-[var(--error)]" />
                     </div>
-                  )}
-
-                  {/* Normal Content */}
-                  <div className="flex-1 p-6 relative flex flex-col">
-                     {/* Delete Button */}
-                     <button 
-                        onClick={(e) => requestDelete(e, proj.id)}
-                        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--error-text)] transition-all rounded-sm z-10"
-                        title="删除项目"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-
-                     <div className="flex-1">
-                        <Folder className="w-8 h-8 text-[var(--text-muted)] mb-6 group-hover:text-[var(--text-tertiary)] transition-colors" />
-                        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2 line-clamp-1 tracking-wide">{proj.title}</h3>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <span className="text-[9px] font-mono text-[var(--text-tertiary)] border border-[var(--border-primary)] px-1.5 py-0.5 uppercase tracking-wider">
-                              {proj.stage === 'script' ? '剧本阶段' : 
-                               proj.stage === 'assets' ? '资产生成' :
-                               proj.stage === 'director' ? '导演工作台' : '导出阶段'}
-                            </span>
-                        </div>
-                        {proj.scriptData?.logline && (
-                            <p className="text-[10px] text-[var(--text-muted)] line-clamp-2 leading-relaxed font-mono border-l border-[var(--border-primary)] pl-2">
-                            {proj.scriptData.logline}
-                            </p>
-                        )}
-                     </div>
-                  </div>
-
-                  <div className="px-6 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-sunken)]">
-                    <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-widest">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(proj.lastModified)}
+                    <div className="text-center space-y-2">
+                      <p className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest">
+                        确认删除项目？
+                      </p>
+                      <p className="text-[var(--text-tertiary)] text-[10px] font-mono">
+                        此操作无法撤销
+                      </p>
+                      <div className="text-[9px] text-[var(--text-muted)] space-y-1 pt-2 border-t border-[var(--border-subtle)]">
+                        <p>将同时删除以下所有资源：</p>
+                        <p className="text-[var(--text-muted)] font-mono">· 角色和场景参考图</p>
+                        <p className="text-[var(--text-muted)] font-mono">· 所有关键帧图像</p>
+                        <p className="text-[var(--text-muted)] font-mono">· 所有生成的视频片段</p>
+                        <p className="text-[var(--text-muted)] font-mono">· 渲染历史记录</p>
+                      </div>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
+                    <div className="flex gap-2 w-full pt-2">
+                      <button
+                        onClick={cancelDelete}
+                        className="flex-1 py-3 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-[10px] font-bold uppercase tracking-wider transition-colors border border-[var(--border-primary)]"
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={(e) => confirmDelete(e, proj.id)}
+                        className="flex-1 py-3 bg-[var(--error-hover-bg)] hover:bg-[var(--error-hover-bg-strong)] text-[var(--error-text)] hover:text-[var(--error-text)] text-[10px] font-bold uppercase tracking-wider transition-colors border border-[var(--error-border)]"
+                      >
+                        永久删除
+                      </button>
+                    </div>
                   </div>
+                )}
+
+                {/* Normal Content */}
+                <div className="flex-1 p-6 relative flex flex-col">
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => requestDelete(e, proj.id)}
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--error-text)] transition-all rounded-sm z-10"
+                    title="删除项目"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex-1">
+                    <Folder className="w-8 h-8 text-[var(--text-muted)] mb-6 group-hover:text-[var(--text-tertiary)] transition-colors" />
+                    <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2 line-clamp-1 tracking-wide">
+                      {proj.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="text-[9px] font-mono text-[var(--text-tertiary)] border border-[var(--border-primary)] px-1.5 py-0.5 uppercase tracking-wider">
+                        {proj.stage === 'script'
+                          ? '剧本阶段'
+                          : proj.stage === 'assets'
+                            ? '资产生成'
+                            : proj.stage === 'director'
+                              ? '导演工作台'
+                              : '导出阶段'}
+                      </span>
+                    </div>
+                    {proj.scriptData?.logline && (
+                      <p className="text-[10px] text-[var(--text-muted)] line-clamp-2 leading-relaxed font-mono border-l border-[var(--border-primary)] pl-2">
+                        {proj.scriptData.logline}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-6 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-sunken)]">
+                  <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-widest">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(proj.lastModified)}
+                  </div>
+                  <ChevronRight className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
+                </div>
               </div>
             ))}
           </div>
@@ -451,7 +511,10 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-base)]/70 p-6" onClick={() => setShowSettingsModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-base)]/70 p-6"
+          onClick={() => setShowSettingsModal(false)}
+        >
           <div
             className="relative w-full max-w-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] p-6 md:p-8"
             onClick={(e) => e.stopPropagation()}
@@ -468,9 +531,13 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                 <h2 className="text-lg text-[var(--text-primary)] flex items-center gap-2">
                   <Settings className="w-4 h-4 text-[var(--accent-text)]" />
                   系统设置
-                  <span className="text-[var(--text-muted)] text-xs font-mono uppercase tracking-widest">Settings</span>
+                  <span className="text-[var(--text-muted)] text-xs font-mono uppercase tracking-widest">
+                    Settings
+                  </span>
                 </h2>
-                <p className="text-xs text-[var(--text-tertiary)] mt-2">管理模型配置、资产库以及数据导入导出</p>
+                <p className="text-xs text-[var(--text-tertiary)] mt-2">
+                  管理模型配置、资产库以及数据导入导出
+                </p>
               </div>
             </div>
 
@@ -487,7 +554,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                     <Cpu className="w-4 h-4 text-[var(--accent-text)]" />
                     模型配置
                   </div>
-                  <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">管理模型与 API 设置</div>
+                  <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">
+                    管理模型与 API 设置
+                  </div>
                 </button>
               )}
 
@@ -502,7 +571,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                   <Archive className="w-4 h-4 text-[var(--accent-text)]" />
                   资产库
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">浏览并复用角色与场景资产</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">
+                  浏览并复用角色与场景资产
+                </div>
               </button>
 
               <button
@@ -514,7 +585,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                   <Database className="w-4 h-4 text-[var(--accent-text)]" />
                   导出数据
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导出全部项目与资产库备份</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">
+                  导出全部项目与资产库备份
+                </div>
               </button>
 
               <button
@@ -526,7 +599,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                   <Database className="w-4 h-4 text-[var(--accent-text)]" />
                   导入数据
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导入全部项目与资产库备份</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">
+                  导入全部项目与资产库备份
+                </div>
               </button>
 
               <button
@@ -542,7 +617,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                   <Database className="w-4 h-4 text-[var(--accent-text)]" />
                   数据库调试
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">导出本地数据库用于调试</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-2">
+                  导出本地数据库用于调试
+                </div>
               </button>
             </div>
 
@@ -569,9 +646,16 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                 {getPreferenceSummary().map((line, i) => {
                   const [label, value] = line.split('：');
                   return (
-                    <div key={i} className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded">
-                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest">{label}</div>
-                      <div className="text-xs text-[var(--text-primary)] font-mono mt-0.5">{value}</div>
+                    <div
+                      key={i}
+                      className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded"
+                    >
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest">
+                        {label}
+                      </div>
+                      <div className="text-xs text-[var(--text-primary)] font-mono mt-0.5">
+                        {value}
+                      </div>
                     </div>
                   );
                 })}
@@ -590,7 +674,6 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
         projects={projects}
         onSelectProjectAndImport={handleSelectProjectAndImport}
       />
-
 
       <input
         ref={importInputRef}

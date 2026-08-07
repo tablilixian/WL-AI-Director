@@ -4,7 +4,7 @@
  */
 
 import { MS_PER_SECOND, clampTime } from './timeFormat';
-import { DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM, TRACK_HEIGHT, TRACK_HEADER_WIDTH } from '../types/editor';
+import { MIN_ZOOM, MAX_ZOOM, TRACK_HEIGHT, TRACK_HEADER_WIDTH } from '../types/editor';
 
 // ============================================================
 // 缩放相关
@@ -65,11 +65,7 @@ export function calculateTimelineWidth(duration: number, zoom: number): number {
  * @param zoom - 缩放级别（像素/秒）
  * @returns 滚动位置（像素）
  */
-export function calculateScrollToTime(
-  time: number,
-  viewportWidth: number,
-  zoom: number
-): number {
+export function calculateScrollToTime(time: number, viewportWidth: number, zoom: number): number {
   const centerOffset = viewportWidth / 2;
   return timeToPixels(time, zoom) - centerOffset + TRACK_HEADER_WIDTH;
 }
@@ -84,7 +80,7 @@ export function calculateScrollToTime(
 export function calculateVisibleRange(
   scrollPosition: number,
   viewportWidth: number,
-  zoom: number
+  zoom: number,
 ): { start: number; end: number } {
   const start = pixelsToTime(Math.max(0, scrollPosition), zoom);
   const end = pixelsToTime(scrollPosition + viewportWidth, zoom);
@@ -98,7 +94,7 @@ export function isTimeVisible(
   time: number,
   scrollPosition: number,
   viewportWidth: number,
-  zoom: number
+  zoom: number,
 ): boolean {
   const { start, end } = calculateVisibleRange(scrollPosition, viewportWidth, zoom);
   return time >= start && time <= end;
@@ -120,7 +116,7 @@ export function getClipEndTime(clip: { startTime: number; duration: number }): n
  */
 export function clipsOverlap(
   clip1: { startTime: number; duration: number },
-  clip2: { startTime: number; duration: number }
+  clip2: { startTime: number; duration: number },
 ): boolean {
   const end1 = getClipEndTime(clip1);
   const end2 = getClipEndTime(clip2);
@@ -135,7 +131,7 @@ export function clipsOverlap(
  */
 export function getClipRelativeTime(
   clip: { startTime: number; duration: number; inPoint: number },
-  time: number
+  time: number,
 ): number | null {
   if (time < clip.startTime || time >= clip.startTime + clip.duration) {
     return null;
@@ -146,10 +142,7 @@ export function getClipRelativeTime(
 /**
  * 检查时间点是否在片段范围内
  */
-export function isTimeInClip(
-  time: number,
-  clip: { startTime: number; duration: number }
-): boolean {
+export function isTimeInClip(time: number, clip: { startTime: number; duration: number }): boolean {
   return time >= clip.startTime && time < clip.startTime + clip.duration;
 }
 
@@ -182,29 +175,29 @@ export function generateRulerTicks(
   duration: number,
   zoom: number,
   scrollPosition: number,
-  viewportWidth: number
+  viewportWidth: number,
 ): Array<{ time: number; x: number; major: boolean }> {
   const interval = calculateRulerInterval(zoom);
   const majorInterval = interval >= MS_PER_SECOND * 60 ? interval : interval * 5;
-  
+
   const { start } = calculateVisibleRange(scrollPosition, viewportWidth, zoom);
   const { end } = calculateVisibleRange(scrollPosition, viewportWidth, zoom);
-  
+
   const ticks: Array<{ time: number; x: number; major: boolean }> = [];
-  
+
   // 从可见范围的起点向前取整到最近的 interval
   const firstTick = Math.floor(start / interval) * interval;
-  
+
   for (let time = firstTick; time <= end + interval; time += interval) {
     if (time < 0) continue;
     if (time > duration) break;
-    
+
     const x = timeToPixels(time, zoom);
     const major = time % majorInterval === 0;
-    
+
     ticks.push({ time, x, major });
   }
-  
+
   return ticks;
 }
 
@@ -217,7 +210,7 @@ export function generateRulerTicks(
  */
 export function getClipPosition(
   clip: { startTime: number; duration: number },
-  zoom: number
+  zoom: number,
 ): { x: number; width: number } {
   return {
     x: timeToPixels(clip.startTime, zoom),
@@ -237,11 +230,11 @@ export function clampClipToTrack(
   startTime: number,
   duration: number,
   minTime: number = 0,
-  maxTime?: number
+  maxTime?: number,
 ): { startTime: number; duration: number } {
   let newStartTime = Math.max(minTime, startTime);
   let newDuration = duration;
-  
+
   if (maxTime !== undefined) {
     // 如果起始位置超出范围，调整起始位置
     if (newStartTime >= maxTime) {
@@ -255,7 +248,7 @@ export function clampClipToTrack(
       }
     }
   }
-  
+
   return {
     startTime: Math.max(0, newStartTime),
     duration: Math.max(0, newDuration),

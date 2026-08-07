@@ -11,10 +11,8 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <ThemeProvider>
-      <AlertProvider>
-        {component}
-      </AlertProvider>
-    </ThemeProvider>
+      <AlertProvider>{component}</AlertProvider>
+    </ThemeProvider>,
   );
 };
 
@@ -22,9 +20,9 @@ describe('项目流程测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    
+
     vi.spyOn(hybridStorage, 'getAllProjects').mockResolvedValue([]);
-    
+
     useAuthStore.setState({
       user: null,
       loading: false,
@@ -40,9 +38,12 @@ describe('项目流程测试', () => {
     it('未登录时显示登录页面', async () => {
       renderWithProviders(<App />);
 
-      await waitFor(() => {
-        expect(screen.getByText(/登录账号/i)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/登录账号/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     it('登录成功后显示项目库页面', async () => {
@@ -51,7 +52,6 @@ describe('项目流程测试', () => {
         email: 'test@example.com',
       };
 
-      const { signIn } = useAuthStore.getState();
       vi.spyOn(useAuthStore.getState(), 'signIn').mockResolvedValue();
       useAuthStore.setState({ user: mockUser as any, loading: false });
 
@@ -65,10 +65,7 @@ describe('项目流程测试', () => {
 
   describe('2. 项目库页面数据同步测试', () => {
     it('登录后自动从云端拉取项目列表', async () => {
-      const mockCloudProjects = [
-        createNewProjectState(),
-        createNewProjectState(),
-      ];
+      const mockCloudProjects = [createNewProjectState(), createNewProjectState()];
 
       vi.spyOn(hybridStorage, 'getAllProjects').mockResolvedValue(mockCloudProjects);
 
@@ -350,7 +347,7 @@ describe('项目流程测试', () => {
       });
 
       vi.spyOn(hybridStorage, 'getAllProjects').mockResolvedValue([user2Project]);
-      
+
       const mockUser2 = {
         id: 'test-user-id-2',
         email: 'user2@example.com',

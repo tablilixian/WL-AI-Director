@@ -8,7 +8,6 @@ import {
   CAMERA_PRESETS,
   LIGHTING_PRESETS,
 } from '../src/modules/canvas/types/video';
-import type { VideoMode } from '../src/modules/canvas/types/video';
 
 describe('getAvailableModes', () => {
   it('returns empty array for 0 source images', () => {
@@ -90,10 +89,7 @@ describe('buildDefaultConfig', () => {
   });
 
   it('defaults gridtype based on source layer count', () => {
-    const config = buildDefaultConfig(
-      ['a', 'b', 'c', 'd', 'e', 'f'],
-      'mkr-grid'
-    );
+    const config = buildDefaultConfig(['a', 'b', 'c', 'd', 'e', 'f'], 'mkr-grid');
     expect(config.mkrGrid.gridtype).toBe(6);
     expect(config.mkrGrid.gridFrameIndexs).toHaveLength(6);
   });
@@ -103,7 +99,7 @@ describe('buildDefaultConfig', () => {
     const indexs = config.mkrGrid.gridFrameIndexs;
     expect(indexs[0]).toBe(0);
     expect(indexs[indexs.length - 1]).toBeCloseTo(
-      ((indexs.length - 1) / (indexs.length - 1)) * TOTAL_FRAMES
+      ((indexs.length - 1) / (indexs.length - 1)) * TOTAL_FRAMES,
     );
   });
 

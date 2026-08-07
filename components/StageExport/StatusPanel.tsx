@@ -1,5 +1,5 @@
 import React from 'react';
-import { Film, CheckCircle, BarChart3 } from 'lucide-react';
+import { CheckCircle, BarChart3 } from 'lucide-react';
 import { ProjectState } from '../../types';
 import { STYLES } from './constants';
 
@@ -43,14 +43,20 @@ const StatusPanel: React.FC<Props> = ({ project, progress, estimatedDuration }) 
             </div>
           </div>
         </div>
-        
+
         <div className={STYLES.statusPanel.progressBadge}>
           <div className="flex items-baseline justify-end gap-1 mb-1">
-            <span className="text-3xl font-mono font-bold text-[var(--accent-text)]">{progress}</span>
+            <span className="text-3xl font-mono font-bold text-[var(--accent-text)]">
+              {progress}
+            </span>
             <span className="text-sm text-[var(--text-tertiary)]">%</span>
           </div>
           <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest flex items-center justify-end gap-2">
-            {progress === 100 ? <CheckCircle className="w-3 h-3 text-[var(--success)]" /> : <BarChart3 className="w-3 h-3" />}
+            {progress === 100 ? (
+              <CheckCircle className="w-3 h-3 text-[var(--success)]" />
+            ) : (
+              <BarChart3 className="w-3 h-3" />
+            )}
             Render Status
           </div>
         </div>

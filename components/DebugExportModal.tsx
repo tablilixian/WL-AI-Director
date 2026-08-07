@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Download, Loader2, Database, X, FileArchive, FileJson, Trash2, AlertTriangle } from 'lucide-react';
+import {
+  Download,
+  Loader2,
+  Database,
+  X,
+  FileArchive,
+  FileJson,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { openDB } from '../services/storageService';
 
 interface DebugExportModalProps {
@@ -29,13 +38,13 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       console.log('[DebugExportModal] 📦 正在打开 WLDB 数据库...');
       const db = await openWLDB();
       console.log('[DebugExportModal] ✅ 数据库打开成功');
-      
+
       const exportData: any = {
         projects: [],
         assetLibrary: [],
         images: [],
         videos: [],
-        projectStages: []
+        projectStages: [],
       };
 
       const stores = ['projects', 'assetLibrary', 'images', 'videos', 'projectStages'];
@@ -43,7 +52,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
       for (const storeName of stores) {
         console.log(`[DebugExportModal] 🔍 检查数据表: ${storeName}`);
-        
+
         if (!db.objectStoreNames.contains(storeName)) {
           console.log(`[DebugExportModal] ⚠️  数据表 ${storeName} 不存在，跳过`);
           exportData[storeName] = [];
@@ -69,8 +78,8 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
           assetLibrary: exportData.assetLibrary.length,
           images: exportData.images.length,
           videos: exportData.videos.length,
-          projectStages: exportData.projectStages.length
-        }
+          projectStages: exportData.projectStages.length,
+        },
       };
       console.log('[DebugExportModal] 📈 数据统计:', metadata.summary);
 
@@ -87,7 +96,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       console.error('[DebugExportModal] ❌ 错误详情:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : '未知错误',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       setExportResult({ error: error instanceof Error ? error.message : '未知错误' });
     } finally {
@@ -96,7 +105,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
     }
   };
 
-  const exportAsJSON = async (exportData: any, metadata: any) => {
+  const exportAsJSON = async (exportData: any, _metadata: any) => {
     console.log('[DebugExportModal] 🔄 将数据转换为 JSON 字符串');
     const json = JSON.stringify(exportData, null, 2);
     console.log(`[DebugExportModal] 📝 JSON 字符串长度: ${json.length} 字符`);
@@ -125,7 +134,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
   const exportAsZIP = async (exportData: any, metadata: any) => {
     console.log('[DebugExportModal] 📦 开始 ZIP 导出模式');
-    
+
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
 
@@ -143,7 +152,9 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       if (image.blob) {
         const extension = image.type?.split('/')[1] || 'png';
         const fileName = `images/${image.id}.${extension}`;
-        console.log(`[DebugExportModal] 🖼️  添加图片 ${i + 1}/${exportData.images.length}: ${fileName}`);
+        console.log(
+          `[DebugExportModal] 🖼️  添加图片 ${i + 1}/${exportData.images.length}: ${fileName}`,
+        );
         zip.file(fileName, image.blob);
       }
     }
@@ -154,7 +165,9 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       if (video.blob) {
         const extension = video.type?.split('/')[1] || 'mp4';
         const fileName = `videos/${video.id}.${extension}`;
-        console.log(`[DebugExportModal] 🎬 添加视频 ${i + 1}/${exportData.videos.length}: ${fileName}`);
+        console.log(
+          `[DebugExportModal] 🎬 添加视频 ${i + 1}/${exportData.videos.length}: ${fileName}`,
+        );
         zip.file(fileName, video.blob);
       }
     }
@@ -192,9 +205,18 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       const allStoreNames = Array.from(db.objectStoreNames);
       console.log('[DebugExportModal] 📋 数据库中的所有数据表:', allStoreNames);
 
-      const tablesToClear = allStoreNames.filter(storeName => {
-        const shouldClear = ['projects', 'assetLibrary', 'images', 'videos', 'projectStages', 'canvasData'].includes(storeName);
-        console.log(`[DebugExportModal] 🔍 数据表 ${storeName}: ${shouldClear ? '✅ 将清空' : '⏭️  跳过'}`);
+      const tablesToClear = allStoreNames.filter((storeName) => {
+        const shouldClear = [
+          'projects',
+          'assetLibrary',
+          'images',
+          'videos',
+          'projectStages',
+          'canvasData',
+        ].includes(storeName);
+        console.log(
+          `[DebugExportModal] 🔍 数据表 ${storeName}: ${shouldClear ? '✅ 将清空' : '⏭️  跳过'}`,
+        );
         return shouldClear;
       });
 
@@ -204,7 +226,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
       for (const tableName of tablesToClear) {
         console.log(`[DebugExportModal] 🔍 检查数据表: ${tableName}`);
-        
+
         if (!db.objectStoreNames.contains(tableName)) {
           console.log(`[DebugExportModal] ⚠️  数据表 ${tableName} 不存在，跳过`);
           results[tableName] = { status: 'skipped', count: 0 };
@@ -212,10 +234,10 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
         }
 
         console.log(`[DebugExportModal] 📥 正在清空数据表: ${tableName}`);
-        
+
         const tx = db.transaction(tableName, 'readwrite');
         const store = tx.objectStore(tableName);
-        
+
         const count = await new Promise<number>((resolve, reject) => {
           const request = store.count();
           request.onsuccess = () => resolve(request.result);
@@ -243,7 +265,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       setExportResult({
         type: 'clear',
         message: '数据库清空成功',
-        results
+        results,
       });
 
       setShowClearConfirm(false);
@@ -252,11 +274,11 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       console.error('[DebugExportModal] ❌ 错误详情:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : '未知错误',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       setExportResult({
         type: 'clear',
-        error: error instanceof Error ? error.message : '未知错误'
+        error: error instanceof Error ? error.message : '未知错误',
       });
     } finally {
       console.log('[DebugExportModal] 🏁 清空流程结束');
@@ -291,7 +313,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
               <p className="text-sm text-[var(--text-tertiary)] mb-4">
                 包含的数据表：projects, assetLibrary, images, videos, projectStages
               </p>
-              
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setExportMode('json')}
@@ -316,7 +338,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
                   ZIP 格式
                 </button>
               </div>
-              
+
               {exportMode === 'zip' && (
                 <p className="text-xs text-[var(--text-tertiary)] mt-2">
                   ZIP 格式会导出所有图片和视频文件，文件较大但更完整
@@ -325,21 +347,29 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
             </div>
 
             {exportResult && (
-              <div className={`p-4 rounded-lg border ${
-                exportResult.error 
-                  ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' 
-                  : exportResult.type === 'clear'
-                    ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-                    : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-              }`}>
-                <h3 className={`font-bold mb-2 ${
-                  exportResult.error 
-                    ? 'text-red-700 dark:text-red-400' 
+              <div
+                className={`p-4 rounded-lg border ${
+                  exportResult.error
+                    ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
                     : exportResult.type === 'clear'
-                      ? 'text-yellow-700 dark:text-yellow-400'
-                      : 'text-green-700 dark:text-green-400'
-                }`}>
-                  {exportResult.error ? '操作失败' : exportResult.type === 'clear' ? '数据库清空' : '导出成功'}
+                      ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                      : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                }`}
+              >
+                <h3
+                  className={`font-bold mb-2 ${
+                    exportResult.error
+                      ? 'text-red-700 dark:text-red-400'
+                      : exportResult.type === 'clear'
+                        ? 'text-yellow-700 dark:text-yellow-400'
+                        : 'text-green-700 dark:text-green-400'
+                  }`}
+                >
+                  {exportResult.error
+                    ? '操作失败'
+                    : exportResult.type === 'clear'
+                      ? '数据库清空'
+                      : '导出成功'}
                 </h3>
                 {exportResult.error ? (
                   <p className="text-sm text-red-600 dark:text-red-300">{exportResult.error}</p>
@@ -347,18 +377,24 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
                   <div className="text-sm space-y-1">
                     <p>{exportResult.message}</p>
                     <div className="mt-2">
-                      {Object.entries(exportResult.results).map(([table, result]: [string, any]) => (
-                        <div key={table} className="flex justify-between text-xs">
-                          <span>{table}:</span>
-                          <span>{result.status === 'cleared' ? `已删除 ${result.count} 条` : '跳过'}</span>
-                        </div>
-                      ))}
+                      {Object.entries(exportResult.results).map(
+                        ([table, result]: [string, any]) => (
+                          <div key={table} className="flex justify-between text-xs">
+                            <span>{table}:</span>
+                            <span>
+                              {result.status === 'cleared' ? `已删除 ${result.count} 条` : '跳过'}
+                            </span>
+                          </div>
+                        ),
+                      )}
                     </div>
                   </div>
                 ) : (
                   <div className="text-sm space-y-1">
                     <p>导出时间: {exportResult.exportDate}</p>
-                    <p>数据库: {exportResult.databaseName} v{exportResult.version}</p>
+                    <p>
+                      数据库: {exportResult.databaseName} v{exportResult.version}
+                    </p>
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <div>项目: {exportResult.summary.projects}</div>
                       <div>资产: {exportResult.summary.assetLibrary}</div>
@@ -429,9 +465,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
               <p className="text-sm text-red-700 dark:text-red-400 font-bold mb-2">
                 ⚠️ 警告：此操作不可恢复！
               </p>
-              <p className="text-xs text-red-600 dark:text-red-300">
-                将清空以下数据表：
-              </p>
+              <p className="text-xs text-red-600 dark:text-red-300">将清空以下数据表：</p>
               <ul className="text-xs text-red-600 dark:text-red-300 mt-1 ml-4 list-disc">
                 <li>projects（项目）</li>
                 <li>assetLibrary（资产库）</li>

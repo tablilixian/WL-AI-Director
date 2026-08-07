@@ -8,22 +8,7 @@ import {
   VIEW_ANGLE_LABELS,
 } from '../src/modules/canvas/utils/panoramaUtils';
 import { useCanvasStore } from '../src/modules/canvas/hooks/useCanvasState';
-import type { LayerData, PanoramaLayerData, PanoramaCameraState, PanoramaScreenshotMode } from '../src/modules/canvas/types/canvas';
-
-function createLayer(overrides: Partial<LayerData> = {}): LayerData {
-  return {
-    id: crypto.randomUUID(),
-    type: 'image',
-    x: 0,
-    y: 0,
-    width: 200,
-    height: 200,
-    src: '',
-    title: 'test layer',
-    createdAt: Date.now(),
-    ...overrides,
-  };
-}
+import type { PanoramaLayerData, PanoramaCameraState } from '../src/modules/canvas/types/canvas';
 
 function createPanoramaLayer(overrides: Partial<PanoramaLayerData> = {}): PanoramaLayerData {
   return {

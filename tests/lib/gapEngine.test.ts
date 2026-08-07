@@ -30,7 +30,7 @@ function setupTrackWithClips(clips: Record<string, any>[]) {
   const trackId = useTimelineStore.getState().addTrack('video', 'Test');
   for (const c of clips) {
     const state = useTimelineStore.getState();
-    const track = state.tracks.find(t => t.id === trackId)!;
+    state.tracks.find((t) => t.id === trackId)!;
     state.addClip(trackId, makeClip({ ...c, trackId }));
 
     // Override auto-calculated startTime
@@ -76,7 +76,7 @@ describe('normalizeTrack', () => {
   it('should do nothing on empty track', () => {
     const tid = useTimelineStore.getState().addTrack('video');
     normalizeTrack(tid);
-    expect(useTimelineStore.getState().tracks.find(t => t.id === tid)!.clips).toEqual([]);
+    expect(useTimelineStore.getState().tracks.find((t) => t.id === tid)!.clips).toEqual([]);
   });
 
   it('should close gaps between clips', () => {
@@ -111,8 +111,10 @@ describe('insertClipAtIndex', () => {
       { id: 'c2', startTime: 3000, duration: 2000 },
     ]);
     const { addTrack } = useTimelineStore.getState();
-    const otherTid = addTrack('video', 'Other');
-    useTimelineStore.getState().addClip(tid, makeClip({ id: 'new-clip', startTime: 0, duration: 1000 }));
+    addTrack('video', 'Other');
+    useTimelineStore
+      .getState()
+      .addClip(tid, makeClip({ id: 'new-clip', startTime: 0, duration: 1000 }));
 
     insertClipAtIndex('new-clip', tid, 0);
     const clips = getTrackClips(tid);
@@ -149,18 +151,14 @@ describe('rippleTrimClip', () => {
   });
 
   it('should clamp delta to not go below min duration', () => {
-    const tid = setupTrackWithClips([
-      { id: 'c1', startTime: 0, duration: 200 },
-    ]);
+    const tid = setupTrackWithClips([{ id: 'c1', startTime: 0, duration: 200 }]);
     rippleTrimClip('c1', 'right', -200);
     const clips = getTrackClips(tid);
     expect(clips[0].duration).toBe(100);
   });
 
   it('should do nothing on locked track', () => {
-    const tid = setupTrackWithClips([
-      { id: 'c1', startTime: 0, duration: 3000 },
-    ]);
+    const tid = setupTrackWithClips([{ id: 'c1', startTime: 0, duration: 3000 }]);
     useTimelineStore.getState().updateTrack(tid, { locked: true });
     rippleTrimClip('c1', 'right', 1000);
     const clips = getTrackClips(tid);

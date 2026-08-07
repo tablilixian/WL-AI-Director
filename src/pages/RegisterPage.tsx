@@ -1,46 +1,43 @@
-import React, { useState } from 'react'
-import { useAuthStore } from '../stores/authStore'
-import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import React, { useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 
 interface RegisterPageProps {
-  onSwitchToLogin: () => void
-  onRegisterSuccess: () => void
+  onSwitchToLogin: () => void;
+  onRegisterSuccess: () => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({
-  onSwitchToLogin,
-  onRegisterSuccess
-}) => {
-  const { signUp, loading, error, clearError } = useAuthStore()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [validationError, setValidationError] = useState('')
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
+  const { signUp, loading, error, clearError } = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    clearError()
-    setValidationError('')
+    e.preventDefault();
+    clearError();
+    setValidationError('');
 
     if (password !== confirmPassword) {
-      setValidationError('两次输入的密码不一致')
-      return
+      setValidationError('两次输入的密码不一致');
+      return;
     }
 
     if (password.length < 8) {
-      setValidationError('密码长度至少为 8 位')
-      return
+      setValidationError('密码长度至少为 8 位');
+      return;
     }
 
     try {
-      await signUp(email, password)
-      setEmailSent(true)
+      await signUp(email, password);
+      setEmailSent(true);
     } catch (err) {
-      console.error('Register error:', err)
+      console.error('Register error:', err);
     }
-  }
+  };
 
   if (emailSent) {
     return (
@@ -50,40 +47,29 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
             <div className="w-16 h-16 bg-[var(--success-bg)] rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-[var(--success)]" />
             </div>
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
-              注册成功！
-            </h2>
+            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">注册成功！</h2>
             <p className="text-[var(--text-muted)] mb-6">
               我们已向 {email} 发送了一封验证邮件，请查收并点击链接完成验证。
             </p>
-            <button
-              onClick={onSwitchToLogin}
-              className="text-[var(--accent)] hover:underline"
-            >
+            <button onClick={onSwitchToLogin} className="text-[var(--accent)] hover:underline">
               返回登录 →
             </button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-            WL AI Director
-          </h1>
-          <p className="text-[var(--text-muted)]">
-            AI 漫剧创作平台
-          </p>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">WL AI Director</h1>
+          <p className="text-[var(--text-muted)]">AI 漫剧创作平台</p>
         </div>
 
         <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-primary)] p-6">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
-            创建账号
-          </h2>
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">创建账号</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -154,9 +140,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           </form>
 
           <div className="mt-6 text-center">
-            <span className="text-[var(--text-muted)] text-sm">
-              已有账号？
-            </span>
+            <span className="text-[var(--text-muted)] text-sm">已有账号？</span>
             <button
               onClick={onSwitchToLogin}
               className="ml-1 text-[var(--accent)] text-sm hover:underline"
@@ -176,7 +160,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default RegisterPage
+export default RegisterPage;

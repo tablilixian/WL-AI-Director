@@ -1,5 +1,13 @@
 import React from 'react';
-import { BookOpen, Wand2, BrainCircuit, AlertCircle, ChevronRight, Aperture, Sparkles, Loader2 } from 'lucide-react';
+import {
+  BookOpen,
+  Wand2,
+  BrainCircuit,
+  AlertCircle,
+  ChevronRight,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
 import OptionSelector from './OptionSelector';
 import { DURATION_OPTIONS, LANGUAGE_OPTIONS, VISUAL_STYLE_OPTIONS, STYLES } from './constants';
 import ModelSelector from '../ModelSelector';
@@ -36,7 +44,7 @@ const ConfigPanel: React.FC<Props> = ({
   model,
   visualStyle,
   customDurationInput,
-  customModelInput,
+
   customStyleInput,
   isProcessing,
   isDetectingStyle,
@@ -48,10 +56,10 @@ const ConfigPanel: React.FC<Props> = ({
   onModelChange,
   onVisualStyleChange,
   onCustomDurationChange,
-  onCustomModelChange,
+
   onCustomStyleChange,
   onAnalyze,
-  onAutoDetectStyle
+  onAutoDetectStyle,
 }) => {
   return (
     <div className="w-96 border-r border-[var(--border-primary)] flex flex-col bg-[var(--bg-primary)]">
@@ -68,7 +76,7 @@ const ConfigPanel: React.FC<Props> = ({
         {/* Title */}
         <div className="space-y-2">
           <label className={STYLES.label}>项目标题</label>
-          <input 
+          <input
             type="text"
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -86,8 +94,10 @@ const ConfigPanel: React.FC<Props> = ({
               onChange={(e) => onLanguageChange(e.target.value)}
               className={STYLES.select}
             >
-              {LANGUAGE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
             <div className="absolute right-3 top-3 pointer-events-none">
@@ -170,9 +180,7 @@ const ConfigPanel: React.FC<Props> = ({
           onClick={onAnalyze}
           disabled={isProcessing}
           className={`w-full py-3.5 font-bold text-xs tracking-widest uppercase rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg ${
-            isProcessing 
-              ? STYLES.button.disabled
-              : STYLES.button.primary
+            isProcessing ? STYLES.button.disabled : STYLES.button.primary
           }`}
         >
           {isProcessing ? (

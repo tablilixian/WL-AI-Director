@@ -4,19 +4,25 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ToggleLeft, ToggleRight, CheckCircle, Circle, Info } from 'lucide-react';
-import { 
-  ModelDefinition, 
+import {
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  CheckCircle,
+  Circle,
+  Info,
+} from 'lucide-react';
+import {
+  ModelDefinition,
   ChatModelParams,
   ImageModelParams,
   VideoModelParams,
   AspectRatio,
-  VideoDuration
+  VideoDuration,
 } from '../../types/model';
-import {
-  getProviderById,
-  getApiKeySource,
-} from '../../services/modelRegistry';
+import { getApiKeySource } from '../../services/modelRegistry';
 
 interface ModelCardProps {
   model: ModelDefinition;
@@ -55,7 +61,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
     onUpdate({ apiKey: value.trim() || undefined });
   };
 
-  const renderChatParams = (params: ChatModelParams) => (
+  const renderChatParams = (_params: ChatModelParams) => (
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">温度</label>
@@ -110,7 +116,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
     </div>
   );
 
-  const renderVideoParams = (params: VideoModelParams) => (
+  const renderVideoParams = (_params: VideoModelParams) => (
     <div className="space-y-4">
       <div>
         <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">默认比例</label>
@@ -159,9 +165,11 @@ const ModelCard: React.FC<ModelCardProps> = ({
   const apiModel = model.apiModel || model.id;
 
   return (
-    <div 
+    <div
       className={`bg-[var(--bg-elevated)]/50 border rounded-lg overflow-hidden transition-all ${
-        isActive ? 'border-[var(--accent-border)] bg-[var(--accent-bg)]' : 'border-[var(--border-primary)]'
+        isActive
+          ? 'border-[var(--accent-border)] bg-[var(--accent-bg)]'
+          : 'border-[var(--border-primary)]'
       } ${!model.isEnabled ? 'opacity-60' : ''}`}
     >
       {/* 头部 */}
@@ -172,7 +180,9 @@ const ModelCard: React.FC<ModelCardProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-[var(--text-primary)]">{model.name}</span>
               {model.isBuiltIn && (
-                <span className="px-1.5 py-0.5 bg-[var(--border-secondary)] text-[var(--text-tertiary)] text-[9px] rounded">内置</span>
+                <span className="px-1.5 py-0.5 bg-[var(--border-secondary)] text-[var(--text-tertiary)] text-[9px] rounded">
+                  内置
+                </span>
               )}
             </div>
             <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
@@ -197,7 +207,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
               使用
             </button>
           )}
-          
+
           {/* 当前激活标记 */}
           {isActive && (
             <span className="px-2.5 py-1 bg-[var(--accent-bg)] text-[var(--accent-text-hover)] text-[10px] font-bold rounded flex items-center gap-1">
@@ -235,11 +245,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
             onClick={onToggleExpand}
             className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -268,7 +274,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                   {getApiKeySource(model.id)}
                 </span>
               </div>
-              
+
               <div className="space-y-2">
                 <div>
                   <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
@@ -282,7 +288,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                     className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono"
                   />
                 </div>
-                
+
                 <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
                   {model.apiKey ? (
                     <>
@@ -298,7 +304,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {model.type === 'chat' && renderChatParams(model.params)}
             {model.type === 'image' && renderImageParams(model.params)}
             {model.type === 'video' && renderVideoParams(model.params)}

@@ -11,9 +11,6 @@ import { ProjectState } from '../types';
  * @param name 原始文件名
  * @returns 清理后的文件名
  */
-function sanitizeFileName(name: string): string {
-  return name.replace(/[\/\\?%*:|"<>]/g, '_').substring(0, 50);
-}
 
 /**
  * 清理 XML 文本
@@ -62,7 +59,7 @@ export function generateFCPXML(
   project: ProjectState,
   frameRate: number = 30,
   width: number = 1920,
-  height: number = 1080
+  height: number = 1080,
 ): string {
   const shots = project.shots;
   const title = project.scriptData?.title || project.title || 'Untitled';
@@ -101,8 +98,7 @@ export function generateFCPXML(
 
   shots.forEach((shot, index) => {
     const duration = shot.interval?.duration || 4;
-    const shotNumber = String(index + 1).padStart(3, '0');
-    const fileName = `Shot_${shotNumber}.mp4`;
+    String(index + 1).padStart(3, '0');
 
     xml += `            <clip offset="${formatDuration(currentTime)}" \n`;
     xml += `                  duration="${formatDuration(duration)}" \n`;
@@ -153,7 +149,7 @@ export function downloadFCPXML(
   project: ProjectState,
   frameRate: number = 30,
   width: number = 1920,
-  height: number = 1080
+  height: number = 1080,
 ): void {
   const fcpxml = generateFCPXML(project, frameRate, width, height);
   const title = project.scriptData?.title || project.title || 'untitled';
@@ -183,7 +179,7 @@ export function getFCPXMLPreview(
   project: ProjectState,
   frameRate: number = 30,
   width: number = 1920,
-  height: number = 1080
+  height: number = 1080,
 ): string {
   return generateFCPXML(project, frameRate, width, height);
 }

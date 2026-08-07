@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, Check, Sparkles, Loader2, Upload, Trash2, Edit2, AlertCircle, FolderPlus, Archive } from 'lucide-react';
+import {
+  MapPin,
+  Check,
+  Loader2,
+  Trash2,
+  Edit2,
+  AlertCircle,
+  FolderPlus,
+  Archive,
+} from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
 import { useImageLoader } from '../../hooks/useImageLoader';
@@ -73,7 +82,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
-      <div 
+      <div
         className="bg-[var(--bg-elevated)] relative cursor-pointer"
         style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
         onClick={() => imageSrc && onImageClick(imageSrc)}
@@ -128,7 +137,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
           </div>
         )}
       </div>
-      
+
       <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--bg-base)]">
         <div className="flex justify-between items-center mb-1 gap-2">
           {isEditingLocation ? (
@@ -143,7 +152,12 @@ const SceneCard: React.FC<SceneCardProps> = ({
             />
           ) : (
             <div className="flex items-center gap-2 flex-1 min-w-0 group/location">
-              <h3 className="font-bold text-[var(--text-secondary)] text-sm truncate" title={scene.location}>{scene.location}</h3>
+              <h3
+                className="font-bold text-[var(--text-secondary)] text-sm truncate"
+                title={scene.location}
+              >
+                {scene.location}
+              </h3>
               <button
                 onClick={() => {
                   setEditLocation(scene.location);

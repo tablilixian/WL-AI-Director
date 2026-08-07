@@ -12,10 +12,10 @@ export interface CharacterVariation {
  * 用于多视角展示角色外观，提升镜头图生成时的角色一致性
  */
 export interface CharacterTurnaroundPanel {
-  index: number;           // 0-8, 九宫格位置索引
-  viewAngle: string;       // 视角：正面/左侧面/右侧面/背面/3/4左侧/3/4右侧/俯视/仰视 等
-  shotSize: string;        // 景别：全身/半身/特写 等
-  description: string;     // 该格子的视觉描述
+  index: number; // 0-8, 九宫格位置索引
+  viewAngle: string; // 视角：正面/左侧面/右侧面/背面/3/4左侧/3/4右侧/俯视/仰视 等
+  shotSize: string; // 景别：全身/半身/特写 等
+  description: string; // 该格子的视觉描述
 }
 
 /**
@@ -26,7 +26,8 @@ export interface CharacterTurnaroundData {
   panels: CharacterTurnaroundPanel[];
   imageUrl?: string;
   prompt?: string;
-  status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
+  status:
+    'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
 }
 
 /**
@@ -34,8 +35,8 @@ export interface CharacterTurnaroundData {
  * 支持 AI 润色和预览图功能
  */
 export interface VisualDescriptionField {
-  original: string;        // 用户输入的原文本
-  polished?: string;        // AI 润色后的文本（可编辑）
+  original: string; // 用户输入的原文本
+  polished?: string; // AI 润色后的文本（可编辑）
   previewImageUrl?: string; // 预览图 URL
 }
 
@@ -67,10 +68,10 @@ export interface Character {
   // 【新增】角色视觉描述增强 - S级视觉描写
   // 用于更细致的角色外观描述（发型、身材比例、手部动作等）
   enhancedVisualDescription?: {
-    headAndHair?: string;      // 头部/发型具体描述
-    upperBody?: string;        // 上半身/S形剪影等
-    hands?: string;            // 手部动作习惯
-    walkingPattern?: string;   // 行走姿态
+    headAndHair?: string; // 头部/发型具体描述
+    upperBody?: string; // 上半身/S形剪影等
+    hands?: string; // 手部动作习惯
+    walkingPattern?: string; // 行走姿态
   };
 }
 
@@ -111,7 +112,7 @@ export interface AssetLibraryItem {
   createdAt: number;
   updatedAt: number;
   data: Character | Scene | Prop;
-  /** 
+  /**
    * PB 记录 ID（首次同步后回存），
    * 用于跨项目去重和删除，避免依赖 data.id 误匹配。
    */
@@ -146,41 +147,42 @@ export interface VideoInterval {
   videoPrompt?: string; // 视频生成时使用的提示词
   status: 'pending' | 'generating' | 'completed' | 'failed';
   // === 高级参数（扩展字段，旧项目兼容） ===
-  mode?: VideoGenerationMode;        // 生成模式，默认 'basic'
-  fps?: number;                      // 帧率，默认 30
-  width?: number;                    // 视频宽度（从 aspectRatio 推断，或用户自定义）
-  height?: number;                   // 视频高度
-  timedKeyframes?: TimedKeyframe[];  // MKR 用：所有帧的时间位置列表
-  backgroundImage?: string;          // MSR 用：背景图
-  gridType?: number;                 // MKR Grid 用：宫格类型（如 3x3=9, 2x2=4）
-  frameIndexes?: number[];           // MKR Grid 用：选中格子的索引
+  mode?: VideoGenerationMode; // 生成模式，默认 'basic'
+  fps?: number; // 帧率，默认 30
+  width?: number; // 视频宽度（从 aspectRatio 推断，或用户自定义）
+  height?: number; // 视频高度
+  timedKeyframes?: TimedKeyframe[]; // MKR 用：所有帧的时间位置列表
+  backgroundImage?: string; // MSR 用：背景图
+  gridType?: number; // MKR Grid 用：宫格类型（如 3x3=9, 2x2=4）
+  frameIndexes?: number[]; // MKR Grid 用：选中格子的索引
 }
 
 /**
  * 九宫格分镜预览 - 单个面板数据
  */
 export interface NineGridPanel {
-  index: number;           // 0-8, 九宫格位置索引
-  shotSize: string;        // 景别：特写/近景/中景/全景/远景 等
-  cameraAngle: string;     // 机位角度：俯拍/仰拍/平视/斜拍 等
-  description: string;     // 该格子的视觉描述
+  index: number; // 0-8, 九宫格位置索引
+  shotSize: string; // 景别：特写/近景/中景/全景/远景 等
+  cameraAngle: string; // 机位角度：俯拍/仰拍/平视/斜拍 等
+  description: string; // 该格子的视觉描述
 }
 
 /**
  * 九宫格分镜预览数据
  */
 export interface NineGridData {
-  panels: NineGridPanel[];  // 格子的描述数据
-  gridnum?: number;         // 格子数量（默认 9）
-  imageUrl?: string;        // 生成的九宫格图片 (base64)
-  prompt?: string;          // 生成时使用的完整提示词
-  status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
+  panels: NineGridPanel[]; // 格子的描述数据
+  gridnum?: number; // 格子数量（默认 9）
+  imageUrl?: string; // 生成的九宫格图片 (base64)
+  prompt?: string; // 生成时使用的完整提示词
+  status:
+    'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
   // generating_panels: AI正在生成镜头描述
   // panels_ready: 镜头描述已生成，等待用户确认/编辑后再生成图片
   // generating_image: 用户已确认，正在生成九宫格图片
   // V2 风格帧信息（风格帧→image2storyboard 流程）
   styleFramePrompt?: string; // 风格帧生成的提示词
-  styleFrameUrl?: string;    // 风格帧图片
+  styleFrameUrl?: string; // 风格帧图片
 }
 
 export interface FourGridDeduction {
@@ -199,10 +201,10 @@ export interface Shot {
   id: string;
   sceneId: string;
   actionSummary: string;
-  dialogue?: string; 
+  dialogue?: string;
   cameraMovement: string;
   cameraChoreography?: CameraChoreography; // 结构化运镜编排（起点→路径→终点）
-  shotSize?: string; 
+  shotSize?: string;
   characters: string[]; // Character IDs
   characterVariations?: { [characterId: string]: string }; // Added: Map char ID to variation ID for this shot
   props?: string[]; // 道具ID数组，引用 ScriptData.props 中的道具
@@ -223,8 +225,10 @@ export interface Shot {
 // 运镜编排类型 —— "起点→路径→终点" 结构化运镜
 // ============================================
 
-export type ShotSizeLabel = '大远景' | '远景' | '全景' | '中全景' | '中景' | '中近景' | '近景' | '特写' | '大特写';
-export type CameraAngleLabel = '平视' | '仰拍' | '俯拍' | '鸟瞰' | '斜拍' | '正面' | '侧面' | '背面' | '低角度';
+export type ShotSizeLabel =
+  '大远景' | '远景' | '全景' | '中全景' | '中景' | '中近景' | '近景' | '特写' | '大特写';
+export type CameraAngleLabel =
+  '平视' | '仰拍' | '俯拍' | '鸟瞰' | '斜拍' | '正面' | '侧面' | '背面' | '低角度';
 export type SubjectPosition = '居中' | '左侧1/3' | '右侧1/3' | '黄金分割左' | '黄金分割右' | '边缘';
 export type FocusType = '浅景深' | '深焦' | '全景清晰' | '柔焦' | '移轴';
 export type MovementSpeedLabel = '极慢' | '慢速' | '中速' | '快速' | '极快';
@@ -254,19 +258,19 @@ export interface CameraChoreography {
 export interface ArtDirection {
   /** 全局色彩方案 */
   colorPalette: {
-    primary: string;      // 主色调描述
-    secondary: string;    // 辅色调
-    accent: string;       // 点缀色
-    skinTones: string;    // 肤色范围描述
-    saturation: string;   // 整体饱和度倾向
-    temperature: string;  // 整体色温倾向
+    primary: string; // 主色调描述
+    secondary: string; // 辅色调
+    accent: string; // 点缀色
+    skinTones: string; // 肤色范围描述
+    saturation: string; // 整体饱和度倾向
+    temperature: string; // 整体色温倾向
   };
   /** 角色设计统一规则 */
   characterDesignRules: {
-    proportions: string;   // 头身比、体型风格
-    eyeStyle: string;      // 眼睛画法统一
-    lineWeight: string;    // 线条粗细风格
-    detailLevel: string;   // 细节密度级别
+    proportions: string; // 头身比、体型风格
+    eyeStyle: string; // 眼睛画法统一
+    lineWeight: string; // 线条粗细风格
+    detailLevel: string; // 细节密度级别
   };
   /** 统一光影处理方式 */
   lightingStyle: string;
@@ -296,7 +300,14 @@ export interface ScriptData {
 export interface RenderLog {
   id: string;
   timestamp: number; // Unix timestamp when API was called
-  type: 'character' | 'character-variation' | 'scene' | 'prop' | 'keyframe' | 'video' | 'script-parsing';
+  type:
+    | 'character'
+    | 'character-variation'
+    | 'scene'
+    | 'prop'
+    | 'keyframe'
+    | 'video'
+    | 'script-parsing';
   resourceId: string; // ID of the resource being generated
   resourceName: string; // Human-readable name
   status: 'success' | 'failed';
@@ -314,7 +325,7 @@ export interface VideoPreset {
   id: string;
   name: string;
   description?: string;
-  version: number;        // 预设数据版本，用于向前兼容迁移
+  version: number; // 预设数据版本，用于向前兼容迁移
   createdAt: number;
   params: {
     mode: VideoGenerationMode;
@@ -337,19 +348,19 @@ export interface ProjectState {
   lastModified: number;
   version: number;
   stage: 'script' | 'assets' | 'director' | 'editor' | 'export' | 'prompts' | 'canvas';
-  
+
   // Script Phase Data
   rawScript: string;
   targetDuration: string;
   language: string;
   visualStyle: string; // Visual style: live-action, anime, 3d-animation, etc.
   shotGenerationModel: string; // Model for shot generation
-  
+
   /** 领域知识：时代背景描述（如"抗日战争1940年华北"），注入AI提示词增强历史/文化准确性 */
   eraContext?: string;
   /** 领域知识：自定义知识库（如风格参考、文化细节、技术规范等），逐行注入 */
   knowledgeBase?: string;
-  
+
   scriptData: ScriptData | null;
   shots: Shot[];
   isParsingScript: boolean;
@@ -424,22 +435,22 @@ export type VideoDuration = number; // 3-15 秒，运行时由 model 的 support
 export function renderCameraChoreographyPrompt(
   cc: CameraChoreography,
   actionSummary: string,
-  totalSeconds: number = 8
+  totalSeconds: number = 8,
 ): string {
   const tStart = Math.round(totalSeconds * cc.timingStartRatio * 10) / 10;
   const tMove = Math.round(totalSeconds * cc.timingMoveRatio * 10) / 10;
-  const tEnd = Math.round(totalSeconds * cc.timingEndRatio * 10) / 10;
+  void (Math.round(totalSeconds * cc.timingEndRatio * 10) / 10);
 
   const tStartEnd = tStart;
   const tMoveEnd = Math.round((tStart + tMove) * 10) / 10;
   const tEndEnd = totalSeconds;
 
   const speedMap: Record<MovementSpeedLabel, string> = {
-    '极慢': 'very-slow',
-    '慢速': 'slow',
-    '中速': 'medium',
-    '快速': 'fast',
-    '极快': 'very-fast',
+    极慢: 'very-slow',
+    慢速: 'slow',
+    中速: 'medium',
+    快速: 'fast',
+    极快: 'very-fast',
   };
 
   return `【运镜编排】

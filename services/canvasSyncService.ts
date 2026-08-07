@@ -1,12 +1,12 @@
 /**
  * 画布同步服务
- * 
+ *
  * 职责：
  * 1. 管理本地保存（高频）
  * 2. 管理云端同步（低频）
  * 3. 处理冲突检测
  * 4. 提供降级方案
- * 
+ *
  * 设计原则：Local-First
  * - 本地保存是必须成功的
  * - 云端同步是可选的，失败不影响本地功能
@@ -68,7 +68,7 @@ function getStoredSyncConfig(): { enabled: boolean } {
     if (stored) {
       return JSON.parse(stored);
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
   return { enabled: true };
@@ -97,7 +97,11 @@ class CanvasSyncService {
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private currentProjectId: string | null = null;
   private debouncedSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private pendingSaveData: { layers: any[]; offset: { x: number; y: number }; scale: number } | null = null;
+  private pendingSaveData: {
+    layers: any[];
+    offset: { x: number; y: number };
+    scale: number;
+  } | null = null;
   private loadPromise: Promise<CanvasData | null> | null = null;
 
   constructor() {
@@ -109,7 +113,7 @@ class CanvasSyncService {
    */
   async init(projectId: string): Promise<void> {
     logger.debug(LogCategory.CANVAS, `[CanvasSync] 初始化，项目: ${projectId}`);
-    
+
     this.currentProjectId = projectId;
     this.state = {
       dirty: false,
@@ -129,7 +133,7 @@ class CanvasSyncService {
   /**
    * 保存画布状态 - 用户操作时调用
    * 本地立即保存，云端延迟同步
-   * 
+   *
    * @param projectId 项目ID（必须传入，确保数据正确关联）
    * @param layers 图层数据
    * @param offset 画布偏移
@@ -139,7 +143,7 @@ class CanvasSyncService {
     projectId: string,
     layers: any[],
     offset: { x: number; y: number },
-    scale: number
+    scale: number,
   ): Promise<void> {
     if (!projectId) {
       logger.warn(LogCategory.CANVAS, '[CanvasSync] 项目ID为空，无法保存');
@@ -164,7 +168,7 @@ class CanvasSyncService {
   /**
    * 立即保存画布状态 - 绕过防抖，直接写入 IndexedDB
    * 用于关键节点：手动保存、切换页面、浏览器关闭前兜底
-   * 
+   *
    * @param projectId 项目ID
    * @param layers 图层数据
    * @param offset 画布偏移
@@ -174,7 +178,7 @@ class CanvasSyncService {
     projectId: string,
     layers: any[],
     offset: { x: number; y: number },
-    scale: number
+    scale: number,
   ): Promise<void> {
     if (!projectId) {
       logger.warn(LogCategory.CANVAS, '[CanvasSync] 项目ID为空，无法立即保存');
@@ -196,7 +200,7 @@ class CanvasSyncService {
 
       logger.debug(
         LogCategory.CANVAS,
-        `[CanvasSync] 立即保存成功，项目: ${projectId}, 版本: ${canvasData.version}`
+        `[CanvasSync] 立即保存成功，项目: ${projectId}, 版本: ${canvasData.version}`,
       );
 
       this.scheduleCloudSync();
@@ -219,19 +223,14 @@ class CanvasSyncService {
 
     try {
       // 1. 保存到本地 IndexedDB（必须成功）
-      const canvasData = await saveCanvasDataToLocal(
-        this.currentProjectId,
-        layers,
-        offset,
-        scale
-      );
+      const canvasData = await saveCanvasDataToLocal(this.currentProjectId, layers, offset, scale);
 
       this.state.lastLocalSave = Date.now();
       this.state.dirty = true;
 
       logger.debug(
         LogCategory.CANVAS,
-        `[CanvasSync] 本地保存成功，项目: ${this.currentProjectId}, 版本: ${canvasData.version}`
+        `[CanvasSync] 本地保存成功，项目: ${this.currentProjectId}, 版本: ${canvasData.version}`,
       );
 
       // 2. 调度云端同步（延迟执行）
@@ -260,7 +259,7 @@ class CanvasSyncService {
     const timeSinceLastSync = Date.now() - this.state.lastCloudSync;
     const delay = Math.max(
       this.config.cloudSyncDelay,
-      this.config.cloudSyncMinInterval - timeSinceLastSync
+      this.config.cloudSyncMinInterval - timeSinceLastSync,
     );
 
     this.syncTimer = setTimeout(() => {
@@ -316,17 +315,14 @@ class CanvasSyncService {
 
       // 更新同步状态
       await updateCanvasSyncStatus(this.currentProjectId, 'synced');
-      
+
       this.state.dirty = false;
       this.state.lastCloudSync = Date.now();
 
-      logger.debug(
-        LogCategory.CANVAS,
-        `[CanvasSync] 云端同步成功，项目: ${this.currentProjectId}`
-      );
+      logger.debug(LogCategory.CANVAS, `[CanvasSync] 云端同步成功，项目: ${this.currentProjectId}`);
     } catch (error) {
       logger.error(LogCategory.CANVAS, '[CanvasSync] 云端同步失败:', error);
-      
+
       // 标记为待同步，下次重试
       await updateCanvasSyncStatus(this.currentProjectId, 'pending');
     } finally {
@@ -353,17 +349,14 @@ class CanvasSyncService {
       if (serverData && serverData.version > data.version) {
         logger.warn(
           LogCategory.CANVAS,
-          `[CanvasSync] 云端版本(${serverData.version}) 高于本地(${data.version})，跳过上传`
+          `[CanvasSync] 云端版本(${serverData.version}) 高于本地(${data.version})，跳过上传`,
         );
         return;
       }
       if (serverData && serverData.version === data.version) {
         // 版本相同，使用 serverData.savedAt 判断，如果服务器更新则跳过
         if (serverData.savedAt > data.savedAt) {
-          logger.warn(
-            LogCategory.CANVAS,
-            `[CanvasSync] 云端版本与本地相同但时间更新，跳过上传`
-          );
+          logger.warn(LogCategory.CANVAS, `[CanvasSync] 云端版本与本地相同但时间更新，跳过上传`);
           return;
         }
       }
@@ -380,11 +373,7 @@ class CanvasSyncService {
         return; // 成功
       } catch (error) {
         lastError = error as Error;
-        logger.warn(
-          LogCategory.CANVAS,
-          `[CanvasSync] 上传失败，第 ${i + 1} 次重试:`,
-          error
-        );
+        logger.warn(LogCategory.CANVAS, `[CanvasSync] 上传失败，第 ${i + 1} 次重试:`, error);
 
         if (i < this.config.cloudSyncRetryTimes - 1) {
           await this.delay(this.config.cloudSyncRetryDelay);
@@ -514,7 +503,7 @@ class CanvasSyncService {
    */
   private determineSyncDirection(
     localData: CanvasData | null,
-    cloudData: CloudCanvasData | null
+    cloudData: CloudCanvasData | null,
   ): ConflictResolution {
     // 情况1: 本地有，云端没有 -> 使用本地
     if (localData && !cloudData) {
@@ -540,14 +529,21 @@ class CanvasSyncService {
       }
 
       // 安全策略：云端有内容但本地为空，使用云端
-      if ((!localData.layers || localData.layers.length === 0) && cloudData.layers && cloudData.layers.length > 0) {
+      if (
+        (!localData.layers || localData.layers.length === 0) &&
+        cloudData.layers &&
+        cloudData.layers.length > 0
+      ) {
         logger.warn(LogCategory.CANVAS, '[CanvasSync] 云端有内容但本地为空，下载云端数据');
         return ConflictResolution.USE_CLOUD;
       }
 
       // 安全策略：双方都为空时，优先使用本地数据
       // 防止在竞态条件下（自动保存空数据 vs 云端空数据）云端因时间戳更新而覆盖本地
-      if ((!localData.layers || localData.layers.length === 0) && (!cloudData.layers || cloudData.layers.length === 0)) {
+      if (
+        (!localData.layers || localData.layers.length === 0) &&
+        (!cloudData.layers || cloudData.layers.length === 0)
+      ) {
         logger.warn(LogCategory.CANVAS, '[CanvasSync] 本地和云端都为空，优先保留本地状态');
         return ConflictResolution.USE_LOCAL;
       }
@@ -584,7 +580,10 @@ class CanvasSyncService {
   private async downloadFromCloud(cloudData: CloudCanvasData): Promise<void> {
     const { saveCloudCanvasDataToLocal } = await import('./canvasStorageService');
     await saveCloudCanvasDataToLocal(cloudData);
-    logger.debug(LogCategory.CANVAS, `[CanvasSync] 云端数据已下载到本地，项目: ${cloudData.projectId}`);
+    logger.debug(
+      LogCategory.CANVAS,
+      `[CanvasSync] 云端数据已下载到本地，项目: ${cloudData.projectId}`,
+    );
   }
 
   /**
@@ -625,10 +624,7 @@ class CanvasSyncService {
    */
   setCloudSyncEnabled(enabled: boolean): void {
     this.config.cloudSyncEnabled = enabled;
-    localStorage.setItem(
-      CLOUD_SYNC_CONFIG_KEY,
-      JSON.stringify({ enabled })
-    );
+    localStorage.setItem(CLOUD_SYNC_CONFIG_KEY, JSON.stringify({ enabled }));
     logger.debug(LogCategory.CANVAS, `[CanvasSync] 云端同步已${enabled ? '启用' : '禁用'}`);
   }
 
@@ -674,7 +670,7 @@ class CanvasSyncService {
    * 延迟函数
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 

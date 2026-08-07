@@ -1,10 +1,14 @@
-import { VideoGenerationMode, AspectRatio, VideoDuration, TimedKeyframe } from '../../types';
+import { VideoGenerationMode, AspectRatio, VideoDuration } from '../../types';
 import { generateVideo } from './videoService';
 import { generateVideoMsr, generateVideoMkr, generateVideoMkrGrid } from './visualService';
 import { unifiedImageService } from '../unifiedImageService';
 import { logger, LogCategory } from '../logger';
 import { retryOperation } from './apiCore';
-import { VIDEO_MKR_GRID_DEFAULT, VIDEO_MSR_DEFAULT, VIDEO_MKR_DEFAULT } from '../../config/sizeConfig';
+import {
+  VIDEO_MKR_GRID_DEFAULT,
+  VIDEO_MSR_DEFAULT,
+  VIDEO_MKR_DEFAULT,
+} from '../../config/sizeConfig';
 
 function withProgressSimulation<T>(
   fn: () => Promise<T>,
@@ -16,7 +20,10 @@ function withProgressSimulation<T>(
 ): Promise<T> {
   const timer = setInterval(() => {
     const current = Date.now() - startTime;
-    const simulated = Math.min(startPct + (endPct - startPct) * Math.min(current / 120000, 1), endPct - 5);
+    const simulated = Math.min(
+      startPct + (endPct - startPct) * Math.min(current / 120000, 1),
+      endPct - 5,
+    );
     onProgress(Math.round(simulated), `${label} (${Math.round(simulated)}%)`);
   }, intervalMs);
   const startTime = Date.now();
@@ -74,10 +81,9 @@ const MAX_RETRIES = 3;
  * 提供统一的进度回调、重试逻辑、错误处理。
  */
 export class VideoGenerationOrchestrator {
-
   async generate(
     request: VideoGenerationRequest,
-    onProgress?: (progress: VideoGenerationProgress) => void
+    onProgress?: (progress: VideoGenerationProgress) => void,
   ): Promise<VideoGenerationResult> {
     const { mode } = request;
     logger.debug(LogCategory.AI, `🎬 Orchestrator 启动 — 模式: ${mode}`);
@@ -114,7 +120,7 @@ export class VideoGenerationOrchestrator {
 
   private async generateBasic(
     req: VideoGenerationRequest,
-    onProgress?: (p: VideoGenerationProgress) => void
+    onProgress?: (p: VideoGenerationProgress) => void,
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: '首尾帧模式生成中...' });
     const result = await generateVideo(
@@ -123,7 +129,7 @@ export class VideoGenerationOrchestrator {
       req.endImage || '',
       req.modelId,
       req.aspectRatio,
-      req.duration
+      req.duration,
     );
     onProgress?.({ stage: 'generating', percent: 85, message: '首尾帧模式完成' });
     return result;
@@ -131,21 +137,35 @@ export class VideoGenerationOrchestrator {
 
   private async generateMsr(
     req: VideoGenerationRequest,
-    onProgress?: (p: VideoGenerationProgress) => void
+    onProgress?: (p: VideoGenerationProgress) => void,
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MSR 多帧超分生成中...' });
 
     const width = VIDEO_MSR_DEFAULT.width;
     const height = VIDEO_MSR_DEFAULT.height;
 
-    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+    const notify = (pct: number, msg: string) =>
+      onProgress?.({ stage: 'generating', percent: pct, message: msg });
 
     const result = await withProgressSimulation(
-      () => retryOperation(
-        () => generateVideoMsr(req.prompt, req.referenceImages || [], req.backgroundImage || '', width, height, req.duration, req.fps),
-        MAX_RETRIES
-      ),
-      notify, 5, 85, 'MSR 多帧超分生成中'
+      () =>
+        retryOperation(
+          () =>
+            generateVideoMsr(
+              req.prompt,
+              req.referenceImages || [],
+              req.backgroundImage || '',
+              width,
+              height,
+              req.duration,
+              req.fps,
+            ),
+          MAX_RETRIES,
+        ),
+      notify,
+      5,
+      85,
+      'MSR 多帧超分生成中',
     );
 
     notify(85, 'MSR 生成完成');
@@ -154,21 +174,34 @@ export class VideoGenerationOrchestrator {
 
   private async generateMkr(
     req: VideoGenerationRequest,
-    onProgress?: (p: VideoGenerationProgress) => void
+    onProgress?: (p: VideoGenerationProgress) => void,
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR 多关键帧生成中...' });
 
     const width = VIDEO_MKR_DEFAULT.width;
     const height = VIDEO_MKR_DEFAULT.height;
 
-    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+    const notify = (pct: number, msg: string) =>
+      onProgress?.({ stage: 'generating', percent: pct, message: msg });
 
     const result = await withProgressSimulation(
-      () => retryOperation(
-        () => generateVideoMkr(req.prompt, req.timedImages || [], width, height, req.duration, req.fps),
-        MAX_RETRIES
-      ),
-      notify, 5, 85, 'MKR 多关键帧生成中'
+      () =>
+        retryOperation(
+          () =>
+            generateVideoMkr(
+              req.prompt,
+              req.timedImages || [],
+              width,
+              height,
+              req.duration,
+              req.fps,
+            ),
+          MAX_RETRIES,
+        ),
+      notify,
+      5,
+      85,
+      'MKR 多关键帧生成中',
     );
 
     notify(85, 'MKR 生成完成');
@@ -177,7 +210,7 @@ export class VideoGenerationOrchestrator {
 
   private async generateMkrGrid(
     req: VideoGenerationRequest,
-    onProgress?: (p: VideoGenerationProgress) => void
+    onProgress?: (p: VideoGenerationProgress) => void,
   ): Promise<string> {
     onProgress?.({ stage: 'generating', percent: 5, message: 'MKR Grid 宫格视频生成中...' });
 
@@ -187,25 +220,42 @@ export class VideoGenerationOrchestrator {
       throw new Error('MKR Grid: frameIndexes 为空，请至少选择一个分镜');
     }
     if (rawIndexes.length !== gridType) {
-      throw new Error(`MKR Grid: frameIndexes 数量 (${rawIndexes.length}) 与 gridType (${gridType}) 不匹配`);
+      throw new Error(
+        `MKR Grid: frameIndexes 数量 (${rawIndexes.length}) 与 gridType (${gridType}) 不匹配`,
+      );
     }
 
     const totalFrames = req.duration * req.fps;
-    const frameIndexes = (req.frameIndexes || [0, 0, 0, 0]).map(pct =>
-      Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
+    const frameIndexes = (req.frameIndexes || [0, 0, 0, 0]).map((pct) =>
+      Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1),
     );
 
     const width = VIDEO_MKR_GRID_DEFAULT.width;
     const height = VIDEO_MKR_GRID_DEFAULT.height;
 
-    const notify = (pct: number, msg: string) => onProgress?.({ stage: 'generating', percent: pct, message: msg });
+    const notify = (pct: number, msg: string) =>
+      onProgress?.({ stage: 'generating', percent: pct, message: msg });
 
     const result = await withProgressSimulation(
-      () => retryOperation(
-        () => generateVideoMkrGrid(req.prompt, req.refImage || '', req.gridType || 4, frameIndexes, width, height, req.duration, req.fps),
-        MAX_RETRIES
-      ),
-      notify, 5, 85, 'MKR Grid 宫格视频生成中'
+      () =>
+        retryOperation(
+          () =>
+            generateVideoMkrGrid(
+              req.prompt,
+              req.refImage || '',
+              req.gridType || 4,
+              frameIndexes,
+              width,
+              height,
+              req.duration,
+              req.fps,
+            ),
+          MAX_RETRIES,
+        ),
+      notify,
+      5,
+      85,
+      'MKR Grid 宫格视频生成中',
     );
 
     notify(85, 'MKR Grid 生成完成');

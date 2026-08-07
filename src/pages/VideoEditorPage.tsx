@@ -4,14 +4,10 @@ interface VideoEditorPageProps {
   projectId?: string;
 }
 
-const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ projectId }) => {
+const VideoEditorPage: React.FC<VideoEditorPageProps> = () => {
   return (
     <div className="flex-1 h-full overflow-hidden">
-      <iframe
-        src="/video-editor"
-        className="w-full h-full border-0"
-        title="Video Editor"
-      />
+      <iframe src="/video-editor" className="w-full h-full border-0" title="Video Editor" />
     </div>
   );
 };

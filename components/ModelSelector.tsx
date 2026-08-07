@@ -5,18 +5,8 @@
 
 import React from 'react';
 import { Cpu, ChevronDown } from 'lucide-react';
-import { 
-  ModelType, 
-  ModelDefinition,
-  ChatModelDefinition,
-  ImageModelDefinition,
-  VideoModelDefinition,
-} from '../types/model';
-import {
-  getChatModels,
-  getImageModels,
-  getVideoModels,
-} from '../services/modelRegistry';
+import { ModelType, ModelDefinition, VideoModelDefinition } from '../types/model';
+import { getChatModels, getImageModels, getVideoModels } from '../services/modelRegistry';
 
 interface ModelSelectorProps {
   type: ModelType;
@@ -26,12 +16,6 @@ interface ModelSelectorProps {
   compact?: boolean;
   label?: string;
 }
-
-const typeLabels: Record<ModelType, string> = {
-  chat: '对话模型',
-  image: '图片模型',
-  video: '视频模型',
-};
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
   type,
@@ -55,11 +39,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         models = getVideoModels();
         break;
     }
-    return models.filter(m => m.isEnabled);
+    return models.filter((m) => m.isEnabled);
   };
 
   const models = getModels();
-  const selectedModel = models.find(m => m.id === value);
+  const selectedModel = models.find((m) => m.id === value);
 
   if (compact) {
     return (
@@ -105,9 +89,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)] pointer-events-none" />
       </div>
       {selectedModel && !compact && (
-        <p className="text-[9px] text-[var(--text-muted)]">
-          ID: {selectedModel.id}
-        </p>
+        <p className="text-[9px] text-[var(--text-muted)]">ID: {selectedModel.id}</p>
       )}
     </div>
   );
@@ -123,9 +105,9 @@ export const VideoModelSelector: React.FC<{
   onChange: (modelId: string) => void;
   disabled?: boolean;
 }> = ({ value, onChange, disabled }) => {
-  const models = getVideoModels().filter(m => m.isEnabled);
-  const selectedModel = models.find(m => m.id === value) as VideoModelDefinition | undefined;
-  
+  const models = getVideoModels().filter((m) => m.isEnabled);
+  const selectedModel = models.find((m) => m.id === value) as VideoModelDefinition | undefined;
+
   return (
     <div className="space-y-1">
       <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">
@@ -153,9 +135,8 @@ export const VideoModelSelector: React.FC<{
       {selectedModel && (
         <p className="text-[9px] text-[var(--text-muted)]">
           模式: {selectedModel.params.mode === 'async' ? '异步（需要轮询）' : '同步（直接返回）'}
-          {selectedModel.params.supportedDurations.length > 1 && 
-            ` · 支持时长: ${selectedModel.params.supportedDurations.join('/')}秒`
-          }
+          {selectedModel.params.supportedDurations.length > 1 &&
+            ` · 支持时长: ${selectedModel.params.supportedDurations.join('/')}秒`}
         </p>
       )}
     </div>

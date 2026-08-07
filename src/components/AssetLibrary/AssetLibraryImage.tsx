@@ -1,6 +1,5 @@
 import React from 'react';
-import { Users, MapPin, Package } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { Users, MapPin, Package, Loader2 } from 'lucide-react';
 import { AssetLibraryItemType } from '../../../types';
 import { useImageLoader } from '../../../hooks/useImageLoader';
 
@@ -12,7 +11,7 @@ interface AssetLibraryImageProps {
 
 export const AssetLibraryImage: React.FC<AssetLibraryImageProps> = ({ imageUrl, alt, type }) => {
   const { src, loading } = useImageLoader(imageUrl);
-  
+
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
@@ -20,7 +19,7 @@ export const AssetLibraryImage: React.FC<AssetLibraryImageProps> = ({ imageUrl, 
       </div>
     );
   }
-  
+
   if (!src) {
     return (
       <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
@@ -34,6 +33,6 @@ export const AssetLibraryImage: React.FC<AssetLibraryImageProps> = ({ imageUrl, 
       </div>
     );
   }
-  
+
   return <img src={src} alt={alt} className="w-full h-full object-cover" />;
 };

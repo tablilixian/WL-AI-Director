@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Archive } from 'lucide-react';
 import { AssetLibraryItem, ProjectState } from '../../../types';
-import { useAssetLibrary, AssetFilter } from './useAssetLibrary';
+import { useAssetLibrary } from './useAssetLibrary';
 import { AssetLibraryBrowser } from './AssetLibraryBrowser';
 
 interface AssetLibraryPageProps {
@@ -29,28 +29,33 @@ export const AssetLibraryPage: React.FC<AssetLibraryPageProps> = ({
     setProjectFilter,
     setSearchQuery,
     deleteItem,
-    refresh,
   } = useAssetLibrary({ autoLoad: isOpen });
 
   const [selectedItem, setSelectedItem] = useState<AssetLibraryItem | null>(null);
 
-  const handleDelete = useCallback(async (itemId: string) => {
-    await deleteItem(itemId);
-  }, [deleteItem]);
+  const handleDelete = useCallback(
+    async (itemId: string) => {
+      await deleteItem(itemId);
+    },
+    [deleteItem],
+  );
 
   const handleSelectItem = useCallback((item: AssetLibraryItem) => {
     setSelectedItem(item);
   }, []);
 
-  const handleSelectProject = useCallback(async (projectId: string) => {
-    if (!selectedItem) return;
-    try {
-      await onSelectProjectAndImport(projectId, selectedItem);
-      setSelectedItem(null);
-    } catch {
-      // error handled by parent
-    }
-  }, [selectedItem, onSelectProjectAndImport]);
+  const handleSelectProject = useCallback(
+    async (projectId: string) => {
+      if (!selectedItem) return;
+      try {
+        await onSelectProjectAndImport(projectId, selectedItem);
+        setSelectedItem(null);
+      } catch {
+        // error handled by parent
+      }
+    },
+    [selectedItem, onSelectProjectAndImport],
+  );
 
   const handleClose = () => {
     setFilter('all');
@@ -84,7 +89,9 @@ export const AssetLibraryPage: React.FC<AssetLibraryPageProps> = ({
             <h2 className="text-lg text-[var(--text-primary)] flex items-center gap-2">
               <Archive className="w-4 h-4 text-[var(--accent-text)]" />
               资产库
-              <span className="text-[var(--text-muted)] text-xs font-mono uppercase tracking-widest">Asset Library</span>
+              <span className="text-[var(--text-muted)] text-xs font-mono uppercase tracking-widest">
+                Asset Library
+              </span>
             </h2>
             <p className="text-xs text-[var(--text-tertiary)] mt-2">
               在项目里将角色与场景加入资产库，跨项目复用
@@ -143,9 +150,15 @@ export const AssetLibraryPage: React.FC<AssetLibraryPageProps> = ({
                         onClick={() => handleSelectProject(proj.id)}
                         className="p-4 text-left border border-[var(--border-primary)] hover:border-[var(--border-secondary)] bg-[var(--bg-deep)] hover:bg-[var(--bg-secondary)] transition-colors"
                       >
-                        <div className="text-sm text-[var(--text-primary)] font-bold line-clamp-1">{proj.title}</div>
+                        <div className="text-sm text-[var(--text-primary)] font-bold line-clamp-1">
+                          {proj.title}
+                        </div>
                         <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-1">
-                          {new Date(proj.lastModified).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                          {new Date(proj.lastModified).toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                          })}
                         </div>
                       </button>
                     ))}

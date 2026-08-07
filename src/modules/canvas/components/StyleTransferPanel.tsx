@@ -17,16 +17,20 @@ const styles = [
   { id: 'ghibli', name: '吉卜力', emoji: '🌸' },
   { id: '3d-render', name: '3D渲染', emoji: '🎮' },
   { id: 'comic', name: '漫画', emoji: '💥' },
-  { id: 'pop-art', name: '波普', emoji: '🎭' }
+  { id: 'pop-art', name: '波普', emoji: '🎭' },
 ];
 
-export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selectedLayerId, onClose }) => {
+export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({
+  selectedLayerId,
+  onClose,
+}) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const { layers, addLayer, updateLayer } = useCanvasStore();
+  const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasSelectedImage =
+    selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleStyleTransfer = async (styleId: string) => {
     if (!hasSelectedImage || !selectedLayer || isProcessing) return;
@@ -35,10 +39,8 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
     setProgress(0);
 
     try {
-      const newImageUrl = await canvasModelService.styleTransfer(
-        selectedLayer.src,
-        styleId,
-        (p) => setProgress(p)
+      const newImageUrl = await canvasModelService.styleTransfer(selectedLayer.src, styleId, (p) =>
+        setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -69,7 +71,7 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
         }
       }
 
-      const styleName = styles.find(s => s.id === styleId)?.name || styleId;
+      const styleName = styles.find((s) => s.id === styleId)?.name || styleId;
 
       const newLayerId = crypto.randomUUID();
       addLayer({
@@ -85,7 +87,7 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
         isLoading: false,
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
-        operationType: 'style-transfer'
+        operationType: 'style-transfer',
       });
 
       onClose();
@@ -121,12 +123,14 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
       <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">风格迁移</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -135,9 +139,7 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({ selected
           <p className="text-sm text-[var(--text-muted)]">
             选择一种风格，AI 将把图片转换为该风格。
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            当前图片: {selectedLayer?.title}
-          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">当前图片: {selectedLayer?.title}</p>
         </div>
 
         {isProcessing ? (

@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  PromptLayerData, 
-  PromptMode, 
-  PROMPT_MODE_ICONS, 
-  PROMPT_MODE_NAMES,
-  PROMPT_MODE_COLORS 
-} from '../types/canvas';
+import { PromptLayerData, PromptMode, PROMPT_MODE_ICONS, PROMPT_MODE_NAMES } from '../types/canvas';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { imageStorageService } from '../../../../services/imageStorageService';
 
 async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; imageId?: string }> {
   if (!imageUrl) return { src: '' };
-  
+
   if (imageUrl.startsWith('local:')) {
     return { src: imageUrl, imageId: imageUrl.replace('local:', '') };
   }
-  
+
   if (imageUrl.startsWith('data:')) {
     try {
       const imgId = `canvas_prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -30,7 +24,7 @@ async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; ima
       return { src: imageUrl };
     }
   }
-  
+
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     try {
       const response = await fetch(imageUrl);
@@ -44,7 +38,7 @@ async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; ima
       return { src: imageUrl };
     }
   }
-  
+
   return { src: imageUrl };
 }
 
@@ -53,62 +47,59 @@ interface PromptLayerProps {
   isSelected: boolean;
 }
 
-export const PromptLayer: React.FC<PromptLayerProps> = ({ 
-  layer, 
-  isSelected
-}) => {
+export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isApiEnhancing, setIsApiEnhancing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-  
-  const { 
-    updatePromptConfig, 
-    getPromptLinkedLayers, 
+
+  const {
+    updatePromptConfig,
+    getPromptLinkedLayers,
     unlinkLayerFromPrompt,
     addLayer,
-    updateLayer
+    updateLayer,
   } = useCanvasStore();
-  
+
   const { promptConfig } = layer;
   const linkedLayers = getPromptLinkedLayers(layer.id);
-  
+
   const handleEditStart = () => {
     setEditPrompt(promptConfig.prompt);
     setIsEditing(true);
   };
-  
+
   const handleEditSave = () => {
     updatePromptConfig(layer.id, { prompt: editPrompt });
     setIsEditing(false);
   };
-  
+
   const handleEditCancel = () => {
     setIsEditing(false);
   };
-  
+
   const handleModeChange = (mode: PromptMode) => {
     updatePromptConfig(layer.id, { mode });
   };
-  
+
   const handleUnlink = (layerId: string) => {
     unlinkLayerFromPrompt(layer.id, layerId);
   };
-  
+
   const handleEnhance = async () => {
     if (!promptConfig.prompt.trim() || isEnhancing) return;
-    
+
     setIsEnhancing(true);
     try {
       const enhanced = await canvasModelService.enhancePrompt(
         promptConfig.prompt,
         promptConfig.mode,
-        linkedLayers.length
+        linkedLayers.length,
       );
-      updatePromptConfig(layer.id, { 
+      updatePromptConfig(layer.id, {
         enhancedPrompt: enhanced,
-        isEnhanced: true 
+        isEnhanced: true,
       });
     } catch (error) {
       console.error('Enhance failed:', error);
@@ -116,7 +107,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
       setIsEnhancing(false);
     }
   };
-  
+
   const handleApiEnhance = async () => {
     if (!promptConfig.prompt.trim() || isApiEnhancing) return;
 
@@ -125,7 +116,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
       const enhanced = await canvasModelService.apiPromptEnhance(promptConfig.prompt);
       updatePromptConfig(layer.id, {
         enhancedPrompt: enhanced,
-        isEnhanced: true
+        isEnhanced: true,
       });
     } catch (error) {
       console.error('API Enhance failed:', error);
@@ -136,36 +127,41 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
 
   const handleExecute = async () => {
     if (!promptConfig.prompt.trim() || isExecuting || linkedLayers.length === 0) return;
-    
+
     setIsExecuting(true);
     const outputIds: string[] = [];
     const traceId = `layer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    
+
     console.log(`\n========== [I2I:${traceId}] PromptLayer 执行启动 ==========`);
     console.log(`[I2I:${traceId}] 模式: 图生图 (${promptConfig.mode})`);
     console.log(`[I2I:${traceId}] 关联图层数: ${linkedLayers.length}`);
     console.log(`[I2I:${traceId}] 已增强: ${promptConfig.isEnhanced}`);
-    
+
     try {
-      const promptToUse = promptConfig.isEnhanced && promptConfig.enhancedPrompt
-        ? promptConfig.enhancedPrompt
-        : promptConfig.prompt;
+      const promptToUse =
+        promptConfig.isEnhanced && promptConfig.enhancedPrompt
+          ? promptConfig.enhancedPrompt
+          : promptConfig.prompt;
       console.log(`[I2I:${traceId}] 提示词: ${promptToUse.substring(0, 80)}...`);
-      
+
       for (let i = 0; i < linkedLayers.length; i++) {
         const sourceLayer = linkedLayers[i];
-        
-        console.log(`[I2I:${traceId}] 处理关联图层 ${i + 1}/${linkedLayers.length}: ${sourceLayer.id}`);
+
+        console.log(
+          `[I2I:${traceId}] 处理关联图层 ${i + 1}/${linkedLayers.length}: ${sourceLayer.id}`,
+        );
         console.log(`[I2I:${traceId}]   源图层标题: ${sourceLayer.title}`);
         console.log(`[I2I:${traceId}]   源图层位置: (${sourceLayer.x}, ${sourceLayer.y})`);
-        console.log(`[I2I:${traceId}]   源图层图片: ${sourceLayer.src ? sourceLayer.src.substring(0, 60) + '...' : '无'}`);
-        
+        console.log(
+          `[I2I:${traceId}]   源图层图片: ${sourceLayer.src ? sourceLayer.src.substring(0, 60) + '...' : '无'}`,
+        );
+
         const placeholderId = crypto.randomUUID();
         addLayer({
           id: placeholderId,
           type: 'image',
           x: sourceLayer.x + sourceLayer.width + 20,
-          y: sourceLayer.y + (i * 20),
+          y: sourceLayer.y + i * 20,
           width: sourceLayer.width,
           height: sourceLayer.height,
           src: '',
@@ -174,66 +170,69 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
           progress: 0,
           createdAt: Date.now(),
           sourceLayerId: sourceLayer.id,
-          operationType: promptConfig.mode === 'style-transfer' ? 'style-transfer' :
-                        promptConfig.mode === 'background-replace' ? 'background-replace' :
-                        promptConfig.mode === 'expand' ? 'expand' : 'image-to-image'
+          operationType:
+            promptConfig.mode === 'style-transfer'
+              ? 'style-transfer'
+              : promptConfig.mode === 'background-replace'
+                ? 'background-replace'
+                : promptConfig.mode === 'expand'
+                  ? 'expand'
+                  : 'image-to-image',
         });
-        
-        console.log(`[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 开始执行 (mode: ${promptConfig.mode})...`);
-        
+
+        console.log(
+          `[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 开始执行 (mode: ${promptConfig.mode})...`,
+        );
+
         try {
           let resultUrl: string;
-          
+
           if (promptConfig.mode === 'style-transfer') {
-            resultUrl = await canvasModelService.styleTransfer(
-              sourceLayer.src,
-              promptToUse,
-              (p) => updateLayer(placeholderId, { progress: p })
+            resultUrl = await canvasModelService.styleTransfer(sourceLayer.src, promptToUse, (p) =>
+              updateLayer(placeholderId, { progress: p }),
             );
           } else if (promptConfig.mode === 'background-replace') {
             resultUrl = await canvasModelService.replaceBackground(
               sourceLayer.src,
               promptToUse,
-              (p) => updateLayer(placeholderId, { progress: p })
+              (p) => updateLayer(placeholderId, { progress: p }),
             );
           } else if (promptConfig.mode === 'expand') {
-            resultUrl = await canvasModelService.expandImage(
-              sourceLayer.src,
-              'all',
-              (p) => updateLayer(placeholderId, { progress: p })
+            resultUrl = await canvasModelService.expandImage(sourceLayer.src, 'all', (p) =>
+              updateLayer(placeholderId, { progress: p }),
             );
           } else {
             resultUrl = await canvasModelService.generateImage({
               prompt: promptToUse,
               referenceImages: [sourceLayer.src],
               aspectRatio: promptConfig.aspectRatio,
-              onProgress: (p) => updateLayer(placeholderId, { progress: p })
+              onProgress: (p) => updateLayer(placeholderId, { progress: p }),
             });
           }
-          
+
           const { src, imageId } = await resolveAndSaveImage(resultUrl);
-          
+
           console.log(`[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 生成完成`);
           console.log(`[I2I:${traceId}]   结果图片: ${src}`);
           console.log(`[I2I:${traceId}]   图片ID: ${imageId || '无'}`);
-          
+
           updateLayer(placeholderId, {
             src,
             imageId,
             title: `${PROMPT_MODE_NAMES[promptConfig.mode]} - ${sourceLayer.title}`,
             isLoading: false,
-            progress: 100
+            progress: 100,
           });
-          
+
           outputIds.push(placeholderId);
         } catch (error: any) {
           updateLayer(placeholderId, {
             error: error.message || '生成失败',
-            isLoading: false
+            isLoading: false,
           });
         }
       }
-      
+
       console.log(`[I2I:${traceId}] 全部完成, 生成 ${outputIds.length} 张图片`);
       console.log(`========== [I2I:${traceId}] PromptLayer 执行结束 ==========\n`);
       updatePromptConfig(layer.id, { outputLayerIds: outputIds });
@@ -241,23 +240,23 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
       setIsExecuting(false);
     }
   };
-  
+
   const canExecute = promptConfig.prompt.trim() && linkedLayers.length > 0 && !isExecuting;
-  
+
   return (
-    <div 
+    <div
       className="absolute rounded-xl shadow-2xl border-2 overflow-hidden backdrop-blur-sm"
       style={{
         width: layer.width,
         height: layer.height,
         borderColor: isSelected ? '#ffffff' : promptConfig.nodeColor,
         backgroundColor: 'rgba(17, 24, 39, 0.95)',
-        boxShadow: isSelected 
-          ? `0 0 20px ${promptConfig.nodeColor}40` 
-          : `0 4px 20px rgba(0, 0, 0, 0.5)`
+        boxShadow: isSelected
+          ? `0 0 20px ${promptConfig.nodeColor}40`
+          : `0 4px 20px rgba(0, 0, 0, 0.5)`,
       }}
     >
-      <div 
+      <div
         className="px-3 py-2 flex items-center justify-between cursor-move"
         style={{ backgroundColor: `${promptConfig.nodeColor}20` }}
       >
@@ -275,7 +274,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
           )}
         </div>
       </div>
-      
+
       <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: layer.height - 100 }}>
         {isEditing ? (
           <div className="space-y-2">
@@ -302,7 +301,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
             </div>
           </div>
         ) : (
-          <div 
+          <div
             onClick={handleEditStart}
             className="cursor-pointer hover:bg-gray-800/50 rounded-lg p-2 transition-colors"
           >
@@ -313,14 +312,14 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
             )}
           </div>
         )}
-        
+
         {promptConfig.enhancedPrompt && (
           <div className="mt-2 p-2 bg-green-500/10 rounded-lg border border-green-500/20">
             <p className="text-xs text-green-400 mb-1">✨ 增强后:</p>
             <p className="text-xs text-gray-300 line-clamp-2">{promptConfig.enhancedPrompt}</p>
           </div>
         )}
-        
+
         <div className="flex flex-wrap gap-1 mt-2">
           {Object.entries(PROMPT_MODE_ICONS).map(([mode, icon]) => (
             <button
@@ -338,21 +337,16 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
           ))}
         </div>
       </div>
-      
+
       <div className="px-3 py-2 border-t border-gray-700 bg-gray-900/50">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400">关联:</span>
-            <span className="text-xs font-medium text-white">
-              {linkedLayers.length}/5
-            </span>
+            <span className="text-xs font-medium text-white">{linkedLayers.length}/5</span>
           </div>
           <div className="flex -space-x-2">
             {linkedLayers.slice(0, 3).map((linked) => (
-              <div
-                key={linked.id}
-                className="relative group"
-              >
+              <div key={linked.id} className="relative group">
                 <img
                   src={linked.src}
                   alt={linked.title}
@@ -376,7 +370,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
             )}
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <button
             onClick={handleEnhance}
@@ -409,7 +403,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({
               <>🚀 API增强</>
             )}
           </button>
-          
+
           <button
             onClick={handleExecute}
             disabled={!canExecute}

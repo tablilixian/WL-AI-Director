@@ -4,16 +4,24 @@
  */
 
 import { ImageModelDefinition, ImageGenerateOptions, AspectRatio } from '../../types/model';
-import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProviderById } from '../modelRegistry';
+import {
+  getApiKeyForModel,
+  getApiBaseUrlForModel,
+  getActiveImageModel,
+  getProviderById,
+} from '../modelRegistry';
 import { enhanceWithQualityTags } from '../ai/promptConstants';
 import { ApiKeyError } from './chatAdapter';
-import { useAuthStore } from '../../src/stores/authStore';
 import { imageStorageService, generateImageId, videoStorageService } from '../imageStorageService';
 import {
-  IMAGE_COGVIEW_SIZE, IMAGE_COGVIEW_FALLBACK,
-  IMAGE_DRAMA_SIZE, IMAGE_DRAMA_FALLBACK,
-  IMAGE_IPA_SIZE, IMAGE_IPA_FALLBACK,
-  IMAGE_ANIME_SIZE, IMAGE_ANIME_FALLBACK,
+  IMAGE_COGVIEW_SIZE,
+  IMAGE_COGVIEW_FALLBACK,
+  IMAGE_DRAMA_SIZE,
+  IMAGE_DRAMA_FALLBACK,
+  IMAGE_IPA_SIZE,
+  IMAGE_IPA_FALLBACK,
+  IMAGE_ANIME_SIZE,
+  IMAGE_ANIME_FALLBACK,
   STORYBOARD_ITEM_WIDTH,
   IMAGE_SPLITE_GRID,
   VIDEO_MSR_DEFAULT,
@@ -27,10 +35,10 @@ import {
 const retryOperation = async <T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
-  delay: number = 2000
+  delay: number = 2000,
 ): Promise<T> => {
   let lastError: Error | null = null;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
@@ -38,27 +46,28 @@ const retryOperation = async <T>(
       lastError = error;
       // 400/401/403/422 错误不重试（客户端错误，重试无意义）
       // 429 限流错误会重试
-      const isClientError = error.message?.includes('400') || 
-          error.message?.includes('401') || 
-          error.message?.includes('403') ||
-          error.message?.includes('422') ||
-          error.message?.includes('不安全') ||
-          error.message?.includes('敏感') ||
-          error.message?.includes('违规');
-      
+      const isClientError =
+        error.message?.includes('400') ||
+        error.message?.includes('401') ||
+        error.message?.includes('403') ||
+        error.message?.includes('422') ||
+        error.message?.includes('不安全') ||
+        error.message?.includes('敏感') ||
+        error.message?.includes('违规');
+
       if (isClientError) {
         console.log(`[Retry] 检测到客户端错误，不再重试: ${error.message}`);
         throw error;
       }
-      
+
       if (i < maxRetries - 1) {
         const retryDelay = delay * (i + 1);
         console.log(`[Retry] 第 ${i + 1}/${maxRetries} 次重试，${retryDelay}ms后重试...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
       }
     }
   }
-  
+
   throw lastError;
 };
 
@@ -83,15 +92,17 @@ const isDramaBackendProvider = (model: ImageModelDefinition): boolean => {
  */
 const measureTime = <T>(label: string, traceId: string, fn: () => Promise<T>): Promise<T> => {
   const start = Date.now();
-  return fn().then(result => {
-    const elapsed = Date.now() - start;
-    console.log(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms`);
-    return result;
-  }).catch(err => {
-    const elapsed = Date.now() - start;
-    console.error(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms (失败)`);
-    throw err;
-  });
+  return fn()
+    .then((result) => {
+      const elapsed = Date.now() - start;
+      console.log(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms`);
+      return result;
+    })
+    .catch((err) => {
+      const elapsed = Date.now() - start;
+      console.error(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms (失败)`);
+      throw err;
+    });
 };
 
 /**
@@ -102,20 +113,23 @@ const callCogViewApi = async (
   model: ImageModelDefinition,
   apiKey: string,
   apiBase: string,
-  traceId: string
+  traceId: string,
 ): Promise<string> => {
   const apiModel = model.apiModel || model.id;
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
-  
-  const size = IMAGE_COGVIEW_SIZE[aspectRatio as keyof typeof IMAGE_COGVIEW_SIZE] || IMAGE_COGVIEW_FALLBACK;
-  
+
+  const size =
+    IMAGE_COGVIEW_SIZE[aspectRatio as keyof typeof IMAGE_COGVIEW_SIZE] || IMAGE_COGVIEW_FALLBACK;
+
   const finalPrompt = enhanceWithQualityTags(options.prompt);
 
   console.log(`[I2I:${traceId}] 提供商: BigModel CogView`);
   console.log(`[I2I:${traceId}] 注意: BigModel 不支持参考图，降级为文生图`);
   console.log(`[I2I:${traceId}] 请求模型: ${apiModel}, 尺寸: ${size}`);
-  console.log(`[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`);
-  
+  console.log(
+    `[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`,
+  );
+
   const requestBody: any = {
     model: apiModel,
     prompt: finalPrompt,
@@ -125,14 +139,14 @@ const callCogViewApi = async (
   if (options.negativePrompt) {
     requestBody.negative_prompt = options.negativePrompt;
   }
-  
+
   const response = await measureTime('CogView API 调用', traceId, () =>
     retryOperation(async () => {
       const res = await fetch(`${apiBase}${model.endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(requestBody),
       });
@@ -142,7 +156,7 @@ const callCogViewApi = async (
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -150,7 +164,7 @@ const callCogViewApi = async (
       }
 
       return await res.json();
-    })
+    }),
   );
 
   // BigModel 返回图片 URL，需要下载并上传到 Supabase Storage
@@ -162,7 +176,7 @@ const callCogViewApi = async (
   console.log(`[I2I:${traceId}] CogView 响应图片URL: ${imageUrl}`);
 
   // 开发环境使用代理下载图片以避免 CORS 问题
-  const downloadUrl = import.meta.env.DEV 
+  const downloadUrl = import.meta.env.DEV
     ? `/proxy-image/${encodeURIComponent(imageUrl)}`
     : imageUrl;
 
@@ -173,15 +187,15 @@ const callCogViewApi = async (
     }
     return await imageResponse.blob();
   });
-  
+
   console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
-  
+
   // 保存到本地 IndexedDB
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
-  
+
   console.log(`[I2I:${traceId}] 图片已保存到 IndexedDB: ${localImageId}`);
-  
+
   // 返回本地图片 ID，格式为 local:{id}
   return `local:${localImageId}`;
 };
@@ -193,20 +207,19 @@ const callDramaBackendApi = async (
   options: ImageGenerateOptions,
   model: ImageModelDefinition,
   apiBase: string,
-  traceId: string
+  traceId: string,
 ): Promise<string> => {
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
-  
-  const size = IMAGE_DRAMA_SIZE[aspectRatio as keyof typeof IMAGE_DRAMA_SIZE] || IMAGE_DRAMA_FALLBACK;
-  
+
+  const size =
+    IMAGE_DRAMA_SIZE[aspectRatio as keyof typeof IMAGE_DRAMA_SIZE] || IMAGE_DRAMA_FALLBACK;
+
   const hasReferenceImages = options.referenceImages && options.referenceImages.length > 0;
-  const endpoint = hasReferenceImages 
-    ? '/api/v1/generate/image2image' 
+  const endpoint = hasReferenceImages
+    ? '/api/v1/generate/image2image'
     : '/api/v1/generate/txt2image';
-  
-  let finalPrompt = hasReferenceImages
-    ? options.prompt
-    : enhanceWithQualityTags(options.prompt);
+
+  let finalPrompt = hasReferenceImages ? options.prompt : enhanceWithQualityTags(options.prompt);
 
   if (options.autoEnhancePrompt) {
     try {
@@ -230,34 +243,38 @@ const callDramaBackendApi = async (
   if (options.negativePrompt) {
     requestBody.negative_prompt = options.negativePrompt;
   }
-  
+
   console.log(`[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
   console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
   console.log(`[I2I:${traceId}] 端点: ${endpoint}`);
   console.log(`[I2I:${traceId}] 尺寸: ${size.width}x${size.height}`);
   console.log(`[I2I:${traceId}] 图生图模式: ${hasReferenceImages ? '是' : '否（文生图）'}`);
   if (!hasReferenceImages) {
-    console.log(`[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`);
+    console.log(
+      `[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`,
+    );
   }
-  
+
   if (hasReferenceImages && options.referenceImages) {
-    console.log(`[I2I:${traceId}] 开始上传 ${options.referenceImages.length} 张参考图到 Drama Backend...`);
-    
+    console.log(
+      `[I2I:${traceId}] 开始上传 ${options.referenceImages.length} 张参考图到 Drama Backend...`,
+    );
+
     for (let i = 0; i < options.referenceImages.length && i < 3; i++) {
       const imgKey = `image${i + 1}`;
       const imageUrl = options.referenceImages[i];
-      
+
       const filename = await measureTime(`上传参考图 ${imgKey}`, traceId, () =>
-        uploadImageToDramaBackend(imageUrl, apiBase, traceId)
+        uploadImageToDramaBackend(imageUrl, apiBase, traceId),
       );
       requestBody[imgKey] = filename;
       console.log(`[I2I:${traceId}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
     }
   }
-  
+
   console.log(`[I2I:${traceId}] 请求远端大模型参数:`, JSON.stringify(requestBody, null, 2));
   console.log(`[I2I:${traceId}] 请求端点: ${apiBase}${endpoint}`);
-  
+
   const response = await measureTime('Drama Backend 图片生成', traceId, () =>
     retryOperation(async () => {
       const res = await fetch(`${apiBase}${endpoint}`, {
@@ -273,7 +290,7 @@ const callDramaBackendApi = async (
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -281,7 +298,7 @@ const callDramaBackendApi = async (
       }
 
       return await res.json();
-    })
+    }),
   );
 
   const imageUrl = response.full_url;
@@ -305,14 +322,14 @@ const callDramaBackendApi = async (
     }
     return await imageResponse.blob();
   });
-  
+
   console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
-  
+
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
-  
+
   console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
-  
+
   return `local:${localImageId}`;
 };
 
@@ -331,26 +348,26 @@ const resolveImageToBlob = async (imageUrl: string): Promise<Blob> => {
     }
     return new Blob([bytes], { type: mimeType });
   }
-  
+
   if (imageUrl.startsWith('local:')) {
     const localId = imageUrl.replace('local:', '');
     const blob = await imageStorageService.getImage(localId);
     if (!blob) throw new Error(`本地图片不存在: ${localId}`);
     return blob;
   }
-  
+
   if (imageUrl.startsWith('blob:')) {
     const response = await fetch(imageUrl);
     if (!response.ok) throw new Error(`Blob URL 读取失败: ${response.status}`);
     return await response.blob();
   }
-  
+
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     const response = await fetch(imageUrl);
     if (!response.ok) throw new Error(`远程图片下载失败: ${response.status}`);
     return await response.blob();
   }
-  
+
   throw new Error(`不支持的图片 URL 格式: ${imageUrl}`);
 };
 
@@ -362,46 +379,48 @@ const resolveImageToBlob = async (imageUrl: string): Promise<Blob> => {
 export const uploadImageToDramaBackend = async (
   imageUrl: string,
   apiBase: string,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const blob = await resolveImageToBlob(imageUrl);
-  
+
   if (traceId) {
-    console.log(`[I2I:${traceId}]   解析图片成功, Blob大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`);
+    console.log(
+      `[I2I:${traceId}]   解析图片成功, Blob大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
+    );
   }
-  
+
   const formData = new FormData();
   formData.append('file', blob, 'reference.png');
-  
+
   const res = await fetch(`${apiBase}/api/v1/generate/uploadimage`, {
     method: 'POST',
     body: formData,
   });
-  
+
   if (!res.ok) {
     let errorMsg = `图片上传失败: ${res.status}`;
     try {
       const errorBody = await res.text();
       console.error(`[${traceId || 'upload'}] 上传失败响应体:`, errorBody);
       errorMsg += ` - ${errorBody}`;
-    } catch (e) {
+    } catch {
       // ignore
     }
     throw new Error(errorMsg);
   }
-  
+
   const data = await res.json();
-  
+
   if (traceId) {
     console.log(`[I2I:${traceId}]   上传响应:`, JSON.stringify(data));
   }
-  
+
   // 兼容多种响应格式：{ filename: "xxx" } 或 { data: { filename: "xxx" } } 或 { success: true, filename: "xxx" }
   const filename = data.filename || data.data?.filename || data.file || data.name;
   if (!filename) {
     throw new Error(`图片上传成功但响应中未找到 filename: ${JSON.stringify(data)}`);
   }
-  
+
   return filename;
 };
 
@@ -413,23 +432,25 @@ const callGeminiApi = async (
   model: ImageModelDefinition,
   apiKey: string,
   apiBase: string,
-  traceId: string
+  traceId: string,
 ): Promise<string> => {
   const apiModel = model.apiModel || model.id;
   const endpoint = model.endpoint || `/v1beta/models/${apiModel}:generateContent`;
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
-  
+
   console.log(`[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
   console.log(`[I2I:${traceId}] 提供商: Gemini (${apiModel})`);
   console.log(`[I2I:${traceId}] API端点: ${apiBase}${endpoint}`);
   console.log(`[I2I:${traceId}] 宽高比: ${aspectRatio}`);
-  
+
   // 构建提示词
   let finalPrompt = options.prompt;
-  
+
   // 如果有参考图，添加一致性指令
   if (options.referenceImages && options.referenceImages.length > 0) {
-    console.log(`[I2I:${traceId}] 检测到 ${options.referenceImages.length} 张参考图，注入字符一致性指令`);
+    console.log(
+      `[I2I:${traceId}] 检测到 ${options.referenceImages.length} 张参考图，注入字符一致性指令`,
+    );
     finalPrompt = `
       ⚠️⚠️⚠️ CRITICAL REQUIREMENTS - CHARACTER CONSISTENCY ⚠️⚠️⚠️
       
@@ -454,7 +475,7 @@ const callGeminiApi = async (
       ⚠️ DO NOT create variations or interpretations of the character - STRICT REPLICATION ONLY!
       ⚠️ Character appearance consistency is THE MOST IMPORTANT requirement!
     `;
-    
+
     console.log(`[I2I:${traceId}] 最终提示词长度: ${finalPrompt.length} 字符`);
     console.log(`[I2I:${traceId}] 用户原始提示词: "${options.prompt}"`);
   }
@@ -469,7 +490,9 @@ const callGeminiApi = async (
       // 处理 data: 格式
       const match = imgUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
       if (match) {
-        console.log(`[I2I:${traceId}] 参考图为 Base64 格式, 类型: ${match[1]}, 数据长度: ${match[2].length}`);
+        console.log(
+          `[I2I:${traceId}] 参考图为 Base64 格式, 类型: ${match[1]}, 数据长度: ${match[2].length}`,
+        );
         parts.push({
           inlineData: {
             mimeType: match[1],
@@ -478,7 +501,7 @@ const callGeminiApi = async (
         });
         continue;
       }
-      
+
       // 处理 local: 格式
       if (imgUrl.startsWith('local:')) {
         const localId = imgUrl.replace('local:', '');
@@ -486,7 +509,9 @@ const callGeminiApi = async (
         try {
           const blob = await imageStorageService.getImage(localId);
           if (blob) {
-            console.log(`[I2I:${traceId}] 本地图片读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`);
+            console.log(
+              `[I2I:${traceId}] 本地图片读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
+            );
             const base64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => resolve(reader.result as string);
@@ -511,14 +536,16 @@ const callGeminiApi = async (
         }
         continue;
       }
-      
+
       // 处理 blob: 格式（临时对象 URL）
       if (imgUrl.startsWith('blob:')) {
         console.log(`[I2I:${traceId}] 检测到 blob: URL，尝试 fetch 读取...`);
         try {
           const response = await fetch(imgUrl);
           const blob = await response.blob();
-          console.log(`[I2I:${traceId}] blob 读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`);
+          console.log(
+            `[I2I:${traceId}] blob 读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
+          );
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -546,15 +573,17 @@ const callGeminiApi = async (
 
   // 构建请求体
   const requestBody: any = {
-    contents: [{
-      role: 'user',
-      parts: parts,
-    }],
+    contents: [
+      {
+        role: 'user',
+        parts: parts,
+      },
+    ],
     generationConfig: {
       responseModalities: ['TEXT', 'IMAGE'],
     },
   };
-  
+
   // 非默认宽高比需要添加 imageConfig
   if (aspectRatio !== '16:9') {
     requestBody.generationConfig.imageConfig = {
@@ -563,7 +592,9 @@ const callGeminiApi = async (
     console.log(`[I2I:${traceId}] 设置宽高比: ${aspectRatio}`);
   }
 
-  console.log(`[I2I:${traceId}] 发送 Gemini API 请求 (parts: ${parts.length}, ${parts.filter(p => p.inlineData).length} 张图片)...`);
+  console.log(
+    `[I2I:${traceId}] 发送 Gemini API 请求 (parts: ${parts.length}, ${parts.filter((p) => p.inlineData).length} 张图片)...`,
+  );
 
   // 调用 API
   const response = await measureTime('Gemini API 图片生成', traceId, () =>
@@ -572,25 +603,27 @@ const callGeminiApi = async (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': '*/*',
+          Authorization: `Bearer ${apiKey}`,
+          Accept: '*/*',
         },
         body: JSON.stringify(requestBody),
       });
 
       if (!res.ok) {
         if (res.status === 400) {
-          throw new Error('提示词可能包含不安全或违规内容，未能处理。\n\n建议：\n1. 避免使用武器、暴力等敏感词汇\n2. 使用更温和的描述方式\n3. 例如：将"警员"改为"年轻男子"，"手枪"改为"道具"\n\n请修改后重试。');
+          throw new Error(
+            '提示词可能包含不安全或违规内容，未能处理。\n\n建议：\n1. 避免使用武器、暴力等敏感词汇\n2. 使用更温和的描述方式\n3. 例如：将"警员"改为"年轻男子"，"手枪"改为"道具"\n\n请修改后重试。',
+          );
         }
         if (res.status === 500) {
           throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
         }
-        
+
         let errorMessage = `HTTP 错误: ${res.status}`;
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -598,7 +631,7 @@ const callGeminiApi = async (
       }
 
       return await res.json();
-    })
+    }),
   );
 
   console.log(`[I2I:${traceId}] Gemini 响应成功`);
@@ -607,12 +640,14 @@ const callGeminiApi = async (
   // 提取 base64 图片
   const candidates = response.candidates || [];
   let base64Image: string | undefined;
-  
+
   if (candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
     for (const part of candidates[0].content.parts) {
       if (part.inlineData) {
         base64Image = `data:image/png;base64,${part.inlineData.data}`;
-        console.log(`[I2I:${traceId}] 从响应中提取到图片, Base64长度: ${part.inlineData.data.length}`);
+        console.log(
+          `[I2I:${traceId}] 从响应中提取到图片, Base64长度: ${part.inlineData.data.length}`,
+        );
         break;
       }
     }
@@ -637,9 +672,9 @@ const callGeminiApi = async (
   // 保存到本地 IndexedDB
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
-  
+
   console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
-  
+
   // 返回本地图片 ID，格式为 local:{id}
   return `local:${localImageId}`;
 };
@@ -652,9 +687,9 @@ const callDramaBackendCharacterApi = async (
   options: ImageGenerateOptions,
   model: ImageModelDefinition,
   apiBase: string,
-  traceId: string
+  traceId: string,
 ): Promise<string> => {
-  const startTime = Date.now();
+  Date.now();
 
   console.log(`[I2I:${traceId}] 阶段 3/5 - 调用角色立绘图 API`);
   console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
@@ -666,7 +701,7 @@ const callDramaBackendCharacterApi = async (
     const imageUrl = options.referenceImages[0];
     console.log(`[I2I:${traceId}] 上传角色设计图到 Drama Backend...`);
     imageFilename = await measureTime('上传角色设计图', traceId, () =>
-      uploadImageToDramaBackend(imageUrl, apiBase, traceId)
+      uploadImageToDramaBackend(imageUrl, apiBase, traceId),
     );
     console.log(`[I2I:${traceId}] 角色设计图上传成功 -> filename: ${imageFilename}`);
   } else {
@@ -690,7 +725,7 @@ const callDramaBackendCharacterApi = async (
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -698,7 +733,7 @@ const callDramaBackendCharacterApi = async (
       }
 
       return await res.json();
-    })
+    }),
   );
 
   const imageUrl = response.full_url;
@@ -741,7 +776,7 @@ const callDramaBackendStoryboardApi = async (
   options: ImageGenerateOptions,
   model: ImageModelDefinition,
   apiBase: string,
-  traceId: string
+  traceId: string,
 ): Promise<string> => {
   console.log(`[I2I:${traceId}] 阶段 3/5 - 调用分镜生成 API`);
   console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
@@ -753,7 +788,7 @@ const callDramaBackendStoryboardApi = async (
     const imageUrl = options.referenceImages[0];
     console.log(`[I2I:${traceId}] 上传参考图到 Drama Backend...`);
     imageFilename = await measureTime('上传参考图', traceId, () =>
-      uploadImageToDramaBackend(imageUrl, apiBase, traceId)
+      uploadImageToDramaBackend(imageUrl, apiBase, traceId),
     );
     console.log(`[I2I:${traceId}] 参考图上传成功 -> filename: ${imageFilename}`);
   }
@@ -782,7 +817,7 @@ const callDramaBackendStoryboardApi = async (
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -790,7 +825,7 @@ const callDramaBackendStoryboardApi = async (
       }
 
       return await res.json();
-    })
+    }),
   );
 
   const imageUrl = response.full_url;
@@ -831,7 +866,7 @@ const callDramaBackendStoryboardApi = async (
 export const callDramaBackendSpliteGridApi = async (
   options: ImageGenerateOptions,
   traceId?: string,
-  selectedIndices?: number[]
+  selectedIndices?: number[],
 ): Promise<string[]> => {
   const tid = traceId || `sg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -840,7 +875,7 @@ export const callDramaBackendSpliteGridApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[SG:${tid}] 调用图像分割网格 API`);
@@ -880,7 +915,7 @@ export const callDramaBackendSpliteGridApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -923,7 +958,7 @@ export const callDramaBackendSpliteGridApi = async (
       downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
     }
 
-    const imageBlob = await fetch(downloadUrl).then(r => {
+    const imageBlob = await fetch(downloadUrl).then((r) => {
       if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
       return r.blob();
     });
@@ -946,7 +981,7 @@ export const callDramaBackendSpliteGridApi = async (
  */
 export const callDramaBackendInpaintApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `inp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -955,7 +990,7 @@ export const callDramaBackendInpaintApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[INP:${tid}] 调用图像修复 API`);
@@ -992,7 +1027,7 @@ export const callDramaBackendInpaintApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1014,7 +1049,7 @@ export const callDramaBackendInpaintApi = async (
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
   }
 
-  const imageBlob = await fetch(downloadUrl).then(r => {
+  const imageBlob = await fetch(downloadUrl).then((r) => {
     if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
     return r.blob();
   });
@@ -1032,7 +1067,7 @@ export const callDramaBackendInpaintApi = async (
  */
 export const callDramaBackend360HdriApi = async (
   imageUrl?: string,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `hdri_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1041,7 +1076,7 @@ export const callDramaBackend360HdriApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[HDRI:${tid}] 调用 360° HDRI 图像生成 API`);
@@ -1071,7 +1106,7 @@ export const callDramaBackend360HdriApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1093,7 +1128,7 @@ export const callDramaBackend360HdriApi = async (
     downloadUrl = imageUrl_.replace('http://117.50.108.73:8082', '/drama-api');
   }
 
-  const imageBlob = await fetch(downloadUrl).then(r => {
+  const imageBlob = await fetch(downloadUrl).then((r) => {
     if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
     return r.blob();
   });
@@ -1123,7 +1158,7 @@ export const callDramaBackendStyleTransferApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[ST:${tid}] 调用风格迁移 API`);
@@ -1165,7 +1200,7 @@ export const callDramaBackendStyleTransferApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1187,7 +1222,7 @@ export const callDramaBackendStyleTransferApi = async (
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
   }
 
-  const imageBlob = await fetch(downloadUrl).then(r => {
+  const imageBlob = await fetch(downloadUrl).then((r) => {
     if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
     return r.blob();
   });
@@ -1205,7 +1240,7 @@ export const callDramaBackendStyleTransferApi = async (
  */
 export const callDramaBackendIPAStyleTransferApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `ipa_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1214,14 +1249,16 @@ export const callDramaBackendIPAStyleTransferApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[IPA:${tid}] 调用 IPA 风格迁移 API`);
   console.log(`[IPA:${tid}] 端点: /api/v1/generate/image2ipastyletransfer`);
   console.log(`[IPA:${tid}] API基础地址: ${apiBase}`);
 
-  const size = IMAGE_IPA_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_IPA_SIZE] || IMAGE_IPA_FALLBACK;
+  const size =
+    IMAGE_IPA_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_IPA_SIZE] ||
+    IMAGE_IPA_FALLBACK;
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1264,7 +1301,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1286,7 +1323,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
   }
 
-  const imageBlob = await fetch(downloadUrl).then(r => {
+  const imageBlob = await fetch(downloadUrl).then((r) => {
     if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
     return r.blob();
   });
@@ -1304,7 +1341,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
  */
 export const callDramaBackendAnimeApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `anime_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1313,14 +1350,16 @@ export const callDramaBackendAnimeApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[ANIME:${tid}] 调用动漫风格生成 API`);
   console.log(`[ANIME:${tid}] 端点: /api/v1/generate/txt2imageanime`);
   console.log(`[ANIME:${tid}] API基础地址: ${apiBase}`);
 
-  const size = IMAGE_ANIME_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_ANIME_SIZE] || IMAGE_ANIME_FALLBACK;
+  const size =
+    IMAGE_ANIME_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_ANIME_SIZE] ||
+    IMAGE_ANIME_FALLBACK;
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1346,7 +1385,7 @@ export const callDramaBackendAnimeApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1368,7 +1407,7 @@ export const callDramaBackendAnimeApi = async (
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
   }
 
-  const imageBlob = await fetch(downloadUrl).then(r => {
+  const imageBlob = await fetch(downloadUrl).then((r) => {
     if (!r.ok) throw new Error(`图片下载失败: ${r.status}`);
     return r.blob();
   });
@@ -1386,7 +1425,7 @@ export const callDramaBackendAnimeApi = async (
  */
 export const callDramaBackendVLApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `vl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1395,7 +1434,7 @@ export const callDramaBackendVLApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[VL:${tid}] 调用视觉语言推理 API`);
@@ -1433,7 +1472,7 @@ export const callDramaBackendVLApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1484,7 +1523,8 @@ export interface DeductionResponse {
   deduction: DeductionResult;
 }
 
-const DEFAULT_ANALYSIS_SYSTEM_PROMPT = '你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张画面。';
+const DEFAULT_ANALYSIS_SYSTEM_PROMPT =
+  '你是一个专业的影视镜头分析师。请从电影摄影的角度分析这张画面。';
 const DEFAULT_ANALYSIS_PROMPT = `请分析这张画面的以下要素，每项用一句话描述：
 1. 场景：这是什么场景/环境？
 2. 构图：镜头构图方式、主体位置
@@ -1493,7 +1533,8 @@ const DEFAULT_ANALYSIS_PROMPT = `请分析这张画面的以下要素，每项�
 5. 情绪/氛围：画面的情绪基调
 6. 镜头语言：机位、焦段、运镜方式`;
 
-const DEFAULT_DEDUCTION_SYSTEM_PROMPT = '你是一个专业的影视编剧。请基于当前帧的画面分析和剧情方向，推演下一帧的内容。';
+const DEFAULT_DEDUCTION_SYSTEM_PROMPT =
+  '你是一个专业的影视编剧。请基于当前帧的画面分析和剧情方向，推演下一帧的内容。';
 const DEFAULT_DEDUCTION_PROMPT = `基于以上画面分析结果，推演下一帧的内容。要求：
 1. 保持角色、场景、光影风格的一致性
 2. 叙事要自然推进，有合理的动因
@@ -1515,7 +1556,7 @@ export const callDramaBackendDeductionApi = async (
     deductionSystemPrompt?: string;
     deductionPrompt?: string;
   },
-  traceId?: string
+  traceId?: string,
 ): Promise<DeductionResponse> => {
   const tid = traceId || `ded_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1524,7 +1565,7 @@ export const callDramaBackendDeductionApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[DED:${tid}] 调用剧情推演 API`);
@@ -1555,7 +1596,7 @@ export const callDramaBackendDeductionApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1582,7 +1623,7 @@ export const callDramaBackendDeductionApi = async (
  */
 export const callDramaBackendPromptEnhanceApi = async (
   prompt: string,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `pe_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1591,7 +1632,7 @@ export const callDramaBackendPromptEnhanceApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[PE:${tid}] 调用提示词增强 API`);
@@ -1614,7 +1655,7 @@ export const callDramaBackendPromptEnhanceApi = async (
       try {
         const errorData = await res.json();
         errorMessage = errorData.error?.message || errorData.msg || errorMessage;
-      } catch (e) {
+      } catch {
         const errorText = await res.text();
         if (errorText) errorMessage = errorText;
       }
@@ -1641,7 +1682,7 @@ export const callDramaBackendPromptEnhanceApi = async (
  */
 export const callDramaBackendVideoMsrApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `vmsr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1650,7 +1691,7 @@ export const callDramaBackendVideoMsrApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[VMSR:${tid}] 调用图像转视频 MSR API`);
@@ -1704,7 +1745,11 @@ export const callDramaBackendVideoMsrApi = async (
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+            errorMessage =
+              errorData.error?.message ||
+              errorData.msg ||
+              errorData.detail ||
+              errorText.slice(0, 200);
           } catch {
             errorMessage = errorText.slice(0, 200);
           }
@@ -1712,7 +1757,9 @@ export const callDramaBackendVideoMsrApi = async (
       } catch {
         errorMessage = `HTTP ${res.status}`;
       }
-      throw new Error(`[MSR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height}`);
+      throw new Error(
+        `[MSR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height}`,
+      );
     }
 
     return await res.json();
@@ -1751,7 +1798,7 @@ export const callDramaBackendVideoMsrApi = async (
  */
 export const callDramaBackendVideoMkrGridApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `vmkrg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1760,7 +1807,7 @@ export const callDramaBackendVideoMkrGridApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[VMKRG:${tid}] 调用图像转视频 MKR Grid API`);
@@ -1806,7 +1853,11 @@ export const callDramaBackendVideoMkrGridApi = async (
           if (errorText) {
             try {
               const errorData = JSON.parse(errorText);
-              errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+              errorMessage =
+                errorData.error?.message ||
+                errorData.msg ||
+                errorData.detail ||
+                errorText.slice(0, 200);
             } catch {
               errorMessage = errorText.slice(0, 200);
             }
@@ -1814,7 +1865,9 @@ export const callDramaBackendVideoMkrGridApi = async (
         } catch {
           errorMessage = `HTTP ${res.status}`;
         }
-        throw new Error(`[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`);
+        throw new Error(
+          `[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`,
+        );
       }
 
       return await res.json();
@@ -1859,7 +1912,7 @@ export const callDramaBackendVideoMkrGridApi = async (
 
 export const callDramaBackendVideoMkrApi = async (
   options: ImageGenerateOptions,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   const tid = traceId || `vmkr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -1868,7 +1921,7 @@ export const callDramaBackendVideoMkrApi = async (
     throw new Error('没有可用的图片模型');
   }
 
-  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
   console.log(`\n[VMKR:${tid}] 调用图像转视频 MKR API`);
@@ -1888,7 +1941,9 @@ export const callDramaBackendVideoMkrApi = async (
     for (const item of options.videoMkrImages) {
       const filename = await uploadImageToDramaBackend(item.image, baseUrl, tid);
       images.push({ image: filename, frame_index: item.frame_index });
-      console.log(`[VMKR:${tid}] 关键帧上传成功 -> image: ${filename}, frame_index: ${item.frame_index}`);
+      console.log(
+        `[VMKR:${tid}] 关键帧上传成功 -> image: ${filename}, frame_index: ${item.frame_index}`,
+      );
     }
     requestBody.images = images;
   }
@@ -1910,7 +1965,11 @@ export const callDramaBackendVideoMkrApi = async (
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 200);
+            errorMessage =
+              errorData.error?.message ||
+              errorData.msg ||
+              errorData.detail ||
+              errorText.slice(0, 200);
           } catch {
             errorMessage = errorText.slice(0, 200);
           }
@@ -1918,7 +1977,9 @@ export const callDramaBackendVideoMkrApi = async (
       } catch {
         errorMessage = `HTTP ${res.status}`;
       }
-      throw new Error(`[MKR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0,50)}..." width=${requestBody.width} height=${requestBody.height}`);
+      throw new Error(
+        `[MKR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height}`,
+      );
     }
 
     return await res.json();
@@ -1956,11 +2017,11 @@ export const callDramaBackendVideoMkrApi = async (
 export const callImageApi = async (
   options: ImageGenerateOptions,
   model?: ImageModelDefinition,
-  traceId?: string
+  traceId?: string,
 ): Promise<string> => {
   // 如果没有 traceId 则生成一个（兼容直接调用场景）
   const tid = traceId || `i2i_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  
+
   // 获取当前激活的模型
   const activeModel = model || getActiveImageModel();
   if (!activeModel) {
@@ -1969,11 +2030,11 @@ export const callImageApi = async (
 
   // 获取 API 配置
   const apiKey = getApiKeyForModel(activeModel.id);
-  
+
   let apiBase = getApiBaseUrlForModel(activeModel.id);
-  
+
   const isImageToImage = options.referenceImages && options.referenceImages.length > 0;
-  
+
   console.log(`\n[I2I:${tid}] 阶段 2/5 - ImageAdapter 分发`);
   console.log(`[I2I:${tid}] 模型: ${activeModel.name} (${activeModel.id})`);
   console.log(`[I2I:${tid}] 提供商: ${activeModel.providerId}`);
@@ -2002,7 +2063,9 @@ export const callImageApi = async (
     }
 
     if (options.isIPAStyleTransfer) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`);
+      console.log(
+        `[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`,
+      );
       return callDramaBackendIPAStyleTransferApi(options, tid);
     }
 
@@ -2012,7 +2075,9 @@ export const callImageApi = async (
     }
 
     if (options.isVideoMkrGrid) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (MKR Grid 宫格视频 image2videomkrgrid 端点)`);
+      console.log(
+        `[I2I:${tid}] → 路由到: Drama Backend (MKR Grid 宫格视频 image2videomkrgrid 端点)`,
+      );
       return callDramaBackendVideoMkrGridApi(options, tid);
     }
 
@@ -2050,12 +2115,10 @@ export const callImageApi = async (
  */
 export const isAspectRatioSupported = (
   aspectRatio: AspectRatio,
-  model?: ImageModelDefinition
+  model?: ImageModelDefinition,
 ): boolean => {
   const activeModel = model || getActiveImageModel();
   if (!activeModel) return false;
-  
+
   return activeModel.params.supportedAspectRatios.includes(aspectRatio);
 };
-
-

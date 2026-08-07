@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Package, Check, Sparkles, Loader2, Trash2, Edit2, AlertCircle, FolderPlus, Archive } from 'lucide-react';
+import {
+  Package,
+  Check,
+  Loader2,
+  Trash2,
+  Edit2,
+  AlertCircle,
+  FolderPlus,
+  Archive,
+} from 'lucide-react';
 import { Prop, AspectRatio } from '../../types';
 import { PROP_CATEGORIES, getImageAspectRatio } from './constants';
 import PromptEditor from './PromptEditor';
@@ -54,7 +63,7 @@ const PropCard: React.FC<PropCardProps> = ({
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
-      <div 
+      <div
         className="bg-[var(--bg-elevated)] relative cursor-pointer"
         style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
         onClick={() => imageSrc && onImageClick(imageSrc)}
@@ -109,7 +118,7 @@ const PropCard: React.FC<PropCardProps> = ({
           </div>
         )}
       </div>
-      
+
       <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--bg-base)]">
         <div className="flex justify-between items-center mb-1 gap-2">
           {isEditingName ? (
@@ -124,7 +133,12 @@ const PropCard: React.FC<PropCardProps> = ({
             />
           ) : (
             <div className="flex items-center gap-2 flex-1 min-w-0 group/name">
-              <h3 className="font-bold text-[var(--text-secondary)] text-sm truncate" title={prop.name}>{prop.name}</h3>
+              <h3
+                className="font-bold text-[var(--text-secondary)] text-sm truncate"
+                title={prop.name}
+              >
+                {prop.name}
+              </h3>
               <button
                 onClick={() => {
                   setEditName(prop.name);
@@ -141,8 +155,10 @@ const PropCard: React.FC<PropCardProps> = ({
             onChange={(e) => onUpdateInfo({ category: e.target.value })}
             className="px-1.5 py-0.5 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[9px] rounded border border-[var(--border-primary)] font-mono cursor-pointer hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] transition-colors shrink-0 focus:outline-none"
           >
-            {PROP_CATEGORIES.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            {PROP_CATEGORIES.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
             ))}
           </select>
         </div>

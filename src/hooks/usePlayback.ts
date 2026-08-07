@@ -4,7 +4,7 @@ import { useEditorStore } from '../stores/editorStore';
 export function usePlayback() {
   const {
     playState,
-    duration,
+
     loop,
     playbackRate,
     seek: storeSeek,
@@ -15,36 +15,39 @@ export function usePlayback() {
   const startTimeRef = useRef<number>(0);
   const startCurrentTimeRef = useRef<number>(0);
 
-  const animate = useCallback((timestamp: number) => {
-    if (lastTimeRef.current === 0) {
-      lastTimeRef.current = timestamp;
-      startTimeRef.current = timestamp;
-    }
-
-    const elapsed = timestamp - startTimeRef.current;
-    const delta = elapsed * playbackRate;
-    const newTime = startCurrentTimeRef.current + delta;
-    
-    const currentDuration = useEditorStore.getState().duration;
-
-    if (newTime >= currentDuration) {
-      if (loop) {
-        storeSeek(0);
+  const animate = useCallback(
+    (timestamp: number) => {
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = timestamp;
         startTimeRef.current = timestamp;
-        startCurrentTimeRef.current = 0;
-      } else {
-        storeSeek(currentDuration);
-        useEditorStore.getState().pause();
-        return;
       }
-    } else {
-      storeSeek(newTime);
-    }
 
-    if (useEditorStore.getState().playState === 'playing') {
-      rafRef.current = requestAnimationFrame(animate);
-    }
-  }, [playbackRate, loop, storeSeek]);
+      const elapsed = timestamp - startTimeRef.current;
+      const delta = elapsed * playbackRate;
+      const newTime = startCurrentTimeRef.current + delta;
+
+      const currentDuration = useEditorStore.getState().duration;
+
+      if (newTime >= currentDuration) {
+        if (loop) {
+          storeSeek(0);
+          startTimeRef.current = timestamp;
+          startCurrentTimeRef.current = 0;
+        } else {
+          storeSeek(currentDuration);
+          useEditorStore.getState().pause();
+          return;
+        }
+      } else {
+        storeSeek(newTime);
+      }
+
+      if (useEditorStore.getState().playState === 'playing') {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    },
+    [playbackRate, loop, storeSeek],
+  );
 
   useEffect(() => {
     if (playState === 'playing') {

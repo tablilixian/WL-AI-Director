@@ -1,24 +1,19 @@
 /**
  * Canvas Integration Service
  * 处理画布与项目数据的集成
- * 
+ *
  * 集成 canvasSyncService 实现 Local-First 架构：
  * - 本地保存：实时（防抖 500ms）
  * - 云端同步：延迟（停止操作 10s 后，最小间隔 30s）
  * - 关键节点：强制同步（切换项目、退出、手动保存）
  */
 
-import { ProjectState, Shot, Keyframe } from '../../../../types';
+import { Shot, Keyframe } from '../../../../types';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { LayerData } from '../types/canvas';
 import { logger, LogCategory } from '../../../../services/logger';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
-import { 
-  saveCanvasDataToLocal, 
-  getCanvasDataFromLocal, 
-  deleteCanvasDataFromLocal,
-  CanvasData
-} from '../../../../services/canvasStorageService';
+import { CanvasData } from '../../../../services/canvasStorageService';
 import { canvasSyncService } from '../../../../services/canvasSyncService';
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
@@ -38,12 +33,12 @@ const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   columns: 4,
   spacing: 20,
   startX: 100,
-  startY: 100
+  startY: 100,
 };
 
 const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   sortByPosition: true,
-  includeAnnotations: false
+  includeAnnotations: false,
 };
 
 function loadImageDimensions(src: string): Promise<{ width: number; height: number }> {
@@ -65,10 +60,10 @@ export class CanvasIntegrationService {
 
   /**
    * 保存队列：将所有写操作串行化，消除竞态
-   * 
+   *
    * 核心思路：每个新的写操作都 chain 在上一个操作的 Promise 之后，
    * 保证后一个操作必须等前一个完成才执行。
-   * 
+   *
    * 不受单个操作失败影响：如果前一个 reject，后一个仍会执行。
    */
   private pendingSave: Promise<void> = Promise.resolve();
@@ -79,9 +74,15 @@ export class CanvasIntegrationService {
    */
   private enqueueSave<T>(fn: () => Promise<T>): Promise<T> {
     const prev = this.pendingSave;
-    const next = prev.then(() => fn(), () => fn());
+    const next = prev.then(
+      () => fn(),
+      () => fn(),
+    );
     // Keep the chain alive regardless of individual failures
-    this.pendingSave = next.then(() => {}, () => {});
+    this.pendingSave = next.then(
+      () => {},
+      () => {},
+    );
     return next;
   }
 
@@ -101,7 +102,7 @@ export class CanvasIntegrationService {
 
   /**
    * 进入项目 - 设置自动保存、加载画布数据
-   * 
+   *
    * 安全边界：
    * - 如果已有活动项目且不同，先自动 exit()
    * - 如果 projectId 相同，跳过（防止重复加载）
@@ -136,7 +137,12 @@ export class CanvasIntegrationService {
     this.loadingPromise = (async () => {
       try {
         // 在加载新数据前清空旧画布，防止新项目没有画布数据时显示旧项目的图层
-        const { importLayers, setOffset, setScale, setProjectId: setStoreProjectId } = useCanvasStore.getState();
+        const {
+          importLayers,
+          setOffset,
+          setScale,
+          setProjectId: setStoreProjectId,
+        } = useCanvasStore.getState();
         importLayers([], true);
         setOffset({ x: 0, y: 0 });
         setScale(1);
@@ -168,7 +174,7 @@ export class CanvasIntegrationService {
 
   /**
    * 退出项目 - 保存、清理、释放资源
-   * 
+   *
    * 执行顺序（防止任何竞态）：
    * 1. 立即清除 currentProjectId → 后续 auto-save 调用变为 no-op
    * 2. 同步写入 sessionStorage 备份 → 即使页面关闭也不丢
@@ -323,12 +329,12 @@ export class CanvasIntegrationService {
     const backupData: CanvasData = {
       version: 2,
       projectId,
-      layers: state.layers.map(l => {
+      layers: state.layers.map((l) => {
         const { src, ...rest } = l;
         // blob URLs（URL.createObjectURL）在页面关闭后失效，不保存
         // data: URI 和 http(s) URL 可以保存，但 data: URI 可能非常大
         // 最佳实践：保留 imageId 用于 IndexedDB 恢复，保留非 blob 的 src
-        const safeSrc = (src && !src.startsWith('blob:')) ? src : undefined;
+        const safeSrc = src && !src.startsWith('blob:') ? src : undefined;
         return { ...rest, src: safeSrc } as any;
       }),
       offset: state.offset,
@@ -366,7 +372,9 @@ export class CanvasIntegrationService {
         return null;
       }
 
-      console.log(`[CanvasIntegration] 从 sessionStorage 恢复备份: ${data.layers?.length || 0} layers`);
+      console.log(
+        `[CanvasIntegration] 从 sessionStorage 恢复备份: ${data.layers?.length || 0} layers`,
+      );
       return data;
     } catch (e) {
       console.warn('[CanvasIntegration] sessionStorage 恢复失败:', e);
@@ -389,7 +397,7 @@ export class CanvasIntegrationService {
 
   /**
    * 安全地将图层序列化为可保存的格式
-   * 
+   *
    * 核心原则：先持久化，后移除 src。
    * - 图片保存到 IndexedDB IMAGES store 成功 → 用 imageId 替代 src
    * - 图片保存失败 → 保留原始 src，下次保存可重试
@@ -424,7 +432,7 @@ export class CanvasIntegrationService {
    * @returns 保存完成的 Promise（可用于退出前等待保存完成）
    */
   saveImmediately(_force?: boolean): Promise<void> {
-    return this.enqueueSave(() => this.doImmediateSave()).catch(e => {
+    return this.enqueueSave(() => this.doImmediateSave()).catch((e) => {
       console.warn('[CanvasIntegration] 即时保存失败:', e);
     });
   }
@@ -443,7 +451,7 @@ export class CanvasIntegrationService {
 
     const { layers, offset, scale } = useCanvasStore.getState();
 
-    const layersToSave = await Promise.all(layers.map(l => this.serializeLayerForSave(l)));
+    const layersToSave = await Promise.all(layers.map((l) => this.serializeLayerForSave(l)));
 
     try {
       await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
@@ -455,13 +463,13 @@ export class CanvasIntegrationService {
 
   private async saveCanvasState(): Promise<void> {
     // console.log('[CanvasIntegration] 保存画布');
-    
+
     // 防止在加载过程中自动保存空数据
     if (this.isLoading) {
       logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 正在加载画布，跳过自动保存');
       return;
     }
-    
+
     const { layers, offset, scale } = useCanvasStore.getState();
 
     if (!this.currentProjectId) {
@@ -469,7 +477,7 @@ export class CanvasIntegrationService {
       return;
     }
 
-    const layersToSave = await Promise.all(layers.map(l => this.serializeLayerForSave(l)));
+    const layersToSave = await Promise.all(layers.map((l) => this.serializeLayerForSave(l)));
 
     try {
       await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
@@ -481,10 +489,7 @@ export class CanvasIntegrationService {
   /**
    * 将分镜导入画布
    */
-  async importShotsToCanvas(
-    shots: Shot[],
-    options: ImportOptions = {}
-  ): Promise<number> {
+  async importShotsToCanvas(shots: Shot[], options: ImportOptions = {}): Promise<number> {
     const opts = { ...DEFAULT_IMPORT_OPTIONS, ...options };
     const { addLayer } = useCanvasStore.getState();
 
@@ -507,7 +512,10 @@ export class CanvasIntegrationService {
         // 解析图片 URL（处理本地引用）
         const resolvedUrl = await unifiedImageService.resolveForApi(keyframe.imageUrl);
         if (!resolvedUrl) {
-          logger.warn(LogCategory.CANVAS, `[CanvasIntegration] 跳过无法解析的关键帧: ${shotIndex}-${kfIndex}`);
+          logger.warn(
+            LogCategory.CANVAS,
+            `[CanvasIntegration] 跳过无法解析的关键帧: ${shotIndex}-${kfIndex}`,
+          );
           continue;
         }
 
@@ -519,7 +527,10 @@ export class CanvasIntegrationService {
             const blob = await response.blob();
             await unifiedImageService.saveImage(imgId, blob);
             imageId = imgId;
-            logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 图片已保存到 IndexedDB: ${imageId}`);
+            logger.debug(
+              LogCategory.CANVAS,
+              `[CanvasIntegration] 图片已保存到 IndexedDB: ${imageId}`,
+            );
           } catch (e) {
             logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 保存图片到 IndexedDB 失败:', e);
           }
@@ -540,7 +551,11 @@ export class CanvasIntegrationService {
             width = dims.width + 10;
             height = dims.height + 10;
           } catch {
-            logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 获取镜头图片尺寸失败，使用默认值:', e);
+            logger.warn(
+              LogCategory.CANVAS,
+              '[CanvasIntegration] 获取镜头图片尺寸失败，使用默认值:',
+              e,
+            );
           }
         }
 
@@ -556,14 +571,17 @@ export class CanvasIntegrationService {
           title: `镜头 ${shotIndex + 1}-${kfIndex + 1}`,
           createdAt: Date.now(),
           linkedResourceId: shot.id,
-          linkedResourceType: 'keyframe'
+          linkedResourceType: 'keyframe',
         };
 
         addLayer(layer);
         importedCount++;
 
         if (importedCount === 1) {
-          logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 第一个图层 src 长度: ${layer.src?.length}, 前缀: ${layer.src?.substring(0, 50)}`);
+          logger.debug(
+            LogCategory.CANVAS,
+            `[CanvasIntegration] 第一个图层 src 长度: ${layer.src?.length}, 前缀: ${layer.src?.substring(0, 50)}`,
+          );
         }
       }
     }
@@ -571,8 +589,6 @@ export class CanvasIntegrationService {
     logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 成功导入 ${importedCount} 个图层`);
     return importedCount;
   }
-
- 
 
   /**
    * 将角色导入画布
@@ -582,7 +598,7 @@ export class CanvasIntegrationService {
     characterName: string,
     imageUrl: string,
     x: number = 100,
-    y: number = 100
+    y: number = 100,
   ): Promise<string> {
     const { addLayer } = useCanvasStore.getState();
 
@@ -609,7 +625,7 @@ export class CanvasIntegrationService {
     }
 
     const layerId = crypto.randomUUID();
-    
+
     // 保存图片到 IndexedDB，获取 imageId
     let imageId: string | undefined;
     if (resolvedUrl.startsWith('data:')) {
@@ -636,12 +652,15 @@ export class CanvasIntegrationService {
       title: characterName,
       createdAt: Date.now(),
       linkedResourceId: characterId,
-      linkedResourceType: 'character'
+      linkedResourceType: 'character',
     };
 
     addLayer(layer);
 
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入角色: ${characterName}, 尺寸: ${width}x${height}, imageId: ${imageId}`);
+    logger.debug(
+      LogCategory.CANVAS,
+      `[CanvasIntegration] 导入角色: ${characterName}, 尺寸: ${width}x${height}, imageId: ${imageId}`,
+    );
     return layerId;
   }
 
@@ -653,7 +672,7 @@ export class CanvasIntegrationService {
     sceneName: string,
     imageUrl: string,
     x: number = 100,
-    y: number = 100
+    y: number = 100,
   ): Promise<string> {
     const { addLayer } = useCanvasStore.getState();
 
@@ -680,7 +699,7 @@ export class CanvasIntegrationService {
     }
 
     const layerId = crypto.randomUUID();
-    
+
     // 保存图片到 IndexedDB，获取 imageId
     let imageId: string | undefined;
     if (resolvedUrl.startsWith('data:')) {
@@ -707,12 +726,15 @@ export class CanvasIntegrationService {
       title: sceneName,
       createdAt: Date.now(),
       linkedResourceId: sceneId,
-      linkedResourceType: 'scene'
+      linkedResourceType: 'scene',
     };
 
     addLayer(layer);
 
-    logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导入场景: ${sceneName}, 尺寸: ${width}x${height}, imageId: ${imageId}`);
+    logger.debug(
+      LogCategory.CANVAS,
+      `[CanvasIntegration] 导入场景: ${sceneName}, 尺寸: ${width}x${height}, imageId: ${imageId}`,
+    );
     return layerId;
   }
 
@@ -723,7 +745,7 @@ export class CanvasIntegrationService {
     const opts = { ...DEFAULT_EXPORT_OPTIONS, ...options };
     const { layers } = useCanvasStore.getState();
 
-    const imageLayers = layers.filter(l => l.type === 'image' && l.src);
+    const imageLayers = layers.filter((l) => l.type === 'image' && l.src);
 
     let sortedLayers = imageLayers;
     if (opts.sortByPosition) {
@@ -734,12 +756,12 @@ export class CanvasIntegrationService {
       });
     }
 
-    const keyframes: Partial<Keyframe>[] = sortedLayers.map((layer, index) => ({
+    const keyframes: Partial<Keyframe>[] = sortedLayers.map((layer, _index) => ({
       id: crypto.randomUUID(),
       type: 'end' as const,
       imageUrl: layer.src,
       visualPrompt: layer.title,
-      status: 'completed' as const
+      status: 'completed' as const,
     }));
 
     logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 导出 ${keyframes.length} 个关键帧`);
@@ -759,9 +781,9 @@ export class CanvasIntegrationService {
 
     return {
       totalLayers: layers.length,
-      imageLayers: layers.filter(l => l.type === 'image').length,
-      videoLayers: layers.filter(l => l.type === 'video').length,
-      otherLayers: layers.filter(l => !['image', 'video'].includes(l.type)).length
+      imageLayers: layers.filter((l) => l.type === 'image').length,
+      videoLayers: layers.filter((l) => l.type === 'video').length,
+      otherLayers: layers.filter((l) => !['image', 'video'].includes(l.type)).length,
     };
   }
 
@@ -771,18 +793,20 @@ export class CanvasIntegrationService {
   async clearCanvas(): Promise<void> {
     const { clearCanvas, offset, scale } = useCanvasStore.getState();
     clearCanvas();
-    
+
     // 清除因清空画布触发的自动保存定时器
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    
+
     if (this.currentProjectId) {
       // 通过保存队列串行化：清空操作会等待之前的 auto-save 完成，undo 触发的 auto-save 会等待清空完成
-      await this.enqueueSave(() => canvasSyncService.saveNow(this.currentProjectId!, [], offset, scale));
+      await this.enqueueSave(() =>
+        canvasSyncService.saveNow(this.currentProjectId!, [], offset, scale),
+      );
     }
-    
+
     logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布已清空');
   }
 
@@ -827,7 +851,7 @@ export class CanvasIntegrationService {
    * - 优先本地数据（IndexedDB）
    * - 检查云端数据
    * - 自动处理冲突
-   * 
+   *
    * 注意：不再检查 localStorage 数据
    * 原因：已移除 Zustand persist 中间件，画布数据完全由 IndexedDB 管理
    */
@@ -853,7 +877,10 @@ export class CanvasIntegrationService {
         return false;
       }
 
-      logger.debug(LogCategory.CANVAS, `[CanvasIntegration] 加载画布数据，版本: ${canvasData.version}, 图层数: ${canvasData.layers.length}`);
+      logger.debug(
+        LogCategory.CANVAS,
+        `[CanvasIntegration] 加载画布数据，版本: ${canvasData.version}, 图层数: ${canvasData.layers.length}`,
+      );
 
       await this.importCanvasData(canvasData);
       logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已恢复');
@@ -872,98 +899,119 @@ export class CanvasIntegrationService {
     const { importLayers, setOffset, setScale } = useCanvasStore.getState();
 
     if (canvasData.layers && canvasData.layers.length > 0) {
-      const restoredLayers = await Promise.all(canvasData.layers.map(async (layer: any) => {
-        if (layer.type === 'image') {
-          if (layer.imageId) {
-            try {
-              const blob = await unifiedImageService.getImage(layer.imageId);
-              if (blob) {
-                return { ...layer, src: URL.createObjectURL(blob) };
+      const restoredLayers = await Promise.all(
+        canvasData.layers.map(async (layer: any) => {
+          if (layer.type === 'image') {
+            if (layer.imageId) {
+              try {
+                const blob = await unifiedImageService.getImage(layer.imageId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复图片失败 (imageId):', e);
               }
-            } catch (e) {
-              console.warn('恢复图片失败 (imageId):', e);
             }
-          }
 
-          if (layer.src && layer.src.startsWith('local:')) {
-            try {
-              const localId = layer.src.replace('local:', '');
-              const blob = await unifiedImageService.getImage(localId);
-              if (blob) {
-                return { ...layer, src: URL.createObjectURL(blob) };
+            if (layer.src && layer.src.startsWith('local:')) {
+              try {
+                const localId = layer.src.replace('local:', '');
+                const blob = await unifiedImageService.getImage(localId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复图片失败 (local:):', e);
               }
-            } catch (e) {
-              console.warn('恢复图片失败 (local:):', e);
+            }
+          } else if (layer.type === 'video') {
+            if (layer.imageId) {
+              try {
+                const blob = await unifiedImageService.getVideo(layer.imageId);
+                if (blob) {
+                  console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复视频失败 (imageId):', e);
+              }
+            }
+            if (layer.src && layer.src.startsWith('video:')) {
+              try {
+                const videoId = layer.src.replace('video:', '');
+                const blob = await unifiedImageService.getVideo(videoId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复视频失败:', e);
+              }
+            }
+          } else if (layer.type === 'panorama') {
+            if (layer.imageId) {
+              try {
+                const blob = await unifiedImageService.getImage(layer.imageId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复全景图失败 (imageId):', e);
+              }
+            }
+            if (layer.src && layer.src.startsWith('local:')) {
+              try {
+                const localId = layer.src.replace('local:', '');
+                const blob = await unifiedImageService.getImage(localId);
+                if (blob) {
+                  return { ...layer, src: URL.createObjectURL(blob) };
+                }
+              } catch (e) {
+                console.warn('恢复全景图失败 (local:):', e);
+              }
+            }
+          } else if (layer.type === 'drawing') {
+            console.log(
+              '[CanvasIntegration] 恢复 drawing 图层:',
+              layer.id,
+              'imageId:',
+              layer.imageId,
+              'src:',
+              layer.src?.substring(0, 50),
+            );
+            if (layer.imageId) {
+              try {
+                const blob = await unifiedImageService.getImage(layer.imageId);
+                if (blob) {
+                  const src = URL.createObjectURL(blob);
+                  console.log(
+                    '[CanvasIntegration] 恢复 drawing 图层成功:',
+                    layer.id,
+                    'blob size:',
+                    blob.size,
+                  );
+                  return { ...layer, src };
+                } else {
+                  console.warn(
+                    '[CanvasIntegration] 恢复 drawing 图层失败: blob 为空',
+                    layer.id,
+                    layer.imageId,
+                  );
+                }
+              } catch (e) {
+                console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
+              }
+            } else if (layer.src && layer.src.startsWith('data:')) {
+              return layer;
+            } else {
+              console.warn(
+                '[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:',
+                layer.id,
+              );
             }
           }
-        } else if (layer.type === 'video') {
-          if (layer.imageId) {
-            try {
-              const blob = await unifiedImageService.getVideo(layer.imageId);
-              if (blob) {
-                console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
-                return { ...layer, src: URL.createObjectURL(blob) };
-              }
-            } catch (e) {
-              console.warn('恢复视频失败 (imageId):', e);
-            }
-          }
-          if (layer.src && layer.src.startsWith('video:')) {
-            try {
-              const videoId = layer.src.replace('video:', '');
-              const blob = await unifiedImageService.getVideo(videoId);
-              if (blob) {
-                return { ...layer, src: URL.createObjectURL(blob) };
-              }
-            } catch (e) {
-              console.warn('恢复视频失败:', e);
-            }
-          }
-        } else if (layer.type === 'panorama') {
-          if (layer.imageId) {
-            try {
-              const blob = await unifiedImageService.getImage(layer.imageId);
-              if (blob) {
-                return { ...layer, src: URL.createObjectURL(blob) };
-              }
-            } catch (e) {
-              console.warn('恢复全景图失败 (imageId):', e);
-            }
-          }
-          if (layer.src && layer.src.startsWith('local:')) {
-            try {
-              const localId = layer.src.replace('local:', '');
-              const blob = await unifiedImageService.getImage(localId);
-              if (blob) {
-                return { ...layer, src: URL.createObjectURL(blob) };
-              }
-            } catch (e) {
-              console.warn('恢复全景图失败 (local:):', e);
-            }
-          }
-        } else if (layer.type === 'drawing') {
-          console.log('[CanvasIntegration] 恢复 drawing 图层:', layer.id, 'imageId:', layer.imageId, 'src:', layer.src?.substring(0, 50));
-          if (layer.imageId) {
-            try {
-              const blob = await unifiedImageService.getImage(layer.imageId);
-              if (blob) {
-                const src = URL.createObjectURL(blob);
-                console.log('[CanvasIntegration] 恢复 drawing 图层成功:', layer.id, 'blob size:', blob.size);
-                return { ...layer, src };
-              } else {
-                console.warn('[CanvasIntegration] 恢复 drawing 图层失败: blob 为空', layer.id, layer.imageId);
-              }
-            } catch (e) {
-              console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
-            }
-          } else if (layer.src && layer.src.startsWith('data:')) {
-            return layer;
-          } else {
-            console.warn('[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:', layer.id);
-          }
-        }
-        return layer;
-      }));
+          return layer;
+        }),
+      );
 
       if (restoredLayers.length > 0) {
         importLayers(restoredLayers, true);
@@ -981,7 +1029,7 @@ export class CanvasIntegrationService {
 
   /**
    * 恢复画布状态（公开 API，供 "恢复" 按钮调用）
-   * 
+   *
    * 恢复优先级：
    * 1. sessionStorage 同步备份（beforeunload 时写入的最新数据）
    * 2. IndexedDB 本地数据（含云端同步）
@@ -1012,7 +1060,7 @@ export class CanvasIntegrationService {
 
   /**
    * 清理资源（兼容旧接口，委托给 exit）
-   * 
+   *
    * 旧代码中 handleExitProject 会先调用 saveImmediately 再调用 cleanup。
    * 现在 exit() 内部已完成保存 + 清理，所以 cleanup 直接委托给 exit。
    * 多次调用安全（exit 有 !currentProjectId 防护）。

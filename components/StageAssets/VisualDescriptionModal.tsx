@@ -21,7 +21,7 @@ import {
   AlertCircle,
   ImageIcon,
   Sparkles,
-  Edit3
+  Edit3,
 } from 'lucide-react';
 import { VisualDescriptionField, Character } from '../../types';
 import { useImageLoader } from '../../hooks/useImageLoader';
@@ -38,9 +38,17 @@ interface VisualDescriptionModalProps {
   /** 保存回调 */
   onSave: (field: VisualDescriptionField) => void;
   /** AI 润色文本 */
-  onPolish: (text: string, fieldType: 'signaturePose' | 'microAction', character: Character) => Promise<string>;
+  onPolish: (
+    text: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character,
+  ) => Promise<string>;
   /** 生成预览图 */
-  onGeneratePreview: (polishedText: string, fieldType: 'signaturePose' | 'microAction', character: Character) => Promise<string>;
+  onGeneratePreview: (
+    polishedText: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character,
+  ) => Promise<string>;
   /** 是否有其他 Modal 正在生成中 */
   isGeneratingGlobal?: boolean;
 }
@@ -49,41 +57,6 @@ interface VisualDescriptionModalProps {
  * AI 润色提示词模板
  * 将用户的简单描述转化为专业的视觉描述
  */
-const getPolishPrompt = (text: string, fieldType: 'signaturePose' | 'microAction'): string => {
-  if (fieldType === 'signaturePose') {
-    return `你是一位拥有30年经验的顶级动画编剧和角色设计专家。
-
-请将以下"标志性姿态"描述转化为专业的、适合直接用于图像生成的视觉描述。
-
-要求：
-- 必须包含具体的身体动作和表情描写
-- 必须包含视角/景别信息（如：远景、中景、近景、特写）
-- 必须包含光影/氛围描述
-- 禁止使用抽象形容词（如"冷酷"、"威严"），必须转化为具体动作
-- 输出格式：[景别] 具体描写 [光影氛围]
-
-原始描述：
-"${text}"
-
-请直接输出润色后的描述，不要解释。`;
-  } else {
-    return `你是一位拥有30年经验的顶级动画编剧和角色设计专家。
-
-请将以下"病态微动作"描述转化为专业的、适合直接用于图像生成的视觉描述。
-
-要求：
-- 必须包含具体的微动作细节（手指、面部肌肉、眼神等）
-- 必须包含该动作发生时的状态描写
-- 必须包含视角/景别信息
-- 这个微动作应该让人感到不安或反常
-- 输出格式：[景别] 具体描写 [微动作细节]
-
-原始描述：
-"${text}"
-
-请直接输出润色后的描述，不要解释。`;
-  }
-};
 
 const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
   fieldType,
@@ -106,15 +79,19 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
   // 是否显示预览图
   const [showPreview, setShowPreview] = useState(false);
   // 预览图加载状态
-  const [localPreviewImageUrl, setLocalPreviewImageUrl] = useState<string | undefined>(fieldValue?.previewImageUrl);
-  const { src: previewImageSrc, loading: previewImageLoading } = useImageLoader(localPreviewImageUrl);
+  const [localPreviewImageUrl, setLocalPreviewImageUrl] = useState<string | undefined>(
+    fieldValue?.previewImageUrl,
+  );
+  const { src: previewImageSrc, loading: previewImageLoading } =
+    useImageLoader(localPreviewImageUrl);
 
   // 字段显示名称
   const fieldLabel = fieldType === 'signaturePose' ? '标志性姿态' : '病态微动作';
   // 输入框 placeholder
-  const placeholder = fieldType === 'signaturePose'
-    ? '例如：靠在墙上，眼神不聚焦，仿佛无视一切'
-    : '例如：说话前用舌头顶一下腮帮子，手指不自觉地抽搐';
+  const placeholder =
+    fieldType === 'signaturePose'
+      ? '例如：靠在墙上，眼神不聚焦，仿佛无视一切'
+      : '例如：说话前用舌头顶一下腮帮子，手指不自觉地抽搐';
 
   /**
    * 处理 AI 润色
@@ -183,7 +160,8 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
   /**
    * 判断是否可以生成预览
    */
-  const canGeneratePreview = (editText.trim() || polishedText.trim()) && !isGeneratingPreview && !isGeneratingGlobal;
+  const canGeneratePreview =
+    (editText.trim() || polishedText.trim()) && !isGeneratingPreview && !isGeneratingGlobal;
 
   return (
     <div
@@ -197,11 +175,13 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
         {/* Header */}
         <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              fieldType === 'signaturePose'
-                ? 'bg-[var(--accent-bg)] text-[var(--accent-text)]'
-                : 'bg-[var(--error-bg)] text-[var(--error-text)]'
-            }`}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                fieldType === 'signaturePose'
+                  ? 'bg-[var(--accent-bg)] text-[var(--accent-text)]'
+                  : 'bg-[var(--error-bg)] text-[var(--error-text)]'
+              }`}
+            >
               {fieldType === 'signaturePose' ? (
                 <Edit3 className="w-4 h-4" />
               ) : (
@@ -209,9 +189,7 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
               )}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                {fieldLabel}
-              </h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{fieldLabel}</h3>
               <p className="text-[10px] text-[var(--text-tertiary)]">
                 {character.name} - 角色视觉描述
               </p>
@@ -289,7 +267,8 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-[var(--accent-text)]" />
-                AI 润色结果 {polishedText && !isPolishing && (
+                AI 润色结果{' '}
+                {polishedText && !isPolishing && (
                   <span className="text-[9px] normal-case font-normal text-[var(--text-muted)] ml-2">
                     （可手动编辑）
                   </span>

@@ -1,6 +1,12 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import type { PanoramaCameraState, PanoramaScreenshotMode } from '../types/canvas';
-import { PANORAMA_DEFAULTS, clampFov, clampPitch, normalizeYaw, VIEW_ANGLE_LABELS } from '../utils/panoramaUtils';
+import {
+  PANORAMA_DEFAULTS,
+  clampFov,
+  clampPitch,
+  normalizeYaw,
+  VIEW_ANGLE_LABELS,
+} from '../utils/panoramaUtils';
 import { PanoramaViewerToolbar } from './PanoramaViewerToolbar';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { usePanoramaEngine } from '../hooks/usePanoramaEngine';
@@ -10,7 +16,9 @@ interface PanoramaViewerProps {
   layerId?: string;
   initialCamera?: PanoramaCameraState;
   onClose: () => void;
-  onScreenshots?: (results: { dataUrl: string; yaw: number; pitch: number; label: string }[]) => void;
+  onScreenshots?: (
+    results: { dataUrl: string; yaw: number; pitch: number; label: string }[],
+  ) => void;
 }
 
 interface DragState {
@@ -37,10 +45,9 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     isLoading,
     loadError,
     zoomPercent,
-    setZoomPercent,
-    renderFrame,
+
     requestRender,
-    syncCanvasSize,
+
     captureView,
     handleReset,
     handleSetFov,
@@ -56,15 +63,28 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
   const inertiaRafRef = useRef(0);
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const [coordDisplay, setCoordDisplay] = useState({ yaw: 0, pitch: 0 });
-  const [viewPresets, setViewPresets] = useState<{ name: string; yaw: number; pitch: number; fov: number }[]>([]);
-  const touchRef = useRef<{ touches: { x: number; y: number }[]; dist: number; yaw: number; pitch: number; fov: number; lastX: number; lastY: number } | null>(null);
+  const [viewPresets, setViewPresets] = useState<
+    { name: string; yaw: number; pitch: number; fov: number }[]
+  >([]);
+  const touchRef = useRef<{
+    touches: { x: number; y: number }[];
+    dist: number;
+    yaw: number;
+    pitch: number;
+    fov: number;
+    lastX: number;
+    lastY: number;
+  } | null>(null);
   const gyroRef = useRef<{ alpha: number; beta: number; gamma: number } | null>(null);
 
   const coordUpdateRef = useRef(0);
   const scheduleCoordUpdate = useCallback(() => {
     cancelAnimationFrame(coordUpdateRef.current);
     coordUpdateRef.current = requestAnimationFrame(() => {
-      setCoordDisplay({ yaw: Math.round(stateRef.current.yaw % 360), pitch: Math.round(stateRef.current.pitch) });
+      setCoordDisplay({
+        yaw: Math.round(stateRef.current.yaw % 360),
+        pitch: Math.round(stateRef.current.pitch),
+      });
     });
   }, [stateRef]);
 
@@ -82,8 +102,12 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     if (Math.abs(vx) < minV && Math.abs(vy) < minV) return;
 
     const step = () => {
-      stateRef.current.yaw = normalizeYaw(stateRef.current.yaw + vx * PANORAMA_DEFAULTS.dragSensitivity);
-      stateRef.current.pitch = clampPitch(stateRef.current.pitch - vy * PANORAMA_DEFAULTS.dragSensitivity);
+      stateRef.current.yaw = normalizeYaw(
+        stateRef.current.yaw + vx * PANORAMA_DEFAULTS.dragSensitivity,
+      );
+      stateRef.current.pitch = clampPitch(
+        stateRef.current.pitch - vy * PANORAMA_DEFAULTS.dragSensitivity,
+      );
       vx *= decay;
       vy *= decay;
       if (Math.abs(vx) < minV && Math.abs(vy) < minV) return;
@@ -93,12 +117,16 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     inertiaRafRef.current = requestAnimationFrame(step);
   }, [stateRef, requestRenderWithHud]);
 
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? PANORAMA_DEFAULTS.wheelZoomStep : -PANORAMA_DEFAULTS.wheelZoomStep;
-    const newFov = clampFov(stateRef.current.fov + delta);
-    handleSetFov(newFov);
-  }, [stateRef, handleSetFov]);
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      const delta =
+        e.deltaY > 0 ? PANORAMA_DEFAULTS.wheelZoomStep : -PANORAMA_DEFAULTS.wheelZoomStep;
+      const newFov = clampFov(stateRef.current.fov + delta);
+      handleSetFov(newFov);
+    },
+    [stateRef, handleSetFov],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -122,9 +150,16 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
       if (!dragRef.current) return;
       const dx = e.clientX - dragRef.current.clientX;
       const dy = e.clientY - dragRef.current.clientY;
-      stateRef.current.yaw = normalizeYaw(dragRef.current.yaw + dx * PANORAMA_DEFAULTS.dragSensitivity);
-      stateRef.current.pitch = clampPitch(dragRef.current.pitch - dy * PANORAMA_DEFAULTS.dragSensitivity);
-      velocityRef.current = { x: e.clientX - dragRef.current.lastX, y: e.clientY - dragRef.current.lastY };
+      stateRef.current.yaw = normalizeYaw(
+        dragRef.current.yaw + dx * PANORAMA_DEFAULTS.dragSensitivity,
+      );
+      stateRef.current.pitch = clampPitch(
+        dragRef.current.pitch - dy * PANORAMA_DEFAULTS.dragSensitivity,
+      );
+      velocityRef.current = {
+        x: e.clientX - dragRef.current.lastX,
+        y: e.clientY - dragRef.current.lastY,
+      };
       dragRef.current.lastX = e.clientX;
       dragRef.current.lastY = e.clientY;
       requestRenderWithHud();
@@ -191,9 +226,16 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
       if (e.touches.length === 1 && touchRef.current.touches.length === 1) {
         const dx = e.touches[0].clientX - touchRef.current.touches[0].x;
         const dy = e.touches[0].clientY - touchRef.current.touches[0].y;
-        stateRef.current.yaw = normalizeYaw(touchRef.current.yaw + dx * PANORAMA_DEFAULTS.dragSensitivity);
-        stateRef.current.pitch = clampPitch(touchRef.current.pitch - dy * PANORAMA_DEFAULTS.dragSensitivity);
-        velocityRef.current = { x: e.touches[0].clientX - touchRef.current.lastX, y: e.touches[0].clientY - touchRef.current.lastY };
+        stateRef.current.yaw = normalizeYaw(
+          touchRef.current.yaw + dx * PANORAMA_DEFAULTS.dragSensitivity,
+        );
+        stateRef.current.pitch = clampPitch(
+          touchRef.current.pitch - dy * PANORAMA_DEFAULTS.dragSensitivity,
+        );
+        velocityRef.current = {
+          x: e.touches[0].clientX - touchRef.current.lastX,
+          y: e.touches[0].clientY - touchRef.current.lastY,
+        };
         touchRef.current.lastX = e.touches[0].clientX;
         touchRef.current.lastY = e.touches[0].clientY;
         requestRenderWithHud();
@@ -256,7 +298,9 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
             setGyroEnabled(false);
             return;
           }
-        } catch { }
+        } catch {
+          /* empty */
+        }
       }
       window.addEventListener('deviceorientation', onOrientation);
     };
@@ -268,22 +312,27 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     };
   }, [gyroEnabled, stateRef, handleSetFov]);
 
-  const handleScreenshot = useCallback(async (mode: PanoramaScreenshotMode) => {
-    const angles = VIEW_ANGLE_LABELS[mode];
-    if (!angles || angles.length === 0) return;
+  const handleScreenshot = useCallback(
+    async (mode: PanoramaScreenshotMode) => {
+      const angles = VIEW_ANGLE_LABELS[mode];
+      if (!angles || angles.length === 0) return;
 
-    const currentPitch = stateRef.current.pitch;
-    const results: { dataUrl: string; yaw: number; pitch: number; label: string }[] = [];
-    for (const angle of angles) {
-      const dataUrl = await captureView(angle.yaw, currentPitch);
-      results.push({ dataUrl, yaw: angle.yaw, pitch: currentPitch, label: angle.label });
-    }
-    onScreenshots?.(results);
-  }, [captureView, onScreenshots, stateRef]);
+      const currentPitch = stateRef.current.pitch;
+      const results: { dataUrl: string; yaw: number; pitch: number; label: string }[] = [];
+      for (const angle of angles) {
+        const dataUrl = await captureView(angle.yaw, currentPitch);
+        results.push({ dataUrl, yaw: angle.yaw, pitch: currentPitch, label: angle.label });
+      }
+      onScreenshots?.(results);
+    },
+    [captureView, onScreenshots, stateRef],
+  );
 
   const handleExportCurrent = useCallback(async () => {
     const dataUrl = await captureView(stateRef.current.yaw, stateRef.current.pitch);
-    onScreenshots?.([{ dataUrl, yaw: stateRef.current.yaw, pitch: stateRef.current.pitch, label: '当前视角' }]);
+    onScreenshots?.([
+      { dataUrl, yaw: stateRef.current.yaw, pitch: stateRef.current.pitch, label: '当前视角' },
+    ]);
   }, [captureView, onScreenshots, stateRef]);
 
   const onReset = useCallback(() => {
@@ -293,25 +342,41 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
 
   const handleSavePreset = useCallback(() => {
     const name = `视角 ${viewPresets.length + 1}`;
-    const newPreset = { name, yaw: stateRef.current.yaw, pitch: stateRef.current.pitch, fov: stateRef.current.fov };
-    setViewPresets(prev => [...prev, newPreset]);
+    const newPreset = {
+      name,
+      yaw: stateRef.current.yaw,
+      pitch: stateRef.current.pitch,
+      fov: stateRef.current.fov,
+    };
+    setViewPresets((prev) => [...prev, newPreset]);
     if (layerId) {
-      useCanvasStore.getState().updateLayer(layerId, { cameraState: { yaw: stateRef.current.yaw, pitch: stateRef.current.pitch, fov: stateRef.current.fov } } as any);
+      useCanvasStore
+        .getState()
+        .updateLayer(layerId, {
+          cameraState: {
+            yaw: stateRef.current.yaw,
+            pitch: stateRef.current.pitch,
+            fov: stateRef.current.fov,
+          },
+        } as any);
     }
   }, [viewPresets, layerId, stateRef]);
 
-  const handleRestorePreset = useCallback((preset: { name: string; yaw: number; pitch: number; fov: number }) => {
-    stateRef.current.yaw = normalizeYaw(preset.yaw);
-    stateRef.current.pitch = preset.pitch;
-    handleSetFov(preset.fov);
-  }, [stateRef, handleSetFov]);
+  const handleRestorePreset = useCallback(
+    (preset: { name: string; yaw: number; pitch: number; fov: number }) => {
+      stateRef.current.yaw = normalizeYaw(preset.yaw);
+      stateRef.current.pitch = preset.pitch;
+      handleSetFov(preset.fov);
+    },
+    [stateRef, handleSetFov],
+  );
 
   const handleDeletePreset = useCallback((index: number) => {
-    setViewPresets(prev => prev.filter((_, i) => i !== index));
+    setViewPresets((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleToggleGyro = useCallback(() => {
-    setGyroEnabled(v => !v);
+    setGyroEnabled((v) => !v);
   }, []);
 
   return (
@@ -355,57 +420,105 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         }}
       />
       {isLoading && (
-        <div style={{
-          position: 'absolute',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <div style={{
-            width: 32, height: 32,
-            border: '3px solid rgba(255,255,255,0.15)',
-            borderTopColor: '#a855f7',
-            borderRadius: '50%',
-            animation: 'panorama-spin 0.8s linear infinite',
-          }} />
-          <div style={{ color: '#999', fontSize: 14, fontFamily: 'sans-serif' }}>
-            加载全景图...
-          </div>
+        <div
+          style={{
+            position: 'absolute',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              border: '3px solid rgba(255,255,255,0.15)',
+              borderTopColor: '#a855f7',
+              borderRadius: '50%',
+              animation: 'panorama-spin 0.8s linear infinite',
+            }}
+          />
+          <div style={{ color: '#999', fontSize: 14, fontFamily: 'sans-serif' }}>加载全景图...</div>
         </div>
       )}
       {loadError && !isLoading && (
-        <div style={{
-          position: 'absolute',
-          color: '#ef4444', fontSize: 14, fontFamily: 'sans-serif',
-          textAlign: 'center', padding: 20,
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            color: '#ef4444',
+            fontSize: 14,
+            fontFamily: 'sans-serif',
+            textAlign: 'center',
+            padding: 20,
+          }}
+        >
           {loadError}
           <br />
-          <button onClick={onClose} style={{
-            marginTop: 12, padding: '6px 16px', borderRadius: 6,
-            border: '1px solid #ef4444', background: 'transparent',
-            color: '#ef4444', cursor: 'pointer', fontSize: 13,
-          }}>
+          <button
+            onClick={onClose}
+            style={{
+              marginTop: 12,
+              padding: '6px 16px',
+              borderRadius: 6,
+              border: '1px solid #ef4444',
+              background: 'transparent',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
             关闭
           </button>
         </div>
       )}
-      <div style={{
-        position: 'absolute', bottom: 20, left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex', alignItems: 'center', gap: 10,
-        background: 'rgba(0,0,0,0.6)', borderRadius: 8,
-        padding: '6px 14px', fontFamily: 'monospace', fontSize: 13,
-        color: '#ccc', zIndex: 10, userSelect: 'none', pointerEvents: 'none',
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'rgba(0,0,0,0.6)',
+          borderRadius: 8,
+          padding: '6px 14px',
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: '#ccc',
+          zIndex: 10,
+          userSelect: 'none',
+          pointerEvents: 'none',
+        }}
+      >
         <svg width="80" height="28" viewBox="0 0 80 28">
-          <text x="40" y="10" textAnchor="middle" fill="#888" fontSize="8" fontFamily="monospace">N</text>
-          <text x="4" y="20" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">W</text>
-          <text x="76" y="20" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">E</text>
-          <text x="40" y="27" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">S</text>
-          <line x1="40" y1="10" x2={40 + 30 * Math.sin(coordDisplay.yaw * Math.PI / 180)} y2={14 + 10 * Math.cos(coordDisplay.yaw * Math.PI / 180)} stroke="#a855f7" strokeWidth="2" />
-          <circle cx={40 + 30 * Math.sin(coordDisplay.yaw * Math.PI / 180)} cy={14 + 10 * Math.cos(coordDisplay.yaw * Math.PI / 180)} r="2" fill="#a855f7" />
+          <text x="40" y="10" textAnchor="middle" fill="#888" fontSize="8" fontFamily="monospace">
+            N
+          </text>
+          <text x="4" y="20" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">
+            W
+          </text>
+          <text x="76" y="20" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">
+            E
+          </text>
+          <text x="40" y="27" textAnchor="middle" fill="#666" fontSize="7" fontFamily="monospace">
+            S
+          </text>
+          <line
+            x1="40"
+            y1="10"
+            x2={40 + 30 * Math.sin((coordDisplay.yaw * Math.PI) / 180)}
+            y2={14 + 10 * Math.cos((coordDisplay.yaw * Math.PI) / 180)}
+            stroke="#a855f7"
+            strokeWidth="2"
+          />
+          <circle
+            cx={40 + 30 * Math.sin((coordDisplay.yaw * Math.PI) / 180)}
+            cy={14 + 10 * Math.cos((coordDisplay.yaw * Math.PI) / 180)}
+            r="2"
+            fill="#a855f7"
+          />
         </svg>
         <span style={{ color: '#a855f7' }}>Yaw {coordDisplay.yaw}°</span>
         <span style={{ color: '#888' }}>|</span>
@@ -413,13 +526,47 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         <span style={{ color: '#888' }}>|</span>
         <span>Zoom {zoomPercent}%</span>
       </div>
-      <div style={{
-        position: 'absolute', left: '50%', top: '50%',
-        transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 20,
-      }}>
-        <div style={{ position: 'absolute', left: 0, top: -12, width: 1, height: 24, background: '#0f0' }} />
-        <div style={{ position: 'absolute', left: -12, top: 0, width: 24, height: 1, background: '#0f0' }} />
-        <div style={{ position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: '50%', background: '#0f0' }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%,-50%)',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: -12,
+            width: 1,
+            height: 24,
+            background: '#0f0',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: -12,
+            top: 0,
+            width: 24,
+            height: 1,
+            background: '#0f0',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: -4,
+            top: -4,
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: '#0f0',
+          }}
+        />
       </div>
       <style>{`
         @keyframes panorama-spin {

@@ -1,4 +1,11 @@
-import { VideoPreset, VideoGenerationMode, AspectRatio, VideoDuration, TimedKeyframe, ProjectState } from '../types';
+import {
+  VideoPreset,
+  VideoGenerationMode,
+  AspectRatio,
+  VideoDuration,
+  TimedKeyframe,
+  ProjectState,
+} from '../types';
 
 const PRESET_VERSION = 1;
 
@@ -29,7 +36,6 @@ export interface PresetInput {
  * 提供预设的创建、加载、应用、版本迁移
  */
 export class VideoPresetManager {
-
   /**
    * 创建一个新的预设对象（不自动保存到 project）
    */
@@ -50,7 +56,7 @@ export class VideoPresetManager {
    */
   savePreset(project: ProjectState, preset: VideoPreset): ProjectState {
     const presets = project.videoPresets ? [...project.videoPresets] : [];
-    const existingIdx = presets.findIndex(p => p.id === preset.id);
+    const existingIdx = presets.findIndex((p) => p.id === preset.id);
     if (existingIdx >= 0) {
       presets[existingIdx] = preset;
     } else {
@@ -69,7 +75,7 @@ export class VideoPresetManager {
     if (!project.videoPresets) return project;
     return {
       ...project,
-      videoPresets: project.videoPresets.filter(p => p.id !== presetId),
+      videoPresets: project.videoPresets.filter((p) => p.id !== presetId),
     };
   }
 
@@ -78,7 +84,7 @@ export class VideoPresetManager {
    * 返回迁移后的预设，原始对象不变
    */
   loadPreset(preset: VideoPreset): VideoPreset {
-    let migrated = { ...preset, params: { ...preset.params } };
+    const migrated = { ...preset, params: { ...preset.params } };
 
     // 版本迁移：从旧版本升级到当前版本
     // 当前只有 v1，迁移逻辑为空
@@ -105,15 +111,15 @@ export class VideoPresetManager {
  */
 export function validateTimedKeyframes(
   timedKeyframes: TimedKeyframe[],
-  validKeyframeIds: string[]
+  validKeyframeIds: string[],
 ): {
   valid: TimedKeyframe[];
   filtered: TimedKeyframe[];
   invalidCount: number;
   allInvalid: boolean;
 } {
-  const valid = timedKeyframes.filter(tk => validKeyframeIds.includes(tk.keyframeId));
-  const filtered = timedKeyframes.filter(tk => !validKeyframeIds.includes(tk.keyframeId));
+  const valid = timedKeyframes.filter((tk) => validKeyframeIds.includes(tk.keyframeId));
+  const filtered = timedKeyframes.filter((tk) => !validKeyframeIds.includes(tk.keyframeId));
   return {
     valid,
     filtered,

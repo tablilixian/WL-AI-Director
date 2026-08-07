@@ -10,7 +10,7 @@ interface VariantPanelProps {
 const variantCounts = [
   { id: 2, name: '2 个' },
   { id: 4, name: '4 个' },
-  { id: 6, name: '6 个' }
+  { id: 6, name: '6 个' },
 ];
 
 export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onClose }) => {
@@ -18,10 +18,11 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
   const [progress, setProgress] = useState(0);
   const [variantCount, setVariantCount] = useState(4);
   const [strength, setStrength] = useState(0.7);
-  const { layers, addLayer, updateLayer } = useCanvasStore();
+  const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasSelectedImage =
+    selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleGenerateVariants = async () => {
     if (!hasSelectedImage || !selectedLayer || isProcessing) return;
@@ -33,7 +34,7 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
       const variants = await canvasModelService.generateVariants(
         selectedLayer.src,
         { count: variantCount, strength },
-        (p) => setProgress(p)
+        (p) => setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -82,7 +83,7 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
           isLoading: false,
           createdAt: Date.now(),
           sourceLayerId: selectedLayer.id,
-          operationType: 'variant'
+          operationType: 'variant',
         });
       }
 
@@ -119,12 +120,14 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
       <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">生成变体</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -133,9 +136,7 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
           <p className="text-sm text-[var(--text-muted)]">
             基于当前图片，生成多个风格/构图相似但细节不同的变体。
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            基于图片: {selectedLayer?.title}
-          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">基于图片: {selectedLayer?.title}</p>
         </div>
 
         {isProcessing ? (

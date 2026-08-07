@@ -3,8 +3,18 @@
  * 处理 Veo（同步）和 Sora（异步）API
  */
 
-import { VideoModelDefinition, VideoGenerateOptions, AspectRatio, VideoDuration } from '../../types/model';
-import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel, getProviderById } from '../modelRegistry';
+import {
+  VideoModelDefinition,
+  VideoGenerateOptions,
+  AspectRatio,
+  VideoDuration,
+} from '../../types/model';
+import {
+  getApiKeyForModel,
+  getApiBaseUrlForModel,
+  getActiveVideoModel,
+  getProviderById,
+} from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
 import { unifiedImageService } from '../unifiedImageService';
 import { uploadImageToDramaBackend } from './imageAdapter';
@@ -13,7 +23,7 @@ import { VIDEO_SORA_SIZE, VIDEO_DRAMA_SIZE, VIDEO_DRAMA_FALLBACK } from '../../c
 
 /**
  * 解析图片引用为 Base64 格式
- * 
+ *
  * @deprecated 使用 unifiedImageService.resolveForApi() 代替
  */
 async function resolveImageRef(imageRef: string): Promise<string> {
@@ -24,7 +34,9 @@ async function resolveImageRef(imageRef: string): Promise<string> {
  * 检查是否为 BigModel 视频模型
  */
 const isBigModelVideoModel = (modelId: string): boolean => {
-  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox');
+  return (
+    modelId.startsWith('vidu') || modelId.startsWith('cogvideo') || modelId.startsWith('cogvideox')
+  );
 };
 
 /**
@@ -43,33 +55,39 @@ const getDevApiBaseUrl = (modelId: string): string => {
 const retryOperation = async <T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
-  delay: number = 2000
+  delay: number = 2000,
 ): Promise<T> => {
   let lastError: Error | null = null;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
     } catch (error: any) {
       lastError = error;
-      if (error.message?.includes('400') || 
-          error.message?.includes('401') || 
-          error.message?.includes('403')) {
+      if (
+        error.message?.includes('400') ||
+        error.message?.includes('401') ||
+        error.message?.includes('403')
+      ) {
         throw error;
       }
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
       }
     }
   }
-  
+
   throw lastError;
 };
 
 /**
  * 调整图片尺寸
  */
-const resizeImageToSize = async (base64Data: string, targetWidth: number, targetHeight: number): Promise<string> => {
+const resizeImageToSize = async (
+  base64Data: string,
+  targetWidth: number,
+  targetHeight: number,
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -95,7 +113,7 @@ const resizeImageToSize = async (base64Data: string, targetWidth: number, target
   });
 };
 
-const convertVideoUrlToBase64 = async (videoUrl: string): Promise<string> => {
+void (async (videoUrl: string): Promise<string> => {
   const response = await fetch(videoUrl);
   if (!response.ok) {
     throw new Error(`视频下载失败: ${response.status}`);
@@ -114,12 +132,14 @@ const convertVideoUrlToBase64 = async (videoUrl: string): Promise<string> => {
     reader.onerror = () => reject(new Error('视频读取失败'));
     reader.readAsDataURL(videoBlob);
   });
-};
+});
 
 /**
  * 根据宽高比获取尺寸
  */
-const getSizeFromAspectRatio = (aspectRatio: AspectRatio): { width: number; height: number; size: string } => {
+const getSizeFromAspectRatio = (
+  aspectRatio: AspectRatio,
+): { width: number; height: number; size: string } => {
   return VIDEO_SORA_SIZE[aspectRatio];
 };
 
@@ -128,7 +148,7 @@ const getSizeFromAspectRatio = (aspectRatio: AspectRatio): { width: number; heig
  */
 const getVeoModelName = (hasReferenceImage: boolean, aspectRatio: AspectRatio): string => {
   const orientation = aspectRatio === '9:16' ? 'portrait' : 'landscape';
-  
+
   if (hasReferenceImage) {
     return `veo_3_1_i2v_s_fast_fl_${orientation}`;
   } else {
@@ -143,21 +163,20 @@ const callVeoApi = async (
   options: VideoGenerateOptions,
   model: VideoModelDefinition,
   apiKey: string,
-  apiBase: string
+  apiBase: string,
 ): Promise<string> => {
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   const hasStartImage = !!options.startImage;
-  
+
   // Veo 不支持 1:1
   const finalAspectRatio = aspectRatio === '1:1' ? '16:9' : aspectRatio;
-  
+
   // 获取具体的模型名称
   const modelName = getVeoModelName(hasStartImage, finalAspectRatio);
-  
+
   // 清理图片数据
   const cleanStart = options.startImage?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
   const cleanEnd = options.endImage?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
-
 
   // 构建消息
   const messages: any[] = [{ role: 'user', content: options.prompt }];
@@ -185,7 +204,7 @@ const callVeoApi = async (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: modelName,
@@ -203,12 +222,12 @@ const callVeoApi = async (
         if (res.status === 500) {
           throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
         }
-        
+
         let errorMessage = `HTTP 错误: ${res.status}`;
         try {
           const errorData = await res.json();
           errorMessage = errorData.error?.message || errorMessage;
-        } catch (e) {
+        } catch {
           const errorText = await res.text();
           if (errorText) errorMessage = errorText;
         }
@@ -224,9 +243,10 @@ const callVeoApi = async (
     const content = data.choices?.[0]?.message?.content || '';
 
     // 提取视频 URL
-    const urlMatch = content.match(/https?:\/\/[^\s\])"]+\.mp4[^\s\])"']*/i) ||
-                    content.match(/https?:\/\/[^\s\])"]+/i);
-    
+    const urlMatch =
+      content.match(/https?:\/\/[^\s\])"]+\.mp4[^\s\])"']*/i) ||
+      content.match(/https?:\/\/[^\s\])"]+/i);
+
     if (!urlMatch) {
       throw new Error('视频生成失败：未能从响应中提取视频 URL');
     }
@@ -241,7 +261,7 @@ const callVeoApi = async (
 
     const videoBlob = await videoResponse.blob();
     const reader = new FileReader();
-    
+
     return new Promise((resolve, reject) => {
       reader.onloadend = () => {
         const result = reader.result as string;
@@ -270,23 +290,23 @@ const callSoraApi = async (
   options: VideoGenerateOptions,
   model: VideoModelDefinition,
   apiKey: string,
-  apiBase: string
+  apiBase: string,
 ): Promise<string> => {
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   const duration = options.duration || model.params.defaultDuration;
   const apiModel = model.apiModel || model.id;
-  
+
   const resolvedStartImage = options.startImage ? await resolveImageRef(options.startImage) : '';
   const resolvedEndImage = options.endImage ? await resolveImageRef(options.endImage) : '';
   const references = [resolvedStartImage, resolvedEndImage].filter(Boolean) as string[];
-  
+
   const resolvedModel = apiModel || 'sora-2';
   const useReferenceArray = resolvedModel.toLowerCase().startsWith('veo_3_1-fast');
 
   if (resolvedModel === 'sora-2' && references.length >= 2) {
     throw new Error('Sora-2 不支持首尾帧模式，请只传一张参考图。');
   }
-  
+
   const { width, height, size } = getSizeFromAspectRatio(aspectRatio);
 
   console.log(`🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`);
@@ -296,8 +316,8 @@ const callSoraApi = async (
   const isBigModel = model.providerId === 'bigmodel';
 
   let requestBody: BodyInit;
-  let headers: Record<string, string> = {
-    'Authorization': `Bearer ${apiKey}`,
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
   };
 
   if (isCogVideo || isBigModel) {
@@ -306,7 +326,7 @@ const callSoraApi = async (
       prompt: options.prompt,
       duration: duration,
       size: size,
-      movement_amplitude: 'auto'
+      movement_amplitude: 'auto',
     };
 
     if (resolvedStartImage) {
@@ -362,12 +382,12 @@ const callSoraApi = async (
     if (createResponse.status === 500) {
       throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
     }
-    
+
     let errorMessage = `创建任务失败: HTTP ${createResponse.status}`;
     try {
       const errorData = await createResponse.json();
       errorMessage = errorData.error?.message || errorMessage;
-    } catch (e) {
+    } catch {
       const errorText = await createResponse.text();
       if (errorText) errorMessage = errorText;
     }
@@ -375,17 +395,19 @@ const callSoraApi = async (
   }
 
   const createData = await createResponse.json();
-  
+
   console.log('=== [VideoAdapter] 创建任务响应 ===');
   console.log('[响应数据]', JSON.stringify(createData, null, 2));
-  
+
   if (createData.error) {
     console.error('API 返回错误:', createData.error);
-    throw new Error(`视频生成失败: ${createData.error.message || createData.error.msg || JSON.stringify(createData.error)}`);
+    throw new Error(
+      `视频生成失败: ${createData.error.message || createData.error.msg || JSON.stringify(createData.error)}`,
+    );
   }
-  
+
   const taskId = createData.id || createData.task_id || createData.taskId;
-  
+
   if (!taskId) {
     console.error('未找到任务 ID，完整响应:', createData);
     throw new Error('创建视频任务失败：未返回任务 ID');
@@ -397,22 +419,23 @@ const callSoraApi = async (
   const maxPollingTime = 1200000; // 20 分钟
   const pollingInterval = 5000;
   const startTime = Date.now();
-  
+
   let videoId: string | null = null;
   let videoUrlFromStatus: string | null = null;
 
   while (Date.now() - startTime < maxPollingTime) {
-    await new Promise(resolve => setTimeout(resolve, pollingInterval));
-    
+    await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+
     // BigModel 使用 /async-result/{id}，其他模型使用 /videos/{id}
-    const statusEndpoint = model.providerId === 'bigmodel' 
-      ? '/api/paas/v4/async-result' 
-      : (model.endpoint || '/v1/videos');
+    const statusEndpoint =
+      model.providerId === 'bigmodel'
+        ? '/api/paas/v4/async-result'
+        : model.endpoint || '/v1/videos';
     const statusResponse = await fetch(`${apiBase}${statusEndpoint}/${taskId}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Accept: 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 
@@ -439,7 +462,11 @@ const callSoraApi = async (
         if (statusData.id && statusData.id.startsWith('video_')) {
           videoId = statusData.id;
         } else {
-          videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+          videoId =
+            statusData.output_video ||
+            statusData.video_id ||
+            statusData.outputs?.[0]?.id ||
+            statusData.id;
         }
         if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
           videoId = statusData.outputs[0];
@@ -448,8 +475,12 @@ const callSoraApi = async (
       console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
-      const errorMsg = statusData.error || statusData.message || statusData.error_message || 
-                       statusData.result?.error || JSON.stringify(statusData);
+      const errorMsg =
+        statusData.error ||
+        statusData.message ||
+        statusData.error_message ||
+        statusData.result?.error ||
+        JSON.stringify(statusData);
       console.error('❌ 视频生成失败，完整响应:', statusData);
       throw new Error(`视频生成失败: ${errorMsg}`);
     }
@@ -461,7 +492,11 @@ const callSoraApi = async (
       if (statusData.id && statusData.id.startsWith('video_')) {
         videoId = statusData.id;
       } else {
-        videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+        videoId =
+          statusData.output_video ||
+          statusData.video_id ||
+          statusData.outputs?.[0]?.id ||
+          statusData.id;
       }
       if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
         videoId = statusData.outputs[0];
@@ -489,32 +524,32 @@ const callSoraApi = async (
   for (let attempt = 1; attempt <= maxDownloadRetries; attempt++) {
     try {
       console.log(`📥 尝试下载视频 (第${attempt}/${maxDownloadRetries}次)...`);
-      
+
       const downloadController = new AbortController();
       const downloadTimeoutId = setTimeout(() => downloadController.abort(), downloadTimeout);
-      
+
       const downloadResponse = await fetch(`${apiBase}/v1/videos/${videoId}/content`, {
         method: 'GET',
         headers: {
-          'Accept': '*/*',
-          'Authorization': `Bearer ${apiKey}`,
+          Accept: '*/*',
+          Authorization: `Bearer ${apiKey}`,
         },
         signal: downloadController.signal,
       });
-      
+
       clearTimeout(downloadTimeoutId);
-      
+
       if (!downloadResponse.ok) {
         if (downloadResponse.status >= 500 && attempt < maxDownloadRetries) {
           console.warn(`⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`);
-          await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
           continue;
         }
         throw new Error(`视频下载失败: HTTP ${downloadResponse.status}`);
       }
-      
+
       const videoBlob = await downloadResponse.blob();
-      
+
       return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -534,7 +569,7 @@ const callSoraApi = async (
         throw error;
       }
       console.warn(`⚠️ 下载出错: ${error.message}，重试中...`);
-      await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
     }
   }
 
@@ -548,7 +583,7 @@ const callSoraApi = async (
 const callDramaBackendVideoApi = async (
   options: VideoGenerateOptions,
   model: VideoModelDefinition,
-  apiBase: string
+  apiBase: string,
 ): Promise<string> => {
   const tid = `drama_video_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -572,7 +607,7 @@ const callDramaBackendVideoApi = async (
   // 收集所有图片：优先使用 referenceImages，否则回退 startImage + endImage
   const allImages = options.referenceImages?.length
     ? options.referenceImages
-    : [options.startImage, options.endImage].filter(Boolean) as string[];
+    : ([options.startImage, options.endImage].filter(Boolean) as string[]);
 
   if (allImages.length === 0) {
     throw new Error('视频生成需要提供至少一张图片');
@@ -629,7 +664,11 @@ const callDramaBackendVideoApi = async (
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error?.message || errorData.msg || errorData.detail || errorText.slice(0, 500);
+            errorMessage =
+              errorData.error?.message ||
+              errorData.msg ||
+              errorData.detail ||
+              errorText.slice(0, 500);
           } catch {
             errorMessage = errorText.slice(0, 500);
           }
@@ -677,7 +716,7 @@ const callDramaBackendVideoApi = async (
  */
 export const callVideoApi = async (
   options: VideoGenerateOptions,
-  model?: VideoModelDefinition
+  model?: VideoModelDefinition,
 ): Promise<string> => {
   // 获取当前激活的模型
   const activeModel = model || getActiveVideoModel();
@@ -697,7 +736,7 @@ export const callVideoApi = async (
   if (!apiKey) {
     throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
   }
-  
+
   const apiBase = getDevApiBaseUrl(activeModel.id);
 
   // 根据模式选择不同的 API
@@ -713,11 +752,11 @@ export const callVideoApi = async (
  */
 export const isAspectRatioSupported = (
   aspectRatio: AspectRatio,
-  model?: VideoModelDefinition
+  model?: VideoModelDefinition,
 ): boolean => {
   const activeModel = model || getActiveVideoModel();
   if (!activeModel) return false;
-  
+
   return activeModel.params.supportedAspectRatios.includes(aspectRatio);
 };
 
@@ -726,10 +765,10 @@ export const isAspectRatioSupported = (
  */
 export const isDurationSupported = (
   duration: VideoDuration,
-  model?: VideoModelDefinition
+  model?: VideoModelDefinition,
 ): boolean => {
   const activeModel = model || getActiveVideoModel();
   if (!activeModel) return false;
-  
+
   return activeModel.params.supportedDurations.includes(duration);
 };

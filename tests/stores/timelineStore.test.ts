@@ -60,7 +60,7 @@ describe('timelineStore', () => {
       const clip = makeClip({ id: 'clip-1' });
 
       useTimelineStore.getState().addClip(trackId, clip);
-      const { tracks, epoch } = useTimelineStore.getState();
+      const { tracks } = useTimelineStore.getState();
 
       expect(tracks[0].clips).toHaveLength(1);
       expect(tracks[0].clips[0].id).toBe('clip-1');
@@ -70,8 +70,12 @@ describe('timelineStore', () => {
     it('should auto-place clip after last clip end', () => {
       const trackId = useTimelineStore.getState().addTrack('video');
 
-      useTimelineStore.getState().addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
-      useTimelineStore.getState().addClip(trackId, makeClip({ id: 'c2', startTime: 0, duration: 3000 }));
+      useTimelineStore
+        .getState()
+        .addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
+      useTimelineStore
+        .getState()
+        .addClip(trackId, makeClip({ id: 'c2', startTime: 0, duration: 3000 }));
 
       const clips = useTimelineStore.getState().tracks[0].clips;
       expect(clips[1].startTime).toBe(5000);
@@ -110,16 +114,18 @@ describe('timelineStore', () => {
       useTimelineStore.getState().moveClip('c1', t2, 1000);
       const { tracks } = useTimelineStore.getState();
 
-      expect(tracks.find(t => t.id === t1)?.clips).toHaveLength(0);
-      expect(tracks.find(t => t.id === t2)?.clips).toHaveLength(1);
-      expect(tracks.find(t => t.id === t2)?.clips[0].startTime).toBe(1000);
+      expect(tracks.find((t) => t.id === t1)?.clips).toHaveLength(0);
+      expect(tracks.find((t) => t.id === t2)?.clips).toHaveLength(1);
+      expect(tracks.find((t) => t.id === t2)?.clips[0].startTime).toBe(1000);
     });
   });
 
   describe('splitClip', () => {
     it('should split a clip at the given time', () => {
       const trackId = useTimelineStore.getState().addTrack('video');
-      useTimelineStore.getState().addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 10000 }));
+      useTimelineStore
+        .getState()
+        .addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 10000 }));
 
       useTimelineStore.getState().splitClip('c1', 4000);
       const clips = useTimelineStore.getState().tracks[0].clips;
@@ -134,7 +140,9 @@ describe('timelineStore', () => {
 
     it('should not split at clip boundaries', () => {
       const trackId = useTimelineStore.getState().addTrack('video');
-      useTimelineStore.getState().addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
+      useTimelineStore
+        .getState()
+        .addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
 
       useTimelineStore.getState().splitClip('c1', 0);
       expect(useTimelineStore.getState().tracks[0].clips).toHaveLength(1);
@@ -144,7 +152,9 @@ describe('timelineStore', () => {
   describe('duplicateClip', () => {
     it('should duplicate a clip after the original', () => {
       const trackId = useTimelineStore.getState().addTrack('video');
-      useTimelineStore.getState().addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
+      useTimelineStore
+        .getState()
+        .addClip(trackId, makeClip({ id: 'c1', startTime: 0, duration: 5000 }));
 
       useTimelineStore.getState().duplicateClip('c1');
       const clips = useTimelineStore.getState().tracks[0].clips;
@@ -212,11 +222,11 @@ describe('timelineStore', () => {
   describe('removeTrack', () => {
     it('should remove a track and its clips', () => {
       const t1 = useTimelineStore.getState().addTrack('video');
-      const t2 = useTimelineStore.getState().addTrack('audio');
+      useTimelineStore.getState().addTrack('audio');
       useTimelineStore.getState().addClip(t1, makeClip({ id: 'c1' }));
 
       useTimelineStore.getState().removeTrack(t1);
-      const { tracks, selectedClipIds } = useTimelineStore.getState();
+      const { tracks } = useTimelineStore.getState();
 
       expect(tracks).toHaveLength(1);
       expect(tracks[0].type).toBe('audio');

@@ -1,5 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import type { RefObject } from 'react';
+import { useRef, useEffect, useCallback, useState, RefObject } from 'react';
 import { PANORAMA_DEFAULTS, clampFov, clampPitch, normalizeYaw } from '../utils/panoramaUtils';
 import type { PanoramaCameraState } from '../types/canvas';
 
@@ -86,27 +85,32 @@ export function usePanoramaEngine({
     const h = Math.round(rect.height);
     if (w > 0 && h > 0) {
       const renderer = e.renderer;
-      if (renderer.domElement.width !== Math.floor(w * renderer.getPixelRatio()) ||
-          renderer.domElement.height !== Math.floor(h * renderer.getPixelRatio())) {
+      if (
+        renderer.domElement.width !== Math.floor(w * renderer.getPixelRatio()) ||
+        renderer.domElement.height !== Math.floor(h * renderer.getPixelRatio())
+      ) {
         renderer.setSize(w, h, false);
         requestRender();
       }
     }
   }, [containerRef, requestRender]);
 
-  const captureView = useCallback((yaw: number, pitch: number): Promise<string> => {
-    return new Promise((resolve) => {
-      const prevYaw = stateRef.current.yaw;
-      const prevPitch = stateRef.current.pitch;
-      stateRef.current.yaw = yaw;
-      stateRef.current.pitch = pitch;
-      renderFrame();
-      const canvas = canvasRef.current;
-      if (canvas) resolve(canvas.toDataURL('image/png'));
-      stateRef.current.yaw = prevYaw;
-      stateRef.current.pitch = prevPitch;
-    });
-  }, [renderFrame, canvasRef]);
+  const captureView = useCallback(
+    (yaw: number, pitch: number): Promise<string> => {
+      return new Promise((resolve) => {
+        const prevYaw = stateRef.current.yaw;
+        const prevPitch = stateRef.current.pitch;
+        stateRef.current.yaw = yaw;
+        stateRef.current.pitch = pitch;
+        renderFrame();
+        const canvas = canvasRef.current;
+        if (canvas) resolve(canvas.toDataURL('image/png'));
+        stateRef.current.yaw = prevYaw;
+        stateRef.current.pitch = prevPitch;
+      });
+    },
+    [renderFrame, canvasRef],
+  );
 
   const handleReset = useCallback(() => {
     stateRef.current.yaw = PANORAMA_DEFAULTS.yaw;
@@ -118,28 +122,40 @@ export function usePanoramaEngine({
     renderFrame();
   }, [renderFrame]);
 
-  const handleWheelZoom = useCallback((deltaY: number) => {
-    const delta = deltaY > 0 ? PANORAMA_DEFAULTS.wheelZoomStep : -PANORAMA_DEFAULTS.wheelZoomStep;
-    stateRef.current.fov = clampFov(stateRef.current.fov + delta);
-    setZoomPercent(Math.round((PANORAMA_DEFAULTS.fov / stateRef.current.fov) * 100));
-    requestRender();
-  }, [requestRender]);
+  const handleWheelZoom = useCallback(
+    (deltaY: number) => {
+      const delta = deltaY > 0 ? PANORAMA_DEFAULTS.wheelZoomStep : -PANORAMA_DEFAULTS.wheelZoomStep;
+      stateRef.current.fov = clampFov(stateRef.current.fov + delta);
+      setZoomPercent(Math.round((PANORAMA_DEFAULTS.fov / stateRef.current.fov) * 100));
+      requestRender();
+    },
+    [requestRender],
+  );
 
-  const handleDeltaYaw = useCallback((dyaw: number) => {
-    stateRef.current.yaw = normalizeYaw(stateRef.current.yaw + dyaw);
-    requestRender();
-  }, [requestRender]);
+  const handleDeltaYaw = useCallback(
+    (dyaw: number) => {
+      stateRef.current.yaw = normalizeYaw(stateRef.current.yaw + dyaw);
+      requestRender();
+    },
+    [requestRender],
+  );
 
-  const handleDeltaPitch = useCallback((dpitch: number) => {
-    stateRef.current.pitch = clampPitch(stateRef.current.pitch + dpitch);
-    requestRender();
-  }, [requestRender]);
+  const handleDeltaPitch = useCallback(
+    (dpitch: number) => {
+      stateRef.current.pitch = clampPitch(stateRef.current.pitch + dpitch);
+      requestRender();
+    },
+    [requestRender],
+  );
 
-  const handleSetFov = useCallback((fov: number) => {
-    stateRef.current.fov = clampFov(fov);
-    setZoomPercent(Math.round((PANORAMA_DEFAULTS.fov / fov) * 100));
-    requestRender();
-  }, [requestRender]);
+  const handleSetFov = useCallback(
+    (fov: number) => {
+      stateRef.current.fov = clampFov(fov);
+      setZoomPercent(Math.round((PANORAMA_DEFAULTS.fov / fov) * 100));
+      requestRender();
+    },
+    [requestRender],
+  );
 
   // Initialize Three.js
   useEffect(() => {
@@ -234,7 +250,7 @@ export function usePanoramaEngine({
       }
       engineRef.current = null;
     };
-  }, [panoramaSrc]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [panoramaSrc]);
 
   // ResizeObserver
   useEffect(() => {

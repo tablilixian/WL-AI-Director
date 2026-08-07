@@ -1,15 +1,15 @@
 import { useTimelineStore } from '../stores/timelineStore';
-import type { Clip, Track } from '../types/editor';
+import type { Clip } from '../types/editor';
 
 export function getTrackClips(trackId: string): Clip[] {
   const { tracks } = useTimelineStore.getState();
-  const track = tracks.find(t => t.id === trackId);
+  const track = tracks.find((t) => t.id === trackId);
   return track ? [...track.clips].sort((a, b) => a.startTime - b.startTime) : [];
 }
 
 export function normalizeTrack(trackId: string): void {
   const tl = useTimelineStore.getState();
-  const track = tl.tracks.find(t => t.id === trackId);
+  const track = tl.tracks.find((t) => t.id === trackId);
   if (!track || track.clips.length === 0) return;
   if (track.type !== 'video') return;
 
@@ -38,11 +38,11 @@ export function insertClipAtIndex(clipId: string, targetTrackId: string, index: 
   const clip = tl.findClip(clipId);
   if (!clip) return;
 
-  const track = tl.tracks.find(t => t.id === targetTrackId);
+  const track = tl.tracks.find((t) => t.id === targetTrackId);
   if (!track) return;
 
   const trackClips = [...track.clips]
-    .filter(c => c.id !== clipId)
+    .filter((c) => c.id !== clipId)
     .sort((a, b) => a.startTime - b.startTime);
 
   trackClips.splice(index, 0, clip);
@@ -80,7 +80,7 @@ export function rippleTrimClip(clipId: string, side: 'left' | 'right', deltaTime
   if (newDuration < minDuration || newStartTime < 0) return;
 
   const downstream = track.clips
-    .filter(c => c.id !== clipId && c.startTime >= clip.startTime + clip.duration)
+    .filter((c) => c.id !== clipId && c.startTime >= clip.startTime + clip.duration)
     .sort((a, b) => a.startTime - b.startTime);
 
   const rippleOffset = side === 'right' ? newDuration - clip.duration : deltaTime;
@@ -116,7 +116,7 @@ export function removeClipWithRipple(clipId: string): void {
   const rippleOffset = clip.duration;
 
   const downstream = track.clips
-    .filter(c => c.id !== clipId && c.startTime >= clip.startTime + clip.duration)
+    .filter((c) => c.id !== clipId && c.startTime >= clip.startTime + clip.duration)
     .sort((a, b) => a.startTime - b.startTime);
 
   tl.withBatch(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { X, Loader2, Check, AlertCircle, Download } from 'lucide-react';
+import { X, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useEditorStore } from '../../stores/editorStore';
 import { isAudioClip } from '../../types/editor';
 import { fetchFile } from '@ffmpeg/util';
@@ -37,13 +37,13 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
   const [elapsed, setElapsed] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
   const cancelRef = useRef(false);
-  const timerRef = useRef<number>(0);
-  const [fileName, setFileName] = useState(`exported-video-${Date.now()}.mp4`);
+  useRef<number>(0);
+  const [fileName] = useState(`exported-video-${Date.now()}.mp4`);
 
   const startExport = useCallback(async () => {
     const state = useEditorStore.getState();
-    const videoTracks = state.tracks.filter(t => t.type === 'video' && t.visible);
-    const audioTracks = state.tracks.filter(t => t.type === 'audio' && t.visible);
+    const videoTracks = state.tracks.filter((t) => t.type === 'video' && t.visible);
+    const audioTracks = state.tracks.filter((t) => t.type === 'audio' && t.visible);
 
     // Calculate total duration
     let dur = 0;
@@ -79,13 +79,13 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
     let audioContext: AudioContext | null = null;
     const audioBuffers: { source: AudioBufferSourceNode; gain: GainNode }[] = [];
 
-    if (audioTracks.some(t => t.clips.length > 0)) {
+    if (audioTracks.some((t) => t.clips.length > 0)) {
       audioContext = new AudioContext();
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
       const destination = audioContext.createMediaStreamDestination();
-      destination.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+      destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
 
       for (const track of audioTracks) {
         for (const clip of track.clips) {
@@ -104,12 +104,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
               const fadeInStart = clip.startTime / 1000;
               const fadeInEnd = fadeInStart + clip.fadeIn / 1000;
               gainNode.gain.setValueAtTime(0, audioContext.currentTime + fadeInStart);
-              gainNode.gain.linearRampToValueAtTime(clip.volume ?? 1, audioContext.currentTime + fadeInEnd);
+              gainNode.gain.linearRampToValueAtTime(
+                clip.volume ?? 1,
+                audioContext.currentTime + fadeInEnd,
+              );
             }
             if (isAudioClip(clip) && clip.fadeOut && clip.fadeOut > 0) {
               const fadeOutStart = (clip.startTime + clip.duration - clip.fadeOut) / 1000;
               const fadeOutEnd = (clip.startTime + clip.duration) / 1000;
-              gainNode.gain.setValueAtTime(clip.volume ?? 1, audioContext.currentTime + fadeOutStart);
+              gainNode.gain.setValueAtTime(
+                clip.volume ?? 1,
+                audioContext.currentTime + fadeOutStart,
+              );
               gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + fadeOutEnd);
             }
 
@@ -151,7 +157,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
         video.src = clip.sourceUrl;
         video.muted = true;
         video.preload = 'auto';
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve) => {
           video.onloadeddata = () => resolve();
           video.onerror = () => resolve();
         });
@@ -173,13 +179,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
     // Cleanup helper
     const cleanup = () => {
       clearInterval(elapsedTimer);
-      audioBuffers.forEach(({ source }) => { try { source.stop(); } catch {} });
+      audioBuffers.forEach(({ source }) => {
+        try {
+          source.stop();
+        } catch {
+          /* empty */
+        }
+      });
       if (audioContext) audioContext.close();
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
     };
 
     let activeEl: HTMLVideoElement | null = null;
-    let frameCount = 0;
 
     const renderFrame = () => {
       if (cancelRef.current) {
@@ -189,7 +200,6 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       }
 
       const currentTime = performance.now() - startWall;
-      frameCount++;
 
       if (currentTime >= dur) {
         recorder.stop();
@@ -230,7 +240,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
               ctx.globalAlpha = clip.opacity ?? 1;
               ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
               ctx.globalAlpha = 1;
-            } catch {}
+            } catch {
+              /* empty */
+            }
           }
         }
       }
@@ -240,7 +252,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       }
 
       // Draw text clips
-      for (const track of state.tracks.filter(t => t.type === 'text' && t.visible)) {
+      for (const track of state.tracks.filter((t) => t.type === 'text' && t.visible)) {
         for (const clip of track.clips) {
           if (currentTime >= clip.startTime && currentTime < clip.startTime + clip.duration) {
             const tc = clip as any;
@@ -248,7 +260,11 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
               ctx.fillStyle = tc.color || '#ffffff';
               ctx.font = `${tc.fontWeight || 400} ${tc.fontSize || 48}px ${tc.fontFamily || 'sans-serif'}`;
               ctx.textAlign = tc.align || 'center';
-              ctx.fillText(tc.text, (tc.x ?? 50) / 100 * canvas.width, (tc.y ?? 50) / 100 * canvas.height);
+              ctx.fillText(
+                tc.text,
+                ((tc.x ?? 50) / 100) * canvas.width,
+                ((tc.y ?? 50) / 100) * canvas.height,
+              );
             }
           }
         }
@@ -273,23 +289,25 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       transcodeToMp4(webmBlob, dur, (p) => {
         console.log('[Export] transcodeToMp4 进度回调:', (p * 100).toFixed(1) + '%');
         if (!cancelRef.current) setProgress(65 + p * 30);
-      }).then(mp4Blob => {
-        if (cancelRef.current) return;
-        setOutputSize(mp4Blob.size);
-        setProgress(100);
-        setStage('done');
+      })
+        .then((mp4Blob) => {
+          if (cancelRef.current) return;
+          setOutputSize(mp4Blob.size);
+          setProgress(100);
+          setStage('done');
 
-        // Trigger download
-        downloadFile(mp4Blob, fileName);
-      }).catch(err => {
-        console.warn('[Export] ffmpeg failed, fallback to WebM:', err);
-        setOutputSize(webmBlob.size);
-        setProgress(100);
-        setStage('done');
-        // Fallback: download the WebM with .mp4 name hint removed
-        const fbName = fileName.replace('.mp4', '.webm');
-        downloadFile(webmBlob, fbName);
-      });
+          // Trigger download
+          downloadFile(mp4Blob, fileName);
+        })
+        .catch((err) => {
+          console.warn('[Export] ffmpeg failed, fallback to WebM:', err);
+          setOutputSize(webmBlob.size);
+          setProgress(100);
+          setStage('done');
+          // Fallback: download the WebM with .mp4 name hint removed
+          const fbName = fileName.replace('.mp4', '.webm');
+          downloadFile(webmBlob, fbName);
+        });
     };
 
     renderFrame();
@@ -346,7 +364,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
             {stage === 'done' ? '导出完成' : '导出视频'}
           </h3>
           {(stage === 'done' || stage === 'error') && (
-            <button onClick={handleClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <button
+              onClick={handleClose}
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
               <X className="w-4 h-4" />
             </button>
           )}
@@ -354,16 +375,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
 
         {stage === 'rendering' && (
           <div className="space-y-3">
-            <div className="text-xs text-[var(--text-secondary)]">
-              正在渲染视频...
-            </div>
+            <div className="text-xs text-[var(--text-secondary)]">正在渲染视频...</div>
             <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
-                style={{ width: `${progressPct}%` }} />
+              <div
+                className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
             <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span>{progressPct}%</span>
-              <span>{formatDuration(elapsed)} / {formatDuration(totalDuration)}</span>
+              <span>
+                {formatDuration(elapsed)} / {formatDuration(totalDuration)}
+              </span>
             </div>
             <button
               onClick={handleCancel}
@@ -381,8 +404,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
               {progress < 68 ? '正在加载转换引擎...' : '正在转换 MP4 格式...'}
             </div>
             <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
-                style={{ width: `${progressPct}%` }} />
+              <div
+                className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
             <div className="text-xs text-[var(--text-muted)] text-right">{progressPct}%</div>
             {progress < 68 && (
@@ -398,7 +423,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
             <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-secondary)]">
               <Check className="w-5 h-5 text-green-500 shrink-0" />
               <div className="min-w-0">
-                <div className="text-xs font-medium text-[var(--text-primary)] truncate">{fileName}</div>
+                <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                  {fileName}
+                </div>
                 <div className="text-[10px] text-[var(--text-muted)]">{formatSize(outputSize)}</div>
               </div>
             </div>
@@ -449,10 +476,13 @@ async function transcodeToMp4(
       console.error('[ffmpeg] load timed out after 60s');
     }, FFMPEG_LOAD_TIMEOUT);
     try {
-      await ffmpeg.load({
-        coreURL: `${FFMPEG_LOCAL}/ffmpeg-core-umd.js`,
-        wasmURL: `${FFMPEG_LOCAL}/ffmpeg-core.wasm`,
-      }, controller.signal);
+      await ffmpeg.load(
+        {
+          coreURL: `${FFMPEG_LOCAL}/ffmpeg-core-umd.js`,
+          wasmURL: `${FFMPEG_LOCAL}/ffmpeg-core.wasm`,
+        },
+        controller.signal,
+      );
       console.log('[ffmpeg] WASM 加载完成');
     } finally {
       clearTimeout(timeoutId);
@@ -483,7 +513,22 @@ async function transcodeToMp4(
     onProgress?.(0.1 + clamped * 0.85);
   });
   try {
-    await ffmpeg.exec('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-y', 'output.mp4');
+    await ffmpeg.exec(
+      '-i',
+      'input.webm',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '23',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '128k',
+      '-y',
+      'output.mp4',
+    );
     console.log('[ffmpeg] 转码命令完成');
   } catch (e) {
     console.error('[ffmpeg] 转码失败:', e);
@@ -508,10 +553,12 @@ async function downloadFile(blob: Blob, name: string) {
   try {
     const handle = await (window as any).showSaveFilePicker?.({
       suggestedName: name,
-      types: [{
-        description: 'Video',
-        accept: { [blob.type]: [name.endsWith('.mp4') ? '.mp4' : '.webm'] },
-      }],
+      types: [
+        {
+          description: 'Video',
+          accept: { [blob.type]: [name.endsWith('.mp4') ? '.mp4' : '.webm'] },
+        },
+      ],
     });
     if (handle) {
       const writable = await handle.createWritable();

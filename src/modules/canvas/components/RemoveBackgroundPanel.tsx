@@ -7,13 +7,17 @@ interface RemoveBackgroundPanelProps {
   onClose: () => void;
 }
 
-export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({ selectedLayerId, onClose }) => {
+export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({
+  selectedLayerId,
+  onClose,
+}) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const { layers, addLayer, updateLayer } = useCanvasStore();
+  const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasSelectedImage =
+    selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleRemoveBackground = async () => {
     if (!hasSelectedImage || !selectedLayer || isProcessing) return;
@@ -22,9 +26,8 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({ se
     setProgress(0);
 
     try {
-      const resultUrl = await canvasModelService.removeBackground(
-        selectedLayer.src,
-        (p) => setProgress(p)
+      const resultUrl = await canvasModelService.removeBackground(selectedLayer.src, (p) =>
+        setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -69,7 +72,7 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({ se
         isLoading: false,
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
-        operationType: 'background-remove'
+        operationType: 'background-remove',
       });
 
       onClose();
@@ -105,12 +108,14 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({ se
       <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">智能抠图</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -119,9 +124,7 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({ se
           <p className="text-sm text-[var(--text-muted)]">
             AI 将自动识别图片中的主体，去除背景，生成透明背景图片。
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            当前图片: {selectedLayer?.title}
-          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">当前图片: {selectedLayer?.title}</p>
         </div>
 
         {isProcessing ? (

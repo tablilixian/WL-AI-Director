@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, RefreshCw, Check, Grid3x3, AlertCircle, Image as ImageIcon, Crop, Edit2, Save, ArrowRight, Wand2, ImagePlus } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  RefreshCw,
+  Check,
+  Grid3x3,
+  AlertCircle,
+  Image as ImageIcon,
+  Crop,
+  Edit2,
+  Save,
+  ArrowRight,
+  Wand2,
+  ImagePlus,
+} from 'lucide-react';
 import { NineGridData, NineGridPanel, AspectRatio } from '../../types';
-import { NINE_GRID } from './constants';
 import { unifiedImageService } from '../../services/unifiedImageService';
 
 interface NineGridPreviewProps {
@@ -9,7 +22,7 @@ interface NineGridPreviewProps {
   nineGrid?: NineGridData;
   onClose: () => void;
   onSelectPanel: (panel: NineGridPanel) => void;
-  onUseWholeImage: () => void;  // 整张九宫格图直接用作首帧
+  onUseWholeImage: () => void; // 整张九宫格图直接用作首帧
   onRegenerate: () => void;
   onRegenerateImage: () => void; // 仅重新生成图片（保留已有的面板文案描述）
   onConfirmPanels: (panels: NineGridPanel[]) => void; // 用户确认面板后生成图片
@@ -28,13 +41,19 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   onRegenerateImage,
   onConfirmPanels,
   onUpdatePanel,
-  aspectRatio = '16:9'
+  aspectRatio = '16:9',
 }) => {
   const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
   const [selectedPanel, setSelectedPanel] = useState<number | null>(null);
   const [editingPanel, setEditingPanel] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{ shotSize: string; cameraAngle: string; description: string }>({
-    shotSize: '', cameraAngle: '', description: ''
+  const [editForm, setEditForm] = useState<{
+    shotSize: string;
+    cameraAngle: string;
+    description: string;
+  }>({
+    shotSize: '',
+    cameraAngle: '',
+    description: '',
   });
   const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
 
@@ -45,7 +64,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
       setEditForm({
         shotSize: panel.shotSize,
         cameraAngle: panel.cameraAngle,
-        description: panel.description
+        description: panel.description,
       });
     }
   }, [editingPanel, nineGrid?.panels]);
@@ -53,7 +72,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   // 处理九宫格图片 URL
   useEffect(() => {
     if (nineGrid?.imageUrl) {
-      unifiedImageService.resolveForDisplay(nineGrid.imageUrl).then(url => {
+      unifiedImageService.resolveForDisplay(nineGrid.imageUrl).then((url) => {
         setNineGridImageUrl(url);
       });
     } else {
@@ -69,7 +88,6 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   const hasFailed = nineGrid?.status === 'failed';
   const isCompleted = nineGrid?.status === 'completed' && nineGridImageUrl;
   // 兼容旧的 generating 状态
-  const isGenerating = nineGrid?.status === 'generating_panels' || nineGrid?.status === 'generating_image' || (nineGrid?.status as string) === 'generating';
 
   const handlePanelClick = (index: number) => {
     if (isPanelsReady) {
@@ -101,11 +119,11 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-[var(--overlay-heavy)] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -113,9 +131,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
         <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0">
           <div className="flex items-center gap-3">
             <Grid3x3 className="w-4 h-4 text-[var(--accent-text)]" />
-            <h3 className="text-sm font-bold text-[var(--text-primary)]">
-              九宫格分镜预览
-            </h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">九宫格分镜预览</h3>
             {isPanelsReady && (
               <span className="text-[10px] text-[var(--warning-text)] font-bold uppercase tracking-wider bg-[var(--warning-bg)] px-2 py-0.5 rounded border border-[var(--warning-border)]">
                 待确认
@@ -186,7 +202,10 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
               {nineGrid?.panels && nineGrid.panels.length > 0 && (
                 <div className="mt-6 w-full max-w-lg space-y-1.5 px-6">
                   {nineGrid.panels.map((panel, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-primary)]">
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 p-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-primary)]"
+                    >
                       <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--text-primary)] flex items-center justify-center text-[9px] font-bold shrink-0">
                         {idx + 1}
                       </span>
@@ -207,14 +226,11 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
           {hasFailed && (
             <div className="flex flex-col items-center justify-center py-20">
               <AlertCircle className="w-12 h-12 text-[var(--error)] mb-6 opacity-60" />
-              <h4 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-                生成失败
-              </h4>
+              <h4 className="text-lg font-bold text-[var(--text-primary)] mb-2">生成失败</h4>
               <p className="text-sm text-[var(--text-tertiary)] mb-6">
-                {nineGrid?.panels && nineGrid.panels.length > 0 
+                {nineGrid?.panels && nineGrid.panels.length > 0
                   ? '九宫格图片生成失败，您可以重新确认生成或修改描述后重试'
-                  : '镜头描述生成失败，请重试'
-                }
+                  : '镜头描述生成失败，请重试'}
               </p>
               <div className="flex items-center gap-3">
                 <button
@@ -269,11 +285,13 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                     {/* 面板头部 */}
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          editingPanel === idx
-                            ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                            : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
-                        }`}>
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                            editingPanel === idx
+                              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
+                          }`}
+                        >
                           {idx + 1}
                         </span>
                         {editingPanel !== idx && (
@@ -284,7 +302,10 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                       </div>
                       {editingPanel !== idx && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handlePanelClick(idx); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePanelClick(idx);
+                          }}
                           className="p-1 hover:bg-[var(--bg-hover)] rounded text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
                           title="编辑"
                         >
@@ -298,35 +319,60 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2">
                           <div className="flex-1">
-                            <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">景别</label>
+                            <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">
+                              景别
+                            </label>
                             <select
                               value={editForm.shotSize}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, shotSize: e.target.value }))}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({ ...prev, shotSize: e.target.value }))
+                              }
                               className="w-full text-[10px] p-1.5 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded text-[var(--text-primary)] focus:border-[var(--accent)] outline-none"
                             >
-                              {['远景', '全景', '中景', '近景', '特写', '大特写'].map(s => (
-                                <option key={s} value={s}>{s}</option>
+                              {['远景', '全景', '中景', '近景', '特写', '大特写'].map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
                               ))}
                             </select>
                           </div>
                           <div className="flex-1">
-                            <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">机位</label>
+                            <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">
+                              机位
+                            </label>
                             <select
                               value={editForm.cameraAngle}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, cameraAngle: e.target.value }))}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({ ...prev, cameraAngle: e.target.value }))
+                              }
                               className="w-full text-[10px] p-1.5 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded text-[var(--text-primary)] focus:border-[var(--accent)] outline-none"
                             >
-                              {['俯拍', '仰拍', '平视', '斜拍', '鸟瞰', '低角度', '荷兰角', '过肩'].map(a => (
-                                <option key={a} value={a}>{a}</option>
+                              {[
+                                '俯拍',
+                                '仰拍',
+                                '平视',
+                                '斜拍',
+                                '鸟瞰',
+                                '低角度',
+                                '荷兰角',
+                                '过肩',
+                              ].map((a) => (
+                                <option key={a} value={a}>
+                                  {a}
+                                </option>
                               ))}
                             </select>
                           </div>
                         </div>
                         <div>
-                          <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">画面描述</label>
+                          <label className="text-[8px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-0.5 block">
+                            画面描述
+                          </label>
                           <textarea
                             value={editForm.description}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, description: e.target.value }))
+                            }
                             className="w-full text-[10px] p-2 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded text-[var(--text-primary)] focus:border-[var(--accent)] outline-none resize-none font-mono leading-relaxed"
                             rows={4}
                           />
@@ -394,7 +440,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                       className="w-full h-auto block"
                       alt="九宫格分镜预览"
                     />
-                    
+
                     {/* Overlay Grid - 3x3 clickable areas, 完全覆盖图片 */}
                     <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
                       {Array.from({ length: 9 }).map((_, idx) => (
@@ -412,15 +458,17 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                           onClick={() => handlePanelClick(idx)}
                         >
                           {/* Panel index badge */}
-                          <div className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-opacity ${
-                            hoveredPanel === idx || selectedPanel === idx
-                              ? 'opacity-100'
-                              : 'opacity-0 group-hover/cell:opacity-60'
-                          } ${
-                            selectedPanel === idx
-                              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                              : 'bg-[var(--bg-deep)]/80 text-[var(--text-primary)]'
-                          }`}>
+                          <div
+                            className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-opacity ${
+                              hoveredPanel === idx || selectedPanel === idx
+                                ? 'opacity-100'
+                                : 'opacity-0 group-hover/cell:opacity-60'
+                            } ${
+                              selectedPanel === idx
+                                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                                : 'bg-[var(--bg-deep)]/80 text-[var(--text-primary)]'
+                            }`}
+                          >
                             {idx + 1}
                           </div>
 
@@ -446,7 +494,9 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                 </div>
 
                 {/* Right: Panel descriptions list */}
-                <div className={`${aspectRatio === '9:16' ? 'flex-1 min-w-0' : 'w-64 shrink-0'} space-y-2`}>
+                <div
+                  className={`${aspectRatio === '9:16' ? 'flex-1 min-w-0' : 'w-64 shrink-0'} space-y-2`}
+                >
                   <h4 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-widest pb-1 border-b border-[var(--border-primary)]">
                     视角列表
                   </h4>
@@ -466,11 +516,13 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                         onClick={() => handlePanelClick(idx)}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                            selectedPanel === idx
-                              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
-                          }`}>
+                          <span
+                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                              selectedPanel === idx
+                                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                                : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
+                            }`}
+                          >
                             {idx + 1}
                           </span>
                           <span className="text-[10px] font-bold text-[var(--text-secondary)] truncate">
@@ -489,10 +541,9 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
               {/* Action Bar */}
               <div className="flex items-center justify-between pt-3 border-t border-[var(--border-primary)]">
                 <p className="text-[10px] text-[var(--text-muted)] max-w-[280px]">
-                  {selectedPanel !== null 
+                  {selectedPanel !== null
                     ? `已选择面板 ${selectedPanel + 1}: ${nineGrid.panels[selectedPanel]?.shotSize} / ${nineGrid.panels[selectedPanel]?.cameraAngle}`
-                    : '可直接使用整张九宫格图作为首帧，或点击选择某个格子裁剪使用'
-                  }
+                    : '可直接使用整张九宫格图作为首帧，或点击选择某个格子裁剪使用'}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
@@ -525,11 +576,10 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
           {!nineGrid && (
             <div className="flex flex-col items-center justify-center py-20">
               <Grid3x3 className="w-12 h-12 text-[var(--text-muted)] mb-6 opacity-40" />
-              <h4 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-                九宫格分镜预览
-              </h4>
+              <h4 className="text-lg font-bold text-[var(--text-primary)] mb-2">九宫格分镜预览</h4>
               <p className="text-sm text-[var(--text-tertiary)] mb-6 text-center max-w-md">
-                AI将自动将当前镜头拆分为9个不同的摄影视角，<br/>
+                AI将自动将当前镜头拆分为9个不同的摄影视角，
+                <br />
                 生成一张3x3网格预览图，帮助你选择最佳构图方案
               </p>
               <button

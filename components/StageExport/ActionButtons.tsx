@@ -1,5 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { Play, Download, FileVideo, Loader2, Video, ChevronDown, FileCode, FileText } from 'lucide-react';
+import {
+  Play,
+  Download,
+  FileVideo,
+  Loader2,
+  Video,
+  ChevronDown,
+  FileCode,
+  FileText,
+} from 'lucide-react';
 import { STYLES, DownloadState } from './constants';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
@@ -22,11 +31,11 @@ interface Props {
 const ActionButtons: React.FC<Props> = ({
   completedShotsCount,
   totalShots,
-  progress,
+
   downloadState,
   project,
   onPreview,
-  onDownloadMaster
+  onDownloadMaster,
 }) => {
   const { showAlert } = useAlert();
   const { isDownloading, phase, progress: downloadProgress } = downloadState;
@@ -34,7 +43,7 @@ const ActionButtons: React.FC<Props> = ({
   const [isMerging, setIsMerging] = React.useState(false);
   const [mergeProgress, setMergeProgress] = React.useState<MergeProgressType>({
     phase: '',
-    progress: 0
+    progress: 0,
   });
 
   const [showExportMenu, setShowExportMenu] = React.useState(false);
@@ -70,28 +79,30 @@ const ActionButtons: React.FC<Props> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       const mimeType = blob.type;
       let extension = 'webm';
       if (mimeType.includes('mp4')) {
         extension = 'mp4';
       }
-      
+
       a.download = `${project.scriptData?.title || project.title || 'master'}_merged.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showAlert(`视频合并成功！已下载 ${extension.toUpperCase()} 格式的视频文件`, { type: 'success' });
+      showAlert(`视频合并成功！已下载 ${extension.toUpperCase()} 格式的视频文件`, {
+        type: 'success',
+      });
     } catch (error) {
       logger.error(LogCategory.VIDEO, '视频合并失败:', error);
-      
+
       let errorMessage = '视频合并失败';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
-        
+
         if (error.message.includes('用户取消了合并操作')) {
           errorMessage = '合并操作已取消';
         } else if (error.message.includes('下载视频片段')) {
@@ -106,7 +117,7 @@ const ActionButtons: React.FC<Props> = ({
           errorMessage = '视频录制失败，请重试';
         }
       }
-      
+
       showAlert(errorMessage, { type: 'error', title: '合并失败' });
     } finally {
       setIsMerging(false);
@@ -123,10 +134,14 @@ const ActionButtons: React.FC<Props> = ({
     }
     try {
       downloadEDL(project);
-      showAlert('EDL 文件导出成功！可在 Premiere Pro、DaVinci Resolve 等软件中使用', { type: 'success' });
+      showAlert('EDL 文件导出成功！可在 Premiere Pro、DaVinci Resolve 等软件中使用', {
+        type: 'success',
+      });
     } catch (error) {
       logger.error(LogCategory.VIDEO, 'EDL 导出失败:', error);
-      showAlert(`EDL 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`EDL 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     }
     setShowExportMenu(false);
   };
@@ -138,10 +153,14 @@ const ActionButtons: React.FC<Props> = ({
     }
     try {
       downloadFCPXML(project);
-      showAlert('FCPXML 文件导出成功！可在 Final Cut Pro、DaVinci Resolve 等软件中使用', { type: 'success' });
+      showAlert('FCPXML 文件导出成功！可在 Final Cut Pro、DaVinci Resolve 等软件中使用', {
+        type: 'success',
+      });
     } catch (error) {
       logger.error(LogCategory.VIDEO, 'FCPXML 导出失败:', error);
-      showAlert(`FCPXML 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`FCPXML 导出失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     }
     setShowExportMenu(false);
   };
@@ -149,7 +168,7 @@ const ActionButtons: React.FC<Props> = ({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <button 
+        <button
           onClick={onPreview}
           disabled={completedShotsCount === 0}
           className={completedShotsCount > 0 ? STYLES.button.primary : STYLES.button.disabled}
@@ -158,34 +177,32 @@ const ActionButtons: React.FC<Props> = ({
           Preview Video ({completedShotsCount}/{totalShots})
         </button>
 
-        <button 
+        <button
           onClick={handleMergeVideos}
-          disabled={completedShotsCount === 0 || isMerging} 
+          disabled={completedShotsCount === 0 || isMerging}
           className={
             isMerging
               ? STYLES.button.loading
-              : completedShotsCount > 0 
-              ? STYLES.button.secondary
-              : STYLES.button.disabled
+              : completedShotsCount > 0
+                ? STYLES.button.secondary
+                : STYLES.button.disabled
           }
         >
-          {isMerging ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Video className="w-4 h-4" />
-          )}
-          {isMerging ? `${mergeProgress.phase} ${mergeProgress.progress}%` : 'Merge Videos (.mp4/.webm)'}
+          {isMerging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+          {isMerging
+            ? `${mergeProgress.phase} ${mergeProgress.progress}%`
+            : 'Merge Videos (.mp4/.webm)'}
         </button>
 
-        <button 
+        <button
           onClick={onDownloadMaster}
-          disabled={completedShotsCount === 0 || isDownloading} 
+          disabled={completedShotsCount === 0 || isDownloading}
           className={
             isDownloading
               ? STYLES.button.loading
-              : completedShotsCount > 0 
-              ? STYLES.button.secondary
-              : STYLES.button.disabled
+              : completedShotsCount > 0
+                ? STYLES.button.secondary
+                : STYLES.button.disabled
           }
         >
           {isDownloading ? (
@@ -197,14 +214,10 @@ const ActionButtons: React.FC<Props> = ({
         </button>
 
         <div className="relative" ref={menuRef}>
-          <button 
+          <button
             onClick={() => setShowExportMenu(!showExportMenu)}
-            disabled={completedShotsCount === 0} 
-            className={
-              completedShotsCount > 0 
-              ? STYLES.button.tertiary
-              : STYLES.button.disabled
-            }
+            disabled={completedShotsCount === 0}
+            className={completedShotsCount > 0 ? STYLES.button.tertiary : STYLES.button.disabled}
           >
             <FileVideo className="w-4 h-4" />
             Export EDL / XML
@@ -220,7 +233,9 @@ const ActionButtons: React.FC<Props> = ({
                 <FileCode className="w-4 h-4 text-[var(--text-muted)]" />
                 <div className="flex-1">
                   <div className="text-[var(--text-primary)] font-medium">Export EDL</div>
-                  <div className="text-[var(--text-tertiary)] text-[10px]">Premiere Pro / DaVinci Resolve</div>
+                  <div className="text-[var(--text-tertiary)] text-[10px]">
+                    Premiere Pro / DaVinci Resolve
+                  </div>
                 </div>
               </button>
               <button
@@ -230,7 +245,9 @@ const ActionButtons: React.FC<Props> = ({
                 <FileText className="w-4 h-4 text-[var(--text-muted)]" />
                 <div className="flex-1">
                   <div className="text-[var(--text-primary)] font-medium">Export FCPXML</div>
-                  <div className="text-[var(--text-tertiary)] text-[10px]">Final Cut Pro / DaVinci Resolve</div>
+                  <div className="text-[var(--text-tertiary)] text-[10px]">
+                    Final Cut Pro / DaVinci Resolve
+                  </div>
                 </div>
               </button>
             </div>

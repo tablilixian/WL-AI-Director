@@ -1,4 +1,4 @@
-import { pb, ensureValidAuth } from '../../../../src/api/pocketbase';
+import { pb } from '../../../../src/api/pocketbase';
 import { imageStorageService } from '../../../../services/imageStorageService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { canvasModelService } from '../services/canvasModelService';
@@ -26,7 +26,6 @@ async function ensureAuth(): Promise<void> {
 }
 
 export const templatePreviewService = {
-
   async getPreviewBlob(templateId: string): Promise<Blob | null> {
     const cached = await imageStorageService.getImage(localKey(templateId));
     if (cached) return cached;
@@ -43,7 +42,7 @@ export const templatePreviewService = {
         const filename = record.preview;
         const fileUrl = `${pb.baseUrl}/api/files/${COLLECTION_ID}/${record.id}/${filename}`;
         const res = await fetch(fileUrl, {
-          headers: pb.authStore.token ? { 'Authorization': `Bearer ${pb.authStore.token}` } : {},
+          headers: pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {},
         });
         if (res.ok) {
           const blob = await res.blob();

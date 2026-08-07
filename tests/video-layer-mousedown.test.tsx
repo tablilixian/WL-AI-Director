@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { InfiniteCanvas } from '../src/modules/canvas/components/InfiniteCanvas';
@@ -50,7 +50,8 @@ describe('视频图层鼠标按下交互', () => {
 
     let layerEl: HTMLElement | null = null;
     await waitFor(() => {
-      layerEl = document.querySelector('[title="双击预览视频"]')?.parentElement as HTMLElement | null;
+      layerEl = document.querySelector('[title="双击预览视频"]')
+        ?.parentElement as HTMLElement | null;
       expect(layerEl).toBeTruthy();
     });
 
@@ -63,7 +64,7 @@ describe('视频图层鼠标按下交互', () => {
     fireEvent.mouseUp(layerEl!);
     fireEvent.click(layerEl!);
 
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
 
     expect(screen.queryByText('AI 视频生成')).toBeNull();
     expect(screen.queryByText('AI 生成视频')).toBeNull();
@@ -99,7 +100,7 @@ describe('视频图层鼠标按下交互', () => {
 
     fireEvent.mouseUp(layerEl!);
 
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
 
     expect(screen.queryByText('视频生成')).toBeNull();
     expect(screen.queryByText('视频已生成')).toBeNull();
@@ -167,7 +168,7 @@ describe('视频图层鼠标按下交互', () => {
     const mkrItem = screen.getByText('多关键帧视频 (MKR)');
     fireEvent.click(mkrItem);
 
-    const mkrLayer = useCanvasStore.getState().layers.find(l => l.operationType === 'mkr-video');
+    const mkrLayer = useCanvasStore.getState().layers.find((l) => l.operationType === 'mkr-video');
     expect(mkrLayer).toBeTruthy();
     expect(useCanvasStore.getState().selectedLayerId).toBe(mkrLayer!.id);
 

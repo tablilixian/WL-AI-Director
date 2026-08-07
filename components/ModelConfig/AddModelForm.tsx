@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Check, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { 
-  ModelType, 
+import { Check, X } from 'lucide-react';
+import {
+  ModelType,
   ModelDefinition,
   ChatModelParams,
   ImageModelParams,
@@ -28,23 +28,24 @@ interface AddModelFormProps {
 const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) => {
   const existingProviders = getProviders();
   const { showAlert } = useAlert();
-  
+
   const [name, setName] = useState('');
   const [apiModel, setApiModel] = useState('');
   const [description, setDescription] = useState('');
   const [endpoint, setEndpoint] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [videoMode, setVideoMode] = useState<'sync' | 'async'>('sync');
-  
+
   // 提供商配置
   const [providerMode, setProviderMode] = useState<'existing' | 'custom'>('existing');
-  const [selectedProviderId, setSelectedProviderId] = useState(existingProviders[0]?.id || 'bigmodel');
+  const [selectedProviderId, setSelectedProviderId] = useState(
+    existingProviders[0]?.id || 'bigmodel',
+  );
   const [customProviderName, setCustomProviderName] = useState('');
   const [customProviderBaseUrl, setCustomProviderBaseUrl] = useState('');
   const [customProviderApiKey, setCustomProviderApiKey] = useState('');
-  
+
   // 展开高级选项
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleSave = () => {
     if (!name.trim() || !apiModel.trim()) {
@@ -54,7 +55,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
 
     // 处理提供商
     let providerId = selectedProviderId;
-    
+
     if (providerMode === 'custom') {
       if (!customProviderName.trim() || !customProviderBaseUrl.trim()) {
         showAlert('请填写自定义提供商名称和 API 基础 URL', { type: 'warning' });
@@ -73,15 +74,14 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
 
     // 根据模型类型设置默认参数
     let params: ChatModelParams | ImageModelParams | VideoModelParams;
-    
+
     if (type === 'chat') {
       params = { ...DEFAULT_CHAT_PARAMS };
     } else if (type === 'image') {
       params = { ...DEFAULT_IMAGE_PARAMS };
     } else {
-      params = videoMode === 'async' 
-        ? { ...DEFAULT_VIDEO_PARAMS_SORA }
-        : { ...DEFAULT_VIDEO_PARAMS_VEO };
+      params =
+        videoMode === 'async' ? { ...DEFAULT_VIDEO_PARAMS_SORA } : { ...DEFAULT_VIDEO_PARAMS_VEO };
     }
 
     const model: Omit<ModelDefinition, 'id' | 'isBuiltIn'> = {
@@ -91,7 +91,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
       providerId,
       endpoint: endpoint.trim() || undefined,
       description: description.trim() || undefined,
-      apiKey: providerMode === 'existing' ? (apiKey.trim() || undefined) : undefined,
+      apiKey: providerMode === 'existing' ? apiKey.trim() || undefined : undefined,
       isEnabled: true,
       params,
     } as any;
@@ -102,7 +102,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
   return (
     <div className="bg-[var(--bg-elevated)]/50 border border-[var(--border-secondary)] rounded-lg p-4 space-y-4">
       <h4 className="text-sm font-bold text-[var(--text-primary)]">添加自定义模型</h4>
-      
+
       {/* 基础信息 */}
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -116,7 +116,9 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
           />
         </div>
         <div>
-          <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">API 模型名 *（可与内置重复）</label>
+          <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+            API 模型名 *（可与内置重复）
+          </label>
           <input
             type="text"
             value={apiModel}
@@ -143,23 +145,31 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
 
       {/* API 端点 */}
       <div>
-        <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">API 端点 (Endpoint)</label>
+        <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+          API 端点 (Endpoint)
+        </label>
         <input
           type="text"
           value={endpoint}
           onChange={(e) => setEndpoint(e.target.value)}
-          placeholder={type === 'chat' ? '/v1/chat/completions' : type === 'image' ? '/v1beta/models/{model}:generateContent' : '/v1/videos'}
+          placeholder={
+            type === 'chat'
+              ? '/v1/chat/completions'
+              : type === 'image'
+                ? '/v1beta/models/{model}:generateContent'
+                : '/v1/videos'
+          }
           className="w-full bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono"
         />
-        <p className="text-[9px] text-[var(--text-muted)] mt-1">
-          留空则使用默认端点
-        </p>
+        <p className="text-[9px] text-[var(--text-muted)] mt-1">留空则使用默认端点</p>
       </div>
 
       {/* 模型专属 API Key（仅在使用已有提供商时显示） */}
       {providerMode === 'existing' && (
         <div>
-          <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">API Key（可选）</label>
+          <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+            API Key（可选）
+          </label>
           <input
             type="password"
             value={apiKey}
@@ -198,7 +208,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
             添加新提供商
           </button>
         </div>
-        
+
         {providerMode === 'existing' ? (
           <select
             value={selectedProviderId}
@@ -206,13 +216,17 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
             className="w-full bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)]"
           >
             {existingProviders.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.baseUrl})</option>
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.baseUrl})
+              </option>
             ))}
           </select>
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">提供商名称 *</label>
+              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                提供商名称 *
+              </label>
               <input
                 type="text"
                 value={customProviderName}
@@ -222,7 +236,9 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
               />
             </div>
             <div>
-              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">API 基础 URL *</label>
+              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                API 基础 URL *
+              </label>
               <input
                 type="text"
                 value={customProviderBaseUrl}
@@ -232,7 +248,9 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
               />
             </div>
             <div>
-              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">提供商 API Key *</label>
+              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                提供商 API Key *
+              </label>
               <input
                 type="password"
                 value={customProviderApiKey}

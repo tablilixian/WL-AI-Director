@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Key, Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { getProviders, updateProvider, getProviderById } from '../../services/modelRegistry';
 import { verifyApiKey } from '../../services/modelService';
 
@@ -44,7 +44,7 @@ const ProviderKeyCard: React.FC<ProviderKeyCardProps> = ({ provider, onRefresh }
   const [apiKey, setApiKey] = useState(provider.apiKey || '');
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState<'idle' | 'success' | 'error'>(
-    provider.apiKey ? 'success' : 'idle'
+    provider.apiKey ? 'success' : 'idle',
   );
   const [verifyMessage, setVerifyMessage] = useState(provider.apiKey ? 'API Key 已配置' : '');
 
@@ -89,8 +89,6 @@ const ProviderKeyCard: React.FC<ProviderKeyCardProps> = ({ provider, onRefresh }
     onRefresh();
   };
 
-  const isIdle = verifyStatus === 'idle' && !verifyMessage;
-
   return (
     <div className="bg-[var(--bg-elevated)]/30 border border-[var(--border-primary)] rounded-lg p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -114,9 +112,11 @@ const ProviderKeyCard: React.FC<ProviderKeyCardProps> = ({ provider, onRefresh }
         />
 
         {verifyMessage && (
-          <div className={`flex items-center gap-2 text-xs ${
-            verifyStatus === 'success' ? 'text-[var(--success-text)]' : 'text-[var(--error-text)]'
-          }`}>
+          <div
+            className={`flex items-center gap-2 text-xs ${
+              verifyStatus === 'success' ? 'text-[var(--success-text)]' : 'text-[var(--error-text)]'
+            }`}
+          >
             {verifyStatus === 'success' ? (
               <CheckCircle className="w-3.5 h-3.5" />
             ) : (

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Loader2, Sparkles, Check, AlertCircle } from 'lucide-react';
 import { useTimelineStore } from '../../stores/timelineStore';
-import { TextClip, AudioClip } from '../../types/editor';
+import { TextClip } from '../../types/editor';
 import { chatCompletion } from '../../../services/ai/apiCore';
 import { Shot } from '../../../types';
 
@@ -24,14 +24,16 @@ export const GenerateSubtitleDialog: React.FC<GenerateSubtitleDialogProps> = ({
   const handleGenerate = useCallback(async () => {
     const { tracks, addClip } = useTimelineStore.getState();
 
-    const videoTrack = tracks.find(t => t.type === 'video');
-    const textTrack = tracks.find(t => t.type === 'text');
+    const videoTrack = tracks.find((t) => t.type === 'video');
+    const textTrack = tracks.find((t) => t.type === 'text');
     if (!videoTrack || !textTrack) {
       alert('请确保视频轨道和字幕轨道都已存在');
       return;
     }
 
-    const videoClips = videoTrack.clips.filter(c => c.sourceType === 'video' || c.sourceType === 'image');
+    const videoClips = videoTrack.clips.filter(
+      (c) => c.sourceType === 'video' || c.sourceType === 'image',
+    );
     if (videoClips.length === 0) {
       alert('没有可生成字幕的视频片段');
       return;
@@ -43,7 +45,7 @@ export const GenerateSubtitleDialog: React.FC<GenerateSubtitleDialogProps> = ({
 
     try {
       const clipInfo = videoClips.map((c, i) => {
-        const shot = shots?.find(s => s.id === c.sourceId);
+        const shot = shots?.find((s) => s.id === c.sourceId);
         return {
           index: i + 1,
           startTime: c.startTime,
@@ -54,9 +56,12 @@ export const GenerateSubtitleDialog: React.FC<GenerateSubtitleDialogProps> = ({
         };
       });
 
-      const clipTable = clipInfo.map(c =>
-        `${c.index}. 起始:${(c.startTime / 1000).toFixed(1)}s 时长:${(c.duration / 1000).toFixed(1)}s 描述:${c.actionSummary}${c.dialogue ? ` 对话:${c.dialogue}` : ''}`
-      ).join('\n');
+      const clipTable = clipInfo
+        .map(
+          (c) =>
+            `${c.index}. 起始:${(c.startTime / 1000).toFixed(1)}s 时长:${(c.duration / 1000).toFixed(1)}s 描述:${c.actionSummary}${c.dialogue ? ` 对话:${c.dialogue}` : ''}`,
+        )
+        .join('\n');
 
       const prompt = `你是一个专业的视频字幕撰稿人。请根据以下信息为每个视频片段生成一句简短自然的旁白字幕。
 
@@ -150,7 +155,10 @@ ${clipTable}
             <Sparkles className="w-4 h-4 text-purple-400" />
             AI 生成字幕
           </h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)]">
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)]"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -158,7 +166,8 @@ ${clipTable}
         <div className="p-5 space-y-4">
           <div>
             <label className="block text-xs text-[var(--text-tertiary)] mb-1.5">
-              视频内容描述 <span className="text-[var(--text-muted)]">（可选，帮助 AI 理解视频主题）</span>
+              视频内容描述{' '}
+              <span className="text-[var(--text-muted)]">（可选，帮助 AI 理解视频主题）</span>
             </label>
             <textarea
               value={description}
@@ -170,11 +179,15 @@ ${clipTable}
           </div>
 
           {progress && (
-            <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded ${
-              result === 'done' ? 'bg-green-500/10 text-green-500' :
-              result === 'error' ? 'bg-red-500/10 text-red-500' :
-              'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
-            }`}>
+            <div
+              className={`flex items-center gap-2 text-xs px-3 py-2 rounded ${
+                result === 'done'
+                  ? 'bg-green-500/10 text-green-500'
+                  : result === 'error'
+                    ? 'bg-red-500/10 text-red-500'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+              }`}
+            >
               {generating && <Loader2 className="w-3 h-3 animate-spin" />}
               {result === 'done' && <Check className="w-3 h-3" />}
               {result === 'error' && <AlertCircle className="w-3 h-3" />}
@@ -195,7 +208,11 @@ ${clipTable}
               disabled={generating}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600 disabled:opacity-40"
             >
-              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {generating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5" />
+              )}
               {generating ? '生成中...' : '生成字幕'}
             </button>
           </div>

@@ -1,22 +1,12 @@
 import React from 'react';
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Repeat,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat } from 'lucide-react';
 import { useEditorStore } from '../../../stores/editorStore';
 
 interface PlaybackControlsProps {
   compact?: boolean;
 }
 
-export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
-  compact = false,
-}) => {
+export const PlaybackControls: React.FC<PlaybackControlsProps> = ({ compact = false }) => {
   const {
     playState,
     currentTime,
@@ -46,7 +36,9 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   const rates = [0.5, 1, 1.5, 2];
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-3'} bg-[var(--bg-base)] rounded-lg border border-[var(--border-subtle)]`}>
+    <div
+      className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-3'} bg-[var(--bg-base)] rounded-lg border border-[var(--border-subtle)]`}
+    >
       <button
         onClick={() => seek(0)}
         className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] transition-colors"
@@ -64,15 +56,11 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
       </button>
 
       <button
-        onClick={() => isPlaying ? pause() : play()}
+        onClick={() => (isPlaying ? pause() : play())}
         className="p-2.5 rounded-full bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
         title={isPlaying ? '暂停' : '播放'}
       >
-        {isPlaying ? (
-          <Pause className="w-5 h-5" />
-        ) : (
-          <Play className="w-5 h-5 ml-0.5" />
-        )}
+        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
       </button>
 
       <button
@@ -122,8 +110,10 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             onChange={(e) => setPlaybackRate(Number(e.target.value))}
             className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]"
           >
-            {rates.map(rate => (
-              <option key={rate} value={rate}>{rate}x</option>
+            {rates.map((rate) => (
+              <option key={rate} value={rate}>
+                {rate}x
+              </option>
             ))}
           </select>
         </>

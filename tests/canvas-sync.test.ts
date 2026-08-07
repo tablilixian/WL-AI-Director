@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // ── Mock dependencies ────────────────────────────────────
 
@@ -17,20 +17,34 @@ vi.mock('../services/canvasCloudApi', () => {
 });
 
 vi.mock('../services/canvasStorageService', () => ({
-  saveCanvasDataToLocal: vi.fn(async (_projectId: string, layers: any[], _offset: any, _scale: any) => {
-    return {
-      projectId: _projectId,
-      layers,
-      offset: _offset,
-      scale: _scale,
-      version: 1,
-      savedAt: Date.now(),
-      syncStatus: 'synced',
-    };
-  }),
+  saveCanvasDataToLocal: vi.fn(
+    async (_projectId: string, layers: any[], _offset: any, _scale: any) => {
+      return {
+        projectId: _projectId,
+        layers,
+        offset: _offset,
+        scale: _scale,
+        version: 1,
+        savedAt: Date.now(),
+        syncStatus: 'synced',
+      };
+    },
+  ),
   getCanvasDataFromLocal: vi.fn(async () => ({
     projectId: 'proj-1',
-    layers: [{ id: 'l1', type: 'image', x: 0, y: 0, width: 100, height: 100, src: '', title: 'test', createdAt: 1 }],
+    layers: [
+      {
+        id: 'l1',
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        src: '',
+        title: 'test',
+        createdAt: 1,
+      },
+    ],
     offset: { x: 0, y: 0 },
     scale: 1,
     version: 1,
@@ -54,12 +68,23 @@ vi.mock('../src/stores/authStore', () => ({
 
 const { canvasCloudApi } = await import('../services/canvasCloudApi');
 const { canvasSyncService } = await import('../services/canvasSyncService');
-const { ConflictResolution } = await import('../services/canvasSyncService');
 
 function makeLocalData(overrides: any = {}): any {
   return {
     projectId: 'proj-1',
-    layers: [{ id: 'l1', type: 'image', x: 0, y: 0, width: 100, height: 100, src: '', title: 'test', createdAt: 1 }],
+    layers: [
+      {
+        id: 'l1',
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        src: '',
+        title: 'test',
+        createdAt: 1,
+      },
+    ],
     offset: { x: 0, y: 0 },
     scale: 1,
     version: 1,
@@ -72,7 +97,19 @@ function makeLocalData(overrides: any = {}): any {
 function makeCloudData(overrides: any = {}): any {
   return {
     projectId: 'proj-1',
-    layers: [{ id: 'l1', type: 'image', x: 0, y: 0, width: 100, height: 100, src: '', title: 'test', createdAt: 1 }],
+    layers: [
+      {
+        id: 'l1',
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        src: '',
+        title: 'test',
+        createdAt: 1,
+      },
+    ],
     offset: { x: 0, y: 0 },
     scale: 1,
     version: 1,
@@ -126,7 +163,7 @@ describe('canvasSyncService', () => {
       const serverTime = Date.now();
       const localTime = serverTime - 60000;
       (canvasCloudApi.get as any).mockResolvedValue(
-        makeCloudData({ version: 1, savedAt: serverTime })
+        makeCloudData({ version: 1, savedAt: serverTime }),
       );
       // Override state so that the queued data has the older timestamp
       (canvasSyncService as any).lastSavedAt = localTime;
@@ -137,7 +174,7 @@ describe('canvasSyncService', () => {
       // Let's test via save() which feeds doSave() → doCloudSync()
       const { saveCanvasDataToLocal } = await import('../services/canvasStorageService');
       (saveCanvasDataToLocal as any).mockResolvedValueOnce(
-        makeLocalData({ version: 1, savedAt: localTime })
+        makeLocalData({ version: 1, savedAt: localTime }),
       );
 
       (canvasCloudApi.save as any).mockResolvedValue(undefined);
@@ -156,7 +193,7 @@ describe('canvasSyncService', () => {
       const localTime = Date.now();
       const serverTime = localTime - 60000;
       (canvasCloudApi.get as any).mockResolvedValue(
-        makeCloudData({ version: 1, savedAt: serverTime })
+        makeCloudData({ version: 1, savedAt: serverTime }),
       );
       (canvasCloudApi.save as any).mockResolvedValue(undefined);
 
@@ -167,7 +204,7 @@ describe('canvasSyncService', () => {
 
       const { saveCanvasDataToLocal } = await import('../services/canvasStorageService');
       (saveCanvasDataToLocal as any).mockResolvedValueOnce(
-        makeLocalData({ version: 1, savedAt: localTime })
+        makeLocalData({ version: 1, savedAt: localTime }),
       );
 
       await (canvasSyncService as any).doCloudSync();
@@ -199,9 +236,7 @@ describe('canvasSyncService', () => {
 
     it('saveNow writes immediately and schedules cloud sync', async () => {
       const { saveCanvasDataToLocal } = await import('../services/canvasStorageService');
-      (saveCanvasDataToLocal as any).mockResolvedValue(
-        makeLocalData({ version: 2 })
-      );
+      (saveCanvasDataToLocal as any).mockResolvedValue(makeLocalData({ version: 2 }));
       (canvasCloudApi.save as any).mockResolvedValue(undefined);
 
       await (canvasSyncService as any).saveNow('proj-1', [], { x: 0, y: 0 }, 1);

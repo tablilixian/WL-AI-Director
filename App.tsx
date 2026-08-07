@@ -13,7 +13,7 @@ import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/
 import ModelConfigModal from './components/ModelConfig';
 import { ProjectState } from './types';
 import { Save, CheckCircle } from 'lucide-react';
-import { saveProjectToDB, loadProjectFromDB, saveCurrentStage, getCurrentStage } from './services/storageService';
+import { loadProjectFromDB, saveCurrentStage, getCurrentStage } from './services/storageService';
 import { hybridStorage } from './services/hybridStorageService';
 
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
@@ -36,14 +36,13 @@ function App() {
 
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showSaveStatus, setShowSaveStatus] = useState(false);
-  const [showQrCode, setShowQrCode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
-  
+
   const saveTimeoutRef = useRef<any>(null);
   const hideStatusTimeoutRef = useRef<any>(null);
   const initialProjectRef = useRef<ProjectState | null>(null);
@@ -57,7 +56,7 @@ function App() {
     let hash = 0;
     for (let i = 0; i < projectString.length; i++) {
       const char = projectString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
     return hash.toString(36);
@@ -106,23 +105,26 @@ function App() {
   // Redirect to login if not authenticated
   // Debounce 300ms to avoid transient auth clears during token refresh
   useEffect(() => {
-    if (authLoading || authView !== 'app' || user) return
+    if (authLoading || authView !== 'app' || user) return;
     const timer = setTimeout(() => {
       setAuthView('login');
-    }, 300)
-    return () => clearTimeout(timer)
+    }, 300);
+    return () => clearTimeout(timer);
   }, [user, authLoading, authView]);
 
   // Detect mobile device on mount
   useEffect(() => {
     const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 1024;
+      const isMobileDevice =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        ) || window.innerWidth < 1024;
       setIsMobile(isMobileDevice);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -157,10 +159,12 @@ function App() {
 
   // Handle API Key error
   const handleApiKeyError = (error: any) => {
-    if (error?.name === 'ApiKeyError' || 
-        error?.message?.includes('API Key missing') ||
-        error?.message?.includes('AntSK API Key') ||
-        error?.message?.includes('API Key 缺失')) {
+    if (
+      error?.name === 'ApiKeyError' ||
+      error?.message?.includes('API Key missing') ||
+      error?.message?.includes('AntSK API Key') ||
+      error?.message?.includes('API Key 缺失')
+    ) {
       logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
       setShowModelConfig(true);
       return true;
@@ -171,10 +175,12 @@ function App() {
   // Global error handler
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      if (event.error?.name === 'ApiKeyError' || 
-          event.error?.message?.includes('API Key missing') ||
-          event.error?.message?.includes('AntSK API Key') ||
-          event.error?.message?.includes('API Key 缺失')) {
+      if (
+        event.error?.name === 'ApiKeyError' ||
+        event.error?.message?.includes('API Key missing') ||
+        event.error?.message?.includes('AntSK API Key') ||
+        event.error?.message?.includes('API Key 缺失')
+      ) {
         logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true);
         event.preventDefault();
@@ -182,10 +188,12 @@ function App() {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (event.reason?.name === 'ApiKeyError' ||
-          event.reason?.message?.includes('API Key missing') ||
-          event.reason?.message?.includes('AntSK API Key') ||
-          event.reason?.message?.includes('API Key 缺失')) {
+      if (
+        event.reason?.name === 'ApiKeyError' ||
+        event.reason?.message?.includes('API Key missing') ||
+        event.reason?.message?.includes('AntSK API Key') ||
+        event.reason?.message?.includes('API Key 缺失')
+      ) {
         logger.warn(LogCategory.APP, '检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true);
         event.preventDefault();
@@ -205,18 +213,18 @@ function App() {
   useEffect(() => {
     if (project) {
       setLogCallback((log) => {
-        setProject(prev => {
+        setProject((prev) => {
           if (!prev) return null;
           return {
             ...prev,
-            renderLogs: [...(prev.renderLogs || []), log]
+            renderLogs: [...(prev.renderLogs || []), log],
           };
         });
       });
     } else {
       clearLogCallback();
     }
-    
+
     return () => clearLogCallback();
   }, [project?.id]);
 
@@ -234,7 +242,7 @@ function App() {
 
     // 计算当前 project 的 hash
     const currentHash = computeProjectHash(project);
-    
+
     // 如果内容没有变化，跳过保存
     if (currentHash === lastSavedHashRef.current) {
       logger.debug(LogCategory.APP, '🔄 项目内容未变化，跳过保存');
@@ -255,7 +263,7 @@ function App() {
         lastSavedHashRef.current = currentHash;
         logger.debug(LogCategory.APP, '✅ 项目保存成功，hash:', currentHash);
       } catch (e) {
-        logger.error(LogCategory.STORAGE, "Auto-save failed", e);
+        logger.error(LogCategory.STORAGE, 'Auto-save failed', e);
       }
     }, 1000);
 
@@ -282,9 +290,11 @@ function App() {
   }, [saveStatus]);
 
   // Update project
-  const updateProject = (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => {
+  const updateProject = (
+    updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState),
+  ) => {
     if (!project) return;
-    setProject(prev => {
+    setProject((prev) => {
       if (!prev) return null;
       if (typeof updates === 'function') {
         return updates(prev);
@@ -293,10 +303,12 @@ function App() {
     });
   };
 
-  const updateProjectWithoutSave = (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => {
+  const updateProjectWithoutSave = (
+    updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState),
+  ) => {
     if (!project) return;
     setIsAIProcessing(true);
-    setProject(prev => {
+    setProject((prev) => {
       if (!prev) return null;
       if (typeof updates === 'function') {
         return updates(prev);
@@ -312,35 +324,40 @@ function App() {
   // Update project state only (without triggering cloud sync)
   const updateProjectState = (updates: Partial<ProjectState>) => {
     if (!project) return;
-    setProject(prev => {
+    setProject((prev) => {
       if (!prev) return null;
       return { ...prev, ...updates };
     });
   };
 
   // Set stage
-  const setStage = async (stage: 'script' | 'assets' | 'director' | 'editor' | 'export' | 'prompts' | 'canvas') => {
+  const setStage = async (
+    stage: 'script' | 'assets' | 'director' | 'editor' | 'export' | 'prompts' | 'canvas',
+  ) => {
     if (project) {
       await canvasIntegrationService.setProjectId(project.id);
     }
-    
+
     canvasIntegrationService.saveImmediately(true);
-    
+
     if (isGenerating) {
-      showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），切换页面会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要离开当前页面吗？', {
-        title: '生成任务进行中',
-        type: 'warning',
-        showCancel: true,
-        confirmText: '确定离开',
-        cancelText: '继续等待',
-        onConfirm: () => {
-          setIsGenerating(false);
-          updateProjectState({ stage });
-          if (project) {
-            saveCurrentStage(project.id, stage);
-          }
-        }
-      });
+      showAlert(
+        '当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），切换页面会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要离开当前页面吗？',
+        {
+          title: '生成任务进行中',
+          type: 'warning',
+          showCancel: true,
+          confirmText: '确定离开',
+          cancelText: '继续等待',
+          onConfirm: () => {
+            setIsGenerating(false);
+            updateProjectState({ stage });
+            if (project) {
+              saveCurrentStage(project.id, stage);
+            }
+          },
+        },
+      );
       return;
     }
     updateProjectState({ stage });
@@ -353,17 +370,17 @@ function App() {
   const handleOpenProject = async (proj: string | ProjectState) => {
     // 重置首次加载标记
     isFirstLoadRef.current = true;
-    
+
     // 如果传入的是字符串（项目ID），则先从本地加载完整项目
     if (typeof proj === 'string') {
       logger.debug(LogCategory.APP, '正在从本地加载项目:', proj);
       const fullProject = await loadProjectFromDB(proj);
       if (fullProject) {
         await canvasIntegrationService.setProjectId(fullProject.id);
-        
+
         const currentStage = await getCurrentStage(proj);
         logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
-        
+
         const projectWithStage = { ...fullProject, stage: currentStage as any };
         setProject(projectWithStage);
         initialProjectRef.current = JSON.parse(JSON.stringify(projectWithStage));
@@ -373,10 +390,10 @@ function App() {
       }
     } else {
       await canvasIntegrationService.setProjectId(proj.id);
-      
+
       const currentStage = await getCurrentStage(proj.id);
       logger.debug(LogCategory.APP, '恢复 stage:', currentStage);
-      
+
       const projectWithStage = { ...proj, stage: currentStage as any };
       setProject(projectWithStage);
       initialProjectRef.current = JSON.parse(JSON.stringify(projectWithStage));
@@ -386,7 +403,7 @@ function App() {
   // 比较两个项目对象是否相等（深度比较）
   const isProjectEqual = (p1: ProjectState | null, p2: ProjectState | null): boolean => {
     if (!p1 || !p2) return false;
-    
+
     // 比较关键字段
     return (
       p1.id === p2.id &&
@@ -406,35 +423,38 @@ function App() {
     logger.debug(LogCategory.APP, '🚪 handleExitProject 开始执行');
     logger.debug(LogCategory.APP, 'isGenerating:', isGenerating);
     logger.debug(LogCategory.APP, 'project:', project);
-    
+
     // 比较项目是否有变化
     const hasChanges = !isProjectEqual(project, initialProjectRef.current);
     logger.debug(LogCategory.APP, '项目是否有变化:', hasChanges);
-    
+
     if (isGenerating) {
-      showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
-        title: '生成任务进行中',
-        type: 'warning',
-        showCancel: true,
-        confirmText: '确定退出',
-        cancelText: '继续等待',
-        onConfirm: async () => {
-          logger.debug(LogCategory.APP, '⚠️ 用户确认退出生成任务');
-          setIsGenerating(false);
-          setIsExiting(true);
-          if (project) {
-            // exit() 内部处理：sessionStorage 备份 + 保存队列排空 + forceSync + cleanup
-            await canvasIntegrationService.exit();
-            await hybridStorage.saveProject(project);
-          }
-          logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
-          setProject(null);
-          setTimeout(() => setIsExiting(false), 100);
-        }
-      });
+      showAlert(
+        '当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？',
+        {
+          title: '生成任务进行中',
+          type: 'warning',
+          showCancel: true,
+          confirmText: '确定退出',
+          cancelText: '继续等待',
+          onConfirm: async () => {
+            logger.debug(LogCategory.APP, '⚠️ 用户确认退出生成任务');
+            setIsGenerating(false);
+            setIsExiting(true);
+            if (project) {
+              // exit() 内部处理：sessionStorage 备份 + 保存队列排空 + forceSync + cleanup
+              await canvasIntegrationService.exit();
+              await hybridStorage.saveProject(project);
+            }
+            logger.debug(LogCategory.APP, '🚪 调用 setProject(null)');
+            setProject(null);
+            setTimeout(() => setIsExiting(false), 100);
+          },
+        },
+      );
       return;
     }
-    
+
     logger.debug(LogCategory.APP, '💾 开始保存并退出...');
     setIsExiting(true);
     if (project) {
@@ -464,9 +484,23 @@ function App() {
           />
         );
       case 'assets':
-        return <StageAssets project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
+        return (
+          <StageAssets
+            project={project}
+            updateProject={updateProject}
+            onApiKeyError={handleApiKeyError}
+            onGeneratingChange={setIsGenerating}
+          />
+        );
       case 'director':
-        return <StageDirector project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
+        return (
+          <StageDirector
+            project={project}
+            updateProject={updateProject}
+            onApiKeyError={handleApiKeyError}
+            onGeneratingChange={setIsGenerating}
+          />
+        );
       case 'editor':
         return <VideoEditor key={project.id} project={project} />;
       case 'export':
@@ -505,20 +539,14 @@ function App() {
   // Show login page
   if (authView === 'login') {
     return (
-      <LoginPage
-        onSwitchToRegister={handleSwitchToRegister}
-        onLoginSuccess={handleLoginSuccess}
-      />
+      <LoginPage onSwitchToRegister={handleSwitchToRegister} onLoginSuccess={handleLoginSuccess} />
     );
   }
 
   // Show register page
   if (authView === 'register') {
     return (
-      <RegisterPage
-        onSwitchToLogin={handleSwitchToLogin}
-        onRegisterSuccess={handleLoginSuccess}
-      />
+      <RegisterPage onSwitchToLogin={handleSwitchToLogin} onRegisterSuccess={handleLoginSuccess} />
     );
   }
 
@@ -531,7 +559,7 @@ function App() {
           <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">WL AI Director</h1>
           <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-8">
             <p className="text-[var(--text-tertiary)] text-base leading-relaxed              为了获得最佳 mb-4">
-体验，请使用 PC 端浏览器访问。
+              体验，请使用 PC 端浏览器访问。
             </p>
             <p className="text-[var(--text-muted)] text-sm">
               本应用需要较大的屏幕空间和桌面级浏览器环境才能正常运行。
@@ -548,55 +576,52 @@ function App() {
   // Dashboard view
   if (!project) {
     return (
-       <>
-         <Dashboard 
-           onOpenProject={handleOpenProject} 
-           onShowOnboarding={handleShowOnboarding}
-           onShowModelConfig={handleShowModelConfig}
-         />
-          {showOnboarding && (
-            <Onboarding
-              onComplete={handleOnboardingComplete}
-              onQuickStart={handleOnboardingQuickStart}
-            />
-          )}
-          <ModelConfigModal
-            isOpen={showModelConfig}
-            onClose={() => setShowModelConfig(false)}
+      <>
+        <Dashboard
+          onOpenProject={handleOpenProject}
+          onShowOnboarding={handleShowOnboarding}
+          onShowModelConfig={handleShowModelConfig}
+        />
+        {showOnboarding && (
+          <Onboarding
+            onComplete={handleOnboardingComplete}
+            onQuickStart={handleOnboardingQuickStart}
           />
-        </>
-     );
+        )}
+        <ModelConfigModal isOpen={showModelConfig} onClose={() => setShowModelConfig(false)} />
+      </>
+    );
   }
 
   // Workspace view
   return (
     <div className="flex h-screen bg-[var(--bg-secondary)] font-sans text-[var(--text-secondary)] selection:bg-[var(--accent-bg)]">
-      <Sidebar 
-        currentStage={project.stage} 
-        setStage={setStage} 
-        onExit={handleExitProject} 
+      <Sidebar
+        currentStage={project.stage}
+        setStage={setStage}
+        onExit={handleExitProject}
         projectName={project.title}
         onShowOnboarding={handleShowOnboarding}
         onShowModelConfig={() => setShowModelConfig(true)}
         isNavigationLocked={isGenerating}
       />
-      
+
       <main className="ml-72 flex-1 h-screen overflow-hidden relative">
         {renderStage()}
-        
+
         {showSaveStatus && (
           <div className="absolute top-4 right-6 pointer-events-none flex items-center gap-2 text-xs font-mono text-[var(--text-tertiary)] bg-[var(--overlay-medium)] px-2 py-1 rounded-full backdrop-blur-sm z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-             {saveStatus === 'saving' ? (
-               <>
-                 <Save className="w-3 h-3 animate-pulse" />
-                 保存中...
-               </>
-             ) : (
-               <>
-                 <CheckCircle className="w-3 h-3 text-[var(--success)]" />
-                 已保存
-               </>
-             )}
+            {saveStatus === 'saving' ? (
+              <>
+                <Save className="w-3 h-3 animate-pulse" />
+                保存中...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-3 h-3 text-[var(--success)]" />
+                已保存
+              </>
+            )}
           </div>
         )}
       </main>
@@ -608,10 +633,7 @@ function App() {
         />
       )}
 
-      <ModelConfigModal
-        isOpen={showModelConfig}
-        onClose={() => setShowModelConfig(false)}
-      />
+      <ModelConfigModal isOpen={showModelConfig} onClose={() => setShowModelConfig(false)} />
     </div>
   );
 }

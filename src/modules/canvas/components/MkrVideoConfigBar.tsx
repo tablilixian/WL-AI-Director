@@ -42,16 +42,26 @@ function parseConfig(layer: LayerData | undefined): MkrGenerationConfig | null {
   }
 }
 
-function buildConfig(sourceLayerIds: string[] | undefined, layers: LayerData[]): MkrGenerationConfig {
+function buildConfig(
+  sourceLayerIds: string[] | undefined,
+  layers: LayerData[],
+): MkrGenerationConfig {
   const ids = sourceLayerIds || [];
-  const sourceLayers = ids.map(id => layers.find(l => l.id === id)).filter(Boolean) as LayerData[];
+  const sourceLayers = ids
+    .map((id) => layers.find((l) => l.id === id))
+    .filter(Boolean) as LayerData[];
   const totalFrames = 360;
   const gridFrames = ids.length > 0 ? ids.length : 4;
   return {
     mode: 'regular',
     frames: sourceLayers.map((l, i) => ({
       layerId: l.id,
-      frameIndex: i === 0 ? 0 : i === sourceLayers.length - 1 ? -1 : Math.round(i * totalFrames / (sourceLayers.length - 1)),
+      frameIndex:
+        i === 0
+          ? 0
+          : i === sourceLayers.length - 1
+            ? -1
+            : Math.round((i * totalFrames) / (sourceLayers.length - 1)),
       prompt: '',
     })),
     globalPrompt: '',
@@ -60,7 +70,9 @@ function buildConfig(sourceLayerIds: string[] | undefined, layers: LayerData[]):
     width: 640,
     height: 320,
     gridtype: Math.min(gridFrames, [4, 6, 9].includes(gridFrames) ? gridFrames : 4) as 4 | 6 | 9,
-    gridFrameIndexs: new Array(gridFrames).fill(0).map((_, i) => i === 0 ? 0 : Math.round(i * totalFrames / (gridFrames - 1))),
+    gridFrameIndexs: new Array(gridFrames)
+      .fill(0)
+      .map((_, i) => (i === 0 ? 0 : Math.round((i * totalFrames) / (gridFrames - 1)))),
   };
 }
 
@@ -70,8 +82,8 @@ function saveConfig(layerId: string, config: MkrGenerationConfig) {
 }
 
 export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId }) => {
-  const { layers, addLayer, selectLayer, deleteLayer, updateLayer } = useCanvasStore();
-  const layer = layers.find(l => l.id === layerId);
+  const { layers, selectLayer, updateLayer } = useCanvasStore();
+  const layer = layers.find((l) => l.id === layerId);
 
   const [config, setConfig] = useState<MkrGenerationConfig>(() => {
     const existing = parseConfig(layer);
@@ -85,78 +97,106 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
 
   const totalFrames = useMemo(() => config.duration * config.fps, [config.duration, config.fps]);
 
-  const sortedKeyframes = useMemo(() =>
-    [...config.frames].sort((a, b) => {
-      if (a.frameIndex === -1 && b.frameIndex === -1) return 0;
-      if (a.frameIndex === -1) return 1;
-      if (b.frameIndex === -1) return -1;
-      return a.frameIndex - b.frameIndex;
-    }),
-    [config.frames]
+  const sortedKeyframes = useMemo(
+    () =>
+      [...config.frames].sort((a, b) => {
+        if (a.frameIndex === -1 && b.frameIndex === -1) return 0;
+        if (a.frameIndex === -1) return 1;
+        if (b.frameIndex === -1) return -1;
+        return a.frameIndex - b.frameIndex;
+      }),
+    [config.frames],
   );
 
-  const updateConfig = useCallback((updater: (prev: MkrGenerationConfig) => MkrGenerationConfig) => {
-    setConfig(prev => {
-      const next = updater(prev);
-      saveConfig(layerId, next);
-      return next;
-    });
-  }, [layerId]);
-
-  const updateFrameIndex = useCallback((frameLayerId: string, newIndex: number) => {
-    updateConfig(prev => ({
-      ...prev,
-      frames: prev.frames.map(f =>
-        f.layerId === frameLayerId ? { ...f, frameIndex: Math.max(-1, Math.min(newIndex, totalFrames)) } : f
-      ),
-    }));
-  }, [updateConfig, totalFrames]);
-
-  const updateFramePrompt = useCallback((frameLayerId: string, prompt: string) => {
-    updateConfig(prev => ({
-      ...prev,
-      frames: prev.frames.map(f => f.layerId === frameLayerId ? { ...f, prompt } : f),
-    }));
-  }, [updateConfig]);
-
-  const removeKeyframe = useCallback((frameLayerId: string) => {
-    updateConfig(prev => ({
-      ...prev,
-      frames: prev.frames.filter(f => f.layerId !== frameLayerId),
-    }));
-  }, [updateConfig]);
-
-  const moveKeyframe = useCallback((frameLayerId: string, direction: -1 | 1) => {
-    updateConfig(prev => {
-      const idx = prev.frames.findIndex(f => f.layerId === frameLayerId);
-      if (idx === -1) return prev;
-      const nextIdx = idx + direction;
-      if (nextIdx < 0 || nextIdx >= prev.frames.length) return prev;
-      const items = [...prev.frames];
-      [items[idx], items[nextIdx]] = [items[nextIdx], items[idx]];
-      return { ...prev, frames: items };
-    });
-  }, [updateConfig]);
-
-  const addImageFromCanvas = useCallback((imageLayerId: string) => {
-    const imageLayer = layers.find(l => l.id === imageLayerId && l.type === 'image');
-    if (!imageLayer || config.frames.some(f => f.layerId === imageLayerId)) return;
-    updateConfig(prev => ({
-      ...prev,
-      frames: [...prev.frames, {
-        layerId: imageLayer.id,
-        frameIndex: prev.frames.some(f => f.frameIndex === -1) ? Math.round(totalFrames / 2) : -1,
-        prompt: '',
-      }],
-    }));
-  }, [layers, config.frames, totalFrames, updateConfig]);
-
-  const availableCanvasImages = useMemo(() =>
-    layers.filter(l => l.type === 'image' && !config.frames.some(f => f.layerId === l.id)),
-    [layers, config.frames]
+  const updateConfig = useCallback(
+    (updater: (prev: MkrGenerationConfig) => MkrGenerationConfig) => {
+      setConfig((prev) => {
+        const next = updater(prev);
+        saveConfig(layerId, next);
+        return next;
+      });
+    },
+    [layerId],
   );
 
-  const canGenerate = !isGenerating && (config.mode === 'regular' ? config.frames.length > 0 : true);
+  const updateFrameIndex = useCallback(
+    (frameLayerId: string, newIndex: number) => {
+      updateConfig((prev) => ({
+        ...prev,
+        frames: prev.frames.map((f) =>
+          f.layerId === frameLayerId
+            ? { ...f, frameIndex: Math.max(-1, Math.min(newIndex, totalFrames)) }
+            : f,
+        ),
+      }));
+    },
+    [updateConfig, totalFrames],
+  );
+
+  const updateFramePrompt = useCallback(
+    (frameLayerId: string, prompt: string) => {
+      updateConfig((prev) => ({
+        ...prev,
+        frames: prev.frames.map((f) => (f.layerId === frameLayerId ? { ...f, prompt } : f)),
+      }));
+    },
+    [updateConfig],
+  );
+
+  const removeKeyframe = useCallback(
+    (frameLayerId: string) => {
+      updateConfig((prev) => ({
+        ...prev,
+        frames: prev.frames.filter((f) => f.layerId !== frameLayerId),
+      }));
+    },
+    [updateConfig],
+  );
+
+  const moveKeyframe = useCallback(
+    (frameLayerId: string, direction: -1 | 1) => {
+      updateConfig((prev) => {
+        const idx = prev.frames.findIndex((f) => f.layerId === frameLayerId);
+        if (idx === -1) return prev;
+        const nextIdx = idx + direction;
+        if (nextIdx < 0 || nextIdx >= prev.frames.length) return prev;
+        const items = [...prev.frames];
+        [items[idx], items[nextIdx]] = [items[nextIdx], items[idx]];
+        return { ...prev, frames: items };
+      });
+    },
+    [updateConfig],
+  );
+
+  const addImageFromCanvas = useCallback(
+    (imageLayerId: string) => {
+      const imageLayer = layers.find((l) => l.id === imageLayerId && l.type === 'image');
+      if (!imageLayer || config.frames.some((f) => f.layerId === imageLayerId)) return;
+      updateConfig((prev) => ({
+        ...prev,
+        frames: [
+          ...prev.frames,
+          {
+            layerId: imageLayer.id,
+            frameIndex: prev.frames.some((f) => f.frameIndex === -1)
+              ? Math.round(totalFrames / 2)
+              : -1,
+            prompt: '',
+          },
+        ],
+      }));
+    },
+    [layers, config.frames, totalFrames, updateConfig],
+  );
+
+  const availableCanvasImages = useMemo(
+    () =>
+      layers.filter((l) => l.type === 'image' && !config.frames.some((f) => f.layerId === l.id)),
+    [layers, config.frames],
+  );
+
+  const canGenerate =
+    !isGenerating && (config.mode === 'regular' ? config.frames.length > 0 : true);
 
   const handleGenerate = async () => {
     if (!canGenerate || !layer) return;
@@ -169,7 +209,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
 
       if (config.mode === 'grid') {
         // Grid mode: use generateVideoMkrGrid
-        const refLayer = layers.find(l => l.type === 'image' && !l.isLoading && l.src);
+        const refLayer = layers.find((l) => l.type === 'image' && !l.isLoading && l.src);
         if (!refLayer) {
           throw new Error('请先添加一张参考图片');
         }
@@ -197,14 +237,17 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
           return a.frameIndex - b.frameIndex;
         });
 
-        const images = sorted.map(f => ({
-          src: layers.find(l => l.id === f.layerId)?.src || '',
+        const images = sorted.map((f) => ({
+          src: layers.find((l) => l.id === f.layerId)?.src || '',
           frameIndex: f.frameIndex,
         }));
 
         const perFramePrompts = sorted
-          .filter(f => f.prompt.trim())
-          .map((f, i) => `[关键帧${i + 1} - frame ${f.frameIndex === -1 ? '结束' : f.frameIndex}] ${f.prompt}`);
+          .filter((f) => f.prompt.trim())
+          .map(
+            (f, i) =>
+              `[关键帧${i + 1} - frame ${f.frameIndex === -1 ? '结束' : f.frameIndex}] ${f.prompt}`,
+          );
         const fullPrompt = [config.globalPrompt, ...perFramePrompts].filter(Boolean).join('\n');
 
         setProgressLabel('正在生成 MKR 视频...');
@@ -223,7 +266,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
       setProgressLabel('处理视频文件...');
       setProgress(90);
 
-      let finalSrc = videoUrl;
+      const finalSrc = videoUrl;
       let videoId: string | undefined;
 
       if (videoUrl.startsWith('video:')) {
@@ -265,18 +308,22 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
             {/* Mode toggle */}
             <div className="flex items-center bg-gray-800 rounded-lg border border-gray-700 p-0.5 gap-0.5">
               <button
-                onClick={() => updateConfig(prev => ({ ...prev, mode: 'regular' }))}
+                onClick={() => updateConfig((prev) => ({ ...prev, mode: 'regular' }))}
                 className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
-                  config.mode === 'regular' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                  config.mode === 'regular'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Film className="w-3 h-3 inline mr-1" />
                 逐帧
               </button>
               <button
-                onClick={() => updateConfig(prev => ({ ...prev, mode: 'grid' }))}
+                onClick={() => updateConfig((prev) => ({ ...prev, mode: 'grid' }))}
                 className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
-                  config.mode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                  config.mode === 'grid'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Grid className="w-3 h-3 inline mr-1" />
@@ -285,7 +332,10 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
             </div>
 
             <span className="text-[10px] text-gray-500 bg-gray-700/60 px-2 py-0.5 rounded-full">
-              {config.mode === 'regular' ? `${config.frames.length} 关键帧` : `${config.gridtype} 宫格`} · {config.duration}s · {totalFrames}帧
+              {config.mode === 'regular'
+                ? `${config.frames.length} 关键帧`
+                : `${config.gridtype} 宫格`}{' '}
+              · {config.duration}s · {totalFrames}帧
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -294,12 +344,17 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                 <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                 <span>{progressLabel}</span>
                 <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
               </div>
             )}
             <button
-              onClick={() => { selectLayer(null); }}
+              onClick={() => {
+                selectLayer(null);
+              }}
               className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -314,7 +369,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
               <div className="relative h-[52px] bg-gray-800/80 rounded-lg border border-gray-700/60 overflow-hidden">
                 {sortedKeyframes.map((kf) => {
                   const pct = timelinePercentage(kf.frameIndex);
-                  const src = layers.find(l => l.id === kf.layerId)?.src || '';
+                  const src = layers.find((l) => l.id === kf.layerId)?.src || '';
                   return (
                     <div
                       key={kf.layerId}
@@ -322,11 +377,15 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                       style={{ left: `${pct}%` }}
                     >
                       <div className="w-[30px] h-[30px] rounded overflow-hidden border-2 border-purple-500 bg-gray-700 shadow-md">
-                        {src && <ResolvedImage src={src} alt="" className="w-full h-full object-cover" />}
+                        {src && (
+                          <ResolvedImage src={src} alt="" className="w-full h-full object-cover" />
+                        )}
                       </div>
-                      <span className={`text-[7px] font-mono whitespace-nowrap bg-gray-900/80 px-1 rounded ${
-                        kf.frameIndex === -1 ? 'text-green-400' : 'text-purple-300'
-                      }`}>
+                      <span
+                        className={`text-[7px] font-mono whitespace-nowrap bg-gray-900/80 px-1 rounded ${
+                          kf.frameIndex === -1 ? 'text-green-400' : 'text-purple-300'
+                        }`}
+                      >
                         {kf.frameIndex === -1 ? '结束' : `#${kf.frameIndex}`}
                       </span>
                     </div>
@@ -340,7 +399,9 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                   />
                 ))}
                 <div className="absolute bottom-0 left-2 text-[7px] text-gray-600">0</div>
-                <div className="absolute bottom-0 right-2 text-[7px] text-gray-600">{totalFrames}</div>
+                <div className="absolute bottom-0 right-2 text-[7px] text-gray-600">
+                  {totalFrames}
+                </div>
               </div>
             </div>
 
@@ -355,7 +416,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                 )}
 
                 {config.frames.map((kf, idx) => {
-                  const imageLayer = layers.find(l => l.id === kf.layerId);
+                  const imageLayer = layers.find((l) => l.id === kf.layerId);
                   const src = imageLayer?.src || '';
                   const title = imageLayer?.title || '未知';
                   return (
@@ -370,13 +431,21 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                             {idx + 1}
                           </span>
                           <div className="w-8 h-8 rounded overflow-hidden bg-gray-700 flex-shrink-0">
-                            {src && <ResolvedImage src={src} alt={title} className="w-full h-full object-cover" />}
+                            {src && (
+                              <ResolvedImage
+                                src={src}
+                                alt={title}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
                           </div>
                         </div>
 
                         {/* Controls */}
                         <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="text-[10px] text-gray-400 truncate max-w-[80px]">{title}</span>
+                          <span className="text-[10px] text-gray-400 truncate max-w-[80px]">
+                            {title}
+                          </span>
 
                           <div className="flex items-center gap-1.5">
                             <span className="text-[8px] text-gray-500">帧:</span>
@@ -384,7 +453,9 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                               <span className="text-[9px] text-green-400 font-semibold flex items-center gap-1">
                                 结束
                                 <button
-                                  onClick={() => updateFrameIndex(kf.layerId, Math.round(totalFrames / 2))}
+                                  onClick={() =>
+                                    updateFrameIndex(kf.layerId, Math.round(totalFrames / 2))
+                                  }
                                   className="text-[8px] text-purple-400/60 hover:text-purple-400 underline"
                                 >
                                   设具体
@@ -397,7 +468,9 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                                   min={0}
                                   max={totalFrames}
                                   value={kf.frameIndex}
-                                  onChange={(e) => updateFrameIndex(kf.layerId, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    updateFrameIndex(kf.layerId, Number(e.target.value))
+                                  }
                                   className="w-16 h-1 accent-purple-500"
                                 />
                                 <input
@@ -405,7 +478,9 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                                   min={0}
                                   max={totalFrames}
                                   value={kf.frameIndex}
-                                  onChange={(e) => updateFrameIndex(kf.layerId, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    updateFrameIndex(kf.layerId, Number(e.target.value))
+                                  }
                                   className="w-10 bg-gray-900 border border-gray-700 rounded text-[9px] text-gray-300 px-0.5 py-0 text-center focus:outline-none focus:border-purple-500 font-mono"
                                 />
                                 <button
@@ -463,19 +538,31 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
             <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-1">
               {/* Reference image selector */}
               <div className="pt-3 pb-2">
-                <span className="text-[10px] text-gray-400 mb-2 block">参考图片（所有宫格共用）</span>
+                <span className="text-[10px] text-gray-400 mb-2 block">
+                  参考图片（所有宫格共用）
+                </span>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {layers.filter(l => l.type === 'image' && !l.isLoading && l.src).map(l => (
-                    <div
-                      key={l.id}
-                      className={`w-12 h-12 rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
-                        config.gridFrameIndexs.length > 0 ? 'border-purple-500' : 'border-gray-600 hover:border-gray-500'
-                      }`}
-                      title={l.title}
-                    >
-                      {l.src && <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />}
-                    </div>
-                  ))}
+                  {layers
+                    .filter((l) => l.type === 'image' && !l.isLoading && l.src)
+                    .map((l) => (
+                      <div
+                        key={l.id}
+                        className={`w-12 h-12 rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
+                          config.gridFrameIndexs.length > 0
+                            ? 'border-purple-500'
+                            : 'border-gray-600 hover:border-gray-500'
+                        }`}
+                        title={l.title}
+                      >
+                        {l.src && (
+                          <ResolvedImage
+                            src={l.src}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -483,16 +570,18 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
               <div className="pb-2">
                 <span className="text-[10px] text-gray-400 mb-2 block">宫格类型</span>
                 <div className="flex items-center gap-2">
-                  {[4, 6, 9].map(g => (
+                  {[4, 6, 9].map((g) => (
                     <button
                       key={g}
-                      onClick={() => updateConfig(prev => ({
-                        ...prev,
-                        gridtype: g,
-                        gridFrameIndexs: new Array(g).fill(0).map((_, i) =>
-                          i === 0 ? 0 : Math.round(i * totalFrames / (g - 1))
-                        ),
-                      }))}
+                      onClick={() =>
+                        updateConfig((prev) => ({
+                          ...prev,
+                          gridtype: g,
+                          gridFrameIndexs: new Array(g)
+                            .fill(0)
+                            .map((_, i) => (i === 0 ? 0 : Math.round((i * totalFrames) / (g - 1)))),
+                        }))
+                      }
                       className={`px-3 py-1 text-[10px] rounded-lg border transition-colors ${
                         config.gridtype === g
                           ? 'bg-purple-600/20 border-purple-500 text-purple-300'
@@ -510,7 +599,10 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                 <span className="text-[10px] text-gray-400 mb-2 block">每个宫格的帧位置</span>
                 <div className="grid grid-cols-3 gap-2">
                   {config.gridFrameIndexs.map((fi, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-gray-800/40 rounded-lg px-2 py-1.5">
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1 bg-gray-800/40 rounded-lg px-2 py-1.5"
+                    >
                       <span className="text-[9px] text-gray-500 w-4">#{idx + 1}</span>
                       <input
                         type="number"
@@ -519,8 +611,11 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                         value={fi}
                         onChange={(e) => {
                           const newIndexs = [...config.gridFrameIndexs];
-                          newIndexs[idx] = Math.max(0, Math.min(totalFrames, Number(e.target.value)));
-                          updateConfig(prev => ({ ...prev, gridFrameIndexs: newIndexs }));
+                          newIndexs[idx] = Math.max(
+                            0,
+                            Math.min(totalFrames, Number(e.target.value)),
+                          );
+                          updateConfig((prev) => ({ ...prev, gridFrameIndexs: newIndexs }));
                         }}
                         className="w-14 bg-gray-900 border border-gray-700 rounded text-[9px] text-gray-300 px-1 py-0.5 text-center focus:outline-none focus:border-purple-500 font-mono"
                       />
@@ -532,7 +627,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                         onChange={(e) => {
                           const newIndexs = [...config.gridFrameIndexs];
                           newIndexs[idx] = Number(e.target.value);
-                          updateConfig(prev => ({ ...prev, gridFrameIndexs: newIndexs }));
+                          updateConfig((prev) => ({ ...prev, gridFrameIndexs: newIndexs }));
                         }}
                         className="flex-1 h-1 accent-purple-500"
                       />
@@ -550,7 +645,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
           <input
             type="text"
             value={config.globalPrompt}
-            onChange={(e) => updateConfig(prev => ({ ...prev, globalPrompt: e.target.value }))}
+            onChange={(e) => updateConfig((prev) => ({ ...prev, globalPrompt: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
             placeholder="全局场景描述（所有关键帧共享）..."
             className="w-full bg-gray-700/50 border border-gray-700 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
@@ -567,7 +662,12 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                   min={1}
                   max={30}
                   value={config.duration}
-                  onChange={(e) => updateConfig(prev => ({ ...prev, duration: Math.max(1, Math.min(30, Number(e.target.value))) }))}
+                  onChange={(e) =>
+                    updateConfig((prev) => ({
+                      ...prev,
+                      duration: Math.max(1, Math.min(30, Number(e.target.value))),
+                    }))
+                  }
                   className="w-10 bg-gray-700 border border-gray-700 rounded text-[10px] text-gray-300 px-1 py-0.5 text-center focus:outline-none focus:border-purple-500 font-mono"
                   disabled={isGenerating}
                 />
@@ -580,7 +680,12 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
                   min={1}
                   max={60}
                   value={config.fps}
-                  onChange={(e) => updateConfig(prev => ({ ...prev, fps: Math.max(1, Math.min(60, Number(e.target.value))) }))}
+                  onChange={(e) =>
+                    updateConfig((prev) => ({
+                      ...prev,
+                      fps: Math.max(1, Math.min(60, Number(e.target.value))),
+                    }))
+                  }
                   className="w-10 bg-gray-700 border border-gray-700 rounded text-[10px] text-gray-300 px-1 py-0.5 text-center focus:outline-none focus:border-purple-500 font-mono"
                   disabled={isGenerating}
                 />
@@ -588,16 +693,25 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
               <label className="flex items-center gap-1 text-[10px] text-gray-400">
                 尺寸:
                 <select
-                  value={VIDEO_SIZE_PRESETS.findIndex(p => p.width === config.width && p.height === config.height)}
+                  value={VIDEO_SIZE_PRESETS.findIndex(
+                    (p) => p.width === config.width && p.height === config.height,
+                  )}
                   onChange={(e) => {
                     const preset = VIDEO_SIZE_PRESETS[Number(e.target.value)];
-                    if (preset) updateConfig(prev => ({ ...prev, width: preset.width, height: preset.height }));
+                    if (preset)
+                      updateConfig((prev) => ({
+                        ...prev,
+                        width: preset.width,
+                        height: preset.height,
+                      }));
                   }}
                   className="bg-gray-700 border border-gray-700 rounded text-[10px] text-gray-300 px-1 py-0.5 focus:outline-none focus:border-purple-500"
                   disabled={isGenerating}
                 >
                   {VIDEO_SIZE_PRESETS.map((p, i) => (
-                    <option key={i} value={i}>{p.label} ({p.width}×{p.height})</option>
+                    <option key={i} value={i}>
+                      {p.label} ({p.width}×{p.height})
+                    </option>
                   ))}
                 </select>
               </label>
@@ -605,14 +719,16 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
               {/* Add image buttons (regular mode only) */}
               {config.mode === 'regular' && availableCanvasImages.length > 0 && (
                 <div className="flex items-center gap-1">
-                  {availableCanvasImages.slice(0, 4).map(l => (
+                  {availableCanvasImages.slice(0, 4).map((l) => (
                     <button
                       key={l.id}
                       onClick={() => addImageFromCanvas(l.id)}
                       className="w-5 h-5 rounded overflow-hidden bg-gray-700 border border-gray-600 hover:border-purple-500 transition-all relative group/img"
                       title={`添加 ${l.title}`}
                     >
-                      {l.src && <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />}
+                      {l.src && (
+                        <ResolvedImage src={l.src} alt="" className="w-full h-full object-cover" />
+                      )}
                       <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/50 transition-colors flex items-center justify-center">
                         <Plus className="w-2.5 h-2.5 text-white opacity-0 group-hover/img:opacity-100 transition-opacity" />
                       </div>
@@ -624,7 +740,9 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { selectLayer(null); }}
+                onClick={() => {
+                  selectLayer(null);
+                }}
                 className="px-2.5 py-1 text-[10px] text-gray-400 hover:text-white transition-colors"
                 disabled={isGenerating}
               >

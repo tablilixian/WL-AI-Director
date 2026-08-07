@@ -1,5 +1,4 @@
-import { useAuthStore } from '../src/stores/authStore';
-import { DB_NAME, DB_VERSION, STORE_NAMES } from './dbConfig';
+import { STORE_NAMES } from './dbConfig';
 import { logger, LogCategory } from './logger';
 import { openDB as openDBFromStorageService } from './storageService';
 
@@ -24,19 +23,19 @@ const openDB = openDBFromStorageService;
 export const imageStorageService = {
   async saveImage(id: string, blob: Blob): Promise<void> {
     logger.debug(LogCategory.IMAGE, `💾 保存图片到本地: ${id}, 大小: ${blob.size}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.IMAGES);
-    
+
     const image: LocalImage = {
       id,
       blob,
       createdAt: Date.now(),
       type: blob.type,
-      size: blob.size
+      size: blob.size,
     };
-    
+
     return new Promise((resolve, reject) => {
       const request = store.put(image);
       request.onsuccess = () => {
@@ -49,11 +48,11 @@ export const imageStorageService = {
 
   async getImage(id: string): Promise<Blob | null> {
     logger.debug(LogCategory.IMAGE, `📖 读取本地图片: ${id}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.IMAGES, 'readonly');
     const store = tx.objectStore(STORE_NAMES.IMAGES);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.get(id);
       request.onsuccess = () => {
@@ -72,11 +71,11 @@ export const imageStorageService = {
 
   async deleteImage(id: string): Promise<void> {
     logger.debug(LogCategory.IMAGE, `🗑️ 删除本地图片: ${id}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.IMAGES);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
       request.onsuccess = () => {
@@ -87,28 +86,28 @@ export const imageStorageService = {
     });
   },
 
-  async uploadToCloud(id: string, blob: Blob, path: string): Promise<string> {
+  async uploadToCloud(id: string, blob: Blob, _path: string): Promise<string> {
     // 保存到 IndexedDB（如果还未保存）
-    await this.saveImage(id, blob)
+    await this.saveImage(id, blob);
     // 返回 local: 引用，syncAssetToCloud 会将其上传到 PocketBase
-    logger.debug(LogCategory.IMAGE, `🏠 生成本地引用: local:${id}`)
-    return `local:${id}`
+    logger.debug(LogCategory.IMAGE, `🏠 生成本地引用: local:${id}`);
+    return `local:${id}`;
   },
 
   async cleanOldImages(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<number> {
     logger.debug(LogCategory.IMAGE, `🧹 清理过期图片，最大年龄: ${maxAge} ms`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.IMAGES);
     const index = store.index('createdAt');
-    
+
     const cutoffTime = Date.now() - maxAge;
     let deletedCount = 0;
 
     return new Promise((resolve, reject) => {
       const request = index.openCursor(IDBKeyRange.upperBound(cutoffTime));
-      
+
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
@@ -120,18 +119,18 @@ export const imageStorageService = {
           resolve(deletedCount);
         }
       };
-      
+
       request.onerror = () => reject(request.error);
     });
   },
 
   async getAllImages(): Promise<LocalImage[]> {
     logger.debug(LogCategory.IMAGE, '📋 获取所有本地图片');
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.IMAGES, 'readonly');
     const store = tx.objectStore(STORE_NAMES.IMAGES);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.getAll();
       request.onsuccess = () => {
@@ -141,7 +140,7 @@ export const imageStorageService = {
       };
       request.onerror = () => reject(request.error);
     });
-  }
+  },
 };
 
 export const generateImageId = (): string => {
@@ -151,19 +150,19 @@ export const generateImageId = (): string => {
 export const videoStorageService = {
   async saveVideo(id: string, blob: Blob): Promise<void> {
     logger.debug(LogCategory.VIDEO, `💾 保存视频到本地: ${id}, 大小: ${blob.size}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.VIDEOS);
-    
+
     const video: LocalVideo = {
       id,
       blob,
       createdAt: Date.now(),
       type: blob.type,
-      size: blob.size
+      size: blob.size,
     };
-    
+
     return new Promise((resolve, reject) => {
       const request = store.put(video);
       request.onsuccess = () => {
@@ -176,11 +175,11 @@ export const videoStorageService = {
 
   async getVideo(id: string): Promise<Blob | null> {
     logger.debug(LogCategory.VIDEO, `📖 读取本地视频: ${id}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.VIDEOS, 'readonly');
     const store = tx.objectStore(STORE_NAMES.VIDEOS);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.get(id);
       request.onsuccess = () => {
@@ -199,11 +198,11 @@ export const videoStorageService = {
 
   async deleteVideo(id: string): Promise<void> {
     logger.debug(LogCategory.VIDEO, `🗑️ 删除本地视频: ${id}`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.VIDEOS);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
       request.onsuccess = () => {
@@ -224,18 +223,18 @@ export const videoStorageService = {
 
   async cleanOldVideos(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<number> {
     logger.debug(LogCategory.VIDEO, `🧹 清理过期视频，最大年龄: ${maxAge} ms`);
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
     const store = tx.objectStore(STORE_NAMES.VIDEOS);
     const index = store.index('createdAt');
-    
+
     const cutoffTime = Date.now() - maxAge;
     let deletedCount = 0;
 
     return new Promise((resolve, reject) => {
       const request = index.openCursor(IDBKeyRange.upperBound(cutoffTime));
-      
+
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
@@ -247,18 +246,18 @@ export const videoStorageService = {
           resolve(deletedCount);
         }
       };
-      
+
       request.onerror = () => reject(request.error);
     });
   },
 
   async getAllVideos(): Promise<LocalVideo[]> {
     logger.debug(LogCategory.VIDEO, '📋 获取所有本地视频');
-    
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAMES.VIDEOS, 'readonly');
     const store = tx.objectStore(STORE_NAMES.VIDEOS);
-    
+
     return new Promise((resolve, reject) => {
       const request = store.getAll();
       request.onsuccess = () => {
@@ -268,7 +267,7 @@ export const videoStorageService = {
       };
       request.onerror = () => reject(request.error);
     });
-  }
+  },
 };
 
 export const generateVideoId = (): string => {

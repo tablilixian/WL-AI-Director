@@ -1,13 +1,13 @@
-import { ConsistencyCheckResult, ConsistencyConflict, Character, Scene, Shot, ScriptData } from "../../types";
-import { logger, LogCategory } from '../logger';
 import {
-  retryOperation,
-  cleanJsonString,
-  chatCompletion,
-  chatCompletionStream,
-  logScriptProgress,
-  getDefaultChatModelId,
-} from './apiCore';
+  ConsistencyCheckResult,
+  ConsistencyConflict,
+  Character,
+  Scene,
+  Shot,
+  ScriptData,
+} from '../../types';
+import { logger, LogCategory } from '../logger';
+import { retryOperation, cleanJsonString, chatCompletion, getDefaultChatModelId } from './apiCore';
 
 let conflictIdCounter = 0;
 const nextConflictId = (): string => `conflict-${Date.now()}-${++conflictIdCounter}`;
@@ -20,16 +20,15 @@ interface ShotWithScene {
 const buildConsistencyPrompt = (
   char: Character,
   scriptData: ScriptData,
-  shotGroups: ShotWithScene[]
+  shotGroups: ShotWithScene[],
 ): string => {
-  const storyTimeline = scriptData.storyParagraphs
-    .map(p => `[段落${p.id}] ${p.text}`)
-    .join('\n');
+  const storyTimeline = scriptData.storyParagraphs.map((p) => `[段落${p.id}] ${p.text}`).join('\n');
 
-  const shotDetails = shotGroups.map(({ shot, scene }) => {
-    const startKf = shot.keyframes.find(k => k.type === 'start');
-    const endKf = shot.keyframes.find(k => k.type === 'end');
-    return `
+  const shotDetails = shotGroups
+    .map(({ shot, scene }) => {
+      const startKf = shot.keyframes.find((k) => k.type === 'start');
+      const endKf = shot.keyframes.find((k) => k.type === 'end');
+      return `
 --- 分镜 ${shot.id} ---
 场景：${scene.location}（${scene.time}，${scene.atmosphere}）
 动作描述：${shot.actionSummary}
@@ -38,7 +37,8 @@ ${shot.dialogue ? `台词：${shot.dialogue}` : ''}
 景别：${shot.shotSize || '未指定'}
 起始帧视觉描述：${startKf?.visualPrompt || '无'}
 ${endKf?.visualPrompt ? `结束帧视觉描述：${endKf.visualPrompt}` : ''}`;
-  }).join('\n');
+    })
+    .join('\n');
 
   return `你是一位专业的影视视觉连续性检查员。你的任务是仔细对比同一角色在不同分镜中的视觉描述，判断是否存在真正的视觉矛盾，还是剧情需要的合理变化。
 
@@ -108,7 +108,7 @@ export const checkCharacterConsistency = async (
   char: Character,
   scriptData: ScriptData,
   shotGroups: ShotWithScene[],
-  model?: string
+  model?: string,
 ): Promise<ConsistencyCheckResult> => {
   if (shotGroups.length < 2) {
     return {
@@ -122,13 +122,16 @@ export const checkCharacterConsistency = async (
   }
 
   const resolvedModel = model || getDefaultChatModelId();
-  logger.debug(LogCategory.AI, `🔍 checkCharacterConsistency 调用 - 角色: ${char.name}, 分镜数: ${shotGroups.length}, 模型: ${resolvedModel}`);
+  logger.debug(
+    LogCategory.AI,
+    `🔍 checkCharacterConsistency 调用 - 角色: ${char.name}, 分镜数: ${shotGroups.length}, 模型: ${resolvedModel}`,
+  );
 
   const prompt = buildConsistencyPrompt(char, scriptData, shotGroups);
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.3, 4096, 'json_object')
+      chatCompletion(prompt, resolvedModel, 0.3, 4096, 'json_object'),
     );
 
     const text = cleanJsonString(responseText);
@@ -136,19 +139,21 @@ export const checkCharacterConsistency = async (
 
     const score = typeof parsed.consistencyScore === 'number' ? parsed.consistencyScore : 10;
 
-    const conflicts: ConsistencyConflict[] = (Array.isArray(parsed.conflicts) ? parsed.conflicts : [])
+    const conflicts: ConsistencyConflict[] = (
+      Array.isArray(parsed.conflicts) ? parsed.conflicts : []
+    )
       .filter((c: any) => c && typeof c === 'object')
       .map((c: any) => ({
         id: nextConflictId(),
         type: c.type || 'feature_mismatch',
-        severity: c.isPlotDriven ? 'info' : (c.severity || 'warning'),
+        severity: c.isPlotDriven ? 'info' : c.severity || 'warning',
         characterId: char.id,
         characterName: char.name,
         shotIds: Array.isArray(c.shotIds) ? c.shotIds : [],
         description: c.description || '',
         isPlotDriven: !!c.isPlotDriven,
         plotExplanation: c.plotExplanation || null,
-        suggestion: c.isPlotDriven ? null : (c.suggestion || null),
+        suggestion: c.isPlotDriven ? null : c.suggestion || null,
         userDecision: 'pending',
       }));
 
@@ -158,10 +163,13 @@ export const checkCharacterConsistency = async (
       totalShots: shotGroups.length,
       consistencyScore: score,
       conflicts,
-      passed: score >= 8 && conflicts.every(c => c.isPlotDriven),
+      passed: score >= 8 && conflicts.every((c) => c.isPlotDriven),
     };
 
-    logger.debug(LogCategory.AI, `✅ 角色 ${char.name} 一致性检查完成: 评分 ${score}/10, 冲突 ${conflicts.length} 项`);
+    logger.debug(
+      LogCategory.AI,
+      `✅ 角色 ${char.name} 一致性检查完成: 评分 ${score}/10, 冲突 ${conflicts.length} 项`,
+    );
     return result;
   } catch (error: any) {
     logger.warn(LogCategory.AI, `⚠️ 角色 ${char.name} 一致性检查失败:`, error?.message);
@@ -180,9 +188,9 @@ export const checkAllCharactersConsistency = async (
   scriptData: ScriptData,
   shots: Shot[],
   scenes: Scene[],
-  model?: string
+  model?: string,
 ): Promise<ConsistencyCheckResult[]> => {
-  const sceneMap = new Map(scenes.map(s => [s.id, s]));
+  const sceneMap = new Map(scenes.map((s) => [s.id, s]));
 
   const charShotMap = new Map<string, ShotWithScene[]>();
   for (const shot of shots) {
@@ -210,17 +218,21 @@ export const fixKeyframeConsistency = async (
   shot: Shot,
   conflict: ConsistencyConflict,
   scriptData: ScriptData,
-  model?: string
+  model?: string,
 ): Promise<{ startPrompt: string; endPrompt: string }> => {
   const resolvedModel = model || getDefaultChatModelId();
   logger.debug(LogCategory.AI, `🔄 fixKeyframeConsistency 调用 - 修复分镜 ${shot.id}`);
 
-  const char = scriptData.characters.find(c => c.id === conflict.characterId);
+  const char = scriptData.characters.find((c) => c.id === conflict.characterId);
   const prompt = `你是一位专业的影视视觉修复师。请根据以下一致性冲突信息，修复该镜头的关键帧视觉描述。
 
 ## 角色信息
-${char ? `名称：${char.name}
-官方视觉设定：${char.visualPrompt || '未提供'}` : conflict.characterName}
+${
+  char
+    ? `名称：${char.name}
+官方视觉设定：${char.visualPrompt || '未提供'}`
+    : conflict.characterName
+}
 
 ## 冲突描述
 ${conflict.description}
@@ -235,8 +247,8 @@ ${shot.dialogue ? `台词：${shot.dialogue}` : ''}
 景别：${shot.shotSize || '未指定'}
 
 ## 当前关键帧描述
-起始帧：${shot.keyframes.find(k => k.type === 'start')?.visualPrompt || '无'}
-${shot.keyframes.find(k => k.type === 'end')?.visualPrompt ? `结束帧：${shot.keyframes.find(k => k.type === 'end')?.visualPrompt}` : ''}
+起始帧：${shot.keyframes.find((k) => k.type === 'start')?.visualPrompt || '无'}
+${shot.keyframes.find((k) => k.type === 'end')?.visualPrompt ? `结束帧：${shot.keyframes.find((k) => k.type === 'end')?.visualPrompt}` : ''}
 
 ## 修复要求
 1. 保持镜头动作描述和运镜方式不变
@@ -252,14 +264,20 @@ ${shot.keyframes.find(k => k.type === 'end')?.visualPrompt ? `结束帧：${shot
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.5, 2048, 'json_object')
+      chatCompletion(prompt, resolvedModel, 0.5, 2048, 'json_object'),
     );
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
     return {
-      startPrompt: parsed.startPrompt?.trim() || shot.keyframes.find(k => k.type === 'start')?.visualPrompt || '',
-      endPrompt: parsed.endPrompt?.trim() || shot.keyframes.find(k => k.type === 'end')?.visualPrompt || '',
+      startPrompt:
+        parsed.startPrompt?.trim() ||
+        shot.keyframes.find((k) => k.type === 'start')?.visualPrompt ||
+        '',
+      endPrompt:
+        parsed.endPrompt?.trim() ||
+        shot.keyframes.find((k) => k.type === 'end')?.visualPrompt ||
+        '',
     };
   } catch (error: any) {
     logger.error(LogCategory.AI, `❌ fixKeyframeConsistency 失败:`, error?.message);

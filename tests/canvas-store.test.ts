@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { useCanvasStore } from '../src/modules/canvas/hooks/useCanvasState';
 import type { LayerData } from '../src/modules/canvas/types/canvas';
 
@@ -84,7 +84,7 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().duplicateLayer('l1');
       const state = useCanvasStore.getState();
       expect(state.layers).toHaveLength(2);
-      const dup = state.layers.find(l => l.id !== 'l1')!;
+      const dup = state.layers.find((l) => l.id !== 'l1')!;
       expect(dup.x).toBe(50 + 20);
       expect(dup.y).toBe(50 + 20);
       expect(state.selectedLayerId).toBe(dup.id);
@@ -97,7 +97,7 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().addLayer(createLayer({ id: 'l2' }));
       useCanvasStore.getState().addLayer(createLayer({ id: 'l3' }));
       useCanvasStore.getState().reorderLayer('l3', 0);
-      const ids = useCanvasStore.getState().layers.map(l => l.id);
+      const ids = useCanvasStore.getState().layers.map((l) => l.id);
       expect(ids).toEqual(['l3', 'l1', 'l2']);
     });
   });
@@ -171,9 +171,9 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().selectMultipleLayers(['l1', 'l2']);
       useCanvasStore.getState().groupSelectedLayers();
       const state = useCanvasStore.getState();
-      const group = state.layers.find(l => l.type === 'group')!;
+      const group = state.layers.find((l) => l.type === 'group')!;
       expect(group).toBeDefined();
-      expect(state.layers.filter(l => l.parentId === group.id)).toHaveLength(2);
+      expect(state.layers.filter((l) => l.parentId === group.id)).toHaveLength(2);
     });
 
     it('ungroup removes parentId and deletes group layer', () => {
@@ -181,10 +181,10 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().addLayer(createLayer({ id: 'l2', x: 100, y: 100 }));
       useCanvasStore.getState().selectMultipleLayers(['l1', 'l2']);
       useCanvasStore.getState().groupSelectedLayers();
-      const groupId = useCanvasStore.getState().layers.find(l => l.type === 'group')!.id;
+      const groupId = useCanvasStore.getState().layers.find((l) => l.type === 'group')!.id;
       useCanvasStore.getState().ungroupLayers(groupId);
-      expect(useCanvasStore.getState().layers.find(l => l.type === 'group')).toBeUndefined();
-      expect(useCanvasStore.getState().layers.every(l => !l.parentId)).toBe(true);
+      expect(useCanvasStore.getState().layers.find((l) => l.type === 'group')).toBeUndefined();
+      expect(useCanvasStore.getState().layers.every((l) => !l.parentId)).toBe(true);
     });
   });
 
@@ -238,7 +238,7 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().pasteLayers();
       const state = useCanvasStore.getState();
       expect(state.layers).toHaveLength(2);
-      const pasted = state.layers.find(l => l.id !== 'l1')!;
+      const pasted = state.layers.find((l) => l.id !== 'l1')!;
       expect(pasted.x).toBe(10 + 20);
       expect(pasted.y).toBe(20 + 20);
       expect(pasted.title).toContain('(copy)');
@@ -280,9 +280,9 @@ describe('useCanvasStore', () => {
       useCanvasStore.getState().addLayer(createLayer({ id: 'l1', zIndex: 0 }));
       useCanvasStore.getState().addLayer(createLayer({ id: 'l2', zIndex: 1 }));
       useCanvasStore.getState().bringToFront('l1');
-      expect(useCanvasStore.getState().layers.find(l => l.id === 'l1')!.zIndex).toBe(2);
+      expect(useCanvasStore.getState().layers.find((l) => l.id === 'l1')!.zIndex).toBe(2);
       useCanvasStore.getState().sendToBack('l2');
-      expect(useCanvasStore.getState().layers.find(l => l.id === 'l2')!.zIndex).toBe(-1);
+      expect(useCanvasStore.getState().layers.find((l) => l.id === 'l2')!.zIndex).toBe(-1);
     });
   });
 

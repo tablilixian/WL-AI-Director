@@ -17,7 +17,7 @@ interface AssetLibraryModalProps {
 export const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
   isOpen,
   onClose,
-  initialFilter = 'all',
+
   onImport,
   onReplace,
   replaceTargetCharId,
@@ -37,21 +37,30 @@ export const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
     deleteItem,
   } = useAssetLibrary({ autoLoad: isOpen });
 
-  const handleFilterChange = useCallback((newFilter: AssetFilter) => {
-    setFilter(newFilter);
-  }, [setFilter]);
+  const handleFilterChange = useCallback(
+    (newFilter: AssetFilter) => {
+      setFilter(newFilter);
+    },
+    [setFilter],
+  );
 
-  const handleDelete = useCallback(async (itemId: string) => {
-    await deleteItem(itemId);
-  }, [deleteItem]);
+  const handleDelete = useCallback(
+    async (itemId: string) => {
+      await deleteItem(itemId);
+    },
+    [deleteItem],
+  );
 
-  const handleSelect = useCallback((item: AssetLibraryItem) => {
-    if (replaceTargetCharId && onReplace) {
-      onReplace(item, replaceTargetCharId);
-    } else {
-      onImport(item);
-    }
-  }, [replaceTargetCharId, onReplace, onImport]);
+  const handleSelect = useCallback(
+    (item: AssetLibraryItem) => {
+      if (replaceTargetCharId && onReplace) {
+        onReplace(item, replaceTargetCharId);
+      } else {
+        onImport(item);
+      }
+    },
+    [replaceTargetCharId, onReplace, onImport],
+  );
 
   if (!isOpen) return null;
 
@@ -73,8 +82,18 @@ export const AssetLibraryModal: React.FC<AssetLibraryModalProps> = ({
       >
         <div className="h-16 px-8 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[var(--bg-elevated)]">
           <div className="flex items-center gap-3">
-            <svg className="w-4 h-4 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            <svg
+              className="w-4 h-4 text-[var(--accent-text)]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
             </svg>
             <div>
               <div className="text-sm font-bold text-[var(--text-primary)]">资产库</div>

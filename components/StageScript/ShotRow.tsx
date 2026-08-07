@@ -1,19 +1,40 @@
 import React, { useState } from 'react';
 import { Aperture, Edit2, Check, X, UserPlus, Trash2, Plus, Sparkles } from 'lucide-react';
-import { Shot, Character, ScriptData } from '../../types';
+import { Shot, ScriptData } from '../../types';
 import InlineEditor from './InlineEditor';
 import { STYLES } from './constants';
 import { CAMERA_SHOT_SIZES, CAMERA_MOVEMENT_TYPES } from '../StageDirector/constants';
 
 const visualVerbs = [
-  '握紧', '攥紧', '颤抖', '抽搐', '低头', '抬头',
-  '挥拳', '重击', '撩发', '撕扯', '攥进', '抠进',
-  '青筋', '咬牙', '瞪眼', '皱眉', '咬唇',
+  '握紧',
+  '攥紧',
+  '颤抖',
+  '抽搐',
+  '低头',
+  '抬头',
+  '挥拳',
+  '重击',
+  '撩发',
+  '撕扯',
+  '攥进',
+  '抠进',
+  '青筋',
+  '咬牙',
+  '瞪眼',
+  '皱眉',
+  '咬唇',
 ];
 
 const emotionalKeywords = [
-  '我很', '我很生气', '我伤心', '我难过',
-  '他看起来', '她看起来', '气氛', '悲伤', '压抑',
+  '我很',
+  '我很生气',
+  '我伤心',
+  '我难过',
+  '他看起来',
+  '她看起来',
+  '气氛',
+  '悲伤',
+  '压抑',
 ];
 
 interface ActionDensityBadgeProps {
@@ -23,12 +44,15 @@ interface ActionDensityBadgeProps {
 
 const ActionDensityBadge: React.FC<ActionDensityBadgeProps> = ({ actionSummary, dialogue }) => {
   const length = actionSummary?.length || 0;
-  const hasVisualVerbs = visualVerbs.some(v => actionSummary?.includes(v));
-  const hasEmotionalDialogue = dialogue && emotionalKeywords.some(k => dialogue.includes(k));
+  const hasVisualVerbs = visualVerbs.some((v) => actionSummary?.includes(v));
+  const hasEmotionalDialogue = dialogue && emotionalKeywords.some((k) => dialogue.includes(k));
 
   if (length < 20 && !hasVisualVerbs) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--error-bg)]/50 text-[var(--error-text)] text-[8px] font-bold rounded" title="动作描写薄弱">
+      <span
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--error-bg)]/50 text-[var(--error-text)] text-[8px] font-bold rounded"
+        title="动作描写薄弱"
+      >
         动作薄弱
       </span>
     );
@@ -36,7 +60,10 @@ const ActionDensityBadge: React.FC<ActionDensityBadgeProps> = ({ actionSummary, 
 
   if (hasVisualVerbs && !hasEmotionalDialogue) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--success-bg)]/50 text-[var(--success-text)] text-[8px] font-bold rounded" title="视觉化动作强">
+      <span
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--success-bg)]/50 text-[var(--success-text)] text-[8px] font-bold rounded"
+        title="视觉化动作强"
+      >
         <Sparkles className="w-3 h-3" />
         视觉化强
       </span>
@@ -45,7 +72,10 @@ const ActionDensityBadge: React.FC<ActionDensityBadgeProps> = ({ actionSummary, 
 
   if (hasEmotionalDialogue) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--warning-bg)]/50 text-[var(--warning-text)] text-[8px] font-bold rounded" title="台词包含情绪描述">
+      <span
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--warning-bg)]/50 text-[var(--warning-text)] text-[8px] font-bold rounded"
+        title="台词包含情绪描述"
+      >
         情绪冗余
       </span>
     );
@@ -107,7 +137,7 @@ const ShotRow: React.FC<Props> = ({
   onSaveCamera,
   onCancelCamera,
   onAddSubShot,
-  onDeleteShot
+  onDeleteShot,
 }) => {
   const [localCameraMovement, setLocalCameraMovement] = useState(shot.cameraMovement || '');
   const [localShotSize, setLocalShotSize] = useState(shot.shotSize || '中景');
@@ -150,31 +180,39 @@ const ShotRow: React.FC<Props> = ({
             </button>
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-2">
           {editingShotCameraId === shot.id ? (
             <div className="space-y-2 p-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg">
               <div className="space-y-1.5">
-                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">景别</label>
+                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">
+                  景别
+                </label>
                 <select
                   value={localShotSize}
                   onChange={(e) => setLocalShotSize(e.target.value)}
                   className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-1.5 py-1 text-[10px] font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                 >
-                  {CAMERA_SHOT_SIZES.map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {CAMERA_SHOT_SIZES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">运镜</label>
+                <label className="text-[8px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">
+                  运镜
+                </label>
                 <select
                   value={localCameraMovement}
                   onChange={(e) => setLocalCameraMovement(e.target.value)}
                   className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-1.5 py-1 text-[10px] font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                 >
-                  {CAMERA_MOVEMENT_TYPES.map(m => (
-                    <option key={m.id} value={m.label}>{m.label}</option>
+                  {CAMERA_MOVEMENT_TYPES.map((m) => (
+                    <option key={m.id} value={m.label}>
+                      {m.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -198,14 +236,22 @@ const ShotRow: React.FC<Props> = ({
           ) : (
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { setLocalShotSize(shot.shotSize || '中景'); setLocalCameraMovement(shot.cameraMovement || ''); onEditCamera(shot.id); }}
+                onClick={() => {
+                  setLocalShotSize(shot.shotSize || '中景');
+                  setLocalCameraMovement(shot.cameraMovement || '');
+                  onEditCamera(shot.id);
+                }}
                 className="group/btn px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title="编辑景别"
               >
                 {shot.shotSize || '中景'}
               </button>
               <button
-                onClick={() => { setLocalShotSize(shot.shotSize || '中景'); setLocalCameraMovement(shot.cameraMovement || ''); onEditCamera(shot.id); }}
+                onClick={() => {
+                  setLocalShotSize(shot.shotSize || '中景');
+                  setLocalCameraMovement(shot.cameraMovement || '');
+                  onEditCamera(shot.id);
+                }}
                 className="group/btn px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] text-[10px] font-mono text-[var(--text-tertiary)] uppercase text-center rounded hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title="编辑运镜"
               >
@@ -221,7 +267,9 @@ const ShotRow: React.FC<Props> = ({
         {editingShotActionId === shot.id ? (
           <div className="space-y-3 p-4 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">动作描述</label>
+              <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">
+                动作描述
+              </label>
               <textarea
                 value={editingShotActionText}
                 onChange={(e) => onEditAction(shot.id, e.target.value, editingShotDialogueText)}
@@ -230,9 +278,11 @@ const ShotRow: React.FC<Props> = ({
                 placeholder="输入动作描述..."
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">台词（可选）</label>
+              <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">
+                台词（可选）
+              </label>
               <textarea
                 value={editingShotDialogueText}
                 onChange={(e) => onEditAction(shot.id, editingShotActionText, e.target.value)}
@@ -241,13 +291,19 @@ const ShotRow: React.FC<Props> = ({
                 placeholder="输入台词（留空表示无台词）..."
               />
             </div>
-            
+
             <div className="flex gap-2 pt-2 border-t border-[var(--border-primary)]">
-              <button onClick={onSaveAction} className="px-3 py-1.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded flex items-center gap-1 hover:bg-[var(--btn-primary-hover)] transition-colors">
+              <button
+                onClick={onSaveAction}
+                className="px-3 py-1.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded flex items-center gap-1 hover:bg-[var(--btn-primary-hover)] transition-colors"
+              >
                 <Check className="w-3 h-3" />
                 保存
               </button>
-              <button onClick={onCancelAction} className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] text-xs font-bold rounded flex items-center gap-1 hover:bg-[var(--border-secondary)] transition-colors">
+              <button
+                onClick={onCancelAction}
+                className="px-3 py-1.5 bg-[var(--bg-hover)] text-[var(--text-tertiary)] text-xs font-bold rounded flex items-center gap-1 hover:bg-[var(--border-secondary)] transition-colors"
+              >
                 <X className="w-3 h-3" />
                 取消
               </button>
@@ -268,19 +324,23 @@ const ShotRow: React.FC<Props> = ({
                 <Edit2 className="w-3.5 h-3.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]" />
               </button>
             </div>
-            
+
             {shot.dialogue && (
               <div className="pl-6 border-l-2 border-[var(--border-primary)] group-hover:border-[var(--border-secondary)] transition-colors py-1 mt-3">
-                <p className="text-[var(--text-tertiary)] font-serif italic text-sm">"{shot.dialogue}"</p>
+                <p className="text-[var(--text-tertiary)] font-serif italic text-sm">
+                  "{shot.dialogue}"
+                </p>
               </div>
             )}
           </div>
         )}
-        
+
         {/* Characters */}
         <div className="pt-2">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">角色</span>
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+              角色
+            </span>
             <button
               onClick={() => onEditCharacters(shot.id)}
               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[var(--bg-hover)] rounded"
@@ -289,19 +349,24 @@ const ShotRow: React.FC<Props> = ({
               <Edit2 className="w-3 h-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]" />
             </button>
           </div>
-          
+
           {editingShotCharactersId === shot.id ? (
             <div className="space-y-3 p-3 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg">
               <div className="space-y-2">
-                <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">当前角色</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                  当前角色
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {shot.characters.length === 0 ? (
                     <span className="text-xs text-[var(--text-muted)] italic">无角色</span>
                   ) : (
-                    shot.characters.map(cid => {
-                      const char = scriptData?.characters.find(c => c.id === cid);
+                    shot.characters.map((cid) => {
+                      const char = scriptData?.characters.find((c) => c.id === cid);
                       return char ? (
-                        <div key={cid} className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)] border border-[var(--border-secondary)] px-2 py-1 rounded-md bg-[var(--bg-elevated)]">
+                        <div
+                          key={cid}
+                          className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)] border border-[var(--border-secondary)] px-2 py-1 rounded-md bg-[var(--bg-elevated)]"
+                        >
                           <span>{char.name}</span>
                           <button
                             onClick={() => onRemoveCharacter(shot.id, cid)}
@@ -316,13 +381,15 @@ const ShotRow: React.FC<Props> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">添加角色</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                  添加角色
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {scriptData?.characters
-                    .filter(char => !shot.characters.includes(char.id))
-                    .map(char => (
+                    .filter((char) => !shot.characters.includes(char.id))
+                    .map((char) => (
                       <button
                         key={char.id}
                         onClick={() => onAddCharacter(shot.id, char.id)}
@@ -333,12 +400,13 @@ const ShotRow: React.FC<Props> = ({
                         <span>{char.name}</span>
                       </button>
                     ))}
-                  {scriptData?.characters.filter(char => !shot.characters.includes(char.id)).length === 0 && (
+                  {scriptData?.characters.filter((char) => !shot.characters.includes(char.id))
+                    .length === 0 && (
                     <span className="text-xs text-[var(--text-muted)] italic">所有角色已添加</span>
                   )}
                 </div>
               </div>
-              
+
               <div className="pt-2 border-t border-[var(--border-primary)]">
                 <button
                   onClick={onCloseCharactersEdit}
@@ -354,10 +422,13 @@ const ShotRow: React.FC<Props> = ({
               {shot.characters.length === 0 ? (
                 <span className="text-[10px] text-[var(--text-muted)] italic">无角色</span>
               ) : (
-                shot.characters.map(cid => {
-                  const char = scriptData?.characters.find(c => c.id === cid);
+                shot.characters.map((cid) => {
+                  const char = scriptData?.characters.find((c) => c.id === cid);
                   return char ? (
-                    <span key={cid} className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-tertiary)] border border-[var(--border-primary)] px-2 py-0.5 rounded-full bg-[var(--bg-elevated)]">
+                    <span
+                      key={cid}
+                      className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-tertiary)] border border-[var(--border-primary)] px-2 py-0.5 rounded-full bg-[var(--bg-elevated)]"
+                    >
                       {char.name}
                     </span>
                   ) : null;
@@ -385,7 +456,9 @@ const ShotRow: React.FC<Props> = ({
           </div>
           <InlineEditor
             isEditing={editingShotId === shot.id}
-            value={editingShotId === shot.id ? editingShotPrompt : shot.keyframes[0]?.visualPrompt || ''}
+            value={
+              editingShotId === shot.id ? editingShotPrompt : shot.keyframes[0]?.visualPrompt || ''
+            }
             onEdit={() => onEditPrompt(shot.id, shot.keyframes[0]?.visualPrompt || '')}
             onChange={(val) => onEditPrompt(shot.id, val)}
             onSave={onSavePrompt}
@@ -416,7 +489,9 @@ const ShotRow: React.FC<Props> = ({
         </div>
         <InlineEditor
           isEditing={editingShotId === shot.id}
-          value={editingShotId === shot.id ? editingShotPrompt : shot.keyframes[0]?.visualPrompt || ''}
+          value={
+            editingShotId === shot.id ? editingShotPrompt : shot.keyframes[0]?.visualPrompt || ''
+          }
           onEdit={() => onEditPrompt(shot.id, shot.keyframes[0]?.visualPrompt || '')}
           onChange={(val) => onEditPrompt(shot.id, val)}
           onSave={onSavePrompt}

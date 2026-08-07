@@ -73,14 +73,21 @@ export class FFmpegWorker {
     return worker;
   }
 
-  async load(opts?: { coreURL?: string; wasmURL?: string }, signal?: AbortSignal): Promise<boolean> {
+  async load(
+    opts?: { coreURL?: string; wasmURL?: string },
+    signal?: AbortSignal,
+  ): Promise<boolean> {
     if (!this.worker) {
       this.worker = this.createWorker();
     }
-    return this.send('load', {
-      coreURL: opts?.coreURL || '/ffmpeg/ffmpeg-core-umd.js',
-      wasmURL: opts?.wasmURL || '/ffmpeg/ffmpeg-core.wasm',
-    }, signal);
+    return this.send(
+      'load',
+      {
+        coreURL: opts?.coreURL || '/ffmpeg/ffmpeg-core-umd.js',
+        wasmURL: opts?.wasmURL || '/ffmpeg/ffmpeg-core.wasm',
+      },
+      signal,
+    );
   }
 
   async writeFile(path: string, data: Uint8Array): Promise<void> {
@@ -99,7 +106,7 @@ export class FFmpegWorker {
     return this.send('exec', { args, timeout: -1 });
   }
 
-  on(_event: string, _cb: Function) {
+  on(_event: string, _cb: (...args: unknown[]) => void) {
     // progress events not exposed yet
   }
 
@@ -123,11 +130,15 @@ export class FFmpegWorker {
       this.rejects[id] = reject;
       this.worker.postMessage({ id, type, data });
       if (signal) {
-        signal.addEventListener('abort', () => {
-          reject(new DOMException(`Message #${id} was aborted`, 'AbortError'));
-          delete this.resolves[id];
-          delete this.rejects[id];
-        }, { once: true });
+        signal.addEventListener(
+          'abort',
+          () => {
+            reject(new DOMException(`Message #${id} was aborted`, 'AbortError'));
+            delete this.resolves[id];
+            delete this.rejects[id];
+          },
+          { once: true },
+        );
       }
     });
   }

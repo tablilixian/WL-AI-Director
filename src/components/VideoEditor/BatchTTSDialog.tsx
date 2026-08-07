@@ -7,48 +7,46 @@ import { cleanDialogueText } from '../../utils/textUtils';
 import { indexedDBService } from '../../services/indexedDB';
 import { nanoid } from 'nanoid';
 
-interface CharacterGroup {
-  character: string;
-  clips: TextClip[];
-}
-
 interface BatchTTSDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
-  isOpen,
-  onClose,
-}) => {
+export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({ isOpen, onClose }) => {
   const [voices, setVoices] = useState<TTSVoice[]>([]);
   const [voiceMap, setVoiceMap] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<'idle' | 'done' | 'error'>('idle');
-  const [clipStatus, setClipStatus] = useState<Record<string, 'pending' | 'generating' | 'done' | 'error'>>({});
+  const [clipStatus, setClipStatus] = useState<
+    Record<string, 'pending' | 'generating' | 'done' | 'error'>
+  >({});
   const voiceInitRef = useRef(false);
 
   const provider = useMemo(() => getTTSProvider(), []);
 
   useEffect(() => {
-    provider.getVoices().then(setVoices).catch(() => {});
+    provider
+      .getVoices()
+      .then(setVoices)
+      .catch(() => {});
   }, [provider]);
 
   const textClips = useMemo(() => {
     const { tracks } = useTimelineStore.getState();
-    const textTrack = tracks.find(t => t.type === 'text');
+    const textTrack = tracks.find((t) => t.type === 'text');
     if (!textTrack) return [];
-    return textTrack.clips
-      .filter((c): c is TextClip => {
-        const tc = c as TextClip;
-        return tc.type === 'text' && !!tc.text?.trim();
-      });
+    return textTrack.clips.filter((c): c is TextClip => {
+      const tc = c as TextClip;
+      return tc.type === 'text' && !!tc.text?.trim();
+    });
   }, [isOpen]);
 
-  const pendingClips = useMemo(() =>
-    textClips.filter(c => !c.ttsStatus || c.ttsStatus === 'none' || c.ttsStatus === 'error'),
-  [textClips, clipStatus]);
+  const pendingClips = useMemo(
+    () =>
+      textClips.filter((c) => !c.ttsStatus || c.ttsStatus === 'none' || c.ttsStatus === 'error'),
+    [textClips, clipStatus],
+  );
 
   const groups = useMemo(() => {
     const map = new Map<string, TextClip[]>();
@@ -75,13 +73,13 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
     const defaults: Record<string, string> = {};
     for (const group of groups) {
       defaults[group.character] =
-        voices.find(v => v.id.includes('Xiaoxiao'))?.id || voices[0]?.id || '';
+        voices.find((v) => v.id.includes('Xiaoxiao'))?.id || voices[0]?.id || '';
     }
     setVoiceMap(defaults);
   }, [isOpen, voices, groups]);
 
   const setCharacterVoice = useCallback((character: string, voiceId: string) => {
-    setVoiceMap(prev => ({ ...prev, [character]: voiceId }));
+    setVoiceMap((prev) => ({ ...prev, [character]: voiceId }));
   }, []);
 
   const totalPending = pendingClips.length;
@@ -99,7 +97,7 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
     setClipStatus(initial);
 
     const { tracks, addClip, updateClip } = useTimelineStore.getState();
-    const audioTrack = tracks.find(t => t.type === 'audio');
+    const audioTrack = tracks.find((t) => t.type === 'audio');
     if (!audioTrack) {
       setProgress('未找到音频轨道');
       setResult('error');
@@ -119,12 +117,12 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
 
       if (!voiceId) {
         console.warn(`[BatchTTS] ${character} 未选择语音，跳过`);
-        setClipStatus(prev => ({ ...prev, [clip.id]: 'error' }));
+        setClipStatus((prev) => ({ ...prev, [clip.id]: 'error' }));
         failCount++;
         continue;
       }
 
-      setClipStatus(prev => ({ ...prev, [clip.id]: 'generating' }));
+      setClipStatus((prev) => ({ ...prev, [clip.id]: 'generating' }));
       setProgress(`生成中 (${i + 1}/${totalPending}): ${shortText}...`);
       updateClip(clip.id, { ttsStatus: 'generating' } as any);
 
@@ -165,7 +163,10 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
             audioEl.preload = 'metadata';
             let resolved = false;
             const timer = setTimeout(() => {
-              if (!resolved) { resolved = true; resolve(); }
+              if (!resolved) {
+                resolved = true;
+                resolve();
+              }
             }, 5000);
             audioEl.onloadedmetadata = () => {
               if (resolved) return;
@@ -189,7 +190,7 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
           }
         });
 
-        const voiceName = voices.find(v => v.id === voiceId)?.name;
+        const voiceName = voices.find((v) => v.id === voiceId)?.name;
         updateClip(clip.id, {
           ttsStatus: 'done',
           ttsVoiceId: voiceId,
@@ -197,12 +198,12 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
           ttsAudioClipId: audioClip.id,
         } as any);
 
-        setClipStatus(prev => ({ ...prev, [clip.id]: 'done' }));
+        setClipStatus((prev) => ({ ...prev, [clip.id]: 'done' }));
         successCount++;
       } catch (e: any) {
         console.error(`[BatchTTS] ${shortText} 失败:`, e);
         updateClip(clip.id, { ttsStatus: 'error' } as any);
-        setClipStatus(prev => ({ ...prev, [clip.id]: 'error' }));
+        setClipStatus((prev) => ({ ...prev, [clip.id]: 'error' }));
         failCount++;
       }
     }
@@ -227,22 +228,32 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
             <Volume2 className="w-4 h-4 text-blue-400" />
             批量生成配音
           </h2>
-          <button onClick={handleClose} className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)]">
+          <button
+            onClick={handleClose}
+            className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)]"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-5 space-y-4">
           {groups.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)] py-4 text-center">没有待生成配音的字幕</p>
+            <p className="text-xs text-[var(--text-muted)] py-4 text-center">
+              没有待生成配音的字幕
+            </p>
           ) : (
             <div className="max-h-56 overflow-y-auto space-y-3">
-              {groups.map(group => (
-                <div key={group.character} className="bg-[var(--bg-secondary)] rounded-lg p-3 space-y-2">
+              {groups.map((group) => (
+                <div
+                  key={group.character}
+                  className="bg-[var(--bg-secondary)] rounded-lg p-3 space-y-2"
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-[var(--text-primary)]">
                       {group.character}
-                      <span className="ml-1 text-[var(--text-muted)] font-normal">({group.clips.length} 段)</span>
+                      <span className="ml-1 text-[var(--text-muted)] font-normal">
+                        ({group.clips.length} 段)
+                      </span>
                     </span>
                     <select
                       value={voiceMap[group.character] || ''}
@@ -251,21 +262,27 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
                       className="w-44 px-2 py-1 bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded text-[10px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
                     >
                       <option value="">选择语音...</option>
-                      {voices.map(v => (
-                        <option key={v.id} value={v.id}>{v.name}</option>
+                      {voices.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div className="space-y-0.5">
-                    {group.clips.map(clip => {
+                    {group.clips.map((clip) => {
                       const st = clipStatus[clip.id] || 'pending';
                       return (
                         <div key={clip.id} className="flex items-center gap-2 py-0.5">
                           <div className="w-3.5 flex justify-center flex-shrink-0">
-                            {st === 'generating' && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+                            {st === 'generating' && (
+                              <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+                            )}
                             {st === 'done' && <Check className="w-3 h-3 text-green-500" />}
                             {st === 'error' && <AlertCircle className="w-3 h-3 text-red-500" />}
-                            {st === 'pending' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />}
+                            {st === 'pending' && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />
+                            )}
                           </div>
                           <span className="text-[11px] text-[var(--text-primary)] truncate flex-1">
                             {cleanDialogueText(clip.text)}
@@ -280,11 +297,15 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
           )}
 
           {progress && (
-            <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded ${
-              result === 'done' ? 'bg-green-500/10 text-green-500' :
-              result === 'error' ? 'bg-red-500/10 text-red-500' :
-              'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
-            }`}>
+            <div
+              className={`flex items-center gap-2 text-xs px-3 py-2 rounded ${
+                result === 'done'
+                  ? 'bg-green-500/10 text-green-500'
+                  : result === 'error'
+                    ? 'bg-red-500/10 text-red-500'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+              }`}
+            >
               {generating && <Loader2 className="w-3 h-3 animate-spin" />}
               {result === 'done' && <Check className="w-3 h-3" />}
               {result === 'error' && <AlertCircle className="w-3 h-3" />}
@@ -292,9 +313,7 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
             </div>
           )}
 
-          <div className="text-[10px] text-[var(--text-tertiary)]">
-            引擎: {provider.name}
-          </div>
+          <div className="text-[10px] text-[var(--text-tertiary)]">引擎: {provider.name}</div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -309,7 +328,11 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({
               disabled={generating || totalPending === 0}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-500 rounded hover:bg-blue-600 disabled:opacity-40"
             >
-              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Volume2 className="w-3.5 h-3.5" />}
+              {generating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
               {generating ? '生成中...' : `开始生成 (${totalPending})`}
             </button>
           </div>

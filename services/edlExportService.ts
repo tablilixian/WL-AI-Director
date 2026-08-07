@@ -28,7 +28,7 @@ function formatTimecode(seconds: number, frameRate: number = 30): string {
  * @returns 清理后的文件名
  */
 function sanitizeFileName(name: string): string {
-  return name.replace(/[\/\\?%*:|"<>]/g, '_').substring(0, 50);
+  return name.replace(/[/\\?%*:|"<>]/g, '_').substring(0, 50);
 }
 
 /**

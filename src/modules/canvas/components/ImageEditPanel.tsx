@@ -16,7 +16,7 @@ const backgroundPresets = [
   { id: 'underwater', name: '水下', emoji: '🐠' },
   { id: 'space', name: '太空', emoji: '🚀' },
   { id: 'office', name: '办公室', emoji: '🏢' },
-  { id: 'garden', name: '花园', emoji: '🌺' }
+  { id: 'garden', name: '花园', emoji: '🌺' },
 ];
 
 const expandDirections = [
@@ -26,17 +26,22 @@ const expandDirections = [
   { id: 'top', name: '向上扩展', emoji: '⬆️' },
   { id: 'bottom', name: '向下扩展', emoji: '⬇️' },
   { id: 'left-right', name: '左右扩展', emoji: '↔️' },
-  { id: 'top-bottom', name: '上下扩展', emoji: '↕️' }
+  { id: 'top-bottom', name: '上下扩展', emoji: '↕️' },
 ];
 
-export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId, editMode, onClose }) => {
+export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({
+  selectedLayerId,
+  editMode,
+  onClose,
+}) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [customInput, setCustomInput] = useState('');
-  const { layers, addLayer, updateLayer } = useCanvasStore();
+  const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasSelectedImage = selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasSelectedImage =
+    selectedLayer?.type === 'image' && selectedLayer?.src && !selectedLayer?.isLoading;
 
   const handleBackgroundReplace = async (background: string) => {
     if (!hasSelectedImage || !selectedLayer || isProcessing) return;
@@ -48,7 +53,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
       const newImageUrl = await canvasModelService.replaceBackground(
         selectedLayer.src,
         background,
-        (p) => setProgress(p)
+        (p) => setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -93,7 +98,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
         isLoading: false,
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
-        operationType: 'background-replace'
+        operationType: 'background-replace',
       });
 
       onClose();
@@ -112,10 +117,8 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
     setProgress(0);
 
     try {
-      const newImageUrl = await canvasModelService.expandImage(
-        selectedLayer.src,
-        direction,
-        (p) => setProgress(p)
+      const newImageUrl = await canvasModelService.expandImage(selectedLayer.src, direction, (p) =>
+        setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -146,7 +149,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
         }
       }
 
-      const directionName = expandDirections.find(d => d.id === direction)?.name || '扩展';
+      const directionName = expandDirections.find((d) => d.id === direction)?.name || '扩展';
       const newLayerId = crypto.randomUUID();
       addLayer({
         id: newLayerId,
@@ -161,7 +164,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
         isLoading: false,
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
-        operationType: 'expand'
+        operationType: 'expand',
       });
 
       onClose();
@@ -201,25 +204,25 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
           <h3 className="text-lg font-bold text-[var(--text-primary)]">
             {editMode === 'background' ? '背景替换' : '图片扩展'}
           </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="mb-4">
           <p className="text-sm text-[var(--text-muted)]">
-            {editMode === 'background' 
+            {editMode === 'background'
               ? '选择预设背景或输入自定义背景描述。'
               : '选择扩展方向，AI 将自动填充扩展区域。'}
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            当前图片: {selectedLayer?.title}
-          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">当前图片: {selectedLayer?.title}</p>
         </div>
 
         {isProcessing ? (
@@ -262,7 +265,9 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({ selectedLayerId,
                     className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   />
                   <button
-                    onClick={() => customInput.trim() && handleBackgroundReplace(customInput.trim())}
+                    onClick={() =>
+                      customInput.trim() && handleBackgroundReplace(customInput.trim())
+                    }
                     disabled={!customInput.trim()}
                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >

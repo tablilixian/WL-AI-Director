@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Play, Pause, SkipForward, SkipBack, X, Loader2 } from 'lucide-react';
 import { Shot, ProjectState } from '../../types';
 import { STYLES } from './constants';
@@ -28,10 +28,10 @@ const VideoPlayerModal: React.FC<Props> = ({
   onPrevShot,
   onNextShot,
   onShotChange,
-  videoRef
+  videoRef,
 }) => {
   const currentShot = completedShots[currentShotIndex];
-  const shotOriginalIndex = project.shots.findIndex(s => s.id === currentShot.id);
+  const shotOriginalIndex = project.shots.findIndex((s) => s.id === currentShot.id);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -103,7 +103,7 @@ const VideoPlayerModal: React.FC<Props> = ({
               <span className="text-sm">视频不可用</span>
             </div>
           )}
-          
+
           {/* Play/Pause Overlay Button */}
           <button
             onClick={onPlayPause}
@@ -119,7 +119,9 @@ const VideoPlayerModal: React.FC<Props> = ({
 
         {/* Shot Info */}
         <div className="p-4 border-t border-[var(--border-primary)] bg-[var(--bg-surface)]">
-          <p className="text-sm text-[var(--text-secondary)] mb-2 line-clamp-2">{currentShot.actionSummary}</p>
+          <p className="text-sm text-[var(--text-secondary)] mb-2 line-clamp-2">
+            {currentShot.actionSummary}
+          </p>
           {currentShot.dialogue && (
             <p className="text-xs text-[var(--accent-text)] italic">"{currentShot.dialogue}"</p>
           )}

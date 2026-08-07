@@ -1,10 +1,31 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
-import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { CameraChoreography, renderCameraChoreographyPrompt } from '../../../../types';
-import { CAMERA_MOVEMENT_TYPES, CAMERA_SHOT_SIZES, CAMERA_ANGLES, CAMERA_SUBJECT_POSITIONS, CAMERA_FOCUS_TYPES, CAMERA_MOVEMENT_SPEEDS } from '../../../../components/StageDirector/constants';
-import { Plus, GripVertical, Trash2, ChevronDown, Sparkles, Camera, Sun, Mic, Settings, Film, Clock, X, Maximize2, Eye, EyeOff, Layout } from 'lucide-react';
+import {
+  CAMERA_SHOT_SIZES,
+  CAMERA_ANGLES,
+  CAMERA_SUBJECT_POSITIONS,
+  CAMERA_FOCUS_TYPES,
+  CAMERA_MOVEMENT_SPEEDS,
+} from '../../../../components/StageDirector/constants';
+import {
+  Plus,
+  Trash2,
+  ChevronDown,
+  Sparkles,
+  Camera,
+  Sun,
+  Mic,
+  Settings,
+  Film,
+  Clock,
+  X,
+  Maximize2,
+  Eye,
+  EyeOff,
+  Layout,
+} from 'lucide-react';
 import { UI_VIDEO_SIZE_PRESETS } from '../../../../config/sizeConfig';
 import { ResolvedImage } from './ResolvedImage';
 
@@ -51,7 +72,8 @@ interface VideoSizePreset {
   aspectRatio: string;
 }
 
-type RightTab = 'prompt' | 'settings' | 'camera' | 'lighting' | 'dialogue' | 'actions' | 'templates';
+type RightTab =
+  'prompt' | 'settings' | 'camera' | 'lighting' | 'dialogue' | 'actions' | 'templates';
 
 export interface GenerationConfig {
   imageSequence: { layerId: string; imagePrompt: string }[];
@@ -100,67 +122,150 @@ interface TimestampActionItem {
   description: string;
 }
 
-interface VideoTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  subjectPrompt: string;
-  actionPrompt: string;
-  environmentPrompt: string;
-  stylePrompt: string;
-  negativePrompt: string;
-  cameraId: string;
-  cameraIntensity: number;
-  cameraSpeed: number;
-  useChoreography: boolean;
-  startShotSize?: string;
-  startAngle?: string;
-  startSubject?: string;
-  startFocus?: string;
-  movementPath?: string;
-  movementSpeed?: string;
-  endShotSize?: string;
-  endAngle?: string;
-  endSubject?: string;
-  timingStartRatio?: number;
-  timingMoveRatio?: number;
-  timingEndRatio?: number;
-  lightingId: string;
-  lightingIntensity: number;
-  durationMs: number;
-}
-
 // ─── 常量 ────────────────────────────────────────────────
 
 const VIDEO_SIZE_PRESETS: VideoSizePreset[] = UI_VIDEO_SIZE_PRESETS as unknown as VideoSizePreset[];
 
 const CAMERA_MOVEMENTS: CameraMovement[] = [
-  { id: 'none', label: '固定镜头', description: '摄像机保持静止', promptEn: 'Static shot, camera remains fixed, no movement.' },
-  { id: 'push-in', label: '推镜头', description: '摄像机匀速向前推进，聚焦主体', promptEn: 'Camera slowly pushes in towards the subject, gradual dolly forward, intensifying focus.' },
-  { id: 'pull-out', label: '拉镜头', description: '摄像机匀速向后拉远，展示环境', promptEn: 'Camera slowly pulls out, dolly backward, revealing the surrounding environment.' },
-  { id: 'pan-left', label: '左摇摄', description: '摄像机水平向左旋转', promptEn: 'Camera pans left, horizontal rotation from left to right, revealing the scene.' },
-  { id: 'pan-right', label: '右摇摄', description: '摄像机水平向右旋转', promptEn: 'Camera pans right, horizontal rotation, revealing the scene dynamically.' },
-  { id: 'tilt-up', label: '上仰摄', description: '摄像机向上仰起', promptEn: 'Camera tilts upward, revealing the upper part of the scene or subject.' },
-  { id: 'tilt-down', label: '下俯摄', description: '摄像机向下俯拍', promptEn: 'Camera tilts downward, revealing the lower part of the scene or subject.' },
-  { id: 'follow', label: '跟拍', description: '摄像机跟随主体移动', promptEn: 'Camera follows the subject, tracking movement smoothly, maintaining framing.' },
-  { id: 'orbit', label: '环绕', description: '摄像机围绕主体旋转', promptEn: 'Camera orbits around the subject, circular movement, 360-degree rotational shot.' },
-  { id: 'shake', label: '手持抖动', description: '模拟手持拍摄的轻微抖动，增加临场感', promptEn: 'Handheld camera effect, slight shake and vibration, adding realism and tension.' },
-  { id: 'crane-up', label: '升降上', description: '摄像机向上升起，视野逐渐开阔', promptEn: 'Crane shot, camera rises upward, revealing the scene from an elevated perspective.' },
-  { id: 'crane-down', label: '升降下', description: '摄像机向下降落，视野逐渐收窄', promptEn: 'Crane shot, camera descends downward, narrowing the view.' },
+  {
+    id: 'none',
+    label: '固定镜头',
+    description: '摄像机保持静止',
+    promptEn: 'Static shot, camera remains fixed, no movement.',
+  },
+  {
+    id: 'push-in',
+    label: '推镜头',
+    description: '摄像机匀速向前推进，聚焦主体',
+    promptEn:
+      'Camera slowly pushes in towards the subject, gradual dolly forward, intensifying focus.',
+  },
+  {
+    id: 'pull-out',
+    label: '拉镜头',
+    description: '摄像机匀速向后拉远，展示环境',
+    promptEn: 'Camera slowly pulls out, dolly backward, revealing the surrounding environment.',
+  },
+  {
+    id: 'pan-left',
+    label: '左摇摄',
+    description: '摄像机水平向左旋转',
+    promptEn: 'Camera pans left, horizontal rotation from left to right, revealing the scene.',
+  },
+  {
+    id: 'pan-right',
+    label: '右摇摄',
+    description: '摄像机水平向右旋转',
+    promptEn: 'Camera pans right, horizontal rotation, revealing the scene dynamically.',
+  },
+  {
+    id: 'tilt-up',
+    label: '上仰摄',
+    description: '摄像机向上仰起',
+    promptEn: 'Camera tilts upward, revealing the upper part of the scene or subject.',
+  },
+  {
+    id: 'tilt-down',
+    label: '下俯摄',
+    description: '摄像机向下俯拍',
+    promptEn: 'Camera tilts downward, revealing the lower part of the scene or subject.',
+  },
+  {
+    id: 'follow',
+    label: '跟拍',
+    description: '摄像机跟随主体移动',
+    promptEn: 'Camera follows the subject, tracking movement smoothly, maintaining framing.',
+  },
+  {
+    id: 'orbit',
+    label: '环绕',
+    description: '摄像机围绕主体旋转',
+    promptEn: 'Camera orbits around the subject, circular movement, 360-degree rotational shot.',
+  },
+  {
+    id: 'shake',
+    label: '手持抖动',
+    description: '模拟手持拍摄的轻微抖动，增加临场感',
+    promptEn: 'Handheld camera effect, slight shake and vibration, adding realism and tension.',
+  },
+  {
+    id: 'crane-up',
+    label: '升降上',
+    description: '摄像机向上升起，视野逐渐开阔',
+    promptEn: 'Crane shot, camera rises upward, revealing the scene from an elevated perspective.',
+  },
+  {
+    id: 'crane-down',
+    label: '升降下',
+    description: '摄像机向下降落，视野逐渐收窄',
+    promptEn: 'Crane shot, camera descends downward, narrowing the view.',
+  },
 ];
 
 const LIGHTING_PRESETS: LightingPreset[] = [
   { id: 'none', label: '保持原光', description: '不改变原有的光照效果', promptEn: '' },
-  { id: 'front', label: '正面光', description: '光线从正面均匀照射，消除阴影', promptEn: 'Front flat lighting, evenly lit from the camera direction, minimal shadows, details clearly visible.' },
-  { id: 'side', label: '侧光', description: '光线从一侧照射，明暗对比强', promptEn: 'Side lighting, strong light from one side creating deep shadows on the opposite side, high contrast dramatic mood.' },
-  { id: 'rim', label: '逆光', description: '光线从背后照射，勾勒轮廓', promptEn: 'Backlighting and rim lighting, light source behind the subject creating bright edge highlights and silhouette effect.' },
-  { id: 'top', label: '顶光', description: '光线从正上方照射，神秘感', promptEn: 'Top lighting, light source directly above, shadows fall downward, mysterious atmosphere.' },
-  { id: 'bottom', label: '底光', description: '光线从下方照射，诡异庄重', promptEn: 'Under lighting, light source below the subject casting shadows upward, dramatic horror effect.' },
-  { id: 'rembrandt', label: '伦勃朗光', description: '经典肖像布光，脸颊三角光区', promptEn: 'Rembrandt lighting, classic portrait lighting with a triangle of light on the shadow side cheek, painterly quality.' },
-  { id: 'butterfly', label: '蝴蝶光', description: '上前方照射，鼻下蝶形阴影', promptEn: 'Butterfly lighting, key light placed high and directly in front, glamorous and flattering.' },
-  { id: 'neon', label: '霓虹光', description: '彩色霓虹灯光，赛博朋克风格', promptEn: 'Neon lighting, colorful neon lights, cyberpunk aesthetic with vibrant colored light sources.' },
-  { id: 'golden-hour', label: '黄金时刻', description: '日落时分的温暖金色光线', promptEn: 'Golden hour lighting, warm golden sunlight, long shadows, warm color temperature.' },
+  {
+    id: 'front',
+    label: '正面光',
+    description: '光线从正面均匀照射，消除阴影',
+    promptEn:
+      'Front flat lighting, evenly lit from the camera direction, minimal shadows, details clearly visible.',
+  },
+  {
+    id: 'side',
+    label: '侧光',
+    description: '光线从一侧照射，明暗对比强',
+    promptEn:
+      'Side lighting, strong light from one side creating deep shadows on the opposite side, high contrast dramatic mood.',
+  },
+  {
+    id: 'rim',
+    label: '逆光',
+    description: '光线从背后照射，勾勒轮廓',
+    promptEn:
+      'Backlighting and rim lighting, light source behind the subject creating bright edge highlights and silhouette effect.',
+  },
+  {
+    id: 'top',
+    label: '顶光',
+    description: '光线从正上方照射，神秘感',
+    promptEn:
+      'Top lighting, light source directly above, shadows fall downward, mysterious atmosphere.',
+  },
+  {
+    id: 'bottom',
+    label: '底光',
+    description: '光线从下方照射，诡异庄重',
+    promptEn:
+      'Under lighting, light source below the subject casting shadows upward, dramatic horror effect.',
+  },
+  {
+    id: 'rembrandt',
+    label: '伦勃朗光',
+    description: '经典肖像布光，脸颊三角光区',
+    promptEn:
+      'Rembrandt lighting, classic portrait lighting with a triangle of light on the shadow side cheek, painterly quality.',
+  },
+  {
+    id: 'butterfly',
+    label: '蝴蝶光',
+    description: '上前方照射，鼻下蝶形阴影',
+    promptEn:
+      'Butterfly lighting, key light placed high and directly in front, glamorous and flattering.',
+  },
+  {
+    id: 'neon',
+    label: '霓虹光',
+    description: '彩色霓虹灯光，赛博朋克风格',
+    promptEn:
+      'Neon lighting, colorful neon lights, cyberpunk aesthetic with vibrant colored light sources.',
+  },
+  {
+    id: 'golden-hour',
+    label: '黄金时刻',
+    description: '日落时分的温暖金色光线',
+    promptEn: 'Golden hour lighting, warm golden sunlight, long shadows, warm color temperature.',
+  },
 ];
 
 // ─── 视频模板预设 ──────────────────────────────────────────
@@ -315,13 +420,13 @@ const TEMPLATE_CATEGORIES = [
 ];
 
 const TAB_CONFIG: { id: RightTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'prompt',   label: '提示词', icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'actions',  label: '动作',   icon: <Film className="w-4 h-4" /> },
-  { id: 'templates', label: '模板',  icon: <Layout className="w-4 h-4" /> },
-  { id: 'settings', label: '画面',   icon: <Settings className="w-4 h-4" /> },
-  { id: 'camera',   label: '运镜',   icon: <Camera className="w-4 h-4" /> },
-  { id: 'lighting', label: '光照',   icon: <Sun className="w-4 h-4" /> },
-  { id: 'dialogue', label: '对白',   icon: <Mic className="w-4 h-4" /> },
+  { id: 'prompt', label: '提示词', icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'actions', label: '动作', icon: <Film className="w-4 h-4" /> },
+  { id: 'templates', label: '模板', icon: <Layout className="w-4 h-4" /> },
+  { id: 'settings', label: '画面', icon: <Settings className="w-4 h-4" /> },
+  { id: 'camera', label: '运镜', icon: <Camera className="w-4 h-4" /> },
+  { id: 'lighting', label: '光照', icon: <Sun className="w-4 h-4" /> },
+  { id: 'dialogue', label: '对白', icon: <Mic className="w-4 h-4" /> },
 ];
 
 // ─── 工具函数 ────────────────────────────────────────────
@@ -345,14 +450,20 @@ function parseTime(str: string): number | null {
 
 // ─── 主组件 ──────────────────────────────────────────────
 
-export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selectedLayerIds, initialConfig, onClose }) => {
+export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({
+  selectedLayerIds,
+  initialConfig,
+  onClose,
+}) => {
   const { layers } = useCanvasStore();
 
   // ── 图片序列状态 ──
   const [imageSequence, setImageSequence] = useState<ImageSequenceItem[]>(() => {
-    const imageLayers = layers.filter(l => selectedLayerIds.includes(l.id) && l.type === 'image' && !l.isLoading);
-    const dedup = new Map<string, typeof layers[0]>();
-    imageLayers.forEach(l => dedup.set(l.id, l));
+    const imageLayers = layers.filter(
+      (l) => selectedLayerIds.includes(l.id) && l.type === 'image' && !l.isLoading,
+    );
+    const dedup = new Map<string, (typeof layers)[0]>();
+    imageLayers.forEach((l) => dedup.set(l.id, l));
     return Array.from(dedup.values()).map((l, i) => ({
       layerId: l.id,
       order: i + 1,
@@ -363,14 +474,19 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
   const [showCanvasImagePicker, setShowCanvasImagePicker] = useState(false);
 
   const imageLookup = useMemo(() => {
-    const map = new Map<string, typeof layers[0]>();
-    layers.forEach(l => { if (l.type === 'image') map.set(l.id, l); });
+    const map = new Map<string, (typeof layers)[0]>();
+    layers.forEach((l) => {
+      if (l.type === 'image') map.set(l.id, l);
+    });
     return map;
   }, [layers]);
 
   const canvasImageLayers = useMemo(
-    () => layers.filter(l => l.type === 'image' && !l.isLoading && !imageSequence.some(s => s.layerId === l.id)),
-    [layers, imageSequence]
+    () =>
+      layers.filter(
+        (l) => l.type === 'image' && !l.isLoading && !imageSequence.some((s) => s.layerId === l.id),
+      ),
+    [layers, imageSequence],
   );
 
   // ── 配置状态 ──
@@ -419,7 +535,6 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
-  const [showImagePicker, setShowImagePicker] = useState(false);
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   // ── 重新生成：应用初始配置 ──
@@ -429,10 +544,12 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
     if (!initialConfig || configApplied.current) return;
     configApplied.current = true;
 
-    setImageSequence(initialConfig.imageSequence.map((item, i) => ({
-      ...item,
-      order: i + 1,
-    })));
+    setImageSequence(
+      initialConfig.imageSequence.map((item, i) => ({
+        ...item,
+        order: i + 1,
+      })),
+    );
     setGlobalPrompt(initialConfig.globalPrompt);
     setSubjectPrompt(initialConfig.subjectPrompt || '');
     setActionPrompt(initialConfig.actionPrompt || '');
@@ -465,50 +582,63 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       if (initialConfig.endShotSize) setEndShotSize(initialConfig.endShotSize);
       if (initialConfig.endAngle) setEndAngle(initialConfig.endAngle);
       if (initialConfig.endSubject) setEndSubject(initialConfig.endSubject);
-      if (initialConfig.timingStartRatio !== undefined) setTimingStartRatio(initialConfig.timingStartRatio);
-      if (initialConfig.timingMoveRatio !== undefined) setTimingMoveRatio(initialConfig.timingMoveRatio);
-      if (initialConfig.timingEndRatio !== undefined) setTimingEndRatio(initialConfig.timingEndRatio);
+      if (initialConfig.timingStartRatio !== undefined)
+        setTimingStartRatio(initialConfig.timingStartRatio);
+      if (initialConfig.timingMoveRatio !== undefined)
+        setTimingMoveRatio(initialConfig.timingMoveRatio);
+      if (initialConfig.timingEndRatio !== undefined)
+        setTimingEndRatio(initialConfig.timingEndRatio);
     }
   }, [initialConfig]);
 
   // ── 图片预览状态 ──
   const [activePreviewId, setActivePreviewId] = useState<string | null>(
-    imageSequence.length > 0 ? imageSequence[0].layerId : null
+    imageSequence.length > 0 ? imageSequence[0].layerId : null,
   );
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string; width?: number; height?: number } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string;
+    title: string;
+    width?: number;
+    height?: number;
+  } | null>(null);
 
   // ── 图片序列操作 ──
 
   const addImageToSequence = useCallback((layerId: string) => {
-    setImageSequence(prev => {
-      if (prev.some(s => s.layerId === layerId)) return prev;
+    setImageSequence((prev) => {
+      if (prev.some((s) => s.layerId === layerId)) return prev;
       return [...prev, { layerId, order: prev.length + 1, imagePrompt: '' }];
     });
-    setActivePreviewId(prev => prev || layerId);
+    setActivePreviewId((prev) => prev || layerId);
   }, []);
 
-  const removeImageFromSequence = useCallback((layerId: string) => {
-    setImageSequence(prev => {
-      const filtered = prev.filter(s => s.layerId !== layerId);
-      return filtered.map((s, i) => ({ ...s, order: i + 1 }));
-    });
-    setActivePreviewId(prev => {
-      if (prev === layerId) {
-        const remaining = imageSequence.filter(s => s.layerId !== layerId);
-        return remaining.length > 0 ? remaining[0].layerId : null;
-      }
-      return prev;
-    });
-  }, [imageSequence]);
+  const removeImageFromSequence = useCallback(
+    (layerId: string) => {
+      setImageSequence((prev) => {
+        const filtered = prev.filter((s) => s.layerId !== layerId);
+        return filtered.map((s, i) => ({ ...s, order: i + 1 }));
+      });
+      setActivePreviewId((prev) => {
+        if (prev === layerId) {
+          const remaining = imageSequence.filter((s) => s.layerId !== layerId);
+          return remaining.length > 0 ? remaining[0].layerId : null;
+        }
+        return prev;
+      });
+    },
+    [imageSequence],
+  );
 
   const updateImagePrompt = useCallback((layerId: string, prompt: string) => {
-    setImageSequence(prev => prev.map(s => s.layerId === layerId ? { ...s, imagePrompt: prompt } : s));
+    setImageSequence((prev) =>
+      prev.map((s) => (s.layerId === layerId ? { ...s, imagePrompt: prompt } : s)),
+    );
   }, []);
 
   const moveImage = useCallback((layerId: string, direction: -1 | 1) => {
-    setImageSequence(prev => {
-      const idx = prev.findIndex(s => s.layerId === layerId);
+    setImageSequence((prev) => {
+      const idx = prev.findIndex((s) => s.layerId === layerId);
       if (idx === -1) return prev;
       const newIdx = idx + direction;
       if (newIdx < 0 || newIdx >= prev.length) return prev;
@@ -528,15 +658,15 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       character: '',
       text: '',
     };
-    setDialogues(prev => [...prev, newEntry]);
+    setDialogues((prev) => [...prev, newEntry]);
   }, [dialogues]);
 
   const updateDialogue = useCallback((id: string, updates: Partial<DialogueEntry>) => {
-    setDialogues(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+    setDialogues((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
   }, []);
 
   const removeDialogue = useCallback((id: string) => {
-    setDialogues(prev => prev.filter(d => d.id !== id));
+    setDialogues((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
   // ── 时长处理 ──
@@ -570,11 +700,15 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       const sizePreset = VIDEO_SIZE_PRESETS[selectedSizePreset];
       const finalWidth = useCustomSize ? customWidth : sizePreset.width;
       const finalHeight = useCustomSize ? customHeight : sizePreset.height;
-      const finalAspectRatio = useCustomSize ? `${finalWidth}:${finalHeight}` : sizePreset.aspectRatio;
+      const finalAspectRatio = useCustomSize
+        ? `${finalWidth}:${finalHeight}`
+        : sizePreset.aspectRatio;
 
-      const activeModel = (await import('../../../../services/modelRegistry')).getActiveVideoModel();
+      (await import('../../../../services/modelRegistry')).getActiveVideoModel();
       const aspectRatioMap: Record<string, '16:9' | '9:16' | '1:1'> = {
-        '16:9': '16:9', '9:16': '9:16', '1:1': '1:1',
+        '16:9': '16:9',
+        '9:16': '9:16',
+        '1:1': '1:1',
       };
       const aspectRatio = aspectRatioMap[finalAspectRatio] || '16:9';
 
@@ -594,12 +728,12 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
       // 时间戳动作
       const validActions = timestampActions
-        .filter(a => a.description.trim())
+        .filter((a) => a.description.trim())
         .sort((a, b) => a.startTime - b.startTime);
       if (validActions.length > 0) {
         promptParts.push('');
         promptParts.push('--- Timestamped action sequence ---');
-        validActions.forEach(a => {
+        validActions.forEach((a) => {
           const startStr = formatTime(a.startTime);
           const endStr = formatTime(a.endTime);
           promptParts.push(`[${startStr} - ${endStr}] ${a.description}`);
@@ -625,36 +759,43 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
           timingMoveRatio,
           timingEndRatio,
         };
-        cameraPrompt = renderCameraChoreographyPrompt(cc, actionPrompt || globalPrompt || '', Math.round(durationMs / 1000));
+        cameraPrompt = renderCameraChoreographyPrompt(
+          cc,
+          actionPrompt || globalPrompt || '',
+          Math.round(durationMs / 1000),
+        );
       } else {
-        const cameraMove = CAMERA_MOVEMENTS.find(c => c.id === selectedCamera);
-        cameraPrompt = cameraMove && selectedCamera !== 'none'
-          ? `Camera movement: ${cameraMove.promptEn} Intensity level ${cameraIntensity}/10, speed ${cameraSpeed}/100.`
-          : '';
+        const cameraMove = CAMERA_MOVEMENTS.find((c) => c.id === selectedCamera);
+        cameraPrompt =
+          cameraMove && selectedCamera !== 'none'
+            ? `Camera movement: ${cameraMove.promptEn} Intensity level ${cameraIntensity}/10, speed ${cameraSpeed}/100.`
+            : '';
       }
       if (cameraPrompt) promptParts.push('\n' + cameraPrompt);
 
       // 光照
-      const lightingPreset = LIGHTING_PRESETS.find(l => l.id === selectedLighting);
+      const lightingPreset = LIGHTING_PRESETS.find((l) => l.id === selectedLighting);
       if (lightingPreset && selectedLighting !== 'none') {
-        promptParts.push(`Lighting: ${lightingPreset.promptEn} Apply with intensity ${lightingIntensity}/100.`);
+        promptParts.push(
+          `Lighting: ${lightingPreset.promptEn} Apply with intensity ${lightingIntensity}/100.`,
+        );
       }
 
       // 图片序列
       promptParts.push('\n--- Image sequence description ---');
-      imageSequence.forEach(s => {
+      imageSequence.forEach((s) => {
         const layer = imageLookup.get(s.layerId);
         const title = layer?.title || `Image ${s.order}`;
-        promptParts.push(s.imagePrompt
-          ? `[${title}] ${s.imagePrompt}`
-          : `[${title}] No specific prompt.`);
+        promptParts.push(
+          s.imagePrompt ? `[${title}] ${s.imagePrompt}` : `[${title}] No specific prompt.`,
+        );
       });
 
       // 对白/旁白
       const dialogueSegments = dialogues
-        .filter(d => d.text.trim())
+        .filter((d) => d.text.trim())
         .sort((a, b) => a.timestamp - b.timestamp)
-        .map(d => {
+        .map((d) => {
           const timeStr = formatTime(d.timestamp);
           if (d.type === 'narration') return `[${timeStr}] Narration: "${d.text}"`;
           return `[${timeStr}] ${d.character || 'Character'}: "${d.text}"`;
@@ -673,7 +814,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
       const firstLayer = imageLookup.get(imageSequence[0].layerId);
       const allImages = imageSequence
-        .map(s => imageLookup.get(s.layerId)?.src)
+        .map((s) => imageLookup.get(s.layerId)?.src)
         .filter((s): s is string => !!s);
 
       const videoUrl = await canvasModelService.generateVideo({
@@ -692,7 +833,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       setProgress(90);
 
       const { videoStorageService } = await import('../../../../services/imageStorageService');
-      let resolvedUrl = videoUrl;
+      let _resolvedUrl = videoUrl;
       let finalSrc = videoUrl;
       let videoId: string | undefined;
 
@@ -702,7 +843,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         finalSrc = videoUrl;
         const blob = await videoStorageService.getVideo(localId);
         if (blob) {
-          resolvedUrl = URL.createObjectURL(blob);
+          _resolvedUrl = URL.createObjectURL(blob);
         }
       } else if (videoUrl.startsWith('video:')) {
         const localId = videoUrl.replace('video:', '');
@@ -710,7 +851,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         finalSrc = videoUrl;
         const blob = await videoStorageService.getVideo(localId);
         if (blob) {
-          resolvedUrl = URL.createObjectURL(blob);
+          _resolvedUrl = URL.createObjectURL(blob);
         }
       } else if (videoUrl.startsWith('data:')) {
         const response = await fetch(videoUrl);
@@ -722,14 +863,17 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       }
 
       const generationConfig: GenerationConfig = {
-        imageSequence: imageSequence.map(s => ({ layerId: s.layerId, imagePrompt: s.imagePrompt })),
+        imageSequence: imageSequence.map((s) => ({
+          layerId: s.layerId,
+          imagePrompt: s.imagePrompt,
+        })),
         globalPrompt,
         subjectPrompt,
         actionPrompt,
         environmentPrompt,
         stylePrompt,
         negativePrompt,
-        timestampActions: timestampActions.map(a => ({ ...a })),
+        timestampActions: timestampActions.map((a) => ({ ...a })),
         appliedTemplateId: selectedTemplateId || undefined,
         sizePresetIndex: selectedSizePreset,
         useCustomSize,
@@ -742,21 +886,23 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         lightingId: selectedLighting,
         lightingIntensity,
         dialogues,
-        ...(useChoreography ? {
-          useChoreography: true,
-          startShotSize,
-          startAngle,
-          startSubject,
-          startFocus,
-          movementPath,
-          movementSpeed,
-          endShotSize,
-          endAngle,
-          endSubject,
-          timingStartRatio,
-          timingMoveRatio,
-          timingEndRatio,
-        } : {}),
+        ...(useChoreography
+          ? {
+              useChoreography: true,
+              startShotSize,
+              startAngle,
+              startSubject,
+              startFocus,
+              movementPath,
+              movementSpeed,
+              endShotSize,
+              endAngle,
+              endSubject,
+              timingStartRatio,
+              timingMoveRatio,
+              timingEndRatio,
+            }
+          : {}),
       };
 
       const { addLayer } = useCanvasStore.getState();
@@ -772,7 +918,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
         title: 'AI生成视频',
         createdAt: Date.now(),
         sourceLayerId: imageSequence[0]?.layerId,
-        sourceLayerIds: imageSequence.map(s => s.layerId),
+        sourceLayerIds: imageSequence.map((s) => s.layerId),
         operationType: 'image-to-video',
         duration: durationMs / 1000,
         generationPrompt: JSON.stringify(generationConfig),
@@ -805,26 +951,38 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
     setActivePreviewId(layerId);
   }, []);
 
-  const handleItemDoubleClick = useCallback((layerId: string) => {
-    const layer = imageLookup.get(layerId);
-    if (layer?.src) {
-      setLightboxImage({ src: layer.src, title: layer.title, width: layer.width, height: layer.height });
-    }
-  }, [imageLookup]);
+  const handleItemDoubleClick = useCallback(
+    (layerId: string) => {
+      const layer = imageLookup.get(layerId);
+      if (layer?.src) {
+        setLightboxImage({
+          src: layer.src,
+          title: layer.title,
+          width: layer.width,
+          height: layer.height,
+        });
+      }
+    },
+    [imageLookup],
+  );
 
   const renderImageSequence = () => (
     <div className="flex flex-col h-full">
       {/* ── 图片预览区 ── */}
       <div className="border-b border-gray-700/50">
         <button
-          onClick={() => setPreviewCollapsed(p => !p)}
+          onClick={() => setPreviewCollapsed((p) => !p)}
           className="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-800/40 transition-colors"
         >
           <h3 className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5 text-purple-400" />
             图片预览
           </h3>
-          {previewCollapsed ? <EyeOff className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+          {previewCollapsed ? (
+            <EyeOff className="w-3 h-3 text-gray-500" />
+          ) : (
+            <ChevronDown className="w-3 h-3 text-gray-500" />
+          )}
         </button>
 
         {!previewCollapsed && (
@@ -847,19 +1005,32 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                   </div>
                 </div>
                 <div className="absolute bottom-1 left-1 text-[9px] text-white/60 bg-black/40 px-1.5 py-0.5 rounded">
-                  {activePreviewLayer.title} · {activePreviewLayer.width}×{activePreviewLayer.height}
+                  {activePreviewLayer.title} · {activePreviewLayer.width}×
+                  {activePreviewLayer.height}
                 </div>
                 {selectedCamera !== 'none' && (
                   <div className="absolute bottom-1 right-1 text-[9px] text-white/80 bg-black/60 backdrop-blur-sm px-2 py-1 rounded leading-tight max-w-[60%]">
                     {useChoreography ? (
                       <>
-                        <div className="font-semibold text-purple-300">📽 {CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label}</div>
-                        <div className="text-[8px] opacity-80">{startShotSize}/{startAngle} → {endShotSize}/{endAngle}</div>
-                        <div className="text-[8px] opacity-60">{Math.round(timingStartRatio * 100)}%/{Math.round(timingMoveRatio * 100)}%/{Math.round(timingEndRatio * 100)}%</div>
-                        {movementPath && <div className="text-[8px] opacity-70 truncate">{movementPath}</div>}
+                        <div className="font-semibold text-purple-300">
+                          📽 {CAMERA_MOVEMENTS.find((c) => c.id === selectedCamera)?.label}
+                        </div>
+                        <div className="text-[8px] opacity-80">
+                          {startShotSize}/{startAngle} → {endShotSize}/{endAngle}
+                        </div>
+                        <div className="text-[8px] opacity-60">
+                          {Math.round(timingStartRatio * 100)}%/{Math.round(timingMoveRatio * 100)}
+                          %/{Math.round(timingEndRatio * 100)}%
+                        </div>
+                        {movementPath && (
+                          <div className="text-[8px] opacity-70 truncate">{movementPath}</div>
+                        )}
                       </>
                     ) : (
-                      <div>{CAMERA_MOVEMENTS.find(c => c.id === selectedCamera)?.label} 强度{cameraIntensity}/10</div>
+                      <div>
+                        {CAMERA_MOVEMENTS.find((c) => c.id === selectedCamera)?.label} 强度
+                        {cameraIntensity}/10
+                      </div>
                     )}
                   </div>
                 )}
@@ -908,20 +1079,28 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
             >
               <div className="flex items-start gap-2 p-2">
                 <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                  <span className={`w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${
-                    isActive ? 'bg-purple-500 text-white' : 'bg-gray-700 text-gray-300'
-                  }`}>
+                  <span
+                    className={`w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${
+                      isActive ? 'bg-purple-500 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
+                  >
                     {item.order}
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); moveImage(item.layerId, -1); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveImage(item.layerId, -1);
+                    }}
                     disabled={idx === 0}
                     className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed p-0.5"
                   >
                     <ChevronDown className="w-2.5 h-2.5 rotate-180" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); moveImage(item.layerId, 1); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveImage(item.layerId, 1);
+                    }}
                     disabled={idx === imageSequence.length - 1}
                     className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed p-0.5"
                   >
@@ -947,7 +1126,10 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
                       </p>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); removeImageFromSequence(item.layerId); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeImageFromSequence(item.layerId);
+                      }}
                       className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all p-0.5 mt-0.5"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -987,13 +1169,20 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
               <p className="text-[9px] text-gray-600 text-center py-2">画布上没有其他可用的图片</p>
             ) : (
               <div className="grid grid-cols-4 gap-1">
-                {canvasImageLayers.map(l => (
+                {canvasImageLayers.map((l) => (
                   <button
                     key={l.id}
-                    onClick={() => { addImageToSequence(l.id); setShowCanvasImagePicker(false); }}
+                    onClick={() => {
+                      addImageToSequence(l.id);
+                      setShowCanvasImagePicker(false);
+                    }}
                     className="relative group/img aspect-[4/3] rounded overflow-hidden bg-gray-700 border border-transparent hover:border-purple-500 transition-all"
                   >
-                    <ResolvedImage src={l.src} alt={l.title} className="w-full h-full object-cover" />
+                    <ResolvedImage
+                      src={l.src}
+                      alt={l.title}
+                      className="w-full h-full object-cover"
+                    />
                     <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-colors flex items-center justify-center">
                       <Plus className="w-3 h-3 text-white opacity-0 group-hover/img:opacity-100 transition-opacity" />
                     </div>
@@ -1019,14 +1208,12 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
   const renderTabBar = () => (
     <div className="flex border-b border-gray-700/50">
-      {TAB_CONFIG.map(tab => (
+      {TAB_CONFIG.map((tab) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors relative ${
-            activeTab === tab.id
-              ? 'text-purple-400'
-              : 'text-gray-500 hover:text-gray-300'
+            activeTab === tab.id ? 'text-purple-400' : 'text-gray-500 hover:text-gray-300'
           }`}
         >
           {tab.icon}
@@ -1041,13 +1228,20 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'prompt': return renderPromptTab();
-      case 'actions': return renderActionsTab();
-      case 'templates': return renderTemplatesTab();
-      case 'settings': return renderSettingsTab();
-      case 'camera': return renderCameraTab();
-      case 'lighting': return renderLightingTab();
-      case 'dialogue': return renderDialogueTab();
+      case 'prompt':
+        return renderPromptTab();
+      case 'actions':
+        return renderActionsTab();
+      case 'templates':
+        return renderTemplatesTab();
+      case 'settings':
+        return renderSettingsTab();
+      case 'camera':
+        return renderCameraTab();
+      case 'lighting':
+        return renderLightingTab();
+      case 'dialogue':
+        return renderDialogueTab();
     }
   };
 
@@ -1056,154 +1250,154 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
   const renderPromptTab = () => {
     const fullPromptPreview = buildFullPromptPreview();
     return (
-    <div className="p-4 space-y-3 overflow-y-auto">
-      {/* 主体描述 */}
-      <div>
-        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full bg-blue-400" />
-          主体描述
-        </label>
-        <input
-          value={subjectPrompt}
-          onChange={(e) => setSubjectPrompt(e.target.value)}
-          placeholder="描述视频中的主要人物/对象的外观特征...&#10;例如：一位穿黑色风衣的年轻男子，短发，眼神坚毅"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
-        />
-      </div>
-
-      {/* 动作描述 */}
-      <div>
-        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full bg-green-400" />
-          动作描述
-        </label>
-        <textarea
-          value={actionPrompt}
-          onChange={(e) => setActionPrompt(e.target.value)}
-          placeholder="描述主体的动作、行为、情绪变化...&#10;例如：在雨中缓步前行，偶尔抬头看路灯，神情疲惫"
-          rows={2}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition-colors resize-none"
-        />
-      </div>
-
-      {/* 环境描述 */}
-      <div>
-        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full bg-yellow-400" />
-          环境描述
-        </label>
-        <textarea
-          value={environmentPrompt}
-          onChange={(e) => setEnvironmentPrompt(e.target.value)}
-          placeholder="描述场景环境、空间关系、背景细节...&#10;例如：潮湿的柏油路面反射霓虹灯光，雨滴打在水洼上泛起涟漪"
-          rows={2}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-yellow-500/50 transition-colors resize-none"
-        />
-      </div>
-
-      {/* 风格氛围 */}
-      <div>
-        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full bg-purple-400" />
-          风格与氛围
-        </label>
-        <textarea
-          value={stylePrompt}
-          onChange={(e) => setStylePrompt(e.target.value)}
-          placeholder="描述视觉风格、色彩基调、情感氛围...&#10;例如：赛博朋克美学，冷色调，电影级景深，略带颗粒感"
-          rows={2}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
-        />
-      </div>
-
-      {/* 负面提示词 */}
-      <div>
-        <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full bg-red-400" />
-          负面提示词
-          <span className="text-[9px] text-gray-600 font-normal">（不希望出现的内容）</span>
-        </label>
-        <input
-          value={negativePrompt}
-          onChange={(e) => setNegativePrompt(e.target.value)}
-          placeholder="例如：卡通风格，低质量，模糊，水印，人物变形"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition-colors"
-        />
-      </div>
-
-      {/* AI 质检按钮 */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleQualityCheck}
-          disabled={isCheckingQuality || !fullPromptPreview.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-cyan-600/80 text-white rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {isCheckingQuality ? (
-            <>
-              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              分析中...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-3 h-3" />
-              AI 质检
-            </>
-          )}
-        </button>
-        <span className="text-[10px] text-gray-600">检查提示词是否有逻辑冲突或不合理之处</span>
-      </div>
-
-      {/* 质检报告 */}
-      {qualityReport && (
-        <div className="bg-gray-800/60 rounded-lg border border-cyan-500/30 p-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <h4 className="text-xs font-medium text-cyan-400 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" />
-              AI 质检报告
-            </h4>
-            <button
-              onClick={() => setQualityReport(null)}
-              className="text-gray-500 hover:text-white"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-          <pre className="text-[11px] text-gray-300 font-sans leading-relaxed whitespace-pre-wrap">
-            {qualityReport}
-          </pre>
-        </div>
-      )}
-
-      {/* 全局补充说明 */}
-      <div className="border-t border-gray-700/30 pt-3">
-        <details className="group">
-          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
-            <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
-            全局补充提示词（可选）
-          </summary>
-          <textarea
-            value={globalPrompt}
-            onChange={(e) => setGlobalPrompt(e.target.value)}
-            placeholder="额外的全局描述，会附加在最终提示词末尾"
-            rows={2}
-            className="w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+      <div className="p-4 space-y-3 overflow-y-auto">
+        {/* 主体描述 */}
+        <div>
+          <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-400" />
+            主体描述
+          </label>
+          <input
+            value={subjectPrompt}
+            onChange={(e) => setSubjectPrompt(e.target.value)}
+            placeholder="描述视频中的主要人物/对象的外观特征...&#10;例如：一位穿黑色风衣的年轻男子，短发，眼神坚毅"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
           />
-        </details>
-      </div>
+        </div>
 
-      {/* 提示词预览 */}
-      <div className="bg-gray-800/40 rounded-lg border border-gray-700/50 p-3">
-        <details open>
-          <summary className="text-xs font-medium text-gray-400 mb-1 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
-            <ChevronDown className="w-3 h-3" />
-            最终提示词预览
-          </summary>
-          <div className="bg-gray-900 rounded p-2.5 text-[11px] text-gray-500 font-mono leading-relaxed max-h-48 overflow-y-auto mt-1">
-            {fullPromptPreview || <span className="text-gray-700">填写上方字段后自动生成</span>}
+        {/* 动作描述 */}
+        <div>
+          <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-400" />
+            动作描述
+          </label>
+          <textarea
+            value={actionPrompt}
+            onChange={(e) => setActionPrompt(e.target.value)}
+            placeholder="描述主体的动作、行为、情绪变化...&#10;例如：在雨中缓步前行，偶尔抬头看路灯，神情疲惫"
+            rows={2}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition-colors resize-none"
+          />
+        </div>
+
+        {/* 环境描述 */}
+        <div>
+          <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-yellow-400" />
+            环境描述
+          </label>
+          <textarea
+            value={environmentPrompt}
+            onChange={(e) => setEnvironmentPrompt(e.target.value)}
+            placeholder="描述场景环境、空间关系、背景细节...&#10;例如：潮湿的柏油路面反射霓虹灯光，雨滴打在水洼上泛起涟漪"
+            rows={2}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-yellow-500/50 transition-colors resize-none"
+          />
+        </div>
+
+        {/* 风格氛围 */}
+        <div>
+          <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-purple-400" />
+            风格与氛围
+          </label>
+          <textarea
+            value={stylePrompt}
+            onChange={(e) => setStylePrompt(e.target.value)}
+            placeholder="描述视觉风格、色彩基调、情感氛围...&#10;例如：赛博朋克美学，冷色调，电影级景深，略带颗粒感"
+            rows={2}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+          />
+        </div>
+
+        {/* 负面提示词 */}
+        <div>
+          <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-400" />
+            负面提示词
+            <span className="text-[9px] text-gray-600 font-normal">（不希望出现的内容）</span>
+          </label>
+          <input
+            value={negativePrompt}
+            onChange={(e) => setNegativePrompt(e.target.value)}
+            placeholder="例如：卡通风格，低质量，模糊，水印，人物变形"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition-colors"
+          />
+        </div>
+
+        {/* AI 质检按钮 */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleQualityCheck}
+            disabled={isCheckingQuality || !fullPromptPreview.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-cyan-600/80 text-white rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isCheckingQuality ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                分析中...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3" />
+                AI 质检
+              </>
+            )}
+          </button>
+          <span className="text-[10px] text-gray-600">检查提示词是否有逻辑冲突或不合理之处</span>
+        </div>
+
+        {/* 质检报告 */}
+        {qualityReport && (
+          <div className="bg-gray-800/60 rounded-lg border border-cyan-500/30 p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <h4 className="text-xs font-medium text-cyan-400 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                AI 质检报告
+              </h4>
+              <button
+                onClick={() => setQualityReport(null)}
+                className="text-gray-500 hover:text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <pre className="text-[11px] text-gray-300 font-sans leading-relaxed whitespace-pre-wrap">
+              {qualityReport}
+            </pre>
           </div>
-        </details>
+        )}
+
+        {/* 全局补充说明 */}
+        <div className="border-t border-gray-700/30 pt-3">
+          <details className="group">
+            <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
+              <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
+              全局补充提示词（可选）
+            </summary>
+            <textarea
+              value={globalPrompt}
+              onChange={(e) => setGlobalPrompt(e.target.value)}
+              placeholder="额外的全局描述，会附加在最终提示词末尾"
+              rows={2}
+              className="w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+            />
+          </details>
+        </div>
+
+        {/* 提示词预览 */}
+        <div className="bg-gray-800/40 rounded-lg border border-gray-700/50 p-3">
+          <details open>
+            <summary className="text-xs font-medium text-gray-400 mb-1 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-1">
+              <ChevronDown className="w-3 h-3" />
+              最终提示词预览
+            </summary>
+            <div className="bg-gray-900 rounded p-2.5 text-[11px] text-gray-500 font-mono leading-relaxed max-h-48 overflow-y-auto mt-1">
+              {fullPromptPreview || <span className="text-gray-700">填写上方字段后自动生成</span>}
+            </div>
+          </details>
+        </div>
       </div>
-    </div>
     );
   };
 
@@ -1220,12 +1414,12 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 
     // 时间戳动作
     const validActions = timestampActions
-      .filter(a => a.description.trim())
+      .filter((a) => a.description.trim())
       .sort((a, b) => a.startTime - b.startTime);
     if (validActions.length > 0) {
       parts.push('');
       parts.push('--- 动作时间线 ---');
-      validActions.forEach(a => {
+      validActions.forEach((a) => {
         const startStr = formatTime(a.startTime);
         const endStr = formatTime(a.endTime);
         parts.push(`[${startStr} - ${endStr}] ${a.description}`);
@@ -1240,7 +1434,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       parts.push(s.imagePrompt ? `[${title}] ${s.imagePrompt}` : `[${title}] No specific prompt.`);
     });
 
-    const cameraMove = CAMERA_MOVEMENTS.find(c => c.id === selectedCamera);
+    const cameraMove = CAMERA_MOVEMENTS.find((c) => c.id === selectedCamera);
     if (selectedCamera !== 'none' && cameraMove) {
       if (useChoreography) {
         parts.push('');
@@ -1253,17 +1447,18 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
       }
     }
 
-    const lightingPreset = LIGHTING_PRESETS.find(l => l.id === selectedLighting);
+    const lightingPreset = LIGHTING_PRESETS.find((l) => l.id === selectedLighting);
     if (selectedLighting !== 'none' && lightingPreset) {
       parts.push(`[光照] ${lightingPreset.label} 强度${lightingIntensity}%`);
     }
 
     const dialogueTexts = dialogues
-      .filter(d => d.text.trim())
+      .filter((d) => d.text.trim())
       .sort((a, b) => a.timestamp - b.timestamp)
-      .map(d => {
+      .map((d) => {
         const timeStr = formatTime(d.timestamp);
-        if (d.type === 'dialogue') return `[对白][${timeStr}] ${d.character || '角色'}: "${d.text}"`;
+        if (d.type === 'dialogue')
+          return `[对白][${timeStr}] ${d.character || '角色'}: "${d.text}"`;
         return `[旁白][${timeStr}] "${d.text}"`;
       });
     if (dialogueTexts.length > 0) {
@@ -1278,7 +1473,33 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
     }
 
     return parts.join('\n');
-  }, [subjectPrompt, actionPrompt, environmentPrompt, stylePrompt, negativePrompt, timestampActions, imageSequence, imageLookup, selectedCamera, useChoreography, startShotSize, startAngle, startSubject, startFocus, movementPath, endShotSize, endAngle, endSubject, cameraIntensity, cameraSpeed, selectedLighting, lightingIntensity, LIGHTING_PRESETS, dialogues, globalPrompt]);
+  }, [
+    subjectPrompt,
+    actionPrompt,
+    environmentPrompt,
+    stylePrompt,
+    negativePrompt,
+    timestampActions,
+    imageSequence,
+    imageLookup,
+    selectedCamera,
+    useChoreography,
+    startShotSize,
+    startAngle,
+    startSubject,
+    startFocus,
+    movementPath,
+    endShotSize,
+    endAngle,
+    endSubject,
+    cameraIntensity,
+    cameraSpeed,
+    selectedLighting,
+    lightingIntensity,
+    LIGHTING_PRESETS,
+    dialogues,
+    globalPrompt,
+  ]);
 
   // ── AI 质检 ──
 
@@ -1310,7 +1531,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({ selected
 ${preview}`,
         undefined,
         0.5,
-        2048
+        2048,
       );
       setQualityReport(report || '分析完成，未发现问题。');
     } catch (error: any) {
@@ -1334,7 +1555,10 @@ ${preview}`,
           {VIDEO_SIZE_PRESETS.map((preset, i) => (
             <button
               key={preset.label}
-              onClick={() => { setSelectedSizePreset(i); setUseCustomSize(false); }}
+              onClick={() => {
+                setSelectedSizePreset(i);
+                setUseCustomSize(false);
+              }}
               className={`px-2.5 py-2 text-xs rounded-lg border transition-all ${
                 !useCustomSize && selectedSizePreset === i
                   ? 'border-purple-500 bg-purple-500/10 text-purple-300'
@@ -1342,7 +1566,9 @@ ${preview}`,
               }`}
             >
               <div className="font-medium">{preset.label}</div>
-              <div className="text-[10px] opacity-60 mt-0.5">{preset.width}×{preset.height}</div>
+              <div className="text-[10px] opacity-60 mt-0.5">
+                {preset.width}×{preset.height}
+              </div>
             </button>
           ))}
           <button
@@ -1433,7 +1659,12 @@ ${preview}`,
 
   // ── Tab: 运镜 ──
 
-  const renderSelect = (label: string, value: string, options: readonly string[], onChange: (v: string) => void) => (
+  const renderSelect = (
+    label: string,
+    value: string,
+    options: readonly string[],
+    onChange: (v: string) => void,
+  ) => (
     <div className="flex items-center gap-2">
       <span className="text-[10px] text-gray-400 w-14 shrink-0">{label}</span>
       <select
@@ -1441,8 +1672,10 @@ ${preview}`,
         onChange={(e) => onChange(e.target.value)}
         className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none focus:border-purple-500/50"
       >
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
         ))}
       </select>
     </div>
@@ -1457,7 +1690,7 @@ ${preview}`,
           镜头运动类型
         </label>
         <div className="grid grid-cols-3 gap-1.5">
-          {CAMERA_MOVEMENTS.map(cam => (
+          {CAMERA_MOVEMENTS.map((cam) => (
             <button
               key={cam.id}
               onClick={() => setSelectedCamera(cam.id)}
@@ -1467,9 +1700,11 @@ ${preview}`,
                   : 'border-gray-700 bg-gray-800/40 hover:border-gray-600'
               }`}
             >
-              <div className={`text-xs font-medium ${
-                selectedCamera === cam.id ? 'text-purple-300' : 'text-gray-300'
-              }`}>
+              <div
+                className={`text-xs font-medium ${
+                  selectedCamera === cam.id ? 'text-purple-300' : 'text-gray-300'
+                }`}
+              >
                 {cam.label}
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5 leading-tight line-clamp-2">
@@ -1539,7 +1774,9 @@ ${preview}`,
 
           {useChoreography && (
             <div className="space-y-4 bg-gray-800/30 rounded-lg border border-purple-500/30 p-3">
-              <p className="text-[10px] text-purple-400 font-medium">依据 Seedance 运镜规范：起点 → 路径 → 终点</p>
+              <p className="text-[10px] text-purple-400 font-medium">
+                依据 Seedance 运镜规范：起点 → 路径 → 终点
+              </p>
 
               {/* 起始帧 */}
               <div>
@@ -1550,7 +1787,12 @@ ${preview}`,
                 <div className="space-y-1.5">
                   {renderSelect('景别', startShotSize, CAMERA_SHOT_SIZES, setStartShotSize)}
                   {renderSelect('角度', startAngle, CAMERA_ANGLES, setStartAngle)}
-                  {renderSelect('主体位置', startSubject, CAMERA_SUBJECT_POSITIONS, setStartSubject)}
+                  {renderSelect(
+                    '主体位置',
+                    startSubject,
+                    CAMERA_SUBJECT_POSITIONS,
+                    setStartSubject,
+                  )}
                   {renderSelect('焦点', startFocus, CAMERA_FOCUS_TYPES, setStartFocus)}
                 </div>
               </div>
@@ -1599,10 +1841,15 @@ ${preview}`,
                   <div>
                     <label className="text-[10px] text-gray-400 flex items-center justify-between">
                       <span>起始段占比</span>
-                      <span className="text-purple-400 font-mono">{Math.round(timingStartRatio * 100)}%</span>
+                      <span className="text-purple-400 font-mono">
+                        {Math.round(timingStartRatio * 100)}%
+                      </span>
                     </label>
                     <input
-                      type="range" min={10} max={60} value={Math.round(timingStartRatio * 100)}
+                      type="range"
+                      min={10}
+                      max={60}
+                      value={Math.round(timingStartRatio * 100)}
                       onChange={(e) => {
                         const v = parseInt(e.target.value) / 100;
                         const remaining = 1 - v;
@@ -1617,16 +1864,27 @@ ${preview}`,
                   <div>
                     <label className="text-[10px] text-gray-400 flex items-center justify-between">
                       <span>运镜段占比</span>
-                      <span className="text-purple-400 font-mono">{Math.round(timingMoveRatio * 100)}%</span>
+                      <span className="text-purple-400 font-mono">
+                        {Math.round(timingMoveRatio * 100)}%
+                      </span>
                     </label>
                     <input
-                      type="range" min={10} max={70} value={Math.round(timingMoveRatio * 100)}
+                      type="range"
+                      min={10}
+                      max={70}
+                      value={Math.round(timingMoveRatio * 100)}
                       onChange={(e) => {
                         const v = parseInt(e.target.value) / 100;
                         const remaining = 1 - v;
                         setTimingMoveRatio(v);
-                        setTimingStartRatio(Math.round(Math.min(timingStartRatio, remaining - 0.1) * 100) / 100);
-                        setTimingEndRatio(Math.round((remaining - Math.min(timingStartRatio, remaining - 0.1)) * 100) / 100);
+                        setTimingStartRatio(
+                          Math.round(Math.min(timingStartRatio, remaining - 0.1) * 100) / 100,
+                        );
+                        setTimingEndRatio(
+                          Math.round(
+                            (remaining - Math.min(timingStartRatio, remaining - 0.1)) * 100,
+                          ) / 100,
+                        );
                       }}
                       className="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
                     />
@@ -1634,10 +1892,15 @@ ${preview}`,
                   <div>
                     <label className="text-[10px] text-gray-400 flex items-center justify-between">
                       <span>结束段占比</span>
-                      <span className="text-purple-400 font-mono">{Math.round(timingEndRatio * 100)}%</span>
+                      <span className="text-purple-400 font-mono">
+                        {Math.round(timingEndRatio * 100)}%
+                      </span>
                     </label>
                     <input
-                      type="range" min={10} max={60} value={Math.round(timingEndRatio * 100)}
+                      type="range"
+                      min={10}
+                      max={60}
+                      value={Math.round(timingEndRatio * 100)}
                       onChange={(e) => {
                         const v = parseInt(e.target.value) / 100;
                         const remaining = 1 - v;
@@ -1663,7 +1926,7 @@ ${preview}`,
   const renderLightingTab = () => (
     <div className="p-4 space-y-4">
       <div className="grid grid-cols-5 gap-1.5">
-        {LIGHTING_PRESETS.map(light => (
+        {LIGHTING_PRESETS.map((light) => (
           <button
             key={light.id}
             onClick={() => setSelectedLighting(light.id)}
@@ -1674,9 +1937,11 @@ ${preview}`,
             }`}
           >
             <div className="w-6 h-6 mx-auto mb-1 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 opacity-80" />
-            <div className={`text-[10px] font-medium ${
-              selectedLighting === light.id ? 'text-yellow-300' : 'text-gray-300'
-            }`}>
+            <div
+              className={`text-[10px] font-medium ${
+                selectedLighting === light.id ? 'text-yellow-300' : 'text-gray-300'
+              }`}
+            >
               {light.label}
             </div>
             <div className="text-[8px] text-gray-500 mt-0.5 leading-tight line-clamp-2">
@@ -1713,7 +1978,7 @@ ${preview}`,
   const [dialogueTimeRaw, setDialogueTimeRaw] = useState<Record<string, string>>({});
 
   const commitDialogueTime = (entryId: string, raw: string) => {
-    setDialogueTimeRaw(prev => {
+    setDialogueTimeRaw((prev) => {
       const next = { ...prev };
       delete next[entryId];
       return next;
@@ -1761,13 +2026,22 @@ ${preview}`,
               <input
                 type="text"
                 value={dialogueTimeRaw[entry.id] ?? formatTime(entry.timestamp)}
-                onChange={(e) => setDialogueTimeRaw(prev => ({ ...prev, [entry.id]: e.target.value }))}
-                onBlur={() => commitDialogueTime(entry.id, dialogueTimeRaw[entry.id] ?? formatTime(entry.timestamp))}
+                onChange={(e) =>
+                  setDialogueTimeRaw((prev) => ({ ...prev, [entry.id]: e.target.value }))
+                }
+                onBlur={() =>
+                  commitDialogueTime(
+                    entry.id,
+                    dialogueTimeRaw[entry.id] ?? formatTime(entry.timestamp),
+                  )
+                }
                 className="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-[11px] text-gray-200 font-mono text-center focus:outline-none focus:border-purple-500/50"
               />
               <select
                 value={entry.type}
-                onChange={(e) => updateDialogue(entry.id, { type: e.target.value as 'dialogue' | 'narration' })}
+                onChange={(e) =>
+                  updateDialogue(entry.id, { type: e.target.value as 'dialogue' | 'narration' })
+                }
                 className="bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-[11px] text-gray-200 focus:outline-none focus:border-purple-500/50"
               >
                 <option value="dialogue">对白</option>
@@ -1791,9 +2065,11 @@ ${preview}`,
               </button>
             </div>
             <div className="flex items-start gap-2">
-              <div className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                entry.type === 'dialogue' ? 'bg-blue-400' : 'bg-green-400'
-              }`} />
+              <div
+                className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                  entry.type === 'dialogue' ? 'bg-blue-400' : 'bg-green-400'
+                }`}
+              />
               <input
                 type="text"
                 value={entry.text}
@@ -1809,7 +2085,7 @@ ${preview}`,
       <div className="bg-gray-800/20 rounded-lg border border-gray-700/50 p-2.5">
         <div className="relative h-8 bg-gray-900 rounded overflow-hidden">
           {dialogues
-            .filter(d => d.text.trim())
+            .filter((d) => d.text.trim())
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((entry) => {
               const percent = durationMs > 0 ? (entry.timestamp / durationMs) * 100 : 0;
@@ -1839,42 +2115,51 @@ ${preview}`,
     const lastAction = timestampActions[timestampActions.length - 1];
     const start = lastAction ? lastAction.endTime : 0;
     const end = Math.min(start + 2000, durationMs);
-    setTimestampActions(prev => [...prev, {
-      id: crypto.randomUUID(),
-      startTime: start,
-      endTime: end,
-      description: '',
-    }]);
+    setTimestampActions((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        startTime: start,
+        endTime: end,
+        description: '',
+      },
+    ]);
   }, [timestampActions, durationMs]);
 
   const updateTimestampAction = useCallback((id: string, updates: Partial<TimestampActionItem>) => {
-    setTimestampActions(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    setTimestampActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
   }, []);
 
   const removeTimestampAction = useCallback((id: string) => {
-    setTimestampActions(prev => prev.filter(a => a.id !== id));
+    setTimestampActions((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   // ── 时间输入编辑状态（临时字符串，不强制格式） ──
-  const [timeEditRaw, setTimeEditRaw] = useState<Record<string, { start?: string; end?: string }>>({});
+  const [timeEditRaw, setTimeEditRaw] = useState<Record<string, { start?: string; end?: string }>>(
+    {},
+  );
 
   const getTimeInputValue = (actionId: string, field: 'start' | 'end', msValue: number): string => {
     return timeEditRaw[actionId]?.[field] ?? formatActionTime(msValue);
   };
 
   const handleTimeInputChange = (actionId: string, field: 'start' | 'end', raw: string) => {
-    setTimeEditRaw(prev => ({
+    setTimeEditRaw((prev) => ({
       ...prev,
       [actionId]: { ...prev[actionId], [field]: raw },
     }));
   };
 
-  const commitTimeInput = (actionId: string, field: 'start' | 'end', action: TimestampActionItem) => {
+  const commitTimeInput = (
+    actionId: string,
+    field: 'start' | 'end',
+    action: TimestampActionItem,
+  ) => {
     const raw = timeEditRaw[actionId]?.[field];
     if (raw === undefined) return;
 
     // 清除编辑态
-    setTimeEditRaw(prev => {
+    setTimeEditRaw((prev) => {
       const next = { ...prev };
       if (next[actionId]) {
         delete next[actionId][field];
@@ -1998,17 +2283,28 @@ ${preview}`,
         <div className="bg-gray-800/20 rounded-lg border border-gray-700/50 p-2.5">
           <div className="relative h-8 bg-gray-900 rounded overflow-hidden">
             {timestampActions
-              .filter(a => a.description.trim())
+              .filter((a) => a.description.trim())
               .sort((a, b) => a.startTime - b.startTime)
               .map((action, idx) => {
                 const left = durationMs > 0 ? (action.startTime / durationMs) * 100 : 0;
-                const width = durationMs > 0 ? ((action.endTime - action.startTime) / durationMs) * 100 : 0;
-                const colors = ['bg-green-500', 'bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-cyan-500'];
+                const width =
+                  durationMs > 0 ? ((action.endTime - action.startTime) / durationMs) * 100 : 0;
+                const colors = [
+                  'bg-green-500',
+                  'bg-blue-500',
+                  'bg-yellow-500',
+                  'bg-purple-500',
+                  'bg-pink-500',
+                  'bg-cyan-500',
+                ];
                 return (
                   <div
                     key={action.id}
                     className={`absolute top-1 bottom-1 rounded ${colors[idx % colors.length]} opacity-60`}
-                    style={{ left: `${Math.min(left, 100)}%`, width: `${Math.min(width, 100 - left)}%` }}
+                    style={{
+                      left: `${Math.min(left, 100)}%`,
+                      width: `${Math.min(width, 100 - left)}%`,
+                    }}
                     title={`${formatActionTime(action.startTime)}-${formatActionTime(action.endTime)}: ${action.description}`}
                   />
                 );
@@ -2070,7 +2366,19 @@ ${preview}`,
     } catch {
       alert('保存失败');
     }
-  }, [subjectPrompt, actionPrompt, environmentPrompt, stylePrompt, negativePrompt, selectedCamera, cameraIntensity, cameraSpeed, selectedLighting, lightingIntensity, durationMs]);
+  }, [
+    subjectPrompt,
+    actionPrompt,
+    environmentPrompt,
+    stylePrompt,
+    negativePrompt,
+    selectedCamera,
+    cameraIntensity,
+    cameraSpeed,
+    selectedLighting,
+    lightingIntensity,
+    durationMs,
+  ]);
 
   const [customTemplates, setCustomTemplates] = useState<TemplatePreset[]>(() => {
     try {
@@ -2080,16 +2388,20 @@ ${preview}`,
     }
   });
 
-  const deleteCustomTemplate = useCallback((id: string) => {
-    const updated = customTemplates.filter(t => t.id !== id);
-    setCustomTemplates(updated);
-    localStorage.setItem('video_templates', JSON.stringify(updated));
-  }, [customTemplates]);
+  const deleteCustomTemplate = useCallback(
+    (id: string) => {
+      const updated = customTemplates.filter((t) => t.id !== id);
+      setCustomTemplates(updated);
+      localStorage.setItem('video_templates', JSON.stringify(updated));
+    },
+    [customTemplates],
+  );
 
   const filteredTemplates = useMemo(() => {
-    const presets = templateCategory === 'all'
-      ? VIDEO_TEMPLATE_PRESETS
-      : VIDEO_TEMPLATE_PRESETS.filter(t => t.category === templateCategory);
+    const presets =
+      templateCategory === 'all'
+        ? VIDEO_TEMPLATE_PRESETS
+        : VIDEO_TEMPLATE_PRESETS.filter((t) => t.category === templateCategory);
     return [...presets, ...customTemplates];
   }, [templateCategory, customTemplates]);
 
@@ -2115,7 +2427,7 @@ ${preview}`,
 
       {/* 分类筛选 */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-        {TEMPLATE_CATEGORIES.map(cat => (
+        {TEMPLATE_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setTemplateCategory(cat.id)}
@@ -2144,7 +2456,7 @@ ${preview}`,
 
       {/* 模板列表 */}
       <div className="grid grid-cols-2 gap-2">
-        {filteredTemplates.map(template => (
+        {filteredTemplates.map((template) => (
           <div
             key={template.id}
             className={`rounded-lg border p-3 cursor-pointer transition-all ${
@@ -2155,14 +2467,19 @@ ${preview}`,
             onClick={() => applyTemplate(template)}
           >
             <div className="flex items-start justify-between mb-1">
-              <h4 className={`text-xs font-medium ${
-                selectedTemplateId === template.id ? 'text-purple-300' : 'text-gray-300'
-              }`}>
+              <h4
+                className={`text-xs font-medium ${
+                  selectedTemplateId === template.id ? 'text-purple-300' : 'text-gray-300'
+                }`}
+              >
                 {template.name}
               </h4>
               {template.id.startsWith('custom_') && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); deleteCustomTemplate(template.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteCustomTemplate(template.id);
+                  }}
                   className="text-gray-500 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -2173,12 +2490,14 @@ ${preview}`,
             <div className="flex flex-wrap gap-1">
               {template.cameraId !== 'none' && (
                 <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
-                  {CAMERA_MOVEMENTS.find(c => c.id === template.cameraId)?.label || template.cameraId}
+                  {CAMERA_MOVEMENTS.find((c) => c.id === template.cameraId)?.label ||
+                    template.cameraId}
                 </span>
               )}
               {template.lightingId !== 'none' && (
                 <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
-                  {LIGHTING_PRESETS.find(l => l.id === template.lightingId)?.label || template.lightingId}
+                  {LIGHTING_PRESETS.find((l) => l.id === template.lightingId)?.label ||
+                    template.lightingId}
                 </span>
               )}
               <span className="text-[9px] text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
@@ -2186,7 +2505,8 @@ ${preview}`,
               </span>
               {template.category !== 'custom' && (
                 <span className="text-[9px] text-gray-600 bg-gray-700/30 px-1.5 py-0.5 rounded">
-                  {TEMPLATE_CATEGORIES.find(c => c.id === template.category)?.name || template.category}
+                  {TEMPLATE_CATEGORIES.find((c) => c.id === template.category)?.name ||
+                    template.category}
                 </span>
               )}
             </div>
@@ -2199,7 +2519,10 @@ ${preview}`,
   // ── 主渲染 ──────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70"
+      onClick={onClose}
+    >
       <div
         className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-[90vw] h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -2214,8 +2537,13 @@ ${preview}`,
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{imageSequence.length} 张图片 · {durationMs}ms</span>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors">
+            <span className="text-xs text-gray-500">
+              {imageSequence.length} 张图片 · {durationMs}ms
+            </span>
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -2231,18 +2559,23 @@ ${preview}`,
           {/* 右侧：配置标签页 */}
           <div className="flex-1 flex flex-col min-w-0">
             {renderTabBar()}
-            <div className="flex-1 overflow-y-auto">
-              {renderTabContent()}
-            </div>
+            <div className="flex-1 overflow-y-auto">{renderTabContent()}</div>
           </div>
         </div>
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-700 bg-gray-900/50">
           <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span>总时长: <span className="text-gray-300 font-mono">{durationInput}s</span></span>
+            <span>
+              总时长: <span className="text-gray-300 font-mono">{durationInput}s</span>
+            </span>
             <span className="text-gray-700">|</span>
-            <span>尺寸: <span className="text-gray-300">{currentSize.width}×{currentSize.height}</span></span>
+            <span>
+              尺寸:{' '}
+              <span className="text-gray-300">
+                {currentSize.width}×{currentSize.height}
+              </span>
+            </span>
           </div>
 
           <div className="flex items-center gap-3">

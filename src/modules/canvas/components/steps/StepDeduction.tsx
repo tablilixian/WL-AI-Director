@@ -14,34 +14,82 @@ interface StepDeductionProps {
   onBack: () => void;
 }
 
-const SHOT_SIZE_OPTIONS = ['大远景', '远景', '全景', '中全景', '中景', '中近景', '近景', '特写', '大特写'];
-const CAMERA_ANGLE_OPTIONS = ['平视', '仰拍', '俯拍', '鸟瞰', '斜拍', '正面', '侧面', '背面', '低角度'];
+const SHOT_SIZE_OPTIONS = [
+  '大远景',
+  '远景',
+  '全景',
+  '中全景',
+  '中景',
+  '中近景',
+  '近景',
+  '特写',
+  '大特写',
+];
+const CAMERA_ANGLE_OPTIONS = [
+  '平视',
+  '仰拍',
+  '俯拍',
+  '鸟瞰',
+  '斜拍',
+  '正面',
+  '侧面',
+  '背面',
+  '低角度',
+];
 const POSITION_OPTIONS = ['居中', '左侧1/3', '右侧1/3', '黄金分割左', '黄金分割右', '边缘'];
-const TRANSITION_OPTIONS = ['硬切', '推镜头', '拉镜头', '横移', '跟拍', '环绕', '过曝闪白', '黑场过渡', '模糊转场', '匹配剪辑'];
+const TRANSITION_OPTIONS = [
+  '硬切',
+  '推镜头',
+  '拉镜头',
+  '横移',
+  '跟拍',
+  '环绕',
+  '过曝闪白',
+  '黑场过渡',
+  '模糊转场',
+  '匹配剪辑',
+];
 
 function makeDefaultPanels(): StoryboardPanelData[] {
-  return [0, 1, 2, 3].map(i => ({
-    index: i, checked: true,
-    shotSize: '', cameraAngle: '', subjectPosition: '',
-    action: '', lighting: '', dialogue: '', transitionToNext: '',
+  return [0, 1, 2, 3].map((i) => ({
+    index: i,
+    checked: true,
+    shotSize: '',
+    cameraAngle: '',
+    subjectPosition: '',
+    action: '',
+    lighting: '',
+    dialogue: '',
+    transitionToNext: '',
     rawDescription: '',
   }));
 }
 
-export const StepDeduction: React.FC<StepDeductionProps> = ({ sourceLayerId, initialData, vlmRawAnalysis, onSave, onNext, onBack }) => {
+export const StepDeduction: React.FC<StepDeductionProps> = ({
+  sourceLayerId,
+  initialData,
+  vlmRawAnalysis,
+  onSave,
+  onNext,
+  onBack,
+}) => {
   const { layers } = useCanvasStore();
-  const sourceLayer = layers.find(l => l.id === sourceLayerId);
+  layers.find((l) => l.id === sourceLayerId);
 
-  const [narrativeDirection, setNarrativeDirection] = useState(initialData?.narrativeDirection || '');
+  const [narrativeDirection, setNarrativeDirection] = useState(
+    initialData?.narrativeDirection || '',
+  );
   const [optimizedNarrativeDirection, setOptimizedNarrativeDirection] = useState('');
-  const [panels, setPanels] = useState<StoryboardPanelData[]>(initialData?.panels || makeDefaultPanels());
+  const [panels, setPanels] = useState<StoryboardPanelData[]>(
+    initialData?.panels || makeDefaultPanels(),
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedPanel, setExpandedPanel] = useState<number | null>(null);
   const [rawLlmOutput, setRawLlmOutput] = useState('');
 
   const updatePanel = (index: number, updates: Partial<StoryboardPanelData>) => {
-    setPanels(prev => prev.map(p => p.index === index ? { ...p, ...updates } : p));
+    setPanels((prev) => prev.map((p) => (p.index === index ? { ...p, ...updates } : p)));
   };
 
   const handleDeduce = useCallback(async () => {
@@ -99,7 +147,10 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
       console.log('Raw result:', result);
 
       // 去掉 markdown 代码块包裹
-      result = result.replace(/^```[\s\S]*?\n/, '').replace(/\n```\s*$/, '').trim();
+      result = result
+        .replace(/^```[\s\S]*?\n/, '')
+        .replace(/\n```\s*$/, '')
+        .trim();
       setRawLlmOutput(result);
 
       const parsedPanels: StoryboardPanelData[] = [];
@@ -126,7 +177,7 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
         if (Object.keys(panel).length > 0) {
           const fields = ['景别', '机位', '主体位置', '动作', '光照', '对白', '转场'];
           const summary = fields
-            .map(f => panel[f])
+            .map((f) => panel[f])
             .filter(Boolean)
             .join('，');
           parsedPanels.push({
@@ -147,18 +198,30 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
       // 如果解析失败，把整段文本放入第1个 panel 的 rawDescription 作为回退
       if (parsedPanels.length === 0 && result) {
         parsedPanels.push({
-          index: 0, checked: true,
-          shotSize: '', cameraAngle: '', subjectPosition: '',
-          action: '', lighting: '', dialogue: '', transitionToNext: '',
+          index: 0,
+          checked: true,
+          shotSize: '',
+          cameraAngle: '',
+          subjectPosition: '',
+          action: '',
+          lighting: '',
+          dialogue: '',
+          transitionToNext: '',
           rawDescription: result,
         });
       }
 
       while (parsedPanels.length < 4) {
         parsedPanels.push({
-          index: parsedPanels.length, checked: true,
-          shotSize: '', cameraAngle: '', subjectPosition: '',
-          action: '', lighting: '', dialogue: '', transitionToNext: '',
+          index: parsedPanels.length,
+          checked: true,
+          shotSize: '',
+          cameraAngle: '',
+          subjectPosition: '',
+          action: '',
+          lighting: '',
+          dialogue: '',
+          transitionToNext: '',
           rawDescription: '',
         });
       }
@@ -177,14 +240,16 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
     onNext();
   };
 
-  const hasData = panels.some(p => p.action || p.rawDescription) || rawLlmOutput.length > 0;
+  const hasData = panels.some((p) => p.action || p.rawDescription) || rawLlmOutput.length > 0;
 
   return (
     <div className="space-y-4">
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="text-sm text-red-400">{error}</p>
-          <button onClick={() => setError(null)} className="text-xs text-red-400 underline mt-1">关闭</button>
+          <button onClick={() => setError(null)} className="text-xs text-red-400 underline mt-1">
+            关闭
+          </button>
         </div>
       )}
 
@@ -210,19 +275,27 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
                   <p className="font-medium text-[var(--text-secondary)] text-[11px]">固定机位</p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">骑兵队列从山谷远处跑来，镜头固定不动</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    骑兵队列从山谷远处跑来，镜头固定不动
+                  </p>
                 </div>
                 <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
                   <p className="font-medium text-[var(--text-secondary)] text-[11px]">空间递进</p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">深夜书房，主角发现古书后蓝光亮起</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    深夜书房，主角发现古书后蓝光亮起
+                  </p>
                 </div>
                 <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
                   <p className="font-medium text-[var(--text-secondary)] text-[11px]">氛围渐变</p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">雨夜街角，一把红伞逐渐消失在雾中</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    雨夜街角，一把红伞逐渐消失在雾中
+                  </p>
                 </div>
                 <div className="p-2 bg-[var(--bg-base)] rounded border border-[var(--border-primary)]">
                   <p className="font-medium text-[var(--text-secondary)] text-[11px]">时间拉伸</p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">爆炸瞬间，碎片飞溅的慢镜头</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    爆炸瞬间，碎片飞溅的慢镜头
+                  </p>
                 </div>
               </div>
             </div>
@@ -254,7 +327,9 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
               <div
                 key={i}
                 className={`rounded-lg border overflow-hidden ${
-                  panel.checked ? 'border-amber-500/40' : 'border-[var(--border-primary)] opacity-60'
+                  panel.checked
+                    ? 'border-amber-500/40'
+                    : 'border-[var(--border-primary)] opacity-60'
                 }`}
               >
                 <div className="px-3 py-1.5 bg-gray-800 border-b border-inherit flex items-center justify-between">
@@ -262,22 +337,28 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
                     <input
                       type="checkbox"
                       checked={panel.checked}
-                      onChange={e => updatePanel(i, { checked: e.target.checked })}
+                      onChange={(e) => updatePanel(i, { checked: e.target.checked })}
                       className="w-3.5 h-3.5"
                     />
-                    <span className="text-xs font-mono font-bold text-[var(--text-tertiary)]">分镜 {i + 1}</span>
+                    <span className="text-xs font-mono font-bold text-[var(--text-tertiary)]">
+                      分镜 {i + 1}
+                    </span>
                   </div>
                   <button
                     onClick={() => setExpandedPanel(expandedPanel === i ? null : i)}
                     className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   >
-                    {expandedPanel === i ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    {expandedPanel === i ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
                 <div className="p-2.5">
                   <textarea
                     value={panel.rawDescription}
-                    onChange={e => updatePanel(i, { rawDescription: e.target.value })}
+                    onChange={(e) => updatePanel(i, { rawDescription: e.target.value })}
                     placeholder="分镜描述..."
                     rows={2}
                     className="w-full px-2 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-xs text-[var(--text-primary)] resize-none focus:border-amber-500 outline-none"
@@ -288,51 +369,88 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
                     <div className="grid grid-cols-2 gap-1.5">
                       <div>
                         <label className="text-[9px] text-[var(--text-tertiary)]">景别</label>
-                        <select value={panel.shotSize} onChange={e => updatePanel(i, { shotSize: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none">
+                        <select
+                          value={panel.shotSize}
+                          onChange={(e) => updatePanel(i, { shotSize: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                        >
                           <option value="">—</option>
-                          {SHOT_SIZE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          {SHOT_SIZE_OPTIONS.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
                         <label className="text-[9px] text-[var(--text-tertiary)]">机位</label>
-                        <select value={panel.cameraAngle} onChange={e => updatePanel(i, { cameraAngle: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none">
+                        <select
+                          value={panel.cameraAngle}
+                          onChange={(e) => updatePanel(i, { cameraAngle: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                        >
                           <option value="">—</option>
-                          {CAMERA_ANGLE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          {CAMERA_ANGLE_OPTIONS.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
                         <label className="text-[9px] text-[var(--text-tertiary)]">主体位置</label>
-                        <select value={panel.subjectPosition} onChange={e => updatePanel(i, { subjectPosition: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none">
+                        <select
+                          value={panel.subjectPosition}
+                          onChange={(e) => updatePanel(i, { subjectPosition: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                        >
                           <option value="">—</option>
-                          {POSITION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          {POSITION_OPTIONS.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
                         <label className="text-[9px] text-[var(--text-tertiary)]">转场</label>
-                        <select value={panel.transitionToNext} onChange={e => updatePanel(i, { transitionToNext: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none">
+                        <select
+                          value={panel.transitionToNext}
+                          onChange={(e) => updatePanel(i, { transitionToNext: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                        >
                           <option value="">—</option>
-                          {TRANSITION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          {TRANSITION_OPTIONS.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
                     <div>
                       <label className="text-[9px] text-[var(--text-tertiary)]">动作</label>
-                      <input value={panel.action} onChange={e => updatePanel(i, { action: e.target.value })}
-                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none" />
+                      <input
+                        value={panel.action}
+                        onChange={(e) => updatePanel(i, { action: e.target.value })}
+                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                      />
                     </div>
                     <div>
                       <label className="text-[9px] text-[var(--text-tertiary)]">光照</label>
-                      <input value={panel.lighting} onChange={e => updatePanel(i, { lighting: e.target.value })}
-                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none" />
+                      <input
+                        value={panel.lighting}
+                        onChange={(e) => updatePanel(i, { lighting: e.target.value })}
+                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                      />
                     </div>
                     <div>
                       <label className="text-[9px] text-[var(--text-tertiary)]">对白</label>
-                      <input value={panel.dialogue} onChange={e => updatePanel(i, { dialogue: e.target.value })}
-                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none" />
+                      <input
+                        value={panel.dialogue}
+                        onChange={(e) => updatePanel(i, { dialogue: e.target.value })}
+                        className="w-full px-1.5 py-1 bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[10px] text-[var(--text-primary)] focus:border-amber-500 outline-none"
+                      />
                     </div>
                   </div>
                 )}
@@ -341,8 +459,11 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
           </div>
 
           <div className="flex gap-2">
-            <button onClick={handleDeduce} disabled={isProcessing}
-              className="flex items-center gap-1 px-3 py-1.5 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs rounded-lg hover:text-[var(--text-primary)]">
+            <button
+              onClick={handleDeduce}
+              disabled={isProcessing}
+              className="flex items-center gap-1 px-3 py-1.5 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs rounded-lg hover:text-[var(--text-primary)]"
+            >
               <Sparkles className="w-3 h-3" /> 重新推演
             </button>
           </div>
@@ -359,10 +480,16 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
           )}
 
           <div className="flex gap-2 pt-2">
-            <button onClick={onBack} className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-sm rounded-lg hover:text-[var(--text-primary)] flex items-center justify-center gap-1">
+            <button
+              onClick={onBack}
+              className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-sm rounded-lg hover:text-[var(--text-primary)] flex items-center justify-center gap-1"
+            >
               <ArrowLeft className="w-4 h-4" /> 返回分析
             </button>
-            <button onClick={handleConfirm} className="flex-1 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700">
+            <button
+              onClick={handleConfirm}
+              className="flex-1 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700"
+            >
               确认，生成宫格图
             </button>
           </div>

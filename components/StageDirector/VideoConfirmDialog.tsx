@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
-import { X, ChevronDown, ChevronRight, Image, Film, AlertTriangle, Check, Sparkles, Grid3x3, Camera, Type } from 'lucide-react';
+import {
+  X,
+  ChevronDown,
+  ChevronRight,
+  Image,
+  Film,
+  AlertTriangle,
+  Check,
+  Sparkles,
+  Camera,
+  Type,
+} from 'lucide-react';
 import {
   VideoGenerationMode,
-  TimedKeyframe,
   AspectRatio,
   VideoDuration,
   CameraChoreography,
@@ -91,31 +101,47 @@ function buildJsonPreview(props: VideoConfirmDialogProps, actualFrameIndexes?: n
   switch (props.mode) {
     case 'basic':
     case 'msr':
-      return JSON.stringify({
-        ...base,
-        background: '<上传后文件名>',
-        image1: '<上传后文件名>',
-        ...(props.mode === 'msr' ? { image2: '<上传后文件名>' } : {}),
-      }, null, 2);
+      return JSON.stringify(
+        {
+          ...base,
+          background: '<上传后文件名>',
+          image1: '<上传后文件名>',
+          ...(props.mode === 'msr' ? { image2: '<上传后文件名>' } : {}),
+        },
+        null,
+        2,
+      );
     case 'mkr':
-      return JSON.stringify({
-        ...base,
-        images: (props.timedKeyframeImages || []).map((_, i) => ({
-          image: `<上传后文件名 #${i + 1}>`,
-          frame_index: props.timedKeyframeImages?.[i]?.positionPercent,
-        })),
-      }, null, 2);
+      return JSON.stringify(
+        {
+          ...base,
+          images: (props.timedKeyframeImages || []).map((_, i) => ({
+            image: `<上传后文件名 #${i + 1}>`,
+            frame_index: props.timedKeyframeImages?.[i]?.positionPercent,
+          })),
+        },
+        null,
+        2,
+      );
     case 'mkr-grid':
-      return JSON.stringify({
-        ...base,
-        image: '<上传后文件名>',
-        gridtype: props.gridType || 4,
-        frame_indexs: actualFrameIndexes || [],
-      }, null, 2);
+      return JSON.stringify(
+        {
+          ...base,
+          image: '<上传后文件名>',
+          gridtype: props.gridType || 4,
+          frame_indexs: actualFrameIndexes || [],
+        },
+        null,
+        2,
+      );
   }
 }
 
-const ImageThumb: React.FC<{ url?: string; label: string; sublabel?: string }> = ({ url, label, sublabel }) => {
+const ImageThumb: React.FC<{ url?: string; label: string; sublabel?: string }> = ({
+  url,
+  label,
+  sublabel,
+}) => {
   const { src, loading, error } = useImageLoader(url);
 
   return (
@@ -132,7 +158,9 @@ const ImageThumb: React.FC<{ url?: string; label: string; sublabel?: string }> =
           <img src={src} className="w-full h-full object-cover" alt={label} />
         )}
       </div>
-      <span className="text-[8px] text-[var(--text-tertiary)] text-center leading-tight">{label}</span>
+      <span className="text-[8px] text-[var(--text-tertiary)] text-center leading-tight">
+        {label}
+      </span>
       {sublabel && <span className="text-[7px] text-[var(--text-muted)]">{sublabel}</span>}
     </div>
   );
@@ -177,8 +205,8 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
   const modeInfo = MODE_LABELS[mode];
   const totalFrames = duration * fps;
   // 根据百分比和总帧数计算实际帧索引（与 orchestrator 公式一致）
-  const actualFrameIndexes = frameIndexesPercent?.map(pct =>
-    Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1)
+  const actualFrameIndexes = frameIndexesPercent?.map((pct) =>
+    Math.min(Math.round((pct / 100) * totalFrames), totalFrames - 1),
   );
 
   if (!isOpen) return null;
@@ -205,7 +233,10 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               )}
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors p-1"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -229,24 +260,35 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
 
             {mode === 'mkr-grid' && gridType && (
               <div className="bg-[var(--bg-base)] rounded p-3 space-y-1.5">
-                <div className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">网格配置</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">
+                  网格配置
+                </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-tertiary)]">类型:</span>
-                    <span className="text-[var(--text-primary)] font-mono">{GRID_LABELS[gridType] || `${gridType}格`}</span>
+                    <span className="text-[var(--text-primary)] font-mono">
+                      {GRID_LABELS[gridType] || `${gridType}格`}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-tertiary)]">总帧数:</span>
                     <span className="text-[var(--text-primary)] font-mono">{totalFrames} 帧</span>
                   </div>
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] mt-1">帧索引 (frame_indexs):</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-1">
+                  帧索引 (frame_indexs):
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {(actualFrameIndexes || []).map((idx, i) => (
-                    <div key={i} className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded text-[10px] font-mono text-[var(--text-primary)]">
+                    <div
+                      key={i}
+                      className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded text-[10px] font-mono text-[var(--text-primary)]"
+                    >
                       #{i + 1}: {idx}
                       {frameIndexesPercent && (
-                        <span className="text-[var(--text-muted)] ml-1">({frameIndexesPercent[i]}%)</span>
+                        <span className="text-[var(--text-muted)] ml-1">
+                          ({frameIndexesPercent[i]}%)
+                        </span>
                       )}
                     </div>
                   ))}
@@ -264,9 +306,14 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                     <div key={i} className="flex items-center gap-3 text-[11px]">
                       <span className="text-[var(--text-muted)] font-mono w-6">#{i + 1}</span>
                       <div className="flex-1 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
-                        <div className="h-full bg-[var(--accent)] rounded-full" style={{ width: `${tk.positionPercent}%` }} />
+                        <div
+                          className="h-full bg-[var(--accent)] rounded-full"
+                          style={{ width: `${tk.positionPercent}%` }}
+                        />
                       </div>
-                      <span className="text-[var(--text-primary)] font-mono w-12 text-right">{tk.positionPercent}%</span>
+                      <span className="text-[var(--text-primary)] font-mono w-12 text-right">
+                        {tk.positionPercent}%
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -286,7 +333,9 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-tertiary)]">模型:</span>
                 <span className="text-[var(--text-primary)]">{modelName}</span>
-                <span className="text-[8px] px-1 py-0.5 bg-[var(--bg-hover)] rounded text-[var(--text-muted)]">{modelProvider}</span>
+                <span className="text-[8px] px-1 py-0.5 bg-[var(--bg-hover)] rounded text-[var(--text-muted)]">
+                  {modelProvider}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-tertiary)]">比例:</span>
@@ -323,7 +372,9 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
                 完整提示词
               </span>
-              <span className="text-[8px] text-[var(--text-muted)]">(最终发送给 API 的 prompt 字段)</span>
+              <span className="text-[8px] text-[var(--text-muted)]">
+                (最终发送给 API 的 prompt 字段)
+              </span>
             </div>
             <div className="bg-[var(--bg-base)] rounded p-3 border border-[var(--border-primary)] max-h-32 overflow-y-auto">
               <pre className="text-[11px] text-[var(--text-primary)] whitespace-pre-wrap font-sans leading-relaxed">
@@ -336,7 +387,11 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               onClick={() => setShowSources(!showSources)}
               className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             >
-              {showSources ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {showSources ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
               提示词拼装来源 {showSources ? '收起' : '展开'}
             </button>
 
@@ -354,7 +409,8 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                   <div className="flex items-start gap-2">
                     <span className="text-[var(--text-tertiary)] shrink-0 w-20">③ 运镜编排:</span>
                     <span className="text-[var(--text-primary)]">
-                      {cameraChoreography.movementType} · {cameraChoreography.movementSpeed} · {cameraChoreography.startShotSize}→{cameraChoreography.endShotSize}
+                      {cameraChoreography.movementType} · {cameraChoreography.movementSpeed} ·{' '}
+                      {cameraChoreography.startShotSize}→{cameraChoreography.endShotSize}
                     </span>
                   </div>
                 )}
@@ -369,7 +425,9 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                     <span className="text-[var(--text-tertiary)] shrink-0 w-20">⑤ 宫格描述:</span>
                     <div className="text-[var(--text-primary)]">
                       {fourGridDescriptions.map((d, i) => (
-                        <div key={i} className="truncate">分镜{i + 1}: {d}</div>
+                        <div key={i} className="truncate">
+                          分镜{i + 1}: {d}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -379,7 +437,9 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                     <span className="text-[var(--text-tertiary)] shrink-0 w-20">⑤ 九宫格描述:</span>
                     <div className="text-[var(--text-primary)]">
                       {nineGridPanels.map((p, i) => (
-                        <div key={i} className="truncate">面板{i + 1} ({p.shotSize}/{p.cameraAngle}): {p.description}</div>
+                        <div key={i} className="truncate">
+                          面板{i + 1} ({p.shotSize}/{p.cameraAngle}): {p.description}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -399,7 +459,9 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
                 参考图片
               </span>
-              <span className="text-[8px] text-[var(--text-muted)]">(所有图片先上传到服务端，请求体中只传文件名)</span>
+              <span className="text-[8px] text-[var(--text-muted)]">
+                (所有图片先上传到服务端，请求体中只传文件名)
+              </span>
             </div>
 
             <div className="flex flex-wrap gap-4">
@@ -408,24 +470,37 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
                 <ImageThumb url={refGridImageUrl} label="宫格整图" sublabel="refImage" />
               )}
               {mode !== 'mkr-grid' && startKeyframeImageUrl && (
-                <ImageThumb url={startKeyframeImageUrl} label="首帧" sublabel={mode === 'basic' ? 'background' : 'reference'} />
+                <ImageThumb
+                  url={startKeyframeImageUrl}
+                  label="首帧"
+                  sublabel={mode === 'basic' ? 'background' : 'reference'}
+                />
               )}
               {(mode === 'basic' || mode === 'msr') && endKeyframeImageUrl && (
-                <ImageThumb url={endKeyframeImageUrl} label={mode === 'msr' ? '尾帧 image2' : '尾帧'} sublabel="image2" />
+                <ImageThumb
+                  url={endKeyframeImageUrl}
+                  label={mode === 'msr' ? '尾帧 image2' : '尾帧'}
+                  sublabel="image2"
+                />
               )}
 
               {/* mkr 关键帧 */}
-              {mode === 'mkr' && timedKeyframeImages && timedKeyframeImages.length > 0 && (
+              {mode === 'mkr' &&
+                timedKeyframeImages &&
+                timedKeyframeImages.length > 0 &&
                 timedKeyframeImages.map((tk, i) => (
-                  <ImageThumb key={i} url={tk.imageUrl} label={`关键帧 #${i + 1}`} sublabel={`${tk.positionPercent}%`} />
-                ))
-              )}
+                  <ImageThumb
+                    key={i}
+                    url={tk.imageUrl}
+                    label={`关键帧 #${i + 1}`}
+                    sublabel={`${tk.positionPercent}%`}
+                  />
+                ))}
 
               {/* msr 背景 */}
               {mode === 'msr' && backgroundImage && (
                 <ImageThumb url={backgroundImage} label="背景参考图" sublabel="background" />
               )}
-
             </div>
 
             {mode === 'mkr-grid' && !refGridImageUrl && (
@@ -442,7 +517,11 @@ const VideoConfirmDialog: React.FC<VideoConfirmDialogProps> = (props) => {
               onClick={() => setShowJsonPreview(!showJsonPreview)}
               className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             >
-              {showJsonPreview ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {showJsonPreview ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
               发送的完整 JSON {showJsonPreview ? '收起' : '展开'}
             </button>
             {showJsonPreview && (

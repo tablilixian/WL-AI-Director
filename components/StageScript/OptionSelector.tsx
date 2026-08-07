@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import { STYLES } from './constants';
 
 interface Option {
@@ -33,7 +32,7 @@ const OptionSelector: React.FC<Props> = ({
   customPlaceholder,
   gridCols = 2,
   helpText,
-  helpLink
+  helpLink,
 }) => {
   return (
     <div className="space-y-2">
@@ -48,9 +47,7 @@ const OptionSelector: React.FC<Props> = ({
             onClick={() => onChange(opt.value)}
             title={opt.desc}
             className={`px-${gridCols === 1 ? '3' : '2'} py-2.5 text-[11px] font-medium rounded-md transition-all text-${gridCols === 1 ? 'left' : 'center'} border ${
-              value === opt.value
-                ? STYLES.button.selected
-                : `${STYLES.button.secondary} border`
+              value === opt.value ? STYLES.button.selected : `${STYLES.button.secondary} border`
             }`}
           >
             {opt.label}
@@ -59,7 +56,7 @@ const OptionSelector: React.FC<Props> = ({
       </div>
       {value === 'custom' && onCustomInputChange && (
         <div className="pt-1">
-          <input 
+          <input
             type="text"
             value={customInput}
             onChange={(e) => onCustomInputChange(e.target.value)}
@@ -75,9 +72,9 @@ const OptionSelector: React.FC<Props> = ({
             {helpLink && (
               <>
                 {' '}
-                <a 
-                  href={helpLink.url} 
-                  target="_blank" 
+                <a
+                  href={helpLink.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors font-medium"
                 >

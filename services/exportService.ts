@@ -43,7 +43,7 @@ async function downloadFile(urlOrBase64: string): Promise<Blob> {
     }
     return new Blob([bytes], { type: 'video/mp4' });
   }
-  
+
   // 原有的URL下载逻辑
   const response = await fetch(urlOrBase64);
   if (!response.ok) {
@@ -57,18 +57,18 @@ async function downloadFile(urlOrBase64: string): Promise<Blob> {
  */
 export async function downloadMasterVideo(
   project: ProjectState,
-  onProgress?: (phase: string, progress: number) => void
+  onProgress?: (phase: string, progress: number) => void,
 ): Promise<void> {
   try {
     // 1. 筛选已完成的视频片段
-    const completedShots = project.shots.filter(shot => shot.interval?.videoUrl);
-    
+    const completedShots = project.shots.filter((shot) => shot.interval?.videoUrl);
+
     if (completedShots.length === 0) {
       throw new Error('没有可导出的视频片段');
     }
 
     onProgress?.('正在加载 ZIP 库...', 0);
-    
+
     // 2. 动态导入 JSZip
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
@@ -81,12 +81,12 @@ export async function downloadMasterVideo(
       const videoUrl = shot.interval!.videoUrl!;
       const shotNum = String(i + 1).padStart(3, '0');
       const fileName = `shot_${shotNum}.mp4`;
-      
+
       try {
         const videoBlob = await downloadFile(videoUrl);
         zip.file(fileName, videoBlob);
-        
-        const progress = 10 + Math.round((i + 1) / completedShots.length * 75);
+
+        const progress = 10 + Math.round(((i + 1) / completedShots.length) * 75);
         onProgress?.(`下载中 (${i + 1}/${completedShots.length})...`, progress);
       } catch (err) {
         logger.error(LogCategory.STORAGE, `下载视频片段 ${i + 1} 失败:`, err);
@@ -97,13 +97,10 @@ export async function downloadMasterVideo(
     onProgress?.('正在生成 ZIP 文件...', 85);
 
     // 4. 生成 ZIP 文件
-    const zipBlob = await zip.generateAsync(
-      { type: 'blob' },
-      (metadata) => {
-        const progress = 85 + Math.round(metadata.percent / 10);
-        onProgress?.('正在压缩...', progress);
-      }
-    );
+    const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      const progress = 85 + Math.round(metadata.percent / 10);
+      onProgress?.('正在压缩...', progress);
+    });
 
     onProgress?.('准备下载...', 95);
 
@@ -139,7 +136,7 @@ export function estimateTotalDuration(project: ProjectState): number {
  */
 export async function downloadSourceAssets(
   project: ProjectState,
-  onProgress?: (phase: string, progress: number) => void
+  onProgress?: (phase: string, progress: number) => void,
 ): Promise<void> {
   try {
     // 动态导入 JSZip
@@ -156,7 +153,7 @@ export async function downloadSourceAssets(
         if (char.imageUrl) {
           assets.push({
             url: char.imageUrl,
-            path: `characters/${char.name.replace(/[\/\\?%*:|"<>]/g, '_')}_base.jpg`
+            path: `characters/${char.name.replace(/[/\\?%*:|"<>]/g, '_')}_base.jpg`,
           });
         }
         if (char.variations) {
@@ -164,7 +161,7 @@ export async function downloadSourceAssets(
             if (variation.imageUrl) {
               assets.push({
                 url: variation.imageUrl,
-                path: `characters/${char.name.replace(/[\/\\?%*:|"<>]/g, '_')}_${variation.name.replace(/[\/\\?%*:|"<>]/g, '_')}.jpg`
+                path: `characters/${char.name.replace(/[/\\?%*:|"<>]/g, '_')}_${variation.name.replace(/[/\\?%*:|"<>]/g, '_')}.jpg`,
               });
             }
           }
@@ -178,7 +175,7 @@ export async function downloadSourceAssets(
         if (scene.imageUrl) {
           assets.push({
             url: scene.imageUrl,
-            path: `scenes/${scene.location.replace(/[\/\\?%*:|"<>]/g, '_')}.jpg`
+            path: `scenes/${scene.location.replace(/[/\\?%*:|"<>]/g, '_')}.jpg`,
           });
         }
       }
@@ -189,13 +186,13 @@ export async function downloadSourceAssets(
       for (let i = 0; i < project.shots.length; i++) {
         const shot = project.shots[i];
         const shotNum = String(i + 1).padStart(3, '0');
-        
+
         if (shot.keyframes) {
           for (const keyframe of shot.keyframes) {
             if (keyframe.imageUrl) {
               assets.push({
                 url: keyframe.imageUrl,
-                path: `shots/shot_${shotNum}_${keyframe.type}_frame.jpg`
+                path: `shots/shot_${shotNum}_${keyframe.type}_frame.jpg`,
               });
             }
           }
@@ -205,7 +202,7 @@ export async function downloadSourceAssets(
         if (shot.interval?.videoUrl) {
           assets.push({
             url: shot.interval.videoUrl,
-            path: `videos/shot_${shotNum}.mp4`
+            path: `videos/shot_${shotNum}.mp4`,
           });
         }
       }
@@ -223,8 +220,8 @@ export async function downloadSourceAssets(
       try {
         const blob = await downloadFile(asset.url);
         zip.file(asset.path, blob);
-        
-        const progress = 5 + Math.round((i + 1) / assets.length * 80);
+
+        const progress = 5 + Math.round(((i + 1) / assets.length) * 80);
         onProgress?.(`下载中 (${i + 1}/${assets.length})...`, progress);
       } catch (error) {
         logger.error(LogCategory.STORAGE, `下载资源失败: ${asset.path}`, error);
@@ -235,13 +232,10 @@ export async function downloadSourceAssets(
     onProgress?.('正在生成 ZIP 文件...', 90);
 
     // 生成 ZIP 文件
-    const zipBlob = await zip.generateAsync(
-      { type: 'blob' },
-      (metadata) => {
-        const progress = 90 + Math.round(metadata.percent / 10);
-        onProgress?.('正在压缩...', progress);
-      }
-    );
+    const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      const progress = 90 + Math.round(metadata.percent / 10);
+      onProgress?.('正在压缩...', progress);
+    });
 
     // 触发下载
     const url = URL.createObjectURL(zipBlob);

@@ -8,24 +8,12 @@ import { TextClip } from '../../types/editor';
 import { parseDialogueLines } from '../../utils/textUtils';
 import { ImportFromProject } from './ImportFromProject';
 
-interface MediaAsset {
-  id: string;
-  name: string;
-  type: 'video' | 'audio' | 'image';
-  url: string;
-  duration?: number;
-  thumbnail?: string;
-}
-
 interface ImportMediaProps {
   onImport?: (clips: any[]) => void;
   project?: ProjectState;
 }
 
-export const ImportMedia: React.FC<ImportMediaProps> = ({
-  onImport,
-  project,
-}) => {
+export const ImportMedia: React.FC<ImportMediaProps> = ({ project }) => {
   const { tracks, addClip, clear, save } = useEditorStore();
   const [showPanel, setShowPanel] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -52,205 +40,221 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
     });
   };
 
-  const findTrackByType = useCallback((type: 'video' | 'audio' | 'text') => {
-    return tracks.find(t => t.type === type) || null;
-  }, [tracks]);
+  const findTrackByType = useCallback(
+    (type: 'video' | 'audio' | 'text') => {
+      return tracks.find((t) => t.type === type) || null;
+    },
+    [tracks],
+  );
 
-  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
 
-    setImporting(true);
+      setImporting(true);
 
-    for (const file of Array.from(files) as File[]) {
-      const url = URL.createObjectURL(file);
-      const type = file.type.startsWith('video') ? 'video' 
-        : file.type.startsWith('audio') ? 'audio' : 'image';
+      for (const file of Array.from(files) as File[]) {
+        const url = URL.createObjectURL(file);
+        const type = file.type.startsWith('video')
+          ? 'video'
+          : file.type.startsWith('audio')
+            ? 'audio'
+            : 'image';
 
-      const trackType = type === 'audio' ? 'audio' : 'video';
-      const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
-      const track = findTrackByType(trackType);
-      if (!track) continue;
+        const trackType = type === 'audio' ? 'audio' : 'video';
+        const track = findTrackByType(trackType);
+        if (!track) continue;
 
-      const duration = await getMediaDuration(url, file.type);
-      const fileName = file.name.replace(/\.[^/.]+$/, '');
+        const duration = await getMediaDuration(url, file.type);
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
 
-      const sourceId = `file-${nanoid()}`;
-      try {
-        await indexedDBService.saveFile(sourceId, file);
-      } catch (err) {
-        console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+        const sourceId = `file-${nanoid()}`;
+        try {
+          await indexedDBService.saveFile(sourceId, file);
+        } catch (err) {
+          console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+        }
+
+        const clip: any = {
+          id: nanoid(),
+          type: type === 'image' ? 'image' : type,
+          sourceType: type,
+          sourceId,
+          sourceUrl: url,
+          name: fileName,
+          startTime: 0,
+          duration,
+          inPoint: 0,
+          outPoint: duration,
+          volume: type === 'audio' ? 1 : undefined,
+          speed: 1,
+          opacity: type === 'image' ? 1 : undefined,
+        };
+
+        addClip(track.id, clip);
       }
 
-      const clip: any = {
-        id: nanoid(),
-        type: type === 'image' ? 'image' : type,
-        sourceType: type,
-        sourceId,
-        sourceUrl: url,
-        name: fileName,
-        startTime: 0,
-        duration,
-        inPoint: 0,
-        outPoint: duration,
-        volume: type === 'audio' ? 1 : undefined,
-        speed: 1,
-        opacity: type === 'image' ? 1 : undefined,
-      };
-
-      addClip(track.id, clip);
-    }
-
-    await save();
-    setImporting(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [findTrackByType, addClip, save]);
+      await save();
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [findTrackByType, addClip, save],
+  );
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (!files || files.length === 0) return;
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      const files = e.dataTransfer.files;
+      if (!files || files.length === 0) return;
 
-    setImporting(true);
+      setImporting(true);
 
-    for (const file of Array.from(files) as File[]) {
-      const url = URL.createObjectURL(file);
-      const type = file.type.startsWith('video') ? 'video' 
-        : file.type.startsWith('audio') ? 'audio' : 'image';
+      for (const file of Array.from(files) as File[]) {
+        const url = URL.createObjectURL(file);
+        const type = file.type.startsWith('video')
+          ? 'video'
+          : file.type.startsWith('audio')
+            ? 'audio'
+            : 'image';
 
-      const trackType = type === 'audio' ? 'audio' : 'video';
-      const trackName = type === 'audio' ? '音频轨道' : '视频轨道';
-      const track = findTrackByType(trackType);
-      if (!track) continue;
+        const trackType = type === 'audio' ? 'audio' : 'video';
+        const track = findTrackByType(trackType);
+        if (!track) continue;
 
-      const duration = await getMediaDuration(url, file.type);
-      const fileName = file.name.replace(/\.[^/.]+$/, '');
+        const duration = await getMediaDuration(url, file.type);
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
 
-      const sourceId = `file-${nanoid()}`;
-      try {
-        await indexedDBService.saveFile(sourceId, file);
-      } catch (err) {
-        console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+        const sourceId = `file-${nanoid()}`;
+        try {
+          await indexedDBService.saveFile(sourceId, file);
+        } catch (err) {
+          console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+        }
+
+        const clip: any = {
+          id: nanoid(),
+          type: type === 'image' ? 'image' : type,
+          sourceType: type,
+          sourceId,
+          sourceUrl: url,
+          name: fileName,
+          startTime: 0,
+          duration,
+          inPoint: 0,
+          outPoint: duration,
+          volume: type === 'audio' ? 1 : undefined,
+          speed: 1,
+          opacity: type === 'image' ? 1 : undefined,
+        };
+
+        addClip(track.id, clip);
       }
 
-      const clip: any = {
-        id: nanoid(),
-        type: type === 'image' ? 'image' : type,
-        sourceType: type,
-        sourceId,
-        sourceUrl: url,
-        name: fileName,
-        startTime: 0,
-        duration,
-        inPoint: 0,
-        outPoint: duration,
-        volume: type === 'audio' ? 1 : undefined,
-        speed: 1,
-        opacity: type === 'image' ? 1 : undefined,
-      };
-
-      addClip(track.id, clip);
-    }
-
-    await save();
-    setImporting(false);
-  }, [findTrackByType, addClip, save]);
+      await save();
+      setImporting(false);
+    },
+    [findTrackByType, addClip, save],
+  );
 
   const handleClearAll = async () => {
     clear();
     await save();
   };
 
-  const handleProjectImport = useCallback(async (shots: any[]) => {
-    if (shots.length === 0) return;
+  const handleProjectImport = useCallback(
+    async (shots: any[]) => {
+      if (shots.length === 0) return;
 
-    setImporting(true);
+      setImporting(true);
 
-    const videoTrack = findTrackByType('video');
-    if (!videoTrack) {
-      console.warn('[ImportMedia] 未找到视频轨道，跳过导入');
-      setImporting(false);
-      return;
-    }
-
-    const textTrack = findTrackByType('text');
-
-    let currentTime = 0;
-
-    for (const shot of shots) {
-      const clipDuration = shot.duration * 1000;
-
-      const videoClip: any = {
-        id: nanoid(),
-        type: 'video',
-        sourceType: 'video',
-        sourceId: shot.id,
-        sourceUrl: shot.videoUrl,
-        name: `片段 ${shot.index + 1}`,
-        startTime: currentTime,
-        duration: clipDuration,
-        inPoint: 0,
-        outPoint: clipDuration,
-        volume: 1,
-        speed: 1,
-        opacity: 1,
-      };
-
-      addClip(videoTrack.id, videoClip);
-
-      // 如果有对白，按角色拆分为多条字幕
-      if (shot.dialogue && textTrack) {
-        const lines = parseDialogueLines(shot.dialogue);
-        if (lines.length > 0) {
-          const segDuration = clipDuration / lines.length;
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const textClip: TextClip = {
-              id: `sub-${shot.id}-${Date.now()}-${i}`,
-              trackId: textTrack.id,
-              sourceId: `subtitle-${shot.id}`,
-              sourceType: 'text',
-              sourceUrl: '',
-              name: line.text.slice(0, 20),
-              startTime: currentTime + i * segDuration,
-              duration: segDuration,
-              inPoint: 0,
-              outPoint: segDuration,
-              type: 'text',
-              text: line.text,
-              character: line.character || undefined,
-              fontFamily: 'Arial, sans-serif',
-              fontSize: 24,
-              fontWeight: 400,
-              color: '#ffffff',
-              backgroundColor: '#00000080',
-              x: 50,
-              y: 85,
-              align: 'center',
-              animation: 'fade',
-              volume: 1,
-              speed: 1,
-              opacity: 1,
-            };
-            addClip(textTrack.id, textClip);
-          }
-        }
+      const videoTrack = findTrackByType('video');
+      if (!videoTrack) {
+        console.warn('[ImportMedia] 未找到视频轨道，跳过导入');
+        setImporting(false);
+        return;
       }
 
-      currentTime += clipDuration;
-    }
+      const textTrack = findTrackByType('text');
 
-    await save();
-    setImporting(false);
-    setShowPanel(false);
-  }, [findTrackByType, addClip, save]);
+      let currentTime = 0;
+
+      for (const shot of shots) {
+        const clipDuration = shot.duration * 1000;
+
+        const videoClip: any = {
+          id: nanoid(),
+          type: 'video',
+          sourceType: 'video',
+          sourceId: shot.id,
+          sourceUrl: shot.videoUrl,
+          name: `片段 ${shot.index + 1}`,
+          startTime: currentTime,
+          duration: clipDuration,
+          inPoint: 0,
+          outPoint: clipDuration,
+          volume: 1,
+          speed: 1,
+          opacity: 1,
+        };
+
+        addClip(videoTrack.id, videoClip);
+
+        // 如果有对白，按角色拆分为多条字幕
+        if (shot.dialogue && textTrack) {
+          const lines = parseDialogueLines(shot.dialogue);
+          if (lines.length > 0) {
+            const segDuration = clipDuration / lines.length;
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              const textClip: TextClip = {
+                id: `sub-${shot.id}-${Date.now()}-${i}`,
+                trackId: textTrack.id,
+                sourceId: `subtitle-${shot.id}`,
+                sourceType: 'text',
+                sourceUrl: '',
+                name: line.text.slice(0, 20),
+                startTime: currentTime + i * segDuration,
+                duration: segDuration,
+                inPoint: 0,
+                outPoint: segDuration,
+                type: 'text',
+                text: line.text,
+                character: line.character || undefined,
+                fontFamily: 'Arial, sans-serif',
+                fontSize: 24,
+                fontWeight: 400,
+                color: '#ffffff',
+                backgroundColor: '#00000080',
+                x: 50,
+                y: 85,
+                align: 'center',
+                animation: 'fade',
+                volume: 1,
+                speed: 1,
+                opacity: 1,
+              };
+              addClip(textTrack.id, textClip);
+            }
+          }
+        }
+
+        currentTime += clipDuration;
+      }
+
+      await save();
+      setImporting(false);
+      setShowPanel(false);
+    },
+    [findTrackByType, addClip, save],
+  );
 
   const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
 
@@ -311,11 +315,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
           </div>
 
           {activeTab === 'file' ? (
-            <div 
-              className="p-4"
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
+            <div className="p-4" onDragOver={handleDragOver} onDrop={handleDrop}>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importing}
@@ -336,10 +336,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
                 <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
                   <span>当前素材: {clipCount} 个片段</span>
                   {clipCount > 0 && (
-                    <button
-                      onClick={handleClearAll}
-                      className="text-red-400 hover:text-red-300"
-                    >
+                    <button onClick={handleClearAll} className="text-red-400 hover:text-red-300">
                       清空全部
                     </button>
                   )}
@@ -356,10 +353,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({
               </div>
             </div>
           ) : (
-            <ImportFromProject
-              project={project}
-              onImport={handleProjectImport}
-            />
+            <ImportFromProject project={project} onImport={handleProjectImport} />
           )}
         </div>
       )}

@@ -15,7 +15,8 @@ interface DeductionModalProps {
 
 const DEFAULT_DESCRIPTIONS = ['', '', '', ''];
 
-const DEFAULT_SYSTEM_PROMPT = '你是一个专业的影视分镜师。请分析当前画面后，创作后续分镜的详细描述。';
+const DEFAULT_SYSTEM_PROMPT =
+  '你是一个专业的影视分镜师。请分析当前画面后，创作后续分镜的详细描述。';
 const DEFAULT_USER_PROMPT = `分析这张画面的场景、构图、光影、角色和情绪，然后为后续分镜画面做详细描述：
 
 要求：
@@ -39,7 +40,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({
   const [descriptions, setDescriptions] = useState<string[]>(DEFAULT_DESCRIPTIONS);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageId, setImageId] = useState<string | undefined>();
+  const [, setImageId] = useState<string | undefined>();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +53,20 @@ const DeductionModal: React.FC<DeductionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     if (initialFourGrid) {
-      setPhase(initialFourGrid.status === 'completed' ? 'preview' : initialFourGrid.status === 'analysis_done' ? 'edit' : 'analyze');
+      setPhase(
+        initialFourGrid.status === 'completed'
+          ? 'preview'
+          : initialFourGrid.status === 'analysis_done'
+            ? 'edit'
+            : 'analyze',
+      );
       setNarrativeDirection(initialFourGrid.narrativeDirection || '');
       setVlmAnalysis(initialFourGrid.vlmAnalysis || '');
-      setDescriptions(initialFourGrid.descriptions.length > 0 ? initialFourGrid.descriptions : DEFAULT_DESCRIPTIONS);
+      setDescriptions(
+        initialFourGrid.descriptions.length > 0
+          ? initialFourGrid.descriptions
+          : DEFAULT_DESCRIPTIONS,
+      );
       setSelectedIndexes(initialFourGrid.selectedIndexes || []);
       setImageUrl(initialFourGrid.imageUrl || null);
       setImageId(initialFourGrid.imageId);
@@ -129,10 +140,13 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
 
       // 解析 "分镜N: <描述>" 或 "N. <描述>" 或 "- <描述>" 格式
       let parsed: string[] = [];
-      const lines = llmResult.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = llmResult
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
 
       for (const line of lines) {
-        const match = line.match(/^(?:分镜\s*)?\d+[\.:、]\s*(.+)/);
+        const match = line.match(/^(?:分镜\s*)?\d+[.:、]\s*(.+)/);
         if (match) {
           parsed.push(match[1].trim());
         } else if (line.length > 5) {
@@ -143,7 +157,9 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
 
       // 保证正好 gridType 个
       while (parsed.length < gridType) {
-        parsed.push(`分镜 ${parsed.length + 1}：延续当前画面${narrativeDirection ? '，' + narrativeDirection : ''}。`);
+        parsed.push(
+          `分镜 ${parsed.length + 1}：延续当前画面${narrativeDirection ? '，' + narrativeDirection : ''}。`,
+        );
       }
       parsed = parsed.slice(0, gridType);
 
@@ -166,7 +182,15 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
     } finally {
       setIsProcessing(false);
     }
-  }, [startKeyframeImageUrl, systemPrompt, userPrompt, narrativeDirection, gridType, isProcessing, onSave]);
+  }, [
+    startKeyframeImageUrl,
+    systemPrompt,
+    userPrompt,
+    narrativeDirection,
+    gridType,
+    isProcessing,
+    onSave,
+  ]);
 
   /** 步骤2: 生成宫格图 */
   const handleGenerateStoryboard = useCallback(async () => {
@@ -214,7 +238,17 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
     } finally {
       setIsProcessing(false);
     }
-  }, [startKeyframeImageUrl, descriptions, selectedIndexes, gridType, isProcessing, vlmAnalysis, narrativeDirection, initialFourGrid, onSave]);
+  }, [
+    startKeyframeImageUrl,
+    descriptions,
+    selectedIndexes,
+    gridType,
+    isProcessing,
+    vlmAnalysis,
+    narrativeDirection,
+    initialFourGrid,
+    onSave,
+  ]);
 
   const handleConfirm = () => {
     onConfirm(selectedIndexes.length > 0 ? selectedIndexes : descriptions.map((_, i) => i));
@@ -247,7 +281,10 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
               {phase === 'preview' && '预览四宫格结果'}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors p-1"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -256,7 +293,12 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-sm text-red-400">{error}</p>
-              <button onClick={() => setError(null)} className="text-xs text-red-400 underline mt-1">关闭</button>
+              <button
+                onClick={() => setError(null)}
+                className="text-xs text-red-400 underline mt-1"
+              >
+                关闭
+              </button>
             </div>
           )}
 
@@ -265,7 +307,9 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
             <div className="space-y-4">
               <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
                 <div className="px-4 py-2 bg-gray-800 border-b border-[var(--border-primary)] flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">参考图片</span>
+                  <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    参考图片
+                  </span>
                   <span className="text-[10px] text-[var(--text-muted)]">首帧关键帧</span>
                 </div>
                 <div className="p-3">
@@ -283,7 +327,9 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] text-sm gap-2">
                         <span>无首帧图片</span>
-                        <span className="text-[10px] text-[var(--text-tertiary)]">请先生成镜头的首帧关键帧</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)]">
+                          请先生成镜头的首帧关键帧
+                        </span>
                       </div>
                     )}
                   </div>
@@ -292,7 +338,8 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
 
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-                  System Prompt <span className="text-[var(--text-muted)] font-normal">（系统提示词）</span>
+                  System Prompt{' '}
+                  <span className="text-[var(--text-muted)] font-normal">（系统提示词）</span>
                 </label>
                 <textarea
                   value={systemPrompt}
@@ -304,7 +351,8 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
 
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-                  User Prompt <span className="text-[var(--text-muted)] font-normal">（用户提示词）</span>
+                  User Prompt{' '}
+                  <span className="text-[var(--text-muted)] font-normal">（用户提示词）</span>
                 </label>
                 <textarea
                   value={userPrompt}
@@ -316,7 +364,10 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
 
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-                  剧情方向 <span className="text-[var(--text-muted)] font-normal">（可选，引导 AI 推演方向）</span>
+                  剧情方向{' '}
+                  <span className="text-[var(--text-muted)] font-normal">
+                    （可选，引导 AI 推演方向）
+                  </span>
                 </label>
                 <textarea
                   value={narrativeDirection}
@@ -332,9 +383,14 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                   <div className="flex items-center justify-center mb-4">
                     <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
                   </div>
-                  <p className="text-sm text-[var(--text-muted)] mb-2">AI 正在分析画面并生成分镜描述... {progress}%</p>
+                  <p className="text-sm text-[var(--text-muted)] mb-2">
+                    AI 正在分析画面并生成分镜描述... {progress}%
+                  </p>
                   <div className="mt-4 h-2 bg-gray-700 rounded-full overflow-hidden max-w-md mx-auto">
-                    <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
                 </div>
               ) : !startKeyframeImageUrl ? (
@@ -382,8 +438,8 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                         type="checkbox"
                         checked={selectedIndexes.includes(i)}
                         onChange={() => {
-                          setSelectedIndexes(prev =>
-                            prev.includes(i) ? prev.filter(j => j !== i) : [...prev, i]
+                          setSelectedIndexes((prev) =>
+                            prev.includes(i) ? prev.filter((j) => j !== i) : [...prev, i],
                           );
                         }}
                         className="w-4 h-4"
@@ -413,9 +469,14 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                   <div className="flex items-center justify-center mb-4">
                     <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
                   </div>
-                  <p className="text-sm text-[var(--text-muted)] mb-2">正在生成四宫格... {progress}%</p>
+                  <p className="text-sm text-[var(--text-muted)] mb-2">
+                    正在生成四宫格... {progress}%
+                  </p>
                   <div className="mt-4 h-2 bg-gray-700 rounded-full overflow-hidden max-w-md mx-auto">
-                    <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
                 </div>
               ) : (
@@ -429,7 +490,7 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
                   </button>
                   <button
                     onClick={handleGenerateStoryboard}
-                    disabled={descriptions.every(d => !d.trim())}
+                    disabled={descriptions.every((d) => !d.trim())}
                     className="flex-1 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
@@ -446,7 +507,9 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
               {imageUrl && resultSrc ? (
                 <div className="bg-[var(--bg-base)] rounded-lg border border-green-500/30 overflow-hidden">
                   <div className="px-4 py-2 bg-green-500/10 border-b border-green-500/20">
-                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider">生成结果</p>
+                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider">
+                      生成结果
+                    </p>
                   </div>
                   <div className="p-4">
                     <img src={resultSrc} className="w-full rounded-lg" alt="四宫格推演结果" />
@@ -488,7 +551,10 @@ ${narrativeDirection || '（未提供，请基于画面分析做合理的剧情�
             {phase === 'edit' && '编辑分镜 → 生成四宫格图'}
             {phase === 'preview' && '确认后将填充到视频参数'}
           </p>
-          <button onClick={onClose} className="px-4 py-2 text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors"
+          >
             {phase === 'preview' ? '关闭' : '取消'}
           </button>
         </div>
