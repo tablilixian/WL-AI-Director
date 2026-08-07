@@ -15,3 +15,5 @@ yarn.lock
 *.png
 *.jpg
 *.ico
+# ffmpeg.wasm 编译产物（第三方 vendored），非团队代码
+public/ffmpeg/**
