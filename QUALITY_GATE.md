@@ -15,6 +15,7 @@
 | Prettier 3                            | ✅ 已配置                 | 统一格式，提交时自动格式化             |
 | pre-commit 门禁 (husky + lint-staged) | ✅ 已生效                 | 只校验**暂存文件**，不阻塞存量债       |
 | 单元测试门禁                          | ✅ 18 文件 / 242 用例全绿 | E2E 已正确排除，避免误收集             |
+| CI 远程门禁 (GitHub Actions)          | ✅ 已接入                 | push/PR 到 dev/main 自动跑门禁         |
 | 一个真实 bug 修复                     | ✅                        | 云端同步嵌套图片 URL 永不被回写        |
 
 新增文件：`eslint.config.js`、` .prettierrc`、` .prettierignore`、`.husky/pre-commit`。
@@ -47,6 +48,30 @@ git commit → husky pre-commit → lint-staged
 
 > 门禁**只处理你这次改动的文件**（暂存区），所以不会因为有历史技术债就拒绝你提交。这就是"渐进式门禁"。
 
+### 2.1 CI 远程门禁（远程也卡）
+
+本地 pre-commit 把关，但别人本地可以跳过 hook。CI 门禁（`.github/workflows/ci.yml`）在 **push 到 `dev`/`main`** 或 **开 PR 到 `dev`/`main`** 时自动跑，让门禁不止本地。
+
+```text
+push / PR → GitHub Actions: quality-gate
+  ├─ npm ci
+  ├─ npm run typecheck          （全量，必须 0 错误）
+  ├─ npm run test:ci            （全量，242 用例必须全绿）
+  └─ 增量 lint / format（仅本次改动文件）
+       ├─ npx eslint            （error 级阻塞合并；warning 暂作 advisory）
+       └─ npx prettier --check  （未格式化即阻塞）
+```
+
+**设计取舍**：
+
+- `typecheck` 与 `test:ci` 走**全量**——它们是硬性底线，必须全绿。
+- `eslint` / `prettier` 走**增量**（只校验本次 PR/提交改动的文件）——与 pre-commit 一致，**不阻塞存量技术债**；新引入的 error 才会卡合并。
+
+**⚠️ 必须手动开启的一步（否则检查会跑但不阻塞合并）**：
+仓库 Settings → Branches → Branch protection rule，对 `dev`（及 `main`）勾选 **Require status checks to pass before merging**，并在下拉里选中 `quality-gate` 这个 check。
+
+**未来收紧**：待存量 warning 债清理后，把 lint 步骤改为 `npx eslint --max-warnings=0`，让 `no-explicit-any` / `no-console` 等也升级为阻塞项。
+
 ---
 
 ## 3. 遇到门禁拦截怎么办
@@ -74,7 +99,7 @@ git commit → husky pre-commit → lint-staged
 
 ## 5. 路线图（下一步，待排期）
 
-- **Phase 1 — CI 接入**：在 CI 中串 `typecheck → lint → test:ci`，让门禁不只在本地。
+- **Phase 1 — CI 接入**：✅ 已完成（`.github/workflows/ci.yml`，GitHub Actions）。
 - **Phase 2 — 重构还债**：巨型组件拆分、统一日志层、逐步把 `any` 换成精确类型。
 - **Phase 3 — 规范加固**：随债减少，把部分 warn 提升为 error（如 `no-explicit-any`）。
 
