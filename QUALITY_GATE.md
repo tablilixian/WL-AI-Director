@@ -70,7 +70,7 @@ push / PR → GitHub Actions: quality-gate
 **⚠️ 必须手动开启的一步（否则检查会跑但不阻塞合并）**：
 仓库 Settings → Branches → Branch protection rule，对 `dev`（及 `main`）勾选 **Require status checks to pass before merging**，并在下拉里选中 `quality-gate` 这个 check。
 
-**未来收紧**：待存量 warning 债清理后，把 lint 步骤改为 `npx eslint --max-warnings=0`，让 `no-explicit-any` / `no-console` 等也升级为阻塞项。
+**未来收紧**：`no-explicit-any` 已升 error；待 `no-console` 等剩余 warning 债清理后，把 lint 步骤改为 `npx eslint --max-warnings=0`，让剩余 warning 也升级为阻塞项。
 
 ---
 
@@ -89,7 +89,7 @@ push / PR → GitHub Actions: quality-gate
 | 类别             | 量级                 | 计划                                                                                                                                                                                                                                                                                  |
 | ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ESLint error     | **0 ✅**             | 已偿还：忽略 vendored ffmpeg(408) + 机械修复 242 处                                                                                                                                                                                                                                   |
-| ESLint warning   | ~548                 | ✅ `no-non-null-assertion` 117 已升 **error**（P1 警告收紧首项，门禁增量特性：仅卡暂存文件，存量不阻塞全仓）；`no-explicit-any` 524 / `no-console`(仅 logger 原语 + vite 插件 + 测试) 残留，逐步收紧                                                                                  |
+| ESLint warning   | ~424                 | ✅ `no-non-null-assertion` 117 + `no-explicit-any` 524 均已升 **error**（P1 警告收紧两项，门禁增量特性：仅卡暂存文件，存量不阻塞全仓，改到哪清到哪）；`no-console`(仅 logger 原语 + vite 插件 + 测试) 残留，逐步收紧                                                                  |
 | `console.*` 散落 | 764 → 0 (app 运行时) | ✅ 已偿还：Phase 4 统一日志层，74 文件 739 处替换为 `logger`；`authStore` 6 处 `.catch(console.error)` 改写为 `logger.error`；`logger.ts` 自身 7 处与 vite 插件/测试里的 `console` 为正当用途保留                                                                                     |
 | 巨型组件         | 10 个文件 >500 行    | ✅ 已拆 2 个：①`GenerateVideoPanel.tsx` 2323→1116 行（9 子组件 + types.ts）；②`VideoNodePanel.tsx` 1136→535 行（抽取 3 个已自洽的内容组件 MsrContent/MkrContent/MkrGridContent 到 `VideoNodePanel/` 子目录，零行为变化）；其余 10 个待拆                                              |
 | React 错误边界   | **0 → 已建**         | ✅ **P0 完成**：新增 `components/ErrorBoundary.tsx`（class 组件，`getDerivedStateFromError` + `componentDidCatch` 用 `logger` 记录 + 可恢复兜底 UI）；`index.tsx` 整树兜底；`InfiniteCanvas` 内 4 个 `GenerateVideoPanel` / `VideoNodePanel` 渲染点精准隔离，单个面板崩溃不再拖垮画布 |
@@ -103,7 +103,7 @@ push / PR → GitHub Actions: quality-gate
 - **Phase 1 — CI 接入**：✅ 已完成（`.github/workflows/ci.yml`，GitHub Actions）。
 - **Phase 2 — error 级债偿还**：✅ 已完成（全仓 ESLint error 0 → 见上表）。warning 级软债留待下。
 - **Phase 3 — 巨型组件拆分**：✅ 进行中（已拆 2 个）——①`GenerateVideoPanel.tsx` 2323→1116 行（9 子组件 + types.ts，聚合强类型 prop 模式）；②`VideoNodePanel.tsx` 1136→535 行（抽取 3 个已自洽的内容组件 MsrContent/MkrContent/MkrGridContent 到 `VideoNodePanel/` 子目录）。剩余 10 个 >500 行文件待按同模式推广。
-- **Phase 4 — 统一日志 + 警告收紧**：✅ 统一日志已完成（74 文件 / 739 处 `console.*` → `logger`，`no-console` 在 app 源已归零）。⚡ **警告收紧进行中**：`no-non-null-assertion` 已由 warn 升 **error**（P1 首项，增量门禁仅卡暂存文件，存量 117 处不阻塞全仓，改到哪清到哪）；`no-explicit-any` / `no-console` 仍 warn，待后续。
+- **Phase 4 — 统一日志 + 警告收紧**：✅ 统一日志已完成（74 文件 / 739 处 `console.*` → `logger`，`no-console` 在 app 源已归零）。⚡ **警告收紧进行中**：`no-non-null-assertion`（117 处）与 `no-explicit-any`（524 处）均已由 warn 升 **error**（P1 两项，增量门禁仅卡暂存文件，存量不阻塞全仓，改到哪清到哪）；`no-console` 仍 warn，待后续。
 - **P0 — React 错误边界（防白屏）**：✅ 已完成。新增 `components/ErrorBoundary.tsx`；`index.tsx` 整树兜底 + `InfiniteCanvas` 内 4 个面板渲染点精准隔离。单个面板/Stage 崩溃降级为可恢复兜底，不再拖垮全局白屏。
 
 ---

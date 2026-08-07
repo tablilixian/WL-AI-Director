@@ -8,7 +8,8 @@ import prettier from 'eslint-config-prettier';
  *
  * 设计原则（brownfield 渐进式采纳）：
  * 1. 只启用"真实 bug"类 error 规则，避免噪音劝退团队。
- * 2. `no-explicit-any` 当前为 warn（仓库有 105 处 any），待清理后升级为 error。
+ * 2. `no-explicit-any` 已升 error（P1 警告收紧第二项，与 `no-non-null-assertion` 同理）；
+ *    存量 524 处靠增量门禁逐步消化（改到哪个文件顺手清该文件的 any），不阻塞全仓。
  * 3. prettier 放在最后，关闭所有与格式化冲突的规则。
  * 4. pre-commit 仅校验暂存文件（lint-staged），存量问题不阻塞，改到哪清到哪。
  */
@@ -50,8 +51,12 @@ export default tseslint.config(
       // 后续启用 tseslint.configs.recommendedTypeChecked 时再加。
 
       // 渐进收紧（当前 warn，后续升级 error）
-      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
+
+      // 已升级 error（P1 警告收紧第二项，与 no-non-null-assertion 同理）：
+      // no-explicit-any 是类型逃逸的温床（any 会传染、绕过全部类型检查），提为 error。
+      // 门禁增量特性：仅校验暂存文件，存量 524 处不阻塞全仓，改到哪清到哪。
+      '@typescript-eslint/no-explicit-any': 'error',
       // 优先升级：no-non-null-assertion 是运行时崩溃直接来源（obj!.prop 在 null 时抛错白屏），
       // 提为 error。门禁增量特性：仅校验暂存文件，存量 117 处不阻塞全仓，改到哪清到哪。
       '@typescript-eslint/no-non-null-assertion': 'error',
