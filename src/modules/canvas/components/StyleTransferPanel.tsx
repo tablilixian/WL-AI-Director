@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface StyleTransferPanelProps {
   selectedLayerId: string | null;
@@ -65,9 +66,9 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({
           const blob = await response.blob();
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
-          console.log('[StyleTransfer] 图片已保存到 IndexedDB:', imgId);
+          logger.info(LogCategory.CANVAS, '[StyleTransfer] 图片已保存到 IndexedDB:', imgId);
         } catch (e) {
-          console.warn('[StyleTransfer] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[StyleTransfer] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -92,7 +93,7 @@ export const StyleTransferPanel: React.FC<StyleTransferPanelProps> = ({
 
       onClose();
     } catch (error: any) {
-      console.error('风格迁移失败:', error);
+      logger.error(LogCategory.CANVAS, '风格迁移失败:', error);
       alert(`风格迁移失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

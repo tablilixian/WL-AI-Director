@@ -115,23 +115,27 @@ export class CanvasIntegrationService {
       return;
     }
     if (this.currentProjectId === projectId) {
-      console.log('[CanvasIntegration] 已在项目中，跳过 enter:', projectId);
+      logger.info(LogCategory.CANVAS, '[CanvasIntegration] 已在项目中，跳过 enter:', projectId);
       return;
     }
 
     // 等待正在执行的 exit() 完成，防止"退出中又进入"的竞态
     if (this.exitPromise) {
-      console.log('[CanvasIntegration] enter 等待 exit 完成...');
+      logger.info(LogCategory.CANVAS, '[CanvasIntegration] enter 等待 exit 完成...');
       await this.exitPromise;
     }
 
     if (this.currentProjectId) {
-      console.log('[CanvasIntegration] enter 检测到活动项目，先退出:', this.currentProjectId);
+      logger.info(
+        LogCategory.CANVAS,
+        '[CanvasIntegration] enter 检测到活动项目，先退出:',
+        this.currentProjectId,
+      );
       await this.exit();
     }
 
-    console.log('[CanvasIntegration] ========== 进入项目 ==========');
-    console.log('[CanvasIntegration] 项目ID:', projectId);
+    logger.info(LogCategory.CANVAS, '[CanvasIntegration] ========== 进入项目 ==========');
+    logger.info(LogCategory.CANVAS, '[CanvasIntegration] 项目ID:', projectId);
     this.currentProjectId = projectId;
     this.isLoading = true;
     this.loadingPromise = (async () => {
@@ -157,7 +161,7 @@ export class CanvasIntegrationService {
         // 但 IndexedDB 写入未完成（浏览器终止了事务）
         const backup = this.restoreSessionBackup(projectId);
         if (backup) {
-          console.log('[CanvasIntegration] 从 sessionStorage 备份恢复画布');
+          logger.info(LogCategory.CANVAS, '[CanvasIntegration] 从 sessionStorage 备份恢复画布');
           await this.importCanvasData(backup);
           return;
         }
@@ -184,15 +188,15 @@ export class CanvasIntegrationService {
    */
   async exit(): Promise<void> {
     if (!this.currentProjectId) {
-      console.log('[CanvasIntegration] 无活动项目，跳过 exit');
+      logger.info(LogCategory.CANVAS, '[CanvasIntegration] 无活动项目，跳过 exit');
       return;
     }
     // Dedup：如果 exit 已在执行，复用其 Promise（防止并发 exit）
     if (this.exitPromise) return this.exitPromise;
 
     const projectId = this.currentProjectId;
-    console.log('[CanvasIntegration] ========== 退出项目 ==========');
-    console.log('[CanvasIntegration] 项目ID:', projectId);
+    logger.info(LogCategory.CANVAS, '[CanvasIntegration] ========== 退出项目 ==========');
+    logger.info(LogCategory.CANVAS, '[CanvasIntegration] 项目ID:', projectId);
 
     this.exitPromise = (async () => {
       // 1. 立即切断 projectId → 此后所有 auto-save/saveImmediately 变为 no-op
@@ -222,7 +226,7 @@ export class CanvasIntegrationService {
         try {
           await canvasSyncService.forceSync();
         } catch (e) {
-          console.warn('[CanvasIntegration] 退出时同步失败:', e);
+          logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 退出时同步失败:', e);
         }
         // forceSync 失败后仍执行 cleanup，确保定时器/状态被重置
         await canvasSyncService.cleanup();
@@ -346,10 +350,17 @@ export class CanvasIntegrationService {
     const key = `${this.STORAGE_KEY_PREFIX}${projectId}`;
     try {
       sessionStorage.setItem(key, JSON.stringify(backupData));
-      console.log(`[CanvasIntegration] sessionStorage 备份完成: ${state.layers.length} layers`);
+      logger.info(
+        LogCategory.CANVAS,
+        `[CanvasIntegration] sessionStorage 备份完成: ${state.layers.length} layers`,
+      );
     } catch (e) {
       // sessionStorage 配额不足（通常 5MB），静默放弃
-      console.warn('[CanvasIntegration] sessionStorage 备份失败（可能超出配额）:', e);
+      logger.warn(
+        LogCategory.CANVAS,
+        '[CanvasIntegration] sessionStorage 备份失败（可能超出配额）:',
+        e,
+      );
     }
   }
 
@@ -368,16 +379,20 @@ export class CanvasIntegrationService {
 
       // 校验：备份超过 10 分钟视为过期（正常流程中备份写入后应在数秒内被加载）
       if (data.savedAt && Date.now() - data.savedAt > 10 * 60 * 1000) {
-        console.log('[CanvasIntegration] sessionStorage 备份已过期（>10分钟），忽略');
+        logger.info(
+          LogCategory.CANVAS,
+          '[CanvasIntegration] sessionStorage 备份已过期（>10分钟），忽略',
+        );
         return null;
       }
 
-      console.log(
+      logger.info(
+        LogCategory.CANVAS,
         `[CanvasIntegration] 从 sessionStorage 恢复备份: ${data.layers?.length || 0} layers`,
       );
       return data;
     } catch (e) {
-      console.warn('[CanvasIntegration] sessionStorage 恢复失败:', e);
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] sessionStorage 恢复失败:', e);
       return null;
     }
   }
@@ -389,7 +404,10 @@ export class CanvasIntegrationService {
     if (typeof window !== 'undefined') {
       const oldData = localStorage.getItem('wl-canvas-state');
       if (oldData) {
-        console.log('[CanvasIntegration] 清理旧的 localStorage 数据（已迁移到 IndexedDB）');
+        logger.info(
+          LogCategory.CANVAS,
+          '[CanvasIntegration] 清理旧的 localStorage 数据（已迁移到 IndexedDB）',
+        );
         localStorage.removeItem('wl-canvas-state');
       }
     }
@@ -415,7 +433,11 @@ export class CanvasIntegrationService {
         await unifiedImageService.saveImage(imgId, blob);
         imageId = imgId;
       } catch (e) {
-        console.warn(`[CanvasIntegration] 保存图片到 IndexedDB 失败，保留原始 src:`, e);
+        logger.warn(
+          LogCategory.CANVAS,
+          `[CanvasIntegration] 保存图片到 IndexedDB 失败，保留原始 src:`,
+          e,
+        );
         // 保存失败，保留原始 layer（含 src），下次保存可重试
         return layer;
       }
@@ -433,7 +455,7 @@ export class CanvasIntegrationService {
    */
   saveImmediately(_force?: boolean): Promise<void> {
     return this.enqueueSave(() => this.doImmediateSave()).catch((e) => {
-      console.warn('[CanvasIntegration] 即时保存失败:', e);
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 即时保存失败:', e);
     });
   }
 
@@ -455,9 +477,9 @@ export class CanvasIntegrationService {
 
     try {
       await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
-      console.log('[CanvasIntegration] 即时保存画布成功');
+      logger.info(LogCategory.CANVAS, '[CanvasIntegration] 即时保存画布成功');
     } catch (e) {
-      console.warn('[CanvasIntegration] 即时保存画布失败:', e);
+      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 即时保存画布失败:', e);
     }
   }
 
@@ -815,7 +837,7 @@ export class CanvasIntegrationService {
    * 用于关键节点：切换项目、退出、手动保存
    */
   async forceSync(): Promise<void> {
-    console.log('[CanvasIntegration] 强制同步到云端');
+    logger.info(LogCategory.CANVAS, '[CanvasIntegration] 强制同步到云端');
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
@@ -909,7 +931,7 @@ export class CanvasIntegrationService {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复图片失败 (imageId):', e);
+                logger.warn(LogCategory.CANVAS, '恢复图片失败 (imageId):', e);
               }
             }
 
@@ -921,7 +943,7 @@ export class CanvasIntegrationService {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复图片失败 (local:):', e);
+                logger.warn(LogCategory.CANVAS, '恢复图片失败 (local:):', e);
               }
             }
           } else if (layer.type === 'video') {
@@ -929,11 +951,15 @@ export class CanvasIntegrationService {
               try {
                 const blob = await unifiedImageService.getVideo(layer.imageId);
                 if (blob) {
-                  console.log('[CanvasIntegration] 恢复视频成功 (imageId):', layer.imageId);
+                  logger.info(
+                    LogCategory.CANVAS,
+                    '[CanvasIntegration] 恢复视频成功 (imageId):',
+                    layer.imageId,
+                  );
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复视频失败 (imageId):', e);
+                logger.warn(LogCategory.CANVAS, '恢复视频失败 (imageId):', e);
               }
             }
             if (layer.src && layer.src.startsWith('video:')) {
@@ -944,7 +970,7 @@ export class CanvasIntegrationService {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复视频失败:', e);
+                logger.warn(LogCategory.CANVAS, '恢复视频失败:', e);
               }
             }
           } else if (layer.type === 'panorama') {
@@ -955,7 +981,7 @@ export class CanvasIntegrationService {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复全景图失败 (imageId):', e);
+                logger.warn(LogCategory.CANVAS, '恢复全景图失败 (imageId):', e);
               }
             }
             if (layer.src && layer.src.startsWith('local:')) {
@@ -966,44 +992,47 @@ export class CanvasIntegrationService {
                   return { ...layer, src: URL.createObjectURL(blob) };
                 }
               } catch (e) {
-                console.warn('恢复全景图失败 (local:):', e);
+                logger.warn(LogCategory.CANVAS, '恢复全景图失败 (local:):', e);
               }
             }
           } else if (layer.type === 'drawing') {
-            console.log(
-              '[CanvasIntegration] 恢复 drawing 图层:',
+            logger.info(LogCategory.CANVAS, '[CanvasIntegration] 恢复 drawing 图层:', [
               layer.id,
               'imageId:',
               layer.imageId,
               'src:',
               layer.src?.substring(0, 50),
-            );
+            ]);
             if (layer.imageId) {
               try {
                 const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
                   const src = URL.createObjectURL(blob);
-                  console.log(
-                    '[CanvasIntegration] 恢复 drawing 图层成功:',
+                  logger.info(LogCategory.CANVAS, '[CanvasIntegration] 恢复 drawing 图层成功:', [
                     layer.id,
                     'blob size:',
                     blob.size,
-                  );
+                  ]);
                   return { ...layer, src };
                 } else {
-                  console.warn(
+                  logger.warn(
+                    LogCategory.CANVAS,
                     '[CanvasIntegration] 恢复 drawing 图层失败: blob 为空',
-                    layer.id,
-                    layer.imageId,
+                    [layer.id, layer.imageId],
                   );
                 }
               } catch (e) {
-                console.warn('[CanvasIntegration] 恢复绘制图层失败 (imageId):', e);
+                logger.warn(
+                  LogCategory.CANVAS,
+                  '[CanvasIntegration] 恢复绘制图层失败 (imageId):',
+                  e,
+                );
               }
             } else if (layer.src && layer.src.startsWith('data:')) {
               return layer;
             } else {
-              console.warn(
+              logger.warn(
+                LogCategory.CANVAS,
                 '[CanvasIntegration] 恢复 drawing 图层失败: 没有 imageId 且 src 不是 data:',
                 layer.id,
               );
@@ -1042,14 +1071,17 @@ export class CanvasIntegrationService {
 
     // 如果 enter() 仍在加载中，等待完成（防止与 loadingPromise 内部 _restoreCanvasState 竞态）
     if (this.isLoading && this.loadingPromise) {
-      console.log('[CanvasIntegration] restoreCanvasState 等待 enter 完成...');
+      logger.info(LogCategory.CANVAS, '[CanvasIntegration] restoreCanvasState 等待 enter 完成...');
       await this.loadingPromise;
     }
 
     // 先检查 sessionStorage 备份
     const backup = this.restoreSessionBackup(this.currentProjectId);
     if (backup) {
-      console.log('[CanvasIntegration] 从 sessionStorage 备份恢复画布（公开 restore）');
+      logger.info(
+        LogCategory.CANVAS,
+        '[CanvasIntegration] 从 sessionStorage 备份恢复画布（公开 restore）',
+      );
       await this.importCanvasData(backup);
       return true;
     }

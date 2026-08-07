@@ -4,6 +4,7 @@ import { useCanvasStore } from '../../hooks/useCanvasState';
 import type { DeductionData, StoryboardPanelData } from '../../types/flow';
 import { OptimizableTextarea } from '../shared/OptimizableTextarea';
 import { optimizeStoryDirection } from '../../services/promptOptimizer';
+import { logger, LogCategory } from '../../../../../services/logger.ts';
 
 interface StepDeductionProps {
   sourceLayerId: string;
@@ -136,15 +137,15 @@ ${effectiveDirection || '（未提供，请基于画面分析做合理的剧情�
 分镜2
 ...`;
 
-      console.log('=== [Deduction] LLM Request ===');
-      console.log('Prompt:', llmPrompt);
-      console.log('vlmRawAnalysis length:', vlmRawAnalysis?.length);
+      logger.info(LogCategory.CANVAS, '=== [Deduction] LLM Request ===');
+      logger.info(LogCategory.CANVAS, 'Prompt:', llmPrompt);
+      logger.info(LogCategory.CANVAS, 'vlmRawAnalysis length:', vlmRawAnalysis?.length);
 
       let result = await chat({ prompt: llmPrompt });
 
-      console.log('=== [Deduction] LLM Response ===');
-      console.log('Raw result length:', result?.length);
-      console.log('Raw result:', result);
+      logger.info(LogCategory.CANVAS, '=== [Deduction] LLM Response ===');
+      logger.info(LogCategory.CANVAS, 'Raw result length:', result?.length);
+      logger.info(LogCategory.CANVAS, 'Raw result:', result);
 
       // 去掉 markdown 代码块包裹
       result = result

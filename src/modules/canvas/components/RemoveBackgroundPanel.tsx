@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface RemoveBackgroundPanelProps {
   selectedLayerId: string | null;
@@ -52,9 +53,9 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({
           const blob = await response.blob();
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
-          console.log('[RemoveBackground] 抠图结果已保存到 IndexedDB:', imgId);
+          logger.info(LogCategory.CANVAS, '[RemoveBackground] 抠图结果已保存到 IndexedDB:', imgId);
         } catch (e) {
-          console.warn('[RemoveBackground] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[RemoveBackground] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -77,7 +78,7 @@ export const RemoveBackgroundPanel: React.FC<RemoveBackgroundPanelProps> = ({
 
       onClose();
     } catch (error: any) {
-      console.error('抠图失败:', error);
+      logger.error(LogCategory.CANVAS, '抠图失败:', error);
       alert(`抠图失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

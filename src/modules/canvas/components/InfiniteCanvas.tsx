@@ -30,6 +30,7 @@ import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
 import type { FlowState } from '../types/flow';
 import type { ProjectState } from '../../../../types';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface InfiniteCanvasProps {
   className?: string;
@@ -245,7 +246,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
             await imageStorageService.saveImage(imgId, blob);
             imageId = imgId;
           } catch (e) {
-            console.warn('[stitchPanorama] 保存到 IndexedDB 失败:', e);
+            logger.warn(LogCategory.CANVAS, '[stitchPanorama] 保存到 IndexedDB 失败:', e);
           }
           resolvedUrl = panoramaSrc;
         } else {
@@ -271,7 +272,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           progress: 100,
         });
       } catch (e) {
-        console.error('[stitchPanorama] 拼接失败:', e);
+        logger.error(LogCategory.CANVAS, '[stitchPanorama] 拼接失败:', e);
         alert(`拼接失败: ${(e as Error).message}`);
       } finally {
         setStitchLoading(false);

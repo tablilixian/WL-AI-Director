@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface VariantPanelProps {
   selectedLayerId: string | null;
@@ -61,9 +62,9 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
             const blob = await response.blob();
             await imageStorageService.saveImage(imgId, blob);
             imageId = imgId;
-            console.log(`[Variant] 变体 ${i + 1} 已保存到 IndexedDB:`, imgId);
+            logger.info(LogCategory.CANVAS, `[Variant] 变体 ${i + 1} 已保存到 IndexedDB:`, imgId);
           } catch (e) {
-            console.warn(`[Variant] 保存变体 ${i + 1} 到 IndexedDB 失败:`, e);
+            logger.warn(LogCategory.CANVAS, `[Variant] 保存变体 ${i + 1} 到 IndexedDB 失败:`, e);
           }
         }
 
@@ -89,7 +90,7 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({ selectedLayerId, onC
 
       onClose();
     } catch (error: any) {
-      console.error('生成变体失败:', error);
+      logger.error(LogCategory.CANVAS, '生成变体失败:', error);
       alert(`生成变体失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

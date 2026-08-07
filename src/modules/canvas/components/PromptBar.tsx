@@ -4,6 +4,7 @@ import { canvasModelService } from '../services/canvasModelService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { styleTemplates, StyleTemplate } from '../data/styleTemplates';
 import { TemplateApplyDialog } from './TemplateApplyDialog';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface PromptBarProps {
   selectedLayerId: string | null;
@@ -100,7 +101,7 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
           },
         });
 
-        console.log('[PromptBar] 生成图片 URL:', imageUrl?.substring(0, 50));
+        logger.info(LogCategory.CANVAS, '[PromptBar] 生成图片 URL:', imageUrl?.substring(0, 50));
 
         const resolvedUrl = await resolveImageUrl(imageUrl);
         let imageId: string | undefined;
@@ -112,9 +113,9 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
             const blob = await response.blob();
             await unifiedImageService.saveImage(imgId, blob);
             imageId = imgId;
-            console.log('[PromptBar] 文生图已保存到 IndexedDB:', imgId);
+            logger.info(LogCategory.CANVAS, '[PromptBar] 文生图已保存到 IndexedDB:', imgId);
           } catch (e) {
-            console.warn('[PromptBar] 保存图片到 IndexedDB 失败:', e);
+            logger.warn(LogCategory.CANVAS, '[PromptBar] 保存图片到 IndexedDB 失败:', e);
           }
         } else if (resolvedUrl.startsWith('local:')) {
           imageId = resolvedUrl.replace('local:', '');
@@ -159,14 +160,14 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
           },
         });
 
-        console.log('[PromptBar] 生成视频 URL:', videoUrl?.substring(0, 50));
+        logger.info(LogCategory.CANVAS, '[PromptBar] 生成视频 URL:', videoUrl?.substring(0, 50));
 
         const resolvedUrl = await resolveVideoUrl(videoUrl);
 
         let videoId: string | undefined;
         if (videoUrl.startsWith('video:')) {
           videoId = videoUrl.replace('video:', '');
-          console.log('[PromptBar] 视频已保存到本地:', videoId);
+          logger.info(LogCategory.CANVAS, '[PromptBar] 视频已保存到本地:', videoId);
         }
 
         let videoWidth = 640;
@@ -176,7 +177,7 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
           videoWidth = dims.width;
           videoHeight = dims.height;
         } catch (e) {
-          console.warn('[PromptBar] 获取视频尺寸失败，使用默认值:', e);
+          logger.warn(LogCategory.CANVAS, '[PromptBar] 获取视频尺寸失败，使用默认值:', e);
         }
 
         updateLayer(placeholderId, {
@@ -193,7 +194,7 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
 
       setPrompt('');
     } catch (error: any) {
-      console.error('Generation failed:', error);
+      logger.error(LogCategory.CANVAS, 'Generation failed:', error);
       alert(`生成失败: ${error.message}`);
     } finally {
       setIsGenerating(false);
@@ -210,7 +211,7 @@ export const PromptBar: React.FC<PromptBarProps> = () => {
         setPrompt(enhanced);
       }
     } catch (error: any) {
-      console.error('Prompt enhance failed:', error);
+      logger.error(LogCategory.CANVAS, 'Prompt enhance failed:', error);
       alert(`增强失败: ${error.message}`);
     } finally {
       setIsEnhancing(false);
@@ -375,34 +376,34 @@ async function resolveVideoUrl(videoUrl: string): Promise<string> {
 
   if (videoUrl.startsWith('video:')) {
     const localId = videoUrl.replace('video:', '');
-    console.log('[PromptBar] 解析本地视频引用:', localId);
+    logger.info(LogCategory.CANVAS, '[PromptBar] 解析本地视频引用:', localId);
 
     try {
       const { videoStorageService } = await import('../../../../services/imageStorageService');
       const blob = await videoStorageService.getVideo(localId);
       if (blob) {
         const objectUrl = URL.createObjectURL(blob);
-        console.log('[PromptBar] 本地视频解析成功:', localId);
+        logger.info(LogCategory.CANVAS, '[PromptBar] 本地视频解析成功:', localId);
         return objectUrl;
       }
     } catch (error) {
-      console.error('[PromptBar] 解析本地视频失败:', error);
+      logger.error(LogCategory.CANVAS, '[PromptBar] 解析本地视频失败:', error);
     }
   }
 
   if (videoUrl.startsWith('local:')) {
     const localId = videoUrl.replace('local:', '');
-    console.log('[PromptBar] 解析本地视频引用:', localId);
+    logger.info(LogCategory.CANVAS, '[PromptBar] 解析本地视频引用:', localId);
 
     try {
       const blob = await unifiedImageService.getImage(localId);
       if (blob) {
         const base64 = await blobToBase64(blob);
-        console.log('[PromptBar] 本地视频解析成功:', localId);
+        logger.info(LogCategory.CANVAS, '[PromptBar] 本地视频解析成功:', localId);
         return base64;
       }
     } catch (error) {
-      console.error('[PromptBar] 解析本地视频失败:', error);
+      logger.error(LogCategory.CANVAS, '[PromptBar] 解析本地视频失败:', error);
     }
   }
 

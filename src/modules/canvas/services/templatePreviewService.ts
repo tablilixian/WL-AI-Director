@@ -3,6 +3,7 @@ import { imageStorageService } from '../../../../services/imageStorageService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { canvasModelService } from '../services/canvasModelService';
 import { styleTemplates, StyleTemplate } from '../data/styleTemplates';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 const COLLECTION_NAME = 'template_previews';
 const LOCAL_PREFIX = 'template_preview_';
@@ -51,7 +52,7 @@ export const templatePreviewService = {
         }
       }
     } catch (e) {
-      console.debug('[templatePreview] 远端拉取失败（预览图需点击生成）:', e);
+      logger.debug(LogCategory.CANVAS, '[templatePreview] 远端拉取失败（预览图需点击生成）:', e);
     }
 
     return null;
@@ -75,7 +76,7 @@ export const templatePreviewService = {
         await pb.collection(COLLECTION_NAME).create(fd);
       }
     } catch (e) {
-      console.warn('[templatePreview] 远端保存失败:', e);
+      logger.warn(LogCategory.CANVAS, '[templatePreview] 远端保存失败:', e);
     }
   },
 

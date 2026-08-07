@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface ImageToImagePanelProps {
   selectedLayerId: string;
@@ -21,12 +22,15 @@ async function resolveImageUrl(imageUrl: string): Promise<string> {
   return await unifiedImageService.resolveForApi(imageUrl);
 }
 
-export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLayerId, onClose }) => {
+export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({
+  selectedLayerId,
+  onClose,
+}) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { layers, addLayer, updateLayer } = useCanvasStore();
 
-  const selectedLayer = layers.find(l => l.id === selectedLayerId);
+  const selectedLayer = layers.find((l) => l.id === selectedLayerId);
   if (!selectedLayer || selectedLayer.type !== 'image') return null;
 
   const handleGenerate = async () => {
@@ -42,7 +46,7 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
         aspectRatio: '16:9',
         onProgress: (p) => {
           updateLayer(selectedLayer.id, { progress: p });
-        }
+        },
       });
 
       const resolvedUrl = await resolveImageUrl(imageUrl);
@@ -56,7 +60,7 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
           await unifiedImageService.saveImage(imgId, blob);
           imageId = imgId;
         } catch (e) {
-          console.warn('[ImageToImage] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[ImageToImage] 保存图片到 IndexedDB 失败:', e);
         }
       } else if (resolvedUrl.startsWith('local:')) {
         imageId = resolvedUrl.replace('local:', '');
@@ -78,14 +82,14 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
         createdAt: Date.now(),
         sourceLayerId: selectedLayer.id,
         operationType: 'image-to-image',
-        generationPrompt: prompt
+        generationPrompt: prompt,
       });
 
       updateLayer(selectedLayer.id, { isLoading: false, progress: 100 });
       setPrompt('');
       onClose();
     } catch (error: any) {
-      console.error('图生图失败:', error);
+      logger.error(LogCategory.CANVAS, '图生图失败:', error);
       alert(`生成失败: ${error.message}`);
     } finally {
       setIsGenerating(false);
@@ -93,20 +97,32 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 p-4 w-[480px]" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 p-4 w-[480px]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-white">图生图</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
-        <div className="text-xs text-gray-400 mb-3">
-          参考: {selectedLayer.title}
-        </div>
+        <div className="text-xs text-gray-400 mb-3">参考: {selectedLayer.title}</div>
 
         <input
           type="text"
@@ -144,7 +160,10 @@ export const ImageToImagePanel: React.FC<ImageToImagePanelProps> = ({ selectedLa
         {isGenerating && (
           <div className="mt-3">
             <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+              <div
+                className="h-full bg-blue-500 rounded-full animate-pulse"
+                style={{ width: '60%' }}
+              />
             </div>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { LayerData } from '../types/canvas';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface TreeNode {
   layer: LayerData;
@@ -19,13 +20,14 @@ const PADDING = 240;
 const DEBUG = true;
 
 function log(...args: any[]) {
-  if (DEBUG) console.log('[AutoLayout]', ...args);
+  if (DEBUG) logger.info(LogCategory.CANVAS, '[AutoLayout]', ...args);
 }
 
 function logTree(node: TreeNode, indent = 0) {
   if (!DEBUG) return;
   const prefix = '  '.repeat(indent);
-  console.log(
+  logger.info(
+    LogCategory.CANVAS,
     `${prefix}├─ ${node.layer.title} (${node.layer.id.slice(0, 8)}) type=${node.layer.type} w=${node.layer.width} h=${node.layer.height} parentId=${node.layer.parentId?.slice(0, 8)} sourceLayerId=${node.layer.sourceLayerId?.slice(0, 8)}`,
   );
   for (const child of node.children) {
@@ -35,7 +37,8 @@ function logTree(node: TreeNode, indent = 0) {
 
 function logRow(row: LayerData[], rowIndex: number) {
   if (!DEBUG) return;
-  console.log(
+  logger.info(
+    LogCategory.CANVAS,
     `[AutoLayout] Row ${rowIndex}:`,
     row
       .map(

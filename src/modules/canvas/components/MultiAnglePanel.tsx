@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface MultiAnglePanelProps {
   selectedLayerId: string | null;
@@ -270,7 +271,7 @@ export const MultiAnglePanel: React.FC<MultiAnglePanelProps> = ({ selectedLayerI
 
       onClose();
     } catch (error: any) {
-      console.error('多角度生成失败:', error);
+      logger.error(LogCategory.CANVAS, '多角度生成失败:', error);
       alert(`多角度生成失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

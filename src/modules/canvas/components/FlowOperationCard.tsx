@@ -4,6 +4,7 @@ import { useCanvasStore } from '../hooks/useCanvasState';
 import { Play, Trash2, RefreshCw, Sparkles, X, Film, AlertTriangle } from 'lucide-react';
 import type { FlowState } from '../types/flow';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface FlowOperationCardProps {
   flowLayerId: string;
@@ -133,7 +134,7 @@ export const FlowOperationCard: React.FC<FlowOperationCardProps> = ({
         });
       }
     } catch (e) {
-      console.error('[FlowOperationCard] 导出视频失败:', e);
+      logger.error(LogCategory.CANVAS, '[FlowOperationCard] 导出视频失败:', e);
     }
   };
 

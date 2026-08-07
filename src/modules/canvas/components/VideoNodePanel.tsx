@@ -25,6 +25,7 @@ import {
   type VideoMode,
   type VideoNodeConfig,
 } from '../types/video';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface VideoNodePanelProps {
   layerId: string;
@@ -238,7 +239,7 @@ export const VideoNodePanel: React.FC<VideoNodePanelProps> = ({ layerId, onClose
       setProgress(100);
       setProgressLabel('生成完成！');
     } catch (error: any) {
-      console.error('[VideoNodePanel] 视频生成失败:', error);
+      logger.error(LogCategory.CANVAS, '[VideoNodePanel] 视频生成失败:', error);
       updateLayer(layer.id, { error: error.message, isLoading: false });
     } finally {
       setIsGenerating(false);

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface InpaintPanelProps {
   selectedLayerId: string | null;
@@ -20,7 +21,7 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
   const brushSizeRef = useRef(30);
   const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
 
   useEffect(() => {
     brushSizeRef.current = brushSize;
@@ -78,17 +79,23 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
     ctx.fill();
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    isDrawingRef.current = true;
-    paintAt(getCanvasPos(e));
-  }, [getCanvasPos, paintAt]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      isDrawingRef.current = true;
+      paintAt(getCanvasPos(e));
+    },
+    [getCanvasPos, paintAt],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDrawingRef.current) return;
-    paintAt(getCanvasPos(e));
-  }, [getCanvasPos, paintAt]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDrawingRef.current) return;
+      paintAt(getCanvasPos(e));
+    },
+    [getCanvasPos, paintAt],
+  );
 
   const handleMouseUp = useCallback(() => {
     isDrawingRef.current = false;
@@ -116,7 +123,8 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
 
       if (drawCanvas && img && imgNaturalSize.width > 0) {
         const { unifiedImageService } = await import('../../../../services/unifiedImageService');
-        const { imageStorageService, generateImageId } = await import('../../../../services/imageStorageService');
+        const { imageStorageService, generateImageId } =
+          await import('../../../../services/imageStorageService');
         const fullResUrl = await unifiedImageService.resolveForDisplay(selectedLayer.src);
 
         const compositeCanvas = document.createElement('canvas');
@@ -132,11 +140,25 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
             imgEl.src = fullResUrl;
           });
           compositeCtx.drawImage(fullResImg, 0, 0);
-          compositeCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
+          compositeCtx.drawImage(
+            drawCanvas,
+            0,
+            0,
+            drawCanvas.width,
+            drawCanvas.height,
+            0,
+            0,
+            compositeCanvas.width,
+            compositeCanvas.height,
+          );
 
-          let blob = await new Promise<Blob>(resolve => compositeCanvas.toBlob(b => resolve(b!), 'image/png'));
+          let blob = await new Promise<Blob>((resolve) =>
+            compositeCanvas.toBlob((b) => resolve(b!), 'image/png'),
+          );
           if (blob.size > 9 * 1024 * 1024) {
-            blob = await new Promise<Blob>(resolve => compositeCanvas.toBlob(b => resolve(b!), 'image/jpeg', 0.9));
+            blob = await new Promise<Blob>((resolve) =>
+              compositeCanvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9),
+            );
           }
           const localId = generateImageId();
           await imageStorageService.saveImage(localId, blob);
@@ -144,10 +166,8 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
         }
       }
 
-      const resultUrl = await canvasModelService.inpaint(
-        compositedImageUrl,
-        prompt,
-        (p) => setProgress(p),
+      const resultUrl = await canvasModelService.inpaint(compositedImageUrl, prompt, (p) =>
+        setProgress(p),
       );
 
       const { imageStorageService } = await import('../../../../services/imageStorageService');
@@ -185,7 +205,7 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
 
       onClose();
     } catch (error: any) {
-      console.error('局部重绘失败:', error);
+      logger.error(LogCategory.CANVAS, '局部重绘失败:', error);
       alert(`局部重绘失败: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -219,12 +239,14 @@ export const InpaintPanel: React.FC<InpaintPanelProps> = ({ selectedLayerId, onC
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">局部重绘</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

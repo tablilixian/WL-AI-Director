@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { ResolvedImage } from './ResolvedImage';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface DirectStyleTransferPanelProps {
   selectedLayerId: string | null;
   onClose: () => void;
 }
 
-export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> = ({ selectedLayerId, onClose }) => {
+export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> = ({
+  selectedLayerId,
+  onClose,
+}) => {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -16,13 +20,16 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
   const [enhanceEnabled, setEnhanceEnabled] = useState(false);
   const { layers, addLayer } = useCanvasStore();
 
-  const styleRefLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const hasStyleRef = styleRefLayer?.type === 'image' && styleRefLayer?.src && !styleRefLayer?.isLoading;
+  const styleRefLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const hasStyleRef =
+    styleRefLayer?.type === 'image' && styleRefLayer?.src && !styleRefLayer?.isLoading;
 
-  const targetImageLayers = layers.filter(l =>
-    l.id !== selectedLayerId && l.type === 'image' && l.src && !l.isLoading
+  const targetImageLayers = layers.filter(
+    (l) => l.id !== selectedLayerId && l.type === 'image' && l.src && !l.isLoading,
   );
-  const selectedTargetLayer = selectedTargetId ? layers.find(l => l.id === selectedTargetId) : null;
+  const selectedTargetLayer = selectedTargetId
+    ? layers.find((l) => l.id === selectedTargetId)
+    : null;
 
   const handleStyleTransfer = async () => {
     if (!hasStyleRef || !selectedTargetLayer || isProcessing || !styleRefLayer) return;
@@ -62,7 +69,7 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
         } catch (e) {
-          console.warn('[DirectStyleTransfer] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[DirectStyleTransfer] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -85,7 +92,7 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
 
       onClose();
     } catch (error: any) {
-      console.error('风格迁移失败:', error);
+      logger.error(LogCategory.CANVAS, '风格迁移失败:', error);
       alert(`风格迁移失败: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -116,34 +123,48 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
       <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--text-primary)]">风格参考迁移</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <p className="text-xs text-[var(--text-muted)] mb-4 leading-relaxed">
-          选中的图片作为<strong className="text-purple-400">风格参考图</strong>，
-          再选一张作为<strong className="text-blue-400">要迁移的目标图</strong>。
+          选中的图片作为<strong className="text-purple-400">风格参考图</strong>， 再选一张作为
+          <strong className="text-blue-400">要迁移的目标图</strong>。
           风格参考图的色彩、纹理和整体风格将被迁移到目标图上。
         </p>
 
         <div className="mb-4 p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">风格参考图</span>
-            <span className="text-sm font-medium text-[var(--text-primary)]">— 此图的风格将被迁移</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">
+              风格参考图
+            </span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              — 此图的风格将被迁移
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-20 h-20 rounded-lg overflow-hidden border border-purple-500/30 shrink-0">
-              <img src={styleRefLayer?.src} alt={styleRefLayer?.title} className="w-full h-full object-cover" />
+              <img
+                src={styleRefLayer?.src}
+                alt={styleRefLayer?.title}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="min-w-0">
-              <p className="text-sm text-[var(--text-primary)] truncate font-medium">{styleRefLayer?.title}</p>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">色彩、纹理、整体风格走向</p>
+              <p className="text-sm text-[var(--text-primary)] truncate font-medium">
+                {styleRefLayer?.title}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                色彩、纹理、整体风格走向
+              </p>
             </div>
           </div>
         </div>
@@ -169,11 +190,7 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
                   }`}
                   title={l.title}
                 >
-                  <img
-                    src={l.src}
-                    alt={l.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={l.src} alt={l.title} className="w-full h-full object-cover" />
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[10px] text-white truncate px-1 py-0.5">
                     {l.title}
                   </div>
@@ -186,16 +203,26 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
         {selectedTargetLayer && (
           <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">目标图</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">
+                目标图
+              </span>
               <span className="text-sm font-medium text-[var(--text-primary)]">已选中</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-20 h-20 rounded-lg overflow-hidden border border-blue-500/30 shrink-0">
-                <ResolvedImage src={selectedTargetLayer.src} alt={selectedTargetLayer.title} className="w-full h-full object-cover" />
+                <ResolvedImage
+                  src={selectedTargetLayer.src}
+                  alt={selectedTargetLayer.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="min-w-0">
-                <p className="text-sm text-[var(--text-primary)] truncate font-medium">{selectedTargetLayer.title}</p>
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">此图将被应用风格参考图的风格</p>
+                <p className="text-sm text-[var(--text-primary)] truncate font-medium">
+                  {selectedTargetLayer.title}
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  此图将被应用风格参考图的风格
+                </p>
               </div>
             </div>
           </div>
@@ -206,9 +233,7 @@ export const DirectStyleTransferPanel: React.FC<DirectStyleTransferPanelProps> =
             高级选项 <span className="text-xs text-gray-500 font-normal">（可选）</span>
           </p>
           <div>
-            <label className="text-xs text-[var(--text-muted)] block mb-1">
-              增强提示词
-            </label>
+            <label className="text-xs text-[var(--text-muted)] block mb-1">增强提示词</label>
             <input
               type="text"
               value={enhancePrompt}

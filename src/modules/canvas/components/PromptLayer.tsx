@@ -3,6 +3,7 @@ import { PromptLayerData, PromptMode, PROMPT_MODE_ICONS, PROMPT_MODE_NAMES } fro
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { imageStorageService } from '../../../../services/imageStorageService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; imageId?: string }> {
   if (!imageUrl) return { src: '' };
@@ -17,10 +18,10 @@ async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; ima
       const response = await fetch(imageUrl);
       const blob = await response.blob();
       await imageStorageService.saveImage(imgId, blob);
-      console.log('[PromptLayer] 图片已保存到 IndexedDB:', imgId);
+      logger.info(LogCategory.CANVAS, '[PromptLayer] 图片已保存到 IndexedDB:', imgId);
       return { src: `local:${imgId}`, imageId: imgId };
     } catch (e) {
-      console.warn('[PromptLayer] 保存图片到 IndexedDB 失败:', e);
+      logger.warn(LogCategory.CANVAS, '[PromptLayer] 保存图片到 IndexedDB 失败:', e);
       return { src: imageUrl };
     }
   }
@@ -31,10 +32,10 @@ async function resolveAndSaveImage(imageUrl: string): Promise<{ src: string; ima
       const blob = await response.blob();
       const imgId = `canvas_prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await imageStorageService.saveImage(imgId, blob);
-      console.log('[PromptLayer] 外部图片已保存到 IndexedDB:', imgId);
+      logger.info(LogCategory.CANVAS, '[PromptLayer] 外部图片已保存到 IndexedDB:', imgId);
       return { src: `local:${imgId}`, imageId: imgId };
     } catch (e) {
-      console.warn('[PromptLayer] 下载外部图片失败:', e);
+      logger.warn(LogCategory.CANVAS, '[PromptLayer] 下载外部图片失败:', e);
       return { src: imageUrl };
     }
   }
@@ -102,7 +103,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
         isEnhanced: true,
       });
     } catch (error) {
-      console.error('Enhance failed:', error);
+      logger.error(LogCategory.CANVAS, 'Enhance failed:', error);
     } finally {
       setIsEnhancing(false);
     }
@@ -119,7 +120,7 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
         isEnhanced: true,
       });
     } catch (error) {
-      console.error('API Enhance failed:', error);
+      logger.error(LogCategory.CANVAS, 'API Enhance failed:', error);
     } finally {
       setIsApiEnhancing(false);
     }
@@ -132,27 +133,38 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
     const outputIds: string[] = [];
     const traceId = `layer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-    console.log(`\n========== [I2I:${traceId}] PromptLayer 执行启动 ==========`);
-    console.log(`[I2I:${traceId}] 模式: 图生图 (${promptConfig.mode})`);
-    console.log(`[I2I:${traceId}] 关联图层数: ${linkedLayers.length}`);
-    console.log(`[I2I:${traceId}] 已增强: ${promptConfig.isEnhanced}`);
+    logger.info(
+      LogCategory.CANVAS,
+      `\n========== [I2I:${traceId}] PromptLayer 执行启动 ==========`,
+    );
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 模式: 图生图 (${promptConfig.mode})`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 关联图层数: ${linkedLayers.length}`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 已增强: ${promptConfig.isEnhanced}`);
 
     try {
       const promptToUse =
         promptConfig.isEnhanced && promptConfig.enhancedPrompt
           ? promptConfig.enhancedPrompt
           : promptConfig.prompt;
-      console.log(`[I2I:${traceId}] 提示词: ${promptToUse.substring(0, 80)}...`);
+      logger.info(
+        LogCategory.CANVAS,
+        `[I2I:${traceId}] 提示词: ${promptToUse.substring(0, 80)}...`,
+      );
 
       for (let i = 0; i < linkedLayers.length; i++) {
         const sourceLayer = linkedLayers[i];
 
-        console.log(
+        logger.info(
+          LogCategory.CANVAS,
           `[I2I:${traceId}] 处理关联图层 ${i + 1}/${linkedLayers.length}: ${sourceLayer.id}`,
         );
-        console.log(`[I2I:${traceId}]   源图层标题: ${sourceLayer.title}`);
-        console.log(`[I2I:${traceId}]   源图层位置: (${sourceLayer.x}, ${sourceLayer.y})`);
-        console.log(
+        logger.info(LogCategory.CANVAS, `[I2I:${traceId}]   源图层标题: ${sourceLayer.title}`);
+        logger.info(
+          LogCategory.CANVAS,
+          `[I2I:${traceId}]   源图层位置: (${sourceLayer.x}, ${sourceLayer.y})`,
+        );
+        logger.info(
+          LogCategory.CANVAS,
           `[I2I:${traceId}]   源图层图片: ${sourceLayer.src ? sourceLayer.src.substring(0, 60) + '...' : '无'}`,
         );
 
@@ -180,7 +192,8 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
                   : 'image-to-image',
         });
 
-        console.log(
+        logger.info(
+          LogCategory.CANVAS,
           `[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 开始执行 (mode: ${promptConfig.mode})...`,
         );
 
@@ -212,9 +225,12 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
 
           const { src, imageId } = await resolveAndSaveImage(resultUrl);
 
-          console.log(`[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 生成完成`);
-          console.log(`[I2I:${traceId}]   结果图片: ${src}`);
-          console.log(`[I2I:${traceId}]   图片ID: ${imageId || '无'}`);
+          logger.info(
+            LogCategory.CANVAS,
+            `[I2I:${traceId}] ${i + 1}/${linkedLayers.length} 生成完成`,
+          );
+          logger.info(LogCategory.CANVAS, `[I2I:${traceId}]   结果图片: ${src}`);
+          logger.info(LogCategory.CANVAS, `[I2I:${traceId}]   图片ID: ${imageId || '无'}`);
 
           updateLayer(placeholderId, {
             src,
@@ -233,8 +249,11 @@ export const PromptLayer: React.FC<PromptLayerProps> = ({ layer, isSelected }) =
         }
       }
 
-      console.log(`[I2I:${traceId}] 全部完成, 生成 ${outputIds.length} 张图片`);
-      console.log(`========== [I2I:${traceId}] PromptLayer 执行结束 ==========\n`);
+      logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 全部完成, 生成 ${outputIds.length} 张图片`);
+      logger.info(
+        LogCategory.CANVAS,
+        `========== [I2I:${traceId}] PromptLayer 执行结束 ==========\n`,
+      );
       updatePromptConfig(layer.id, { outputLayerIds: outputIds });
     } finally {
       setIsExecuting(false);

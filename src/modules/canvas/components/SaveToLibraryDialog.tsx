@@ -1,7 +1,7 @@
 /**
  * SaveToLibraryDialog Component
  * 用于将画布图层保存到资产库的对话框
- * 
+ *
  * 功能：
  * 1. 智能识别图层来源（角色/场景/关键帧）
  * 2. 允许用户选择资产类型（角色/场景/道具）
@@ -14,11 +14,12 @@ import { LayerData } from '../types/canvas';
 import type { ProjectState } from '../../../../types';
 import { createLibraryItemFromLayer } from '../../../../services/assetLibraryService';
 import { hybridStorage } from '../../../../services/hybridStorageService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface SaveToLibraryDialogProps {
-  layer: LayerData;           // 要保存的图层
-  project: ProjectState;      // 当前项目状态
-  onClose: () => void;        // 关闭对话框回调
+  layer: LayerData; // 要保存的图层
+  project: ProjectState; // 当前项目状态
+  onClose: () => void; // 关闭对话框回调
 }
 
 /**
@@ -28,7 +29,7 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   character: '角色',
   scene: '场景',
   keyframe: '关键帧',
-  undefined: '未知'
+  undefined: '未知',
 };
 
 /**
@@ -37,13 +38,13 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
 const ASSET_TYPE_ICONS: Record<'character' | 'scene' | 'prop', string> = {
   character: '👤',
   scene: '🏞️',
-  prop: '📦'
+  prop: '📦',
 };
 
-export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({ 
-  layer, 
-  project, 
-  onClose 
+export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
+  layer,
+  project,
+  onClose,
 }) => {
   // 智能推荐资产类型：根据图层的 linkedResourceType 自动选择
   const [assetType, setAssetType] = useState<'character' | 'scene' | 'prop'>(() => {
@@ -51,10 +52,10 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
     if (layer.linkedResourceType === 'scene') return 'scene';
     return 'character'; // 默认推荐角色类型
   });
-  
+
   // 资产名称，默认为图层标题
   const [assetName, setAssetName] = useState(layer.title || '');
-  
+
   // 保存状态
   const [isSaving, setIsSaving] = useState(false);
 
@@ -67,14 +68,19 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
     setIsSaving(true);
     try {
       const layerToSave = { ...layer };
-      
-      const item = await createLibraryItemFromLayer(layerToSave, project, assetType, assetName.trim());
+
+      const item = await createLibraryItemFromLayer(
+        layerToSave,
+        project,
+        assetType,
+        assetName.trim(),
+      );
       await hybridStorage.saveAssetToLibrary(item);
-      
+
       alert(`已保存到资产库：${assetName}`);
       onClose();
     } catch (error) {
-      console.error('[SaveToLibrary] 保存失败:', error);
+      logger.error(LogCategory.CANVAS, '[SaveToLibrary] 保存失败:', error);
       alert('保存失败，请重试');
     } finally {
       setIsSaving(false);
@@ -91,7 +97,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]"
       onClick={onClose}
       onKeyDown={handleKeyDown}
@@ -99,7 +105,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
       aria-modal="true"
       aria-labelledby="dialog-title"
     >
-      <div 
+      <div
         className="bg-gray-800 rounded-lg p-6 w-96 shadow-xl border border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
@@ -107,43 +113,41 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
         <h3 id="dialog-title" className="text-lg font-bold text-white mb-4">
           💾 保存到资产库
         </h3>
-        
+
         {/* 资产类型选择 */}
         <div className="mb-4">
-          <label className="block text-sm text-gray-400 mb-2">
-            资产类型
-          </label>
+          <label className="block text-sm text-gray-400 mb-2">资产类型</label>
           <div className="flex gap-2">
             {/* 角色类型按钮 */}
             <button
               onClick={() => setAssetType('character')}
               className={`flex-1 px-3 py-2 rounded transition-colors ${
-                assetType === 'character' 
-                  ? 'bg-blue-600 text-white' 
+                assetType === 'character'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
               {ASSET_TYPE_ICONS.character} 角色
             </button>
-            
+
             {/* 场景类型按钮 */}
             <button
               onClick={() => setAssetType('scene')}
               className={`flex-1 px-3 py-2 rounded transition-colors ${
-                assetType === 'scene' 
-                  ? 'bg-blue-600 text-white' 
+                assetType === 'scene'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
               {ASSET_TYPE_ICONS.scene} 场景
             </button>
-            
+
             {/* 道具类型按钮 */}
             <button
               onClick={() => setAssetType('prop')}
               className={`flex-1 px-3 py-2 rounded transition-colors ${
-                assetType === 'prop' 
-                  ? 'bg-blue-600 text-white' 
+                assetType === 'prop'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
@@ -151,12 +155,10 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
             </button>
           </div>
         </div>
-        
+
         {/* 资产名称输入 */}
         <div className="mb-6">
-          <label className="block text-sm text-gray-400 mb-2">
-            资产名称
-          </label>
+          <label className="block text-sm text-gray-400 mb-2">资产名称</label>
           <input
             type="text"
             value={assetName}
@@ -166,7 +168,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
             autoFocus
           />
         </div>
-        
+
         {/* 来源信息提示 */}
         {layer.linkedResourceId && layer.linkedResourceType && (
           <div className="mb-4 p-3 bg-blue-900/20 border border-blue-800 rounded">
@@ -176,7 +178,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
             </p>
           </div>
         )}
-        
+
         {/* 操作按钮 */}
         <div className="flex gap-2 justify-end">
           {/* 取消按钮 */}
@@ -187,7 +189,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
           >
             取消
           </button>
-          
+
           {/* 保存按钮 */}
           <button
             onClick={handleSave}

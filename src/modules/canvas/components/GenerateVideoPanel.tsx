@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { UI_VIDEO_SIZE_PRESETS } from '../../../../config/sizeConfig';
 import { ResolvedImage } from './ResolvedImage';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface GenerateVideoPanelProps {
   selectedLayerIds: string[];
@@ -931,7 +932,7 @@ export const GenerateVideoPanel: React.FC<GenerateVideoPanelProps> = ({
         onClose();
       }, 1000);
     } catch (error: any) {
-      console.error('视频生成失败:', error);
+      logger.error(LogCategory.CANVAS, '视频生成失败:', error);
       alert(`生成失败: ${error.message}`);
     } finally {
       setIsGenerating(false);

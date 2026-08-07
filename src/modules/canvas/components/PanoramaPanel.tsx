@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import type { PanoramaGenerationMode } from '../types/canvas';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface PanoramaPanelProps {
   selectedLayerId: string | null;
@@ -64,7 +65,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         });
         onClose();
       } catch (e) {
-        console.error('[PanoramaPanel] 上传失败:', e);
+        logger.error(LogCategory.CANVAS, '[PanoramaPanel] 上传失败:', e);
         alert(`上传失败: ${(e as Error).message}`);
       } finally {
         setIsProcessing(false);
@@ -140,7 +141,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
           finalSrc = `local:${imgId}`;
           displayUrl = URL.createObjectURL(blob);
         } catch (e) {
-          console.warn('[PanoramaPanel] 外部 URL 保存到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[PanoramaPanel] 外部 URL 保存到 IndexedDB 失败:', e);
           imageId = undefined;
           finalSrc = panoramaSrc;
           displayUrl = panoramaSrc;
@@ -177,7 +178,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
 
       onClose();
     } catch (e) {
-      console.error('[PanoramaPanel] 生成失败:', e);
+      logger.error(LogCategory.CANVAS, '[PanoramaPanel] 生成失败:', e);
       alert(`生成失败: ${(e as Error).message}`);
     } finally {
       setIsProcessing(false);

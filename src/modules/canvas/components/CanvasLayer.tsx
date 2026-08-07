@@ -16,6 +16,7 @@ import { Film, Orbit, Sparkles } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 import { InlinePanoramaViewer } from './InlinePanoramaViewer';
 import { isLikelyPanoramaImage } from '../utils/panoramaUtils';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface CanvasLayerProps {
   layer: LayerData;
@@ -85,8 +86,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
 
     const resolve = async () => {
       if (layer.type === 'image' || layer.type === 'drawing' || layer.type === 'panorama') {
-        console.log(
-          '[CanvasLayer] 解析图片/drawing:',
+        logger.info(LogCategory.CANVAS, '[CanvasLayer] 解析图片/drawing:', [
           layer.id,
           'type:',
           layer.type,
@@ -94,7 +94,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           layer.src?.substring(0, 30),
           'imageId:',
           layer.imageId,
-        );
+        ]);
 
         let srcToResolve = layer.src;
 
@@ -104,7 +104,11 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
         }
 
         const resolved = await resolveImageSrc(srcToResolve);
-        console.log('[CanvasLayer] 解析结果:', layer.id, 'resolved:', resolved?.substring(0, 50));
+        logger.info(LogCategory.CANVAS, '[CanvasLayer] 解析结果:', [
+          layer.id,
+          'resolved:',
+          resolved?.substring(0, 50),
+        ]);
         setResolvedSrc(resolved);
         if (resolved.startsWith('blob:') && resolved !== layer.src) {
           objectUrl = resolved;
@@ -403,7 +407,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
               className="w-full h-full object-contain"
               draggable={false}
               onError={(_e) => {
-                console.error('图片加载失败:', {
+                logger.error(LogCategory.CANVAS, '图片加载失败:', {
                   layerId: layer.id,
                   title: layer.title,
                   srcLength: layer.src?.length,
@@ -695,7 +699,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
                       operationType: 'panorama-screenshot',
                     } as LayerData);
                   } catch (e) {
-                    console.error('[CanvasLayer] 截图保存失败:', e);
+                    logger.error(LogCategory.CANVAS, '[CanvasLayer] 截图保存失败:', e);
                     pending.push({
                       id: crypto.randomUUID(),
                       type: 'image',

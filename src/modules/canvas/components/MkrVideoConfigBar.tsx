@@ -5,6 +5,7 @@ import { X, Sparkles, Plus, Trash2, ChevronUp, ChevronDown, Film, Grid } from 'l
 import type { LayerData } from '../types/canvas';
 import { UI_MKR_SIZE_PRESETS } from '../../../../config/sizeConfig';
 import { ResolvedImage } from './ResolvedImage';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface MkrVideoConfigBarProps {
   layerId: string;
@@ -286,7 +287,7 @@ export const MkrVideoConfigBar: React.FC<MkrVideoConfigBarProps> = ({ layerId })
       setProgress(100);
       setProgressLabel('生成完成！');
     } catch (error: any) {
-      console.error('MKR 视频生成失败:', error);
+      logger.error(LogCategory.CANVAS, 'MKR 视频生成失败:', error);
       updateLayer(layer.id, { error: error.message, isLoading: false });
     } finally {
       setIsGenerating(false);

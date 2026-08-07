@@ -5,6 +5,7 @@ import { useCanvasStore } from '../hooks/useCanvasState';
 import { generateSpliteGridImage } from '@/services/aiService';
 import { imageStorageService, generateImageId } from '@/services/imageStorageService';
 import type { GridGenerationType } from '../types/canvas';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface GridSplitPanelProps {
   selectedLayerId: string | null;
@@ -30,7 +31,11 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
   return new Blob([bytes], { type: mimeType });
 };
 
-export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId, gridType, onClose }) => {
+export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({
+  selectedLayerId,
+  gridType,
+  onClose,
+}) => {
   const [selectedCells, setSelectedCells] = useState<Set<number>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -42,10 +47,10 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
 
   const config = GRID_CONFIG[gridType];
   const totalCells = config.cols * config.rows;
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
 
   const toggleCell = (index: number) => {
-    setSelectedCells(prev => {
+    setSelectedCells((prev) => {
       const next = new Set(prev);
       if (next.has(index)) next.delete(index);
       else next.add(index);
@@ -60,7 +65,7 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
     row: number,
     displayCellW: number,
     displayCellH: number,
-    order: number
+    order: number,
   ) => {
     addLayer({
       id: crypto.randomUUID(),
@@ -97,13 +102,17 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
       const ctx = canvas.getContext('2d');
       if (!ctx) continue;
 
-      ctx.drawImage(
-        img,
-        col * cellW, row * cellH, cellW, cellH,
-        0, 0, cellW, cellH
-      );
+      ctx.drawImage(img, col * cellW, row * cellH, cellW, cellH, 0, 0, cellW, cellH);
 
-      addCellLayer(canvas.toDataURL('image/png'), cellIndex, col, row, displayCellW, displayCellH, i);
+      addCellLayer(
+        canvas.toDataURL('image/png'),
+        cellIndex,
+        col,
+        row,
+        displayCellW,
+        displayCellH,
+        i,
+      );
     }
   };
 
@@ -170,7 +179,7 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
       }
       onClose();
     } catch (error: any) {
-      console.error('提取宫格失败:', error);
+      logger.error(LogCategory.CANVAS, '提取宫格失败:', error);
       alert(`提取失败: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -188,30 +197,42 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
 
   if (!selectedLayer) {
     return createPortal(
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-        <div className="bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        onClick={onClose}
+      >
+        <div
+          className="bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p className="text-sm text-[var(--text-muted)]">请先选中一张图片</p>
-          <button onClick={onClose} className="mt-4 px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-lg text-xs font-bold">关闭</button>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-lg text-xs font-bold"
+          >
+            关闭
+          </button>
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
       <div
         className="bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl shadow-2xl flex flex-col"
         style={{ width: 'min(90vw, 800px)', height: 'min(90vh, 700px)' }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0 rounded-t-xl">
           <div className="flex items-center gap-3">
             <Grid3x3 className="w-4 h-4 text-[var(--accent-text)]" />
-            <h3 className="text-sm font-bold text-[var(--text-primary)]">
-              {config.label}切分
-            </h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">{config.label}切分</h3>
             <div className="flex items-center gap-1 ml-4 bg-[var(--bg-base)] rounded-lg p-0.5 border border-[var(--border-secondary)]">
               <button
                 onClick={() => setSplitMode('fast')}
@@ -237,7 +258,10 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
               </button>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--error-hover-bg)] rounded text-[var(--text-tertiary)] hover:text-[var(--error-text)] transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[var(--error-hover-bg)] rounded text-[var(--text-tertiary)] hover:text-[var(--error-text)] transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -258,10 +282,13 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
               }}
             />
             {imageLoaded && (
-              <div className="absolute inset-0 grid cursor-pointer" style={{
-                gridTemplateColumns: `repeat(${config.cols}, 1fr)`,
-                gridTemplateRows: `repeat(${config.rows}, 1fr)`,
-              }}>
+              <div
+                className="absolute inset-0 grid cursor-pointer"
+                style={{
+                  gridTemplateColumns: `repeat(${config.cols}, 1fr)`,
+                  gridTemplateRows: `repeat(${config.rows}, 1fr)`,
+                }}
+              >
                 {Array.from({ length: totalCells }, (_, i) => {
                   const isSelected = selectedCells.has(i);
                   return (
@@ -270,9 +297,10 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
                       onClick={() => toggleCell(i)}
                       className={`
                         border border-dashed transition-colors relative
-                        ${isSelected
-                          ? 'bg-blue-500/30 border-blue-400'
-                          : 'border-white/30 hover:border-white/60 hover:bg-white/10'
+                        ${
+                          isSelected
+                            ? 'bg-blue-500/30 border-blue-400'
+                            : 'border-white/30 hover:border-white/60 hover:bg-white/10'
                         }
                       `}
                     >
@@ -297,10 +325,10 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
                 <span className="w-3 h-3 border-2 border-[var(--text-tertiary)]/30 border-t-[var(--text-tertiary)] rounded-full animate-spin" />
                 {splitMode === 'ai' ? '正在通过 AI 服务分割图片...' : '正在提取宫格...'}
               </span>
+            ) : imageLoaded ? (
+              `原图 ${imgNaturalSize.w} × ${imgNaturalSize.h}px · ${config.cols}×${config.rows} 共 ${totalCells} 格 · 已选 ${selectedCells.size} 格`
             ) : (
-              imageLoaded
-                ? `原图 ${imgNaturalSize.w} × ${imgNaturalSize.h}px · ${config.cols}×${config.rows} 共 ${totalCells} 格 · 已选 ${selectedCells.size} 格`
-                : '加载图片中...'
+              '加载图片中...'
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -327,6 +355,6 @@ export const GridSplitPanel: React.FC<GridSplitPanelProps> = ({ selectedLayerId,
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };

@@ -1,5 +1,6 @@
 import { pb } from '../../../../src/api/pocketbase';
 import { StyleTemplate } from '../data/styleTemplates';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 const COLLECTION_NAME = 'user_templates';
 const STORAGE_KEY = 'user_custom_templates';
@@ -71,7 +72,7 @@ async function syncToPb(template: StyleTemplate): Promise<void> {
       }),
     });
   } catch (e) {
-    console.warn('[userTemplate] PB同步失败:', e);
+    logger.warn(LogCategory.CANVAS, '[userTemplate] PB同步失败:', e);
   }
 }
 
@@ -90,7 +91,7 @@ async function deleteFromPb(templateId: string): Promise<void> {
       });
     }
   } catch (e) {
-    console.warn('[userTemplate] PB删除失败:', e);
+    logger.warn(LogCategory.CANVAS, '[userTemplate] PB删除失败:', e);
   }
 }
 

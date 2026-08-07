@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface ImageEditPanelProps {
   selectedLayerId: string | null;
@@ -78,9 +79,9 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({
           const blob = await response.blob();
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
-          console.log('[ImageEdit] 背景替换图片已保存到 IndexedDB:', imgId);
+          logger.info(LogCategory.CANVAS, '[ImageEdit] 背景替换图片已保存到 IndexedDB:', imgId);
         } catch (e) {
-          console.warn('[ImageEdit] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[ImageEdit] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -103,7 +104,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({
 
       onClose();
     } catch (error: any) {
-      console.error('背景替换失败:', error);
+      logger.error(LogCategory.CANVAS, '背景替换失败:', error);
       alert(`背景替换失败: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -143,9 +144,9 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({
           const blob = await response.blob();
           await imageStorageService.saveImage(imgId, blob);
           imageId = imgId;
-          console.log('[ImageEdit] 图片扩展已保存到 IndexedDB:', imgId);
+          logger.info(LogCategory.CANVAS, '[ImageEdit] 图片扩展已保存到 IndexedDB:', imgId);
         } catch (e) {
-          console.warn('[ImageEdit] 保存图片到 IndexedDB 失败:', e);
+          logger.warn(LogCategory.CANVAS, '[ImageEdit] 保存图片到 IndexedDB 失败:', e);
         }
       }
 
@@ -169,7 +170,7 @@ export const ImageEditPanel: React.FC<ImageEditPanelProps> = ({
 
       onClose();
     } catch (error: any) {
-      console.error('图片扩展失败:', error);
+      logger.error(LogCategory.CANVAS, '图片扩展失败:', error);
       alert(`图片扩展失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

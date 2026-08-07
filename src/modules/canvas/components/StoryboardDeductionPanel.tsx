@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
 import { STORYBOARD_FALLBACK_SIZE } from '../../../../config/sizeConfig';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface StoryboardDeductionPanelProps {
   selectedLayerId: string | null;
@@ -205,7 +206,11 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
             resolve();
           };
           img.onerror = () => {
-            console.warn('[StoryboardDeduction] 图片加载失败:', resolvedLabels[i].url);
+            logger.warn(
+              LogCategory.CANVAS,
+              '[StoryboardDeduction] 图片加载失败:',
+              resolvedLabels[i].url,
+            );
             resolve();
           };
           img.src = resolvedLabels[i].url;
@@ -236,7 +241,7 @@ export const StoryboardDeductionPanel: React.FC<StoryboardDeductionPanelProps> =
 
       onClose();
     } catch (error: any) {
-      console.error('剧情推演失败:', error);
+      logger.error(LogCategory.CANVAS, '剧情推演失败:', error);
       alert(`剧情推演失败: ${error.message}`);
     } finally {
       setIsProcessing(false);

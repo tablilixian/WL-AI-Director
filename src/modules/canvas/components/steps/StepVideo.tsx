@@ -17,6 +17,7 @@ import {
   type KeyframePromptData,
 } from '../../types/flow';
 import { optimizeVideoFramePrompt } from '../../services/promptOptimizer';
+import { logger, LogCategory } from '../../../../../services/logger.ts';
 
 interface StepVideoProps {
   sourceLayerId: string;
@@ -257,7 +258,7 @@ export const StepVideo: React.FC<StepVideoProps> = ({
         duration,
         fps,
         onProgress: (pct: number) => {
-          console.log(`[Video] Progress: ${pct}%`);
+          logger.info(LogCategory.CANVAS, `[Video] Progress: ${pct}%`);
         },
       });
 

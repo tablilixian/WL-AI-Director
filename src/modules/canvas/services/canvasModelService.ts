@@ -97,24 +97,29 @@ export class CanvasModelService {
     const startTime = Date.now();
     const isImageToImage = referenceImages.length > 0;
 
-    console.log(`\n========== [I2I:${traceId}] 图生图流程启动 ==========`);
-    console.log(`[I2I:${traceId}] 阶段 1/5 - 发起请求`);
-    console.log(
+    logger.info(LogCategory.CANVAS, `\n========== [I2I:${traceId}] 图生图流程启动 ==========`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 阶段 1/5 - 发起请求`);
+    logger.info(
+      LogCategory.CANVAS,
       `[I2I:${traceId}] 请求类型: ${isImageToImage ? '图生图 (Image-to-Image)' : '文生图 (Text-to-Image)'}`,
     );
-    console.log(`[I2I:${traceId}] 动漫模式: ${isAnime ? '是 (txt2imageanime)' : '否'}`);
-    console.log(`[I2I:${traceId}] 当前提供商: ${provider}`);
-    console.log(`[I2I:${traceId}] 提示词: ${prompt}`);
-    console.log(`[I2I:${traceId}] 宽高比: ${aspectRatio}`);
-    console.log(`[I2I:${traceId}] 参考图数量: ${referenceImages.length}`);
+    logger.info(
+      LogCategory.CANVAS,
+      `[I2I:${traceId}] 动漫模式: ${isAnime ? '是 (txt2imageanime)' : '否'}`,
+    );
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 当前提供商: ${provider}`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 提示词: ${prompt}`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 宽高比: ${aspectRatio}`);
+    logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 参考图数量: ${referenceImages.length}`);
     if (isImageToImage) {
-      console.log(`[I2I:${traceId}] 参考图详情:`);
+      logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 参考图详情:`);
       referenceImages.forEach((img, i) => {
-        console.log(
+        logger.info(
+          LogCategory.CANVAS,
           `  [${i + 1}] 来源类型: ${img.startsWith('data:') ? 'Base64' : img.startsWith('local:') ? '本地IndexedDB' : img.startsWith('blob:') ? 'Blob URL' : '远程URL'}`,
         );
-        console.log(`  [${i + 1}] 数据长度: ${img.length} 字符`);
-        console.log(`  [${i + 1}] 预览前缀: ${img.substring(0, 60)}...`);
+        logger.info(LogCategory.CANVAS, `  [${i + 1}] 数据长度: ${img.length} 字符`);
+        logger.info(LogCategory.CANVAS, `  [${i + 1}] 预览前缀: ${img.substring(0, 60)}...`);
       });
     }
 
@@ -130,7 +135,10 @@ export class CanvasModelService {
 
       onProgress?.(30);
 
-      console.log(`[I2I:${traceId}] 阶段 2/5 - 调用 ImageAdapter (callImageApi)...`);
+      logger.info(
+        LogCategory.CANVAS,
+        `[I2I:${traceId}] 阶段 2/5 - 调用 ImageAdapter (callImageApi)...`,
+      );
 
       const imageUrl = await callImageApi(
         {
@@ -151,23 +159,25 @@ export class CanvasModelService {
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
-      console.log(`\n[I2I:${traceId}] 阶段 5/5 - 生成完成 ✓`);
-      console.log(`[I2I:${traceId}] 总耗时: ${totalTime}s`);
-      console.log(
+      logger.info(LogCategory.CANVAS, `\n[I2I:${traceId}] 阶段 5/5 - 生成完成 ✓`);
+      logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 总耗时: ${totalTime}s`);
+      logger.info(
+        LogCategory.CANVAS,
         `[I2I:${traceId}] 结果类型: ${imageUrl?.startsWith('local:') ? '本地IndexedDB引用' : imageUrl?.startsWith('data:') ? 'Base64' : '未知'}`,
       );
-      console.log(`[I2I:${traceId}] 结果ID: ${imageUrl}`);
-      console.log(`========== [I2I:${traceId}] 流程结束 ==========\n`);
+      logger.info(LogCategory.CANVAS, `[I2I:${traceId}] 结果ID: ${imageUrl}`);
+      logger.info(LogCategory.CANVAS, `========== [I2I:${traceId}] 流程结束 ==========\n`);
 
       onProgress?.(100);
 
       return imageUrl;
     } catch (error: any) {
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.error(`\n[I2I:${traceId}] ❌ 图生图流程失败 (${totalTime}s)`);
-      console.error(`[I2I:${traceId}] 错误信息: ${error.message}`);
+      logger.error(LogCategory.CANVAS, `\n[I2I:${traceId}] ❌ 图生图流程失败 (${totalTime}s)`);
+      logger.error(LogCategory.CANVAS, `[I2I:${traceId}] 错误信息: ${error.message}`);
       if (error.stack) {
-        console.error(
+        logger.error(
+          LogCategory.CANVAS,
           `[I2I:${traceId}] 错误堆栈: ${error.stack.split('\n').slice(0, 3).join('\n')}`,
         );
       }
@@ -206,7 +216,7 @@ export class CanvasModelService {
 
       onProgress?.(60);
 
-      console.log('[CanvasModelService] 视频生成完成，URL:', videoUrl);
+      logger.info(LogCategory.CANVAS, '[CanvasModelService] 视频生成完成，URL:', videoUrl);
 
       // Adapter 已保存到本地 (video: 协议)，直接返回
       if (videoUrl.startsWith('video:')) {
@@ -222,12 +232,16 @@ export class CanvasModelService {
             'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',
             '/video-proxy',
           );
-          console.log('[CanvasModelService] 使用代理下载视频:', downloadUrl);
+          logger.info(LogCategory.CANVAS, '[CanvasModelService] 使用代理下载视频:', downloadUrl);
         } else if (videoUrl.includes('aigc-files.bigmodel.cn')) {
           downloadUrl = videoUrl.replace('https://aigc-files.bigmodel.cn', '/bigmodel-files');
-          console.log('[CanvasModelService] 使用代理下载 bigmodel 视频:', downloadUrl);
+          logger.info(
+            LogCategory.CANVAS,
+            '[CanvasModelService] 使用代理下载 bigmodel 视频:',
+            downloadUrl,
+          );
         } else {
-          console.log('[CanvasModelService] 尝试直接下载视频...');
+          logger.info(LogCategory.CANVAS, '[CanvasModelService] 尝试直接下载视频...');
         }
 
         const response = await fetch(downloadUrl);
@@ -236,20 +250,20 @@ export class CanvasModelService {
         }
 
         const videoBlob = await response.blob();
-        console.log('[CanvasModelService] 视频下载成功，大小:', videoBlob.size);
+        logger.info(LogCategory.CANVAS, '[CanvasModelService] 视频下载成功，大小:', videoBlob.size);
 
         const { unifiedImageService } = await import('../../../../services/unifiedImageService');
         const localVideoUrl = await unifiedImageService.saveVideoToLocal(
           URL.createObjectURL(videoBlob),
         );
 
-        console.log('[CanvasModelService] 视频保存到本地成功:', localVideoUrl);
+        logger.info(LogCategory.CANVAS, '[CanvasModelService] 视频保存到本地成功:', localVideoUrl);
         onProgress?.(100);
 
         return localVideoUrl;
       } catch (downloadError: any) {
-        console.error('[CanvasModelService] 视频下载失败:', downloadError);
-        console.log('[CanvasModelService] 使用外部视频 URL');
+        logger.error(LogCategory.CANVAS, '[CanvasModelService] 视频下载失败:', downloadError);
+        logger.info(LogCategory.CANVAS, '[CanvasModelService] 使用外部视频 URL');
         onProgress?.(100);
         return videoUrl;
       }
@@ -297,7 +311,7 @@ export class CanvasModelService {
 
       onProgress?.(60);
 
-      console.log('[CanvasModelService] MKR 视频生成完成，URL:', videoUrl);
+      logger.info(LogCategory.CANVAS, '[CanvasModelService] MKR 视频生成完成，URL:', videoUrl);
 
       if (videoUrl.startsWith('video:')) {
         onProgress?.(100);
@@ -316,7 +330,11 @@ export class CanvasModelService {
         }
 
         const videoBlob = await response.blob();
-        console.log('[CanvasModelService] MKR 视频下载成功，大小:', videoBlob.size);
+        logger.info(
+          LogCategory.CANVAS,
+          '[CanvasModelService] MKR 视频下载成功，大小:',
+          videoBlob.size,
+        );
 
         const { unifiedImageService } = await import('../../../../services/unifiedImageService');
         const localVideoUrl = await unifiedImageService.saveVideoToLocal(
@@ -326,7 +344,7 @@ export class CanvasModelService {
         onProgress?.(100);
         return localVideoUrl;
       } catch (downloadError: any) {
-        console.error('[CanvasModelService] MKR 视频下载失败:', downloadError);
+        logger.error(LogCategory.CANVAS, '[CanvasModelService] MKR 视频下载失败:', downloadError);
         onProgress?.(100);
         return videoUrl;
       }
@@ -373,7 +391,7 @@ export class CanvasModelService {
 
       onProgress?.(60);
 
-      console.log('[CanvasModelService] MKR Grid 视频生成完成，URL:', videoUrl);
+      logger.info(LogCategory.CANVAS, '[CanvasModelService] MKR Grid 视频生成完成，URL:', videoUrl);
 
       if (videoUrl.startsWith('video:')) {
         onProgress?.(100);
@@ -395,12 +413,17 @@ export class CanvasModelService {
           URL.createObjectURL(videoBlob),
         );
 
-        console.log('[CanvasModelService] MKR Grid 视频保存到本地成功:', localVideoUrl);
+        logger.info(
+          LogCategory.CANVAS,
+          '[CanvasModelService] MKR Grid 视频保存到本地成功:',
+          localVideoUrl,
+        );
         onProgress?.(100);
 
         return localVideoUrl;
       } catch (downloadError: any) {
-        console.warn(
+        logger.warn(
+          LogCategory.CANVAS,
           '[CanvasModelService] MKR Grid 视频下载失败，使用外部 URL:',
           downloadError.message,
         );
@@ -473,7 +496,7 @@ export class CanvasModelService {
         1024,
       );
 
-      console.log(`[CanvasModelService] Prompt enhanced for mode: ${mode}`);
+      logger.info(LogCategory.CANVAS, `[CanvasModelService] Prompt enhanced for mode: ${mode}`);
       return enhancedPrompt || prompt;
     } catch (error: any) {
       logger.warn(
@@ -486,16 +509,16 @@ export class CanvasModelService {
   }
 
   async apiPromptEnhance(prompt: string): Promise<string> {
-    console.log('=== API 提示词增强请求 (image2promptenhance) ===');
-    console.log('[原始提示词]', prompt);
+    logger.info(LogCategory.CANVAS, '=== API 提示词增强请求 (image2promptenhance) ===');
+    logger.info(LogCategory.CANVAS, '[原始提示词]', prompt);
 
     try {
       const { generatePromptEnhanceImage } = await import('../../../../services/ai/visualService');
       const result = await generatePromptEnhanceImage(prompt);
-      console.log('[增强结果]', result);
+      logger.info(LogCategory.CANVAS, '[增强结果]', result);
       return result;
     } catch (error: any) {
-      console.error('API 提示词增强失败:', error);
+      logger.error(LogCategory.CANVAS, 'API 提示词增强失败:', error);
       throw error;
     }
   }
@@ -542,9 +565,9 @@ export class CanvasModelService {
 
     const stylePrompt = stylePrompts[style] || `Convert this image to ${style} style.`;
 
-    console.log('=== 风格迁移请求 ===');
-    console.log('[风格]', style);
-    console.log('[提示词]', stylePrompt);
+    logger.info(LogCategory.CANVAS, '=== 风格迁移请求 ===');
+    logger.info(LogCategory.CANVAS, '[风格]', style);
+    logger.info(LogCategory.CANVAS, '[提示词]', stylePrompt);
 
     onProgress?.(10);
 
@@ -561,8 +584,8 @@ export class CanvasModelService {
     backgroundDescription: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 背景替换请求 ===');
-    console.log('[背景描述]', backgroundDescription);
+    logger.info(LogCategory.CANVAS, '=== 背景替换请求 ===');
+    logger.info(LogCategory.CANVAS, '[背景描述]', backgroundDescription);
 
     onProgress?.(10);
 
@@ -581,8 +604,8 @@ export class CanvasModelService {
     expandDirection: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 图片扩展请求 ===');
-    console.log('[扩展方向]', expandDirection);
+    logger.info(LogCategory.CANVAS, '=== 图片扩展请求 ===');
+    logger.info(LogCategory.CANVAS, '[扩展方向]', expandDirection);
 
     onProgress?.(10);
 
@@ -610,7 +633,7 @@ export class CanvasModelService {
     imageUrl: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 智能抠图请求 ===');
+    logger.info(LogCategory.CANVAS, '=== 智能抠图请求 ===');
 
     onProgress?.(10);
 
@@ -632,9 +655,9 @@ export class CanvasModelService {
     prompt?: string,
     enhance?: boolean,
   ): Promise<string> {
-    console.log('=== 直接风格迁移请求 (image2styletransfer) ===');
-    console.log('[目标图]', targetImageUrl);
-    console.log('[风格参考图]', styleImageUrl);
+    logger.info(LogCategory.CANVAS, '=== 直接风格迁移请求 (image2styletransfer) ===');
+    logger.info(LogCategory.CANVAS, '[目标图]', targetImageUrl);
+    logger.info(LogCategory.CANVAS, '[风格参考图]', styleImageUrl);
 
     onProgress?.(10);
 
@@ -654,7 +677,7 @@ export class CanvasModelService {
       onProgress?.(100);
       return result;
     } catch (error) {
-      console.error('直接风格迁移失败:', error);
+      logger.error(LogCategory.CANVAS, '直接风格迁移失败:', error);
       throw error;
     }
   }
@@ -667,12 +690,12 @@ export class CanvasModelService {
     refImage?: string,
     enhance?: boolean,
   ): Promise<string> {
-    console.log('=== IPA 风格迁移请求 (image2ipastyletransfer) ===');
-    console.log('[提示词]', prompt);
-    console.log('[参考图数量]', referenceImages.length);
-    console.log('[宽高比]', aspectRatio);
-    if (refImage) console.log('[风格迁移参考图]', refImage.substring(0, 50));
-    if (enhance !== undefined) console.log('[增强效果]', enhance);
+    logger.info(LogCategory.CANVAS, '=== IPA 风格迁移请求 (image2ipastyletransfer) ===');
+    logger.info(LogCategory.CANVAS, '[提示词]', prompt);
+    logger.info(LogCategory.CANVAS, '[参考图数量]', referenceImages.length);
+    logger.info(LogCategory.CANVAS, '[宽高比]', aspectRatio);
+    if (refImage) logger.info(LogCategory.CANVAS, '[风格迁移参考图]', refImage.substring(0, 50));
+    if (enhance !== undefined) logger.info(LogCategory.CANVAS, '[增强效果]', enhance);
 
     onProgress?.(10);
 
@@ -696,7 +719,7 @@ export class CanvasModelService {
       onProgress?.(100);
       return result;
     } catch (error) {
-      console.error('IPA 风格迁移失败:', error);
+      logger.error(LogCategory.CANVAS, 'IPA 风格迁移失败:', error);
       throw error;
     }
   }
@@ -706,9 +729,9 @@ export class CanvasModelService {
     aspectRatio: AspectRatio = '16:9',
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 动漫风格生成请求 (txt2imageanime) ===');
-    console.log('[提示词]', prompt);
-    console.log('[宽高比]', aspectRatio);
+    logger.info(LogCategory.CANVAS, '=== 动漫风格生成请求 (txt2imageanime) ===');
+    logger.info(LogCategory.CANVAS, '[提示词]', prompt);
+    logger.info(LogCategory.CANVAS, '[宽高比]', aspectRatio);
 
     onProgress?.(10);
 
@@ -729,7 +752,7 @@ export class CanvasModelService {
       onProgress?.(100);
       return result;
     } catch (error) {
-      console.error('动漫风格生成失败:', error);
+      logger.error(LogCategory.CANVAS, '动漫风格生成失败:', error);
       throw error;
     }
   }
@@ -739,8 +762,8 @@ export class CanvasModelService {
     prompt: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 局部重绘请求 ===');
-    console.log('[提示词]', prompt);
+    logger.info(LogCategory.CANVAS, '=== 局部重绘请求 ===');
+    logger.info(LogCategory.CANVAS, '[提示词]', prompt);
 
     onProgress?.(10);
 
@@ -760,7 +783,7 @@ export class CanvasModelService {
       onProgress?.(100);
       return result;
     } catch (error) {
-      console.error('局部重绘失败:', error);
+      logger.error(LogCategory.CANVAS, '局部重绘失败:', error);
       throw error;
     }
   }
@@ -769,8 +792,8 @@ export class CanvasModelService {
     imageUrl?: string,
     onProgress?: (progress: number) => void,
   ): Promise<string> {
-    console.log('=== 360° HDRI 全景生成请求 (image2360hdri) ===');
-    if (imageUrl) console.log('[输入图像]', imageUrl.substring(0, 60));
+    logger.info(LogCategory.CANVAS, '=== 360° HDRI 全景生成请求 (image2360hdri) ===');
+    if (imageUrl) logger.info(LogCategory.CANVAS, '[输入图像]', imageUrl.substring(0, 60));
 
     onProgress?.(10);
 
@@ -784,7 +807,7 @@ export class CanvasModelService {
       onProgress?.(100);
       return result;
     } catch (error) {
-      console.error('360° HDRI 全景生成失败:', error);
+      logger.error(LogCategory.CANVAS, '360° HDRI 全景生成失败:', error);
       throw error;
     }
   }
@@ -799,9 +822,9 @@ export class CanvasModelService {
   ): Promise<string[]> {
     const { count = 4, strength = 0.7 } = options;
 
-    console.log('=== 图片变体请求 ===');
-    console.log('[变体数量]', count);
-    console.log('[变体强度]', strength);
+    logger.info(LogCategory.CANVAS, '=== 图片变体请求 ===');
+    logger.info(LogCategory.CANVAS, '[变体数量]', count);
+    logger.info(LogCategory.CANVAS, '[变体强度]', strength);
 
     onProgress?.(10);
 
@@ -822,9 +845,9 @@ export class CanvasModelService {
         });
 
         variants.push(variant);
-        console.log(`[变体 ${i + 1}/${count}] 生成完成`);
+        logger.info(LogCategory.CANVAS, `[变体 ${i + 1}/${count}] 生成完成`);
       } catch (error) {
-        console.error(`[变体 ${i + 1}/${count}] 生成失败:`, error);
+        logger.error(LogCategory.CANVAS, `[变体 ${i + 1}/${count}] 生成失败:`, error);
       }
     }
 
