@@ -10,6 +10,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { openDB } from '../services/storageService';
+import { logger, LogCategory } from '../services/logger.ts';
 
 interface DebugExportModalProps {
   isOpen: boolean;
@@ -24,20 +25,24 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   React.useEffect(() => {
-    console.log('[DebugExportModal] 📱 模态框状态变化:', isOpen ? '打开' : '关闭');
+    logger.info(
+      LogCategory.RENDER,
+      '[DebugExportModal] 📱 模态框状态变化:',
+      isOpen ? '打开' : '关闭',
+    );
   }, [isOpen]);
 
   const handleExport = async () => {
     if (isExporting) return;
 
-    console.log('[DebugExportModal] 🚀 开始导出数据库');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🚀 开始导出数据库');
     setIsExporting(true);
     setExportResult(null);
 
     try {
-      console.log('[DebugExportModal] 📦 正在打开 WLDB 数据库...');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📦 正在打开 WLDB 数据库...');
       const db = await openWLDB();
-      console.log('[DebugExportModal] ✅ 数据库打开成功');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] ✅ 数据库打开成功');
 
       const exportData: any = {
         projects: [],
@@ -48,27 +53,33 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       };
 
       const stores = ['projects', 'assetLibrary', 'images', 'videos', 'projectStages'];
-      console.log('[DebugExportModal] 📋 准备导出的数据表:', stores);
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📋 准备导出的数据表:', stores);
 
       for (const storeName of stores) {
-        console.log(`[DebugExportModal] 🔍 检查数据表: ${storeName}`);
+        logger.info(LogCategory.RENDER, `[DebugExportModal] 🔍 检查数据表: ${storeName}`);
 
         if (!db.objectStoreNames.contains(storeName)) {
-          console.log(`[DebugExportModal] ⚠️  数据表 ${storeName} 不存在，跳过`);
+          logger.info(
+            LogCategory.RENDER,
+            `[DebugExportModal] ⚠️  数据表 ${storeName} 不存在，跳过`,
+          );
           exportData[storeName] = [];
           continue;
         }
 
-        console.log(`[DebugExportModal] 📥 正在读取数据表: ${storeName}`);
+        logger.info(LogCategory.RENDER, `[DebugExportModal] 📥 正在读取数据表: ${storeName}`);
         const data = await getAllFromStore(db, storeName);
-        console.log(`[DebugExportModal] ✅ 数据表 ${storeName} 读取完成，共 ${data.length} 条记录`);
+        logger.info(
+          LogCategory.RENDER,
+          `[DebugExportModal] ✅ 数据表 ${storeName} 读取完成，共 ${data.length} 条记录`,
+        );
         exportData[storeName] = data;
       }
 
-      console.log('[DebugExportModal] 🔒 关闭数据库连接');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 🔒 关闭数据库连接');
       db.close();
 
-      console.log('[DebugExportModal] 📊 生成元数据');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📊 生成元数据');
       const metadata = {
         exportDate: new Date().toISOString(),
         databaseName: 'WLDB',
@@ -81,7 +92,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
           projectStages: exportData.projectStages.length,
         },
       };
-      console.log('[DebugExportModal] 📈 数据统计:', metadata.summary);
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📈 数据统计:', metadata.summary);
 
       if (exportMode === 'json') {
         await exportAsJSON(exportData, metadata);
@@ -89,40 +100,40 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
         await exportAsZIP(exportData, metadata);
       }
 
-      console.log('[DebugExportModal] ✅ 导出完成！');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] ✅ 导出完成！');
       setExportResult(metadata);
     } catch (error) {
-      console.error('[DebugExportModal] ❌ 导出失败:', error);
-      console.error('[DebugExportModal] ❌ 错误详情:', {
+      logger.error(LogCategory.RENDER, '[DebugExportModal] ❌ 导出失败:', error);
+      logger.error(LogCategory.RENDER, '[DebugExportModal] ❌ 错误详情:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : '未知错误',
         stack: error instanceof Error ? error.stack : undefined,
       });
       setExportResult({ error: error instanceof Error ? error.message : '未知错误' });
     } finally {
-      console.log('[DebugExportModal] 🏁 导出流程结束');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 🏁 导出流程结束');
       setIsExporting(false);
     }
   };
 
   const exportAsJSON = async (exportData: any, _metadata: any) => {
-    console.log('[DebugExportModal] 🔄 将数据转换为 JSON 字符串');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🔄 将数据转换为 JSON 字符串');
     const json = JSON.stringify(exportData, null, 2);
-    console.log(`[DebugExportModal] 📝 JSON 字符串长度: ${json.length} 字符`);
+    logger.info(LogCategory.RENDER, `[DebugExportModal] 📝 JSON 字符串长度: ${json.length} 字符`);
 
-    console.log('[DebugExportModal] 📦 创建 Blob 对象');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📦 创建 Blob 对象');
     const blob = new Blob([json], { type: 'application/json' });
-    console.log(`[DebugExportModal] 📦 Blob 大小: ${blob.size} 字节`);
+    logger.info(LogCategory.RENDER, `[DebugExportModal] 📦 Blob 大小: ${blob.size} 字节`);
 
-    console.log('[DebugExportModal] 🔗 创建对象 URL');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🔗 创建对象 URL');
     const url = URL.createObjectURL(blob);
-    console.log('[DebugExportModal] 🔗 对象 URL:', url);
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🔗 对象 URL:', url);
 
     const timestamp = new Date().toISOString().slice(0, 10);
     const fileName = `WLDB-debug-export-${timestamp}.json`;
-    console.log('[DebugExportModal] 📁 文件名:', fileName);
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📁 文件名:', fileName);
 
-    console.log('[DebugExportModal] 🖱️  创建下载链接并触发下载');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🖱️  创建下载链接并触发下载');
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
@@ -133,55 +144,57 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
   };
 
   const exportAsZIP = async (exportData: any, metadata: any) => {
-    console.log('[DebugExportModal] 📦 开始 ZIP 导出模式');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📦 开始 ZIP 导出模式');
 
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
 
-    console.log('[DebugExportModal] 📝 添加元数据 JSON');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📝 添加元数据 JSON');
     zip.file('metadata.json', JSON.stringify(metadata, null, 2));
 
-    console.log('[DebugExportModal] 📝 添加项目数据 JSON');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📝 添加项目数据 JSON');
     zip.file('projects.json', JSON.stringify(exportData.projects, null, 2));
     zip.file('assetLibrary.json', JSON.stringify(exportData.assetLibrary, null, 2));
     zip.file('projectStages.json', JSON.stringify(exportData.projectStages, null, 2));
 
-    console.log('[DebugExportModal] 🖼️  开始添加图片文件');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🖼️  开始添加图片文件');
     for (let i = 0; i < exportData.images.length; i++) {
       const image = exportData.images[i];
       if (image.blob) {
         const extension = image.type?.split('/')[1] || 'png';
         const fileName = `images/${image.id}.${extension}`;
-        console.log(
+        logger.info(
+          LogCategory.RENDER,
           `[DebugExportModal] 🖼️  添加图片 ${i + 1}/${exportData.images.length}: ${fileName}`,
         );
         zip.file(fileName, image.blob);
       }
     }
 
-    console.log('[DebugExportModal] 🎬 开始添加视频文件');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🎬 开始添加视频文件');
     for (let i = 0; i < exportData.videos.length; i++) {
       const video = exportData.videos[i];
       if (video.blob) {
         const extension = video.type?.split('/')[1] || 'mp4';
         const fileName = `videos/${video.id}.${extension}`;
-        console.log(
+        logger.info(
+          LogCategory.RENDER,
           `[DebugExportModal] 🎬 添加视频 ${i + 1}/${exportData.videos.length}: ${fileName}`,
         );
         zip.file(fileName, video.blob);
       }
     }
 
-    console.log('[DebugExportModal] 🗜️  生成 ZIP 文件');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🗜️  生成 ZIP 文件');
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    console.log(`[DebugExportModal] 📦 ZIP 大小: ${zipBlob.size} 字节`);
+    logger.info(LogCategory.RENDER, `[DebugExportModal] 📦 ZIP 大小: ${zipBlob.size} 字节`);
 
     const url = URL.createObjectURL(zipBlob);
     const timestamp = new Date().toISOString().slice(0, 10);
     const fileName = `WLDB-debug-export-${timestamp}.zip`;
-    console.log('[DebugExportModal] 📁 文件名:', fileName);
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 📁 文件名:', fileName);
 
-    console.log('[DebugExportModal] 🖱️  创建下载链接并触发下载');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🖱️  创建下载链接并触发下载');
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
@@ -194,16 +207,16 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
   const handleClearDatabase = async () => {
     if (isClearing) return;
 
-    console.log('[DebugExportModal] 🗑️  开始清空数据库');
+    logger.info(LogCategory.RENDER, '[DebugExportModal] 🗑️  开始清空数据库');
     setIsClearing(true);
 
     try {
-      console.log('[DebugExportModal] 📦 正在打开 WLDB 数据库...');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📦 正在打开 WLDB 数据库...');
       const db = await openWLDB();
-      console.log('[DebugExportModal] ✅ 数据库打开成功');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] ✅ 数据库打开成功');
 
       const allStoreNames = Array.from(db.objectStoreNames);
-      console.log('[DebugExportModal] 📋 数据库中的所有数据表:', allStoreNames);
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📋 数据库中的所有数据表:', allStoreNames);
 
       const tablesToClear = allStoreNames.filter((storeName) => {
         const shouldClear = [
@@ -214,26 +227,30 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
           'projectStages',
           'canvasData',
         ].includes(storeName);
-        console.log(
+        logger.info(
+          LogCategory.RENDER,
           `[DebugExportModal] 🔍 数据表 ${storeName}: ${shouldClear ? '✅ 将清空' : '⏭️  跳过'}`,
         );
         return shouldClear;
       });
 
-      console.log('[DebugExportModal] 📋 准备清空的数据表:', tablesToClear);
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📋 准备清空的数据表:', tablesToClear);
 
       const results: any = {};
 
       for (const tableName of tablesToClear) {
-        console.log(`[DebugExportModal] 🔍 检查数据表: ${tableName}`);
+        logger.info(LogCategory.RENDER, `[DebugExportModal] 🔍 检查数据表: ${tableName}`);
 
         if (!db.objectStoreNames.contains(tableName)) {
-          console.log(`[DebugExportModal] ⚠️  数据表 ${tableName} 不存在，跳过`);
+          logger.info(
+            LogCategory.RENDER,
+            `[DebugExportModal] ⚠️  数据表 ${tableName} 不存在，跳过`,
+          );
           results[tableName] = { status: 'skipped', count: 0 };
           continue;
         }
 
-        console.log(`[DebugExportModal] 📥 正在清空数据表: ${tableName}`);
+        logger.info(LogCategory.RENDER, `[DebugExportModal] 📥 正在清空数据表: ${tableName}`);
 
         const tx = db.transaction(tableName, 'readwrite');
         const store = tx.objectStore(tableName);
@@ -247,7 +264,10 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
         await new Promise<void>((resolve, reject) => {
           const request = store.clear();
           request.onsuccess = () => {
-            console.log(`[DebugExportModal] ✅ 数据表 ${tableName} 已清空，删除了 ${count} 条记录`);
+            logger.info(
+              LogCategory.RENDER,
+              `[DebugExportModal] ✅ 数据表 ${tableName} 已清空，删除了 ${count} 条记录`,
+            );
             resolve();
           };
           request.onerror = () => reject(request.error);
@@ -257,10 +277,10 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
       }
 
       db.close();
-      console.log('[DebugExportModal] 🔒 关闭数据库连接');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 🔒 关闭数据库连接');
 
-      console.log('[DebugExportModal] ✅ 数据库清空完成！');
-      console.log('[DebugExportModal] 📊 清空统计:', results);
+      logger.info(LogCategory.RENDER, '[DebugExportModal] ✅ 数据库清空完成！');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 📊 清空统计:', results);
 
       setExportResult({
         type: 'clear',
@@ -270,8 +290,8 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
 
       setShowClearConfirm(false);
     } catch (error) {
-      console.error('[DebugExportModal] ❌ 清空失败:', error);
-      console.error('[DebugExportModal] ❌ 错误详情:', {
+      logger.error(LogCategory.RENDER, '[DebugExportModal] ❌ 清空失败:', error);
+      logger.error(LogCategory.RENDER, '[DebugExportModal] ❌ 错误详情:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : '未知错误',
         stack: error instanceof Error ? error.stack : undefined,
@@ -281,7 +301,7 @@ const DebugExportModal: React.FC<DebugExportModalProps> = ({ isOpen, onClose }) 
         error: error instanceof Error ? error.message : '未知错误',
       });
     } finally {
-      console.log('[DebugExportModal] 🏁 清空流程结束');
+      logger.info(LogCategory.RENDER, '[DebugExportModal] 🏁 清空流程结束');
       setIsClearing(false);
     }
   };

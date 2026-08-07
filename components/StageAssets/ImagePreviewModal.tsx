@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { unifiedImageService } from '../../services/unifiedImageService';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface ImagePreviewModalProps {
   imageUrl: string | null;
@@ -24,7 +25,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
         const url = await unifiedImageService.resolveForDisplay(imageUrl);
         setSrc(url);
       } catch (err) {
-        console.error('[ImagePreviewModal] 加载图片失败:', err);
+        logger.error(LogCategory.IMAGE, '[ImagePreviewModal] 加载图片失败:', err);
         setSrc(null);
       } finally {
         setLoading(false);
@@ -37,11 +38,11 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
   if (!imageUrl) return null;
 
   return (
-    <div 
+    <div
       className="absolute inset-0 z-50 bg-[var(--bg-base)]/95 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <button 
+      <button
         onClick={onClose}
         className="absolute top-6 right-6 p-3 hover:bg-[var(--text-primary)]/10 rounded-full transition-colors group z-10"
       >
@@ -53,9 +54,9 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
             <Loader2 className="w-12 h-12 animate-spin text-[var(--accent)]" />
           </div>
         ) : src ? (
-          <img 
-            src={src} 
-            alt="Preview" 
+          <img
+            src={src}
+            alt="Preview"
             className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />

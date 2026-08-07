@@ -274,14 +274,13 @@ const StageDirector: React.FC<Props> = ({
       : shot.actionSummary;
 
     const visualStyle = project.scriptData?.visualStyle || project.visualStyle || 'live-action';
-    console.log(
-      '🎯 [handleGenerateKeyframe] project.visualStyle:',
+    logger.info(LogCategory.AI, '🎯 [handleGenerateKeyframe] project.visualStyle:', [
       project.visualStyle,
       'scriptData.visualStyle:',
       project.scriptData?.visualStyle,
       '→ resolved:',
       visualStyle,
-    );
+    ]);
 
     // 立即设置生成状态，显示loading
     updateProject((prevProject: ProjectState) => ({
@@ -468,9 +467,9 @@ const StageDirector: React.FC<Props> = ({
         // 立即保存到云端
         try {
           await saveProjectToCloud(updatedProject);
-          console.log(`✅ 关键帧上传完成 (${type})，已保存到云端`);
+          logger.info(LogCategory.AI, `✅ 关键帧上传完成 (${type})，已保存到云端`);
         } catch (error) {
-          console.error('❌ 保存关键帧失败:', error);
+          logger.error(LogCategory.AI, '❌ 保存关键帧失败:', error);
         }
       } catch {
         showAlert('读取文件失败！', { type: 'error' });
@@ -611,12 +610,12 @@ const StageDirector: React.FC<Props> = ({
       // 立即保存到云端
       try {
         await saveProjectToCloud(updatedProject);
-        console.log(`✅ 视频生成完成，已保存到云端`);
+        logger.info(LogCategory.AI, `✅ 视频生成完成，已保存到云端`);
       } catch (error) {
-        console.error('❌ 保存视频失败:', error);
+        logger.error(LogCategory.AI, '❌ 保存视频失败:', error);
       }
     } catch (e: any) {
-      console.error(e);
+      logger.error(LogCategory.AI, '', e);
       updateShot(shot.id, (s) => ({
         ...s,
         interval: s.interval ? { ...s.interval, status: 'failed' } : undefined,
@@ -860,11 +859,11 @@ const StageDirector: React.FC<Props> = ({
       try {
         await saveProjectToCloud(updatedProject);
       } catch (error) {
-        console.error('❌ 保存视频失败:', error);
+        logger.error(LogCategory.AI, '❌ 保存视频失败:', error);
       }
     } catch (e: any) {
       setGenerationProgress(null);
-      console.error(e);
+      logger.error(LogCategory.AI, '', e);
       updateShot(shot.id, (s) => ({
         ...s,
         interval: s.interval ? { ...s.interval, status: 'failed' } : undefined,
@@ -1044,7 +1043,7 @@ const StageDirector: React.FC<Props> = ({
       try {
         await handleGenerateKeyframe(shot, 'start');
       } catch (e: any) {
-        console.error(`Failed to generate for shot ${shot.id}`, e);
+        logger.error(LogCategory.AI, `Failed to generate for shot ${shot.id}`, e);
         if (onApiKeyError && onApiKeyError(e)) {
           setBatchProgress(null);
           return;
@@ -1224,7 +1223,7 @@ const StageDirector: React.FC<Props> = ({
         setEditModal({ ...editModal, value: suggestion });
       }
     } catch (e: any) {
-      console.error('AI动作生成失败:', e);
+      logger.error(LogCategory.AI, 'AI动作生成失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
       showAlert(`AI动作生成失败: ${e.message}`, { type: 'error' });
     } finally {
@@ -1300,7 +1299,7 @@ const StageDirector: React.FC<Props> = ({
 
       showAlert(`${type === 'start' ? '起始帧' : '结束帧'}提示词已优化`, { type: 'success' });
     } catch (e: any) {
-      console.error('AI优化失败:', e);
+      logger.error(LogCategory.AI, 'AI优化失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
       showAlert(`AI优化失败: ${e.message}`, { type: 'error' });
     } finally {
@@ -1396,7 +1395,7 @@ const StageDirector: React.FC<Props> = ({
         { type: 'success' },
       );
     } catch (e: any) {
-      console.error('AI优化失败:', e);
+      logger.error(LogCategory.AI, 'AI优化失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
       showAlert(`AI优化失败: ${e.message}`, { type: 'error' });
     } finally {
@@ -1447,18 +1446,16 @@ const StageDirector: React.FC<Props> = ({
     const activeChatModel = getActiveChatModel();
     const shotGenerationModel =
       project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
-    console.log(
-      '🎬 九宫格分镜 - shotGenerationModel:',
+    logger.info(LogCategory.AI, '🎬 九宫格分镜 - shotGenerationModel:', [
       shotGenerationModel,
       'activeChatModel:',
       activeChatModel?.id,
-    );
-    console.log(
-      '🎬 九宫格分镜 - shotGenerationModel:',
+    ]);
+    logger.info(LogCategory.AI, '🎬 九宫格分镜 - shotGenerationModel:', [
       shotGenerationModel,
       'activeChatModel:',
       activeChatModel?.id,
-    );
+    ]);
 
     // 3. 调用AI拆分
     setIsSplittingShot(true);
@@ -1492,7 +1489,7 @@ const StageDirector: React.FC<Props> = ({
       setActiveShotId(null);
       showAlert(`镜头已拆分为 ${subShots.length} 个子镜头`, { type: 'success' });
     } catch (e: any) {
-      console.error('镜头拆分失败:', e);
+      logger.error(LogCategory.AI, '镜头拆分失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
       showAlert(`拆分失败: ${e.message}`, { type: 'error' });
     } finally {
@@ -1527,12 +1524,11 @@ const StageDirector: React.FC<Props> = ({
     const activeChatModel = getActiveChatModel();
     const shotGenerationModel =
       project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
-    console.log(
-      '🎬 九宫格分镜 - shotGenerationModel:',
+    logger.info(LogCategory.AI, '🎬 九宫格分镜 - shotGenerationModel:', [
       shotGenerationModel,
       'activeChatModel:',
       activeChatModel?.id,
-    );
+    ]);
 
     // 3. 显示弹窗并设置生成状态（仅生成面板描述）
     setShowNineGrid(true);
@@ -1570,7 +1566,7 @@ const StageDirector: React.FC<Props> = ({
 
       showAlert('9个镜头描述已生成，请检查并编辑后确认生成图片', { type: 'success' });
     } catch (e: any) {
-      console.error('九宫格镜头描述生成失败:', e);
+      logger.error(LogCategory.AI, '九宫格镜头描述生成失败:', e);
       updateShot(shot.id, (s) => ({
         ...s,
         nineGrid: {
@@ -1700,7 +1696,7 @@ const StageDirector: React.FC<Props> = ({
 
       showAlert('V2 九宫格分镜生成完成！（风格帧→分格）', { type: 'success' });
     } catch (e: any) {
-      console.error('V2 九宫格分镜生成失败:', e);
+      logger.error(LogCategory.AI, 'V2 九宫格分镜生成失败:', e);
       updateShot(shot.id, (s) => ({
         ...s,
         nineGrid: {
@@ -1757,7 +1753,7 @@ const StageDirector: React.FC<Props> = ({
 
       showAlert('九宫格分镜图片生成完成！', { type: 'success' });
     } catch (e: any) {
-      console.error('九宫格图片生成失败:', e);
+      logger.error(LogCategory.AI, '九宫格图片生成失败:', e);
       updateShot(activeShot.id, (s) => ({
         ...s,
         nineGrid: {
@@ -1854,7 +1850,7 @@ const StageDirector: React.FC<Props> = ({
       setShowNineGrid(false);
       showAlert(`已将「${panel.shotSize}/${panel.cameraAngle}」视角设为首帧`, { type: 'success' });
     } catch (e: any) {
-      console.error('裁剪九宫格面板失败:', e);
+      logger.error(LogCategory.AI, '裁剪九宫格面板失败:', e);
       showAlert(`裁剪失败: ${e.message}`, { type: 'error' });
     }
   };

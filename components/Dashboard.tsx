@@ -37,6 +37,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import DebugExportModal from './DebugExportModal';
 import { getPreferenceSummary, resetPreferences } from '../services/userPreferencesService';
+import { logger, LogCategory } from '../services/logger.ts';
 
 interface Props {
   onOpenProject: (projectId: string | ProjectState) => void;
@@ -64,34 +65,39 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const loadProjects = async () => {
     // 防止重复加载
     if (isLoadingRef.current) {
-      console.log('[Dashboard] ⚠️ 正在加载项目，跳过重复请求');
+      logger.info(LogCategory.UI, '[Dashboard] ⚠️ 正在加载项目，跳过重复请求');
       return;
     }
 
-    console.log('[Dashboard] 📋 开始加载项目列表...');
-    console.log('[Dashboard] 当前用户:', user?.id);
+    logger.info(LogCategory.UI, '[Dashboard] 📋 开始加载项目列表...');
+    logger.info(LogCategory.UI, '[Dashboard] 当前用户:', user?.id);
     isLoadingRef.current = true;
     setIsLoading(true);
 
     try {
-      console.log('[Dashboard] 📡 调用 hybridStorage.getAllProjects()...');
+      logger.info(LogCategory.UI, '[Dashboard] 📡 调用 hybridStorage.getAllProjects()...');
       const list = await hybridStorage.getAllProjects();
-      console.log(`[Dashboard] ✅ 加载完成，获取到 ${list.length} 个项目`);
-      console.log(
+      logger.info(LogCategory.UI, `[Dashboard] ✅ 加载完成，获取到 ${list.length} 个项目`);
+      logger.info(
+        LogCategory.UI,
         '[Dashboard] 项目列表:',
         list.map((p) => ({ id: p.id, title: p.title, version: p.version })),
       );
       setProjects(list);
     } catch (e) {
-      console.error('[Dashboard] ❌ 加载项目失败:', e);
-      console.error('[Dashboard] 错误详情:', e instanceof Error ? e.stack : String(e));
+      logger.error(LogCategory.UI, '[Dashboard] ❌ 加载项目失败:', e);
+      logger.error(
+        LogCategory.UI,
+        '[Dashboard] 错误详情:',
+        e instanceof Error ? e.stack : String(e),
+      );
       // 即使失败也重置状态，允许重新加载
     } finally {
-      console.log('[Dashboard] 🔚 加载流程结束，重置状态');
+      logger.info(LogCategory.UI, '[Dashboard] 🔚 加载流程结束，重置状态');
       setIsLoading(false);
       // 立即重置 loading 标志，不等待延迟
       isLoadingRef.current = false;
-      console.log('[Dashboard] ✅ isLoadingRef 已重置');
+      logger.info(LogCategory.UI, '[Dashboard] ✅ isLoadingRef 已重置');
     }
   };
 
@@ -99,7 +105,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   useEffect(() => {
     const checkStuck = () => {
       if (isLoadingRef.current && isLoading) {
-        console.log('[Dashboard] 检测到加载卡住，强制重置...');
+        logger.info(LogCategory.UI, '[Dashboard] 检测到加载卡住，强制重置...');
         isLoadingRef.current = false;
         setIsLoading(false);
       }
@@ -125,9 +131,10 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   // 监听后台刷新完成事件
   useEffect(() => {
     const handleRefresh = (event: CustomEvent<ProjectState[]>) => {
-      console.log('[Dashboard] 📢 收到后台刷新事件，更新项目列表');
-      console.log('[Dashboard] 新项目数量:', event.detail.length);
-      console.log(
+      logger.info(LogCategory.UI, '[Dashboard] 📢 收到后台刷新事件，更新项目列表');
+      logger.info(LogCategory.UI, '[Dashboard] 新项目数量:', event.detail.length);
+      logger.info(
+        LogCategory.UI,
         '[Dashboard] 新项目列表:',
         event.detail.map((p) => ({ id: p.id, title: p.title })),
       );
@@ -145,7 +152,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const requestDelete = (e: React.MouseEvent, id: string) => {
     // 验证项目ID
     if (!id) {
-      console.error('❌ 无法删除项目: 项目ID无效');
+      logger.error(LogCategory.UI, '❌ 无法删除项目: 项目ID无效');
       return;
     }
     e.stopPropagation();
@@ -160,7 +167,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const confirmDelete = async (e: React.MouseEvent, id: string) => {
     // 验证项目ID
     if (!id) {
-      console.error('❌ 无法删除项目: 项目ID无效');
+      logger.error(LogCategory.UI, '❌ 无法删除项目: 项目ID无效');
       showAlert('无法删除项目: 项目ID无效', { type: 'error' });
       return;
     }
@@ -175,14 +182,14 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
       await hybridStorage.deleteProject(id);
       // 强制重置 loading 状态，确保能刷新
       isLoadingRef.current = false;
-      console.log('💾 重新加载项目列表...');
+      logger.info(LogCategory.UI, '💾 重新加载项目列表...');
       await loadProjects();
-      console.log(`✅ 项目 "${projectName}" 已成功删除`);
+      logger.info(LogCategory.UI, `✅ 项目 "${projectName}" 已成功删除`);
 
       // 可选：添加成功提示（如果不想打扰用户可以注释掉）
       // alert(`项目 "${projectName}" 已删除`);
     } catch (error) {
-      console.error('❌ 删除项目失败:', error);
+      logger.error(LogCategory.UI, '❌ 删除项目失败:', error);
       showAlert(
         `删除项目失败: ${error instanceof Error ? error.message : '未知错误'}\n\n请检查浏览器控制台查看详细信息`,
         { type: 'error' },
@@ -234,7 +241,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
 
       showAlert('导出完成，备份文件已下载。', { type: 'success' });
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error(LogCategory.UI, 'Export failed:', error);
       showAlert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`, {
         type: 'error',
       });
@@ -277,7 +284,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               type: 'success',
             });
           } catch (error) {
-            console.error('Import failed:', error);
+            logger.error(LogCategory.UI, 'Import failed:', error);
             showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, {
               type: 'error',
             });
@@ -287,7 +294,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
         },
       });
     } catch (error) {
-      console.error('Import failed:', error);
+      logger.error(LogCategory.UI, 'Import failed:', error);
       showAlert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`, {
         type: 'error',
       });
@@ -606,10 +613,10 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
 
               <button
                 onClick={() => {
-                  console.log('[Dashboard] 🔧 点击数据库调试按钮');
+                  logger.info(LogCategory.UI, '[Dashboard] 🔧 点击数据库调试按钮');
                   setShowSettingsModal(false);
                   setShowDebugModal(true);
-                  console.log('[Dashboard] ✅ 调试模态框状态已设置');
+                  logger.info(LogCategory.UI, '[Dashboard] ✅ 调试模态框状态已设置');
                 }}
                 className="p-4 border border-[var(--border-primary)] hover:border-[var(--border-secondary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] transition-colors text-left"
               >

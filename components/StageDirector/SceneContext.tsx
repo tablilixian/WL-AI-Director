@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Clock, X, Edit2, Package } from 'lucide-react';
 import { Shot, Character, Scene, Prop } from '../../types';
 import { unifiedImageService } from '../../services/unifiedImageService';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface SceneContextProps {
   shot: Shot;
@@ -55,7 +56,7 @@ const SceneContext: React.FC<SceneContextProps> = ({
             const url = await unifiedImageService.resolveForDisplay(char.imageUrl);
             urls[char.id] = url;
           } catch (err) {
-            console.error(`[SceneContext] 加载角色图片失败: ${char.id}`, err);
+            logger.error(LogCategory.AI, `[SceneContext] 加载角色图片失败: ${char.id}`, err);
             urls[char.id] = null;
           }
         } else {
@@ -76,7 +77,7 @@ const SceneContext: React.FC<SceneContextProps> = ({
             const url = await unifiedImageService.resolveForDisplay(prop.imageUrl);
             urls[prop.id] = url;
           } catch (err) {
-            console.error(`[SceneContext] 加载道具图片失败: ${prop.id}`, err);
+            logger.error(LogCategory.AI, `[SceneContext] 加载道具图片失败: ${prop.id}`, err);
             urls[prop.id] = null;
           }
         } else {

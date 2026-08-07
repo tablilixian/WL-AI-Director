@@ -7,6 +7,7 @@ import CharacterSection from './CharacterSection';
 import SceneSection from './SceneSection';
 import PropSection from './PropSection';
 import KeyframeSection from './KeyframeSection';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface Props {
   project: ProjectState;
@@ -64,7 +65,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
       const enhanced = await generatePromptEnhanceImage(currentValue);
       return enhanced;
     } catch (error: any) {
-      console.error('API 提示词增强失败:', error);
+      logger.error(LogCategory.AI, 'API 提示词增强失败:', error);
       throw error;
     }
   }, []);

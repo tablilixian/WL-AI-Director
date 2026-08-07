@@ -52,6 +52,7 @@ import { hybridStorage } from '../../services/hybridStorageService';
 import { AssetLibraryModal } from '../../src/components/AssetLibrary';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getUserAspectRatio, getActiveImageModel } from '../../services/modelRegistry';
+import { logger, LogCategory } from '../../services/logger.ts';
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
@@ -125,8 +126,12 @@ const StageAssets: React.FC<Props> = ({
     );
 
     if (hasStuckCharacters || hasStuckScenes || hasStuckProps) {
-      console.log('🔧 [StageAssets] 检测到卡住的生成状态，正在重置...');
-      console.log('🔧 [StageAssets] 重置前字符数:', project.scriptData.characters.length);
+      logger.info(LogCategory.IMAGE, '🔧 [StageAssets] 检测到卡住的生成状态，正在重置...');
+      logger.info(
+        LogCategory.IMAGE,
+        '🔧 [StageAssets] 重置前字符数:',
+        project.scriptData.characters.length,
+      );
       const newData = { ...project.scriptData };
 
       newData.characters = newData.characters.map((char) => ({
@@ -172,7 +177,7 @@ const StageAssets: React.FC<Props> = ({
       );
 
       if (stuckChars.length > 0 || stuckScenes.length > 0 || stuckProps.length > 0) {
-        console.log('🔧 检测到卡住的生成状态，自动重置...');
+        logger.info(LogCategory.IMAGE, '🔧 检测到卡住的生成状态，自动重置...');
         const newData = { ...project.scriptData! };
 
         newData.characters = newData.characters.map((char) => ({
@@ -213,7 +218,7 @@ const StageAssets: React.FC<Props> = ({
   useEffect(() => {
     if (!project.scriptData) return;
     const chars = project.scriptData.characters;
-    console.log('🎯 [StageAssets] 角色列表:', {
+    logger.info(LogCategory.IMAGE, '🎯 [StageAssets] 角色列表:', {
       count: chars.length,
       chars: chars.map((c) => ({ id: c.id, name: c.name, hasImg: !!c.imageUrl, status: c.status })),
       scenesCount: project.scriptData.scenes.length,
@@ -387,7 +392,7 @@ const StageAssets: React.FC<Props> = ({
       // 生成成功后关闭图片预览 Modal
       setPreviewImage(null);
     } catch (e: any) {
-      console.error('❌ [StageAssets] handleGenerateAsset 失败:', {
+      logger.error(LogCategory.IMAGE, '❌ [StageAssets] handleGenerateAsset 失败:', {
         type,
         id,
         error: (e as Error).message,
@@ -501,7 +506,7 @@ const StageAssets: React.FC<Props> = ({
 
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
       } catch (e: any) {
-        console.error('[StageAssets] 加入资产库失败:', e);
+        logger.error(LogCategory.IMAGE, '[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -528,7 +533,7 @@ const StageAssets: React.FC<Props> = ({
 
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
       } catch (e: any) {
-        console.error('[StageAssets] 加入资产库失败:', e);
+        logger.error(LogCategory.IMAGE, '[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -715,20 +720,20 @@ const StageAssets: React.FC<Props> = ({
 
 角色「${char.name}」的${fieldType === 'signaturePose' ? '标志性姿态' : '病态微动作'}：${text}`;
 
-    console.log('[AI润色] 开始润色:', { text, fieldType, charName: char.name });
-    console.log('[AI润色] 发送给模型的 prompt:', userPrompt);
+    logger.info(LogCategory.IMAGE, '[AI润色] 开始润色:', { text, fieldType, charName: char.name });
+    logger.info(LogCategory.IMAGE, '[AI润色] 发送给模型的 prompt:', userPrompt);
 
     try {
       const { chatCompletion, getActiveChatModelName } = await import('../../services/ai/apiCore');
       const modelName = getActiveChatModelName();
-      console.log('[AI润色] 使用模型:', modelName);
+      logger.info(LogCategory.IMAGE, '[AI润色] 使用模型:', modelName);
 
       const result = await chatCompletion(userPrompt, modelName, 0.7, 500);
-      console.log('[AI润色] 模型返回结果:', result);
+      logger.info(LogCategory.IMAGE, '[AI润色] 模型返回结果:', result);
 
       return result.trim();
     } catch (error) {
-      console.error('[AI润色] 调用失败:', error);
+      logger.error(LogCategory.IMAGE, '[AI润色] 调用失败:', error);
       return text;
     }
   };
@@ -768,17 +773,17 @@ const StageAssets: React.FC<Props> = ({
             reader.readAsDataURL(imageBlob);
             const base64Url = await base64Promise;
             referenceImages.push(base64Url);
-            console.log('[预览图生成] 已将本地图片转为 base64:', localImageId);
+            logger.info(LogCategory.IMAGE, '[预览图生成] 已将本地图片转为 base64:', localImageId);
           }
         } catch (err) {
-          console.warn('[预览图生成] 获取本地图片失败:', err);
+          logger.warn(LogCategory.IMAGE, '[预览图生成] 获取本地图片失败:', err);
         }
       } else if (character.imageUrl.startsWith('data:')) {
         referenceImages.push(character.imageUrl);
       }
     }
 
-    console.log('[预览图生成] 开始生成:', {
+    logger.info(LogCategory.IMAGE, '[预览图生成] 开始生成:', {
       text,
       fieldType,
       charName: character.name,
@@ -798,10 +803,10 @@ const StageAssets: React.FC<Props> = ({
         'character',
         character.id,
       );
-      console.log('[预览图生成] 生成成功:', imageUrl);
+      logger.info(LogCategory.IMAGE, '[预览图生成] 生成成功:', imageUrl);
       return imageUrl;
     } catch (error) {
-      console.error('[预览图生成] 生成失败:', error);
+      logger.error(LogCategory.IMAGE, '[预览图生成] 生成失败:', error);
       return '';
     }
   };
@@ -877,7 +882,7 @@ const StageAssets: React.FC<Props> = ({
         confirmText: '删除',
         cancelText: '取消',
         onConfirm: () => {
-          console.log('🗑️ [StageAssets] 删除角色:', {
+          logger.info(LogCategory.IMAGE, '🗑️ [StageAssets] 删除角色:', {
             charId,
             charName: char.name,
             beforeCount: project.scriptData!.characters.length,
@@ -1030,7 +1035,7 @@ const StageAssets: React.FC<Props> = ({
       }
       updateProject({ scriptData: updatedData });
     } catch (e: any) {
-      console.error(e);
+      logger.error(LogCategory.IMAGE, '', e);
       const errData = { ...project.scriptData };
       const errP = (errData.props || []).find((p) => compareIds(p.id, propId));
       if (errP) errP.status = 'failed';
@@ -1104,7 +1109,7 @@ const StageAssets: React.FC<Props> = ({
 
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
       } catch (e: any) {
-        console.error('[StageAssets] 加入资产库失败:', e);
+        logger.error(LogCategory.IMAGE, '[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -1235,7 +1240,7 @@ const StageAssets: React.FC<Props> = ({
 
       updateProject({ scriptData: newData });
     } catch (e: any) {
-      console.error('❌ [StageAssets] handleGenerateVariation 失败:', {
+      logger.error(LogCategory.IMAGE, '❌ [StageAssets] handleGenerateVariation 失败:', {
         charId,
         varId,
         error: e.message,
@@ -1327,7 +1332,7 @@ const StageAssets: React.FC<Props> = ({
         return { ...prev, scriptData: newData };
       });
     } catch (e: any) {
-      console.error('九宫格视角描述生成失败:', e);
+      logger.error(LogCategory.IMAGE, '九宫格视角描述生成失败:', e);
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
@@ -1389,7 +1394,7 @@ const StageAssets: React.FC<Props> = ({
         return { ...prev, scriptData: newData };
       });
     } catch (e: any) {
-      console.error('九宫格造型图片生成失败:', e);
+      logger.error(LogCategory.IMAGE, '九宫格造型图片生成失败:', e);
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
@@ -1461,7 +1466,7 @@ const StageAssets: React.FC<Props> = ({
 
         showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
       } catch (e: any) {
-        console.error('[StageAssets] 加入资产库失败:', e);
+        logger.error(LogCategory.IMAGE, '[StageAssets] 加入资产库失败:', e);
         showAlert(e?.message || '加入资产库失败', { type: 'error' });
       }
     };
@@ -1498,7 +1503,7 @@ const StageAssets: React.FC<Props> = ({
         return { ...prev, scriptData: newData };
       });
     } catch (e: any) {
-      console.error('三视图生成失败:', e);
+      logger.error(LogCategory.IMAGE, '三视图生成失败:', e);
       if (onApiKeyError && onApiKeyError(e)) {
         setThreeViewLoading(false);
         return;

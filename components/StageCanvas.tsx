@@ -14,6 +14,7 @@ import { RemoveBackgroundPanel } from '../src/modules/canvas/components/RemoveBa
 import { VariantPanel } from '../src/modules/canvas/components/VariantPanel';
 import { getCanvasDataFromLocal } from '../services/canvasStorageService';
 import { unifiedImageService } from '../services/unifiedImageService';
+import { logger, LogCategory } from '../services/logger.ts';
 
 interface StageCanvasProps {
   project: ProjectState;
@@ -81,13 +82,13 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
       s.keyframes.filter((k) => k.imageUrl),
     );
 
-    console.log('=== 分镜导入调试 ===');
-    console.log('分镜总数:', project.shots.length);
-    console.log('有关键帧的分镜:', shotsWithKeyframes.length);
-    console.log('有图片的关键帧:', keyframesWithImages.length);
+    logger.info(LogCategory.CANVAS, '=== 分镜导入调试 ===');
+    logger.info(LogCategory.CANVAS, '分镜总数:', project.shots.length);
+    logger.info(LogCategory.CANVAS, '有关键帧的分镜:', shotsWithKeyframes.length);
+    logger.info(LogCategory.CANVAS, '有图片的关键帧:', keyframesWithImages.length);
 
     if (keyframesWithImages.length > 0) {
-      console.log('第一个关键帧示例:', {
+      logger.info(LogCategory.CANVAS, '第一个关键帧示例:', {
         id: keyframesWithImages[0].id,
         type: keyframesWithImages[0].type,
         status: keyframesWithImages[0].status,
@@ -268,7 +269,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
     const confirmed = confirm(`确定要将画布中的 ${keyframes.length} 个图层导出为关键帧吗？`);
     if (confirmed) {
-      console.log('导出的关键帧:', keyframes);
+      logger.info(LogCategory.CANVAS, '导出的关键帧:', keyframes);
       alert(`已导出 ${keyframes.length} 个关键帧到控制台`);
     }
   };
@@ -331,7 +332,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
           await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (error) {
-          console.error('导出视频失败:', error);
+          logger.error(LogCategory.CANVAS, '导出视频失败:', error);
         }
       }
       alert(`已导出 ${videoLayers.length} 个视频`);
@@ -383,7 +384,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
         alert('已导出选中的视频');
       } catch (error) {
-        console.error('导出视频失败:', error);
+        logger.error(LogCategory.CANVAS, '导出视频失败:', error);
         alert('导出视频失败');
       }
     } else {
@@ -421,7 +422,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
         try {
           ctx.drawImage(img, x, y, imgRect.width, imgRect.height);
         } catch (e) {
-          console.warn('绘制图片失败:', e);
+          logger.warn(LogCategory.CANVAS, '绘制图片失败:', e);
         }
       });
 
@@ -434,7 +435,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
       alert('画布截图已保存');
     } catch (error) {
-      console.error('截图失败:', error);
+      logger.error(LogCategory.CANVAS, '截图失败:', error);
       alert('截图失败');
     }
   };
@@ -467,7 +468,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
               const { imageStorageService } = await import('../services/imageStorageService');
               blob = await imageStorageService.getImage(layer.imageId);
               filename = `${layer.title || `image_${i + 1}`}.png`;
-              console.log('从 IndexedDB 获取图片:', layer.imageId);
+              logger.info(LogCategory.CANVAS, '从 IndexedDB 获取图片:', layer.imageId);
             } else if (layer.src.startsWith('data:')) {
               const response = await fetch(layer.src);
               blob = await response.blob();
@@ -505,12 +506,12 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
           if (blob) {
             zip.file(filename, blob);
-            console.log('添加到 ZIP:', filename, blob.size);
+            logger.info(LogCategory.CANVAS, '添加到 ZIP:', [filename, blob.size]);
           } else {
-            console.warn('无法获取图层数据:', layer.id, layer.type);
+            logger.warn(LogCategory.CANVAS, '无法获取图层数据:', [layer.id, layer.type]);
           }
         } catch (e) {
-          console.warn('处理图层失败:', layer.id, e);
+          logger.warn(LogCategory.CANVAS, '处理图层失败:', [layer.id, e]);
         }
       }
 
@@ -525,7 +526,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
 
       alert(`已打包下载 ${exportableLayers.length} 个文件`);
     } catch (error) {
-      console.error('打包下载失败:', error);
+      logger.error(LogCategory.CANVAS, '打包下载失败:', error);
       alert('打包下载失败');
     }
   };
@@ -575,7 +576,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
       URL.revokeObjectURL(link.href);
       alert('画布数据已导出');
     } catch (error) {
-      console.error('导出 JSON 失败:', error);
+      logger.error(LogCategory.CANVAS, '导出 JSON 失败:', error);
       alert('导出失败');
     }
   };
@@ -600,7 +601,7 @@ const StageCanvas: React.FC<StageCanvasProps> = ({ project }) => {
             await unifiedImageService.saveImage(id, blob);
             imageId = id;
           } catch (e) {
-            console.warn('[StageCanvas] 保存图片到 IndexedDB 失败:', e);
+            logger.warn(LogCategory.CANVAS, '[StageCanvas] 保存图片到 IndexedDB 失败:', e);
           }
 
           useCanvasStore.getState().addLayer({

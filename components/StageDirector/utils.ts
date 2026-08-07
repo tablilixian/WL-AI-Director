@@ -165,12 +165,11 @@ export const buildKeyframePrompt = async (
   knowledgeBase?: string,
 ): Promise<string> => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
-  console.log(
-    '🎨 [buildKeyframePrompt] visualStyle key:',
+  logger.info(LogCategory.AI, '🎨 [buildKeyframePrompt] visualStyle key:', [
     visualStyle,
     '→ resolved style:',
     stylePrompt.substring(0, 60),
-  );
+  ]);
   const cameraGuide = await getCameraMovementCompositionGuide(
     cameraMovement,
     frameType,

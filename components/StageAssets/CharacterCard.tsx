@@ -31,6 +31,7 @@ import ImageUploadButton from './ImageUploadButton';
 import VisualDescriptionModal from './VisualDescriptionModal';
 import { useImageLoader } from '../../hooks/useImageLoader';
 import { getImageAspectRatio } from './constants';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface CharacterCardProps {
   character: Character;
@@ -179,7 +180,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     _char: Character,
   ): Promise<string> => {
     // 默认实现：返回空字符串（需要外部提供真实实现）
-    console.warn('onGeneratePreview not provided, using default implementation');
+    logger.warn(LogCategory.IMAGE, 'onGeneratePreview not provided, using default implementation');
     return '';
   };
 

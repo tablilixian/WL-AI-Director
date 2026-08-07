@@ -1,16 +1,14 @@
 import { REGIONAL_FEATURES, LANGUAGE_MAP, DEFAULTS } from './constants';
 import { imageStorageService, generateImageId } from '../../services/imageStorageService';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 /**
  * 根据语言获取地域特征前缀
  */
-export const getRegionalPrefix = (
-  language: string,
-  type: 'character' | 'scene'
-): string => {
+export const getRegionalPrefix = (language: string, type: 'character' | 'scene'): string => {
   const mappedLanguage = LANGUAGE_MAP[language];
   if (!mappedLanguage) return '';
-  
+
   const features = REGIONAL_FEATURES[mappedLanguage];
   return features ? features[type] : '';
 };
@@ -23,10 +21,10 @@ export const handleImageUpload = async (file: File): Promise<string> => {
   try {
     const localImageId = generateImageId();
     await imageStorageService.saveImage(localImageId, file);
-    console.log(`[Utils] 图片已保存到本地: ${localImageId}`);
+    logger.info(LogCategory.IMAGE, `[Utils] 图片已保存到本地: ${localImageId}`);
     return `local:${localImageId}`;
   } catch (e: any) {
-    console.error('图片上传失败:', e);
+    logger.error(LogCategory.IMAGE, '图片上传失败:', e);
     throw new Error(e.message || '图片上传失败');
   }
 };
@@ -34,10 +32,7 @@ export const handleImageUpload = async (file: File): Promise<string> => {
 /**
  * 获取项目语言配置
  */
-export const getProjectLanguage = (
-  projectLanguage?: string,
-  scriptLanguage?: string
-): string => {
+export const getProjectLanguage = (projectLanguage?: string, scriptLanguage?: string): string => {
   return projectLanguage || scriptLanguage || DEFAULTS.language;
 };
 
@@ -46,7 +41,7 @@ export const getProjectLanguage = (
  */
 export const getProjectVisualStyle = (
   projectVisualStyle?: string,
-  scriptVisualStyle?: string
+  scriptVisualStyle?: string,
 ): string => {
   return projectVisualStyle || scriptVisualStyle || DEFAULTS.visualStyle;
 };
@@ -55,7 +50,7 @@ export const getProjectVisualStyle = (
  * 延迟执行
  */
 export const delay = (ms: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 /**

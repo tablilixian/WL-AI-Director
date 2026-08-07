@@ -1,3 +1,4 @@
+import { logger, LogCategory } from '../../services/logger.ts';
 /**
  * 镜头运动构图指导配置
  * 为不同类型的镜头运动提供首帧和尾帧的构图建议
@@ -193,7 +194,7 @@ export const getCameraMovementCompositionGuide = async (
   // 1. 快速路径：精确匹配（LLM 输出本身就是规范值时，零延迟）
   const exactMatch = KNOWN_KEYS.find((k) => movement === k);
   if (exactMatch) {
-    console.log(`📐 [cameraGuide] 精确匹配 → "${exactMatch}" (${frameType})`);
+    logger.info(LogCategory.AI, `📐 [cameraGuide] 精确匹配 → "${exactMatch}" (${frameType})`);
     const guide = CAMERA_MOVEMENT_GUIDES[exactMatch];
     return frameType === 'start' ? guide.start : guide.end;
   }
@@ -201,26 +202,32 @@ export const getCameraMovementCompositionGuide = async (
   // 2. 检查缓存（之前用 LLM 映射过的变体名称）
   if (movementKeyCache.has(movement)) {
     const key = movementKeyCache.get(movement)!;
-    console.log(`📐 [cameraGuide] 缓存命中 → "${movement}" → "${key}" (${frameType})`);
+    logger.info(
+      LogCategory.AI,
+      `📐 [cameraGuide] 缓存命中 → "${movement}" → "${key}" (${frameType})`,
+    );
     const guide = CAMERA_MOVEMENT_GUIDES[key];
     return frameType === 'start' ? guide.start : guide.end;
   }
 
   // 3. LLM 分类（仅在提供了 chatCompletion 时启用）
   if (chatCompletion) {
-    console.log(`📐 [cameraGuide] 字符串未匹配，调用 LLM 分类 → "${movement}"`);
+    logger.info(LogCategory.AI, `📐 [cameraGuide] 字符串未匹配，调用 LLM 分类 → "${movement}"`);
     const matchedKey = await mapToKnownMovement(movement, chatCompletion, model);
     if (matchedKey) {
       movementKeyCache.set(movement, matchedKey);
-      console.log(`📐 [cameraGuide] LLM 映射 → "${movement}" → "${matchedKey}" (${frameType})`);
+      logger.info(
+        LogCategory.AI,
+        `📐 [cameraGuide] LLM 映射 → "${movement}" → "${matchedKey}" (${frameType})`,
+      );
       const guide = CAMERA_MOVEMENT_GUIDES[matchedKey];
       return frameType === 'start' ? guide.start : guide.end;
     }
-    console.warn(`📐 [cameraGuide] LLM 映射失败，回退通用指导`);
+    logger.warn(LogCategory.AI, `📐 [cameraGuide] LLM 映射失败，回退通用指导`);
   }
 
   // 4. 最终兜底
-  console.log(`📐 [cameraGuide] 通用指导兜底 → "${movement}" (${frameType})`);
+  logger.info(LogCategory.AI, `📐 [cameraGuide] 通用指导兜底 → "${movement}" (${frameType})`);
   return frameType === 'start'
     ? 'Composition: Initial frame composition suited for the camera movement.'
     : 'Composition: Final frame composition showing the result of camera movement.';

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { VisualDescriptionField, Character } from '../../types';
 import { useImageLoader } from '../../hooks/useImageLoader';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface VisualDescriptionModalProps {
   /** 字段类型：标志性姿态 或 病态微动作 */
@@ -104,7 +105,7 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
       const polished = await onPolish(editText, fieldType, character);
       setPolishedText(polished);
     } catch (error) {
-      console.error('AI 润色失败:', error);
+      logger.error(LogCategory.IMAGE, 'AI 润色失败:', error);
     } finally {
       setIsPolishing(false);
     }
@@ -125,7 +126,7 @@ const VisualDescriptionModal: React.FC<VisualDescriptionModalProps> = ({
         setShowPreview(true);
       }
     } catch (error) {
-      console.error('预览图生成失败:', error);
+      logger.error(LogCategory.IMAGE, '预览图生成失败:', error);
     } finally {
       setIsGeneratingPreview(false);
     }
