@@ -1,0 +1,17 @@
+dist
+node_modules
+pb_data
+pb_data_backup_v0.26.5
+pb_hooks
+pb_migrations
+playwright-report
+test-results
+coverage
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+*.svg
+*.png
+*.jpg
+*.ico
