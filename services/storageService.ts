@@ -246,12 +246,11 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
               /* 回写失败不影响运行 */
             });
         }
-        console.log(
-          '📦 [loadProject] visualStyle from DB:',
+        logger.info(LogCategory.STORAGE, '📦 [loadProject] visualStyle from DB:', [
           project.visualStyle,
           'scriptData.visualStyle:',
           project.scriptData?.visualStyle,
-        );
+        ]);
         resolve(project);
       } else reject(new Error('Project not found'));
     };

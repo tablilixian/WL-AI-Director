@@ -17,7 +17,7 @@ class HybridStorageService {
     if (!pb.authStore.isValid) return false;
     // Verify the token is still fresh — refresh it silently
     const refreshed = await ensureValidAuth();
-    console.log('[HybridStorage] isOnline:', {
+    logger.info(LogCategory.STORAGE, '[HybridStorage] isOnline:', {
       refreshed,
       hasToken: !!pb.authStore.token,
       hasModel: !!pb.authStore.model,
@@ -27,7 +27,10 @@ class HybridStorageService {
 
   private async currentUserId(): Promise<string | null> {
     const id = pb.authStore.model?.id || null;
-    console.log('[HybridStorage] currentUserId:', { id, modelId: pb.authStore.model?.id });
+    logger.info(LogCategory.STORAGE, '[HybridStorage] currentUserId:', {
+      id,
+      modelId: pb.authStore.model?.id,
+    });
     return id;
   }
 
@@ -47,7 +50,7 @@ class HybridStorageService {
   async saveProject(project: ProjectState): Promise<void> {
     const userId = await this.currentUserId();
     const online = await this.isOnline();
-    console.log('[HybridStorage] saveProject:', {
+    logger.info(LogCategory.STORAGE, '[HybridStorage] saveProject:', {
       projectId: project.id,
       userId,
       isOnline: online,
@@ -55,12 +58,12 @@ class HybridStorageService {
     });
     if (userId && !project.userId) {
       project.userId = userId;
-      console.log('[HybridStorage] set project.userId =', userId);
+      logger.info(LogCategory.STORAGE, '[HybridStorage] set project.userId =', userId);
     }
     await saveProjectToDB(project);
     if (online) {
       this.syncProjectToCloud(project).catch((err) =>
-        console.error('[HybridStorage] syncProjectToCloud failed:', err),
+        logger.error(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud failed:', err),
       );
     }
   }
@@ -71,7 +74,7 @@ class HybridStorageService {
     try {
       project = await loadProjectFromDB(id);
     } catch {
-      console.warn('[HybridStorage] deleteProject: could not load project');
+      logger.warn(LogCategory.STORAGE, '[HybridStorage] deleteProject: could not load project');
     }
 
     // 2. Clear canvas in-memory state first (timers, pending saves, currentProjectId)
@@ -120,7 +123,7 @@ class HybridStorageService {
           await pb.collection('projects').delete(projectRecords.items[0].id);
         }
       } catch (err) {
-        console.error('[HybridStorage] deleteProject cloud failed:', err);
+        logger.error(LogCategory.STORAGE, '[HybridStorage] deleteProject cloud failed:', err);
       }
     }
   }
@@ -174,7 +177,7 @@ class HybridStorageService {
 
       return result;
     } catch (error) {
-      console.error('[HybridStorage] syncFromCloud failed:', error);
+      logger.error(LogCategory.STORAGE, '[HybridStorage] syncFromCloud failed:', error);
       return result;
     }
   }
@@ -191,7 +194,10 @@ class HybridStorageService {
         await this.syncProjectToCloud(project);
         count++;
       } catch (err) {
-        console.error('[HybridStorage] exportToCloud failed for project:', project.id, err);
+        logger.error(LogCategory.STORAGE, '[HybridStorage] exportToCloud failed for project:', [
+          project.id,
+          err,
+        ]);
       }
     }
     return count;
@@ -199,13 +205,13 @@ class HybridStorageService {
 
   private async syncProjectToCloud(project: ProjectState): Promise<void> {
     const userId = project.userId || (await this.currentUserId());
-    console.log('[HybridStorage] syncProjectToCloud:', {
+    logger.info(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud:', {
       projectId: project.id,
       userId,
       hasUserField: !!project.userId,
     });
     if (!userId) {
-      console.warn('[HybridStorage] syncProjectToCloud: no userId, skipping');
+      logger.warn(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud: no userId, skipping');
       return;
     }
     try {
@@ -219,21 +225,25 @@ class HybridStorageService {
         description: project.title,
         status: 'draft',
       };
-      console.log('[HybridStorage] syncProjectToCloud body:', {
+      logger.info(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud body:', {
         user_id: body.user_id,
         title: body.title,
         dataId: body.data.id,
       });
       if (existing.items.length > 0) {
-        console.log('[HybridStorage] updating existing project:', existing.items[0].id);
+        logger.info(
+          LogCategory.STORAGE,
+          '[HybridStorage] updating existing project:',
+          existing.items[0].id,
+        );
         await pb.collection('projects').update(existing.items[0].id, body);
       } else {
-        console.log('[HybridStorage] creating new project');
+        logger.info(LogCategory.STORAGE, '[HybridStorage] creating new project');
         await pb.collection('projects').create(body);
       }
-      console.log('[HybridStorage] syncProjectToCloud success');
+      logger.info(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud success');
     } catch (error) {
-      console.error('[HybridStorage] syncProjectToCloud failed:', error);
+      logger.error(LogCategory.STORAGE, '[HybridStorage] syncProjectToCloud failed:', error);
     }
   }
 
@@ -269,7 +279,7 @@ class HybridStorageService {
         const updated = items.find((i: any) => i.id === item.id);
         return updated || item;
       } catch (err) {
-        console.error('[HybridStorage] syncAssetToCloud failed:', err);
+        logger.error(LogCategory.STORAGE, '[HybridStorage] syncAssetToCloud failed:', err);
       }
     }
     return item;
@@ -286,10 +296,18 @@ class HybridStorageService {
       try {
         if (cloudId) {
           await pb.collection('asset_library').delete(cloudId);
-          console.log('[HybridStorage] deleteAssetFromLibrary: deleted cloud by cloudId:', cloudId);
+          logger.info(
+            LogCategory.STORAGE,
+            '[HybridStorage] deleteAssetFromLibrary: deleted cloud by cloudId:',
+            cloudId,
+          );
         }
       } catch (err) {
-        console.error('[HybridStorage] deleteAssetFromLibrary cloud failed:', err);
+        logger.error(
+          LogCategory.STORAGE,
+          '[HybridStorage] deleteAssetFromLibrary cloud failed:',
+          err,
+        );
       }
     }
   }
@@ -339,7 +357,7 @@ class HybridStorageService {
         }
       }
     } catch (err) {
-      console.error('[HybridStorage] syncAssetLibraryFromCloud failed:', err);
+      logger.error(LogCategory.STORAGE, '[HybridStorage] syncAssetLibraryFromCloud failed:', err);
     }
   }
 
@@ -414,7 +432,10 @@ class HybridStorageService {
         if (typeof val === 'string' && val.startsWith('local:')) {
           const blob = await imageStorageService.getImage(val.substring(6));
           if (blob) return { path, blob };
-          console.warn(`[HybridStorage] syncAssetToCloud: cannot read blob for ${path}`);
+          logger.warn(
+            LogCategory.STORAGE,
+            `[HybridStorage] syncAssetToCloud: cannot read blob for ${path}`,
+          );
         }
         return null;
       };
@@ -487,7 +508,10 @@ class HybridStorageService {
       if (primaryEntry && result.image) {
         const pbUrl = `${baseFileUrl}/${result.image}`;
         this.setNestedValue(dataObj, this.PRIMARY_IMAGE_PATH, pbUrl);
-        console.log(`[HybridStorage] syncAssetToCloud: ${this.PRIMARY_IMAGE_PATH} -> ${pbUrl}`);
+        logger.info(
+          LogCategory.STORAGE,
+          `[HybridStorage] syncAssetToCloud: ${this.PRIMARY_IMAGE_PATH} -> ${pbUrl}`,
+        );
       }
       const secondaryFiles: string[] = result.images || [];
       secondaryEntries.forEach((entry, idx) => {
@@ -495,7 +519,10 @@ class HybridStorageService {
         if (filename) {
           const pbUrl = `${baseFileUrl}/${filename}`;
           this.setNestedValue(dataObj, entry.path, pbUrl);
-          console.log(`[HybridStorage] syncAssetToCloud: ${entry.path} -> ${pbUrl}`);
+          logger.info(
+            LogCategory.STORAGE,
+            `[HybridStorage] syncAssetToCloud: ${entry.path} -> ${pbUrl}`,
+          );
         }
       });
 
@@ -508,15 +535,23 @@ class HybridStorageService {
       itemData.cloudId = result.id;
       itemData.data = dataObj;
       await saveAssetToDB(itemData as AssetLibraryItem);
-      console.log(`[HybridStorage] syncAssetToCloud success (${existingId ? 'update' : 'create'})`);
+      logger.info(
+        LogCategory.STORAGE,
+        `[HybridStorage] syncAssetToCloud success (${existingId ? 'update' : 'create'})`,
+      );
     } catch (error: any) {
       if (error?.response) {
-        console.error(
+        logger.error(
+          LogCategory.STORAGE,
           `[HybridStorage] syncAssetToCloud failed: ${error.message}`,
           JSON.stringify(error.response),
         );
       } else {
-        console.error(`[HybridStorage] syncAssetToCloud failed:`, error?.message || error);
+        logger.error(
+          LogCategory.STORAGE,
+          `[HybridStorage] syncAssetToCloud failed:`,
+          error?.message || error,
+        );
       }
     }
   }
@@ -560,3 +595,4 @@ export const saveAssetToLibrary = (item: AssetLibraryItem): Promise<AssetLibrary
 export const deleteAssetFromLibrary = (id: string) => hybridStorage.deleteAssetFromLibrary(id);
 
 import { canvasSyncService } from './canvasSyncService';
+import { logger, LogCategory } from './logger.ts';

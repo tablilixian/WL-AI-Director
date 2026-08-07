@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- logger 是日志原语，自身兜底必须直接用 console */
 /**
  * Logger Service
  * 统一的日志管理服务
@@ -9,7 +10,7 @@ export enum LogLevel {
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  NONE = 4
+  NONE = 4,
 }
 
 export enum LogCategory {
@@ -24,7 +25,7 @@ export enum LogCategory {
   MODEL = 'MODEL',
   UI = 'UI',
   NETWORK = 'NETWORK',
-  CANVAS = 'CANVAS'
+  CANVAS = 'CANVAS',
 }
 
 interface LogEntry {
@@ -50,7 +51,7 @@ class Logger {
     enableConsole: true,
     enableStorage: false,
     categories: new Set(Object.values(LogCategory)),
-    maxStorageEntries: 1000
+    maxStorageEntries: 1000,
   };
 
   private storage: LogEntry[] = [];
@@ -79,7 +80,7 @@ class Logger {
     try {
       const toSave = {
         ...this.config,
-        categories: Array.from(this.config.categories)
+        categories: Array.from(this.config.categories),
       };
       localStorage.setItem('logger_config', JSON.stringify(toSave));
     } catch (e) {
@@ -97,14 +98,20 @@ class Logger {
     return `[${timestamp}] [${levelStr}] [${category}] ${message}`;
   }
 
-  private createEntry(level: LogLevel, category: LogCategory, message: string, data?: any, stack?: string): LogEntry {
+  private createEntry(
+    level: LogLevel,
+    category: LogCategory,
+    message: string,
+    data?: any,
+    stack?: string,
+  ): LogEntry {
     return {
       level,
       category,
       message,
       data,
       timestamp: Date.now(),
-      stack
+      stack,
     };
   }
 
@@ -113,7 +120,8 @@ class Logger {
       return;
     }
 
-    const stack = level === LogLevel.ERROR ? new Error().stack?.split('\n').slice(2, 5).join('\n') : undefined;
+    const stack =
+      level === LogLevel.ERROR ? new Error().stack?.split('\n').slice(2, 5).join('\n') : undefined;
     const entry = this.createEntry(level, category, message, data, stack);
 
     if (this.config.enableConsole) {
@@ -142,7 +150,7 @@ class Logger {
       }
     }
 
-    this.listeners.forEach(listener => listener(entry));
+    this.listeners.forEach((listener) => listener(entry));
   }
 
   debug(category: LogCategory, message: string, data?: any): void {

@@ -28,6 +28,7 @@ import {
   VIDEO_MKR_DEFAULT,
   VIDEO_MKR_GRID_DEFAULT,
 } from '../../config/sizeConfig';
+import { logger, LogCategory } from '../logger.ts';
 
 /**
  * 重试操作
@@ -56,13 +57,16 @@ const retryOperation = async <T>(
         error.message?.includes('违规');
 
       if (isClientError) {
-        console.log(`[Retry] 检测到客户端错误，不再重试: ${error.message}`);
+        logger.info(LogCategory.NETWORK, `[Retry] 检测到客户端错误，不再重试: ${error.message}`);
         throw error;
       }
 
       if (i < maxRetries - 1) {
         const retryDelay = delay * (i + 1);
-        console.log(`[Retry] 第 ${i + 1}/${maxRetries} 次重试，${retryDelay}ms后重试...`);
+        logger.info(
+          LogCategory.NETWORK,
+          `[Retry] 第 ${i + 1}/${maxRetries} 次重试，${retryDelay}ms后重试...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
       }
     }
@@ -95,12 +99,12 @@ const measureTime = <T>(label: string, traceId: string, fn: () => Promise<T>): P
   return fn()
     .then((result) => {
       const elapsed = Date.now() - start;
-      console.log(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms`);
+      logger.info(LogCategory.NETWORK, `[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms`);
       return result;
     })
     .catch((err) => {
       const elapsed = Date.now() - start;
-      console.error(`[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms (失败)`);
+      logger.error(LogCategory.NETWORK, `[I2I:${traceId}] ⏱ ${label}: ${elapsed}ms (失败)`);
       throw err;
     });
 };
@@ -123,10 +127,11 @@ const callCogViewApi = async (
 
   const finalPrompt = enhanceWithQualityTags(options.prompt);
 
-  console.log(`[I2I:${traceId}] 提供商: BigModel CogView`);
-  console.log(`[I2I:${traceId}] 注意: BigModel 不支持参考图，降级为文生图`);
-  console.log(`[I2I:${traceId}] 请求模型: ${apiModel}, 尺寸: ${size}`);
-  console.log(
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提供商: BigModel CogView`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 注意: BigModel 不支持参考图，降级为文生图`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 请求模型: ${apiModel}, 尺寸: ${size}`);
+  logger.info(
+    LogCategory.NETWORK,
     `[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`,
   );
 
@@ -173,7 +178,7 @@ const callCogViewApi = async (
     throw new Error('图片生成失败：未能从响应中提取图片 URL');
   }
 
-  console.log(`[I2I:${traceId}] CogView 响应图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] CogView 响应图片URL: ${imageUrl}`);
 
   // 开发环境使用代理下载图片以避免 CORS 问题
   const downloadUrl = import.meta.env.DEV
@@ -188,13 +193,16 @@ const callCogViewApi = async (
     return await imageResponse.blob();
   });
 
-  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`,
+  );
 
   // 保存到本地 IndexedDB
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[I2I:${traceId}] 图片已保存到 IndexedDB: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 图片已保存到 IndexedDB: ${localImageId}`);
 
   // 返回本地图片 ID，格式为 local:{id}
   return `local:${localImageId}`;
@@ -223,14 +231,14 @@ const callDramaBackendApi = async (
 
   if (options.autoEnhancePrompt) {
     try {
-      console.log(`[I2I:${traceId}] 自动增强提示词...`);
+      logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 自动增强提示词...`);
       const enhanced = await callDramaBackendPromptEnhanceApi(options.prompt, traceId);
       if (enhanced) {
         finalPrompt = enhanced;
-        console.log(`[I2I:${traceId}] 提示词已自动增强`);
+        logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提示词已自动增强`);
       }
     } catch (e) {
-      console.warn(`[I2I:${traceId}] 自动增强失败，使用原始提示词:`, e);
+      logger.warn(LogCategory.NETWORK, `[I2I:${traceId}] 自动增强失败，使用原始提示词:`, e);
     }
   }
 
@@ -244,19 +252,24 @@ const callDramaBackendApi = async (
     requestBody.negative_prompt = options.negativePrompt;
   }
 
-  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
-  console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
-  console.log(`[I2I:${traceId}] 端点: ${endpoint}`);
-  console.log(`[I2I:${traceId}] 尺寸: ${size.width}x${size.height}`);
-  console.log(`[I2I:${traceId}] 图生图模式: ${hasReferenceImages ? '是' : '否（文生图）'}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 端点: ${endpoint}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 尺寸: ${size.width}x${size.height}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图生图模式: ${hasReferenceImages ? '是' : '否（文生图）'}`,
+  );
   if (!hasReferenceImages) {
-    console.log(
+    logger.info(
+      LogCategory.NETWORK,
       `[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`,
     );
   }
 
   if (hasReferenceImages && options.referenceImages) {
-    console.log(
+    logger.info(
+      LogCategory.NETWORK,
       `[I2I:${traceId}] 开始上传 ${options.referenceImages.length} 张参考图到 Drama Backend...`,
     );
 
@@ -268,12 +281,19 @@ const callDramaBackendApi = async (
         uploadImageToDramaBackend(imageUrl, apiBase, traceId),
       );
       requestBody[imgKey] = filename;
-      console.log(`[I2I:${traceId}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${traceId}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
+      );
     }
   }
 
-  console.log(`[I2I:${traceId}] 请求远端大模型参数:`, JSON.stringify(requestBody, null, 2));
-  console.log(`[I2I:${traceId}] 请求端点: ${apiBase}${endpoint}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 请求远端大模型参数:`,
+    JSON.stringify(requestBody, null, 2),
+  );
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 请求端点: ${apiBase}${endpoint}`);
 
   const response = await measureTime('Drama Backend 图片生成', traceId, () =>
     retryOperation(async () => {
@@ -306,13 +326,13 @@ const callDramaBackendApi = async (
     throw new Error('图片生成失败：未能从响应中获取图片 URL');
   }
 
-  console.log(`[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   // 开发环境：将图片 URL 转换为代理路径
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
-    console.log(`[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
   }
 
   const imageBlob = await measureTime('下载生成图片', traceId, async () => {
@@ -323,12 +343,18 @@ const callDramaBackendApi = async (
     return await imageResponse.blob();
   });
 
-  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`,
+  );
 
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`,
+  );
 
   return `local:${localImageId}`;
 };
@@ -384,7 +410,8 @@ export const uploadImageToDramaBackend = async (
   const blob = await resolveImageToBlob(imageUrl);
 
   if (traceId) {
-    console.log(
+    logger.info(
+      LogCategory.NETWORK,
       `[I2I:${traceId}]   解析图片成功, Blob大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
     );
   }
@@ -401,7 +428,7 @@ export const uploadImageToDramaBackend = async (
     let errorMsg = `图片上传失败: ${res.status}`;
     try {
       const errorBody = await res.text();
-      console.error(`[${traceId || 'upload'}] 上传失败响应体:`, errorBody);
+      logger.error(LogCategory.NETWORK, `[${traceId || 'upload'}] 上传失败响应体:`, errorBody);
       errorMsg += ` - ${errorBody}`;
     } catch {
       // ignore
@@ -412,7 +439,7 @@ export const uploadImageToDramaBackend = async (
   const data = await res.json();
 
   if (traceId) {
-    console.log(`[I2I:${traceId}]   上传响应:`, JSON.stringify(data));
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}]   上传响应:`, JSON.stringify(data));
   }
 
   // 兼容多种响应格式：{ filename: "xxx" } 或 { data: { filename: "xxx" } } 或 { success: true, filename: "xxx" }
@@ -438,17 +465,18 @@ const callGeminiApi = async (
   const endpoint = model.endpoint || `/v1beta/models/${apiModel}:generateContent`;
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
 
-  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
-  console.log(`[I2I:${traceId}] 提供商: Gemini (${apiModel})`);
-  console.log(`[I2I:${traceId}] API端点: ${apiBase}${endpoint}`);
-  console.log(`[I2I:${traceId}] 宽高比: ${aspectRatio}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 阶段 3/5 - 调用提供商 API`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提供商: Gemini (${apiModel})`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] API端点: ${apiBase}${endpoint}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 宽高比: ${aspectRatio}`);
 
   // 构建提示词
   let finalPrompt = options.prompt;
 
   // 如果有参考图，添加一致性指令
   if (options.referenceImages && options.referenceImages.length > 0) {
-    console.log(
+    logger.info(
+      LogCategory.NETWORK,
       `[I2I:${traceId}] 检测到 ${options.referenceImages.length} 张参考图，注入字符一致性指令`,
     );
     finalPrompt = `
@@ -476,8 +504,8 @@ const callGeminiApi = async (
       ⚠️ Character appearance consistency is THE MOST IMPORTANT requirement!
     `;
 
-    console.log(`[I2I:${traceId}] 最终提示词长度: ${finalPrompt.length} 字符`);
-    console.log(`[I2I:${traceId}] 用户原始提示词: "${options.prompt}"`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 最终提示词长度: ${finalPrompt.length} 字符`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 用户原始提示词: "${options.prompt}"`);
   }
 
   // 构建请求 parts
@@ -485,12 +513,13 @@ const callGeminiApi = async (
 
   // 添加参考图片
   if (options.referenceImages) {
-    console.log(`[I2I:${traceId}] 开始解析参考图片 (local: → inlineData)...`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 开始解析参考图片 (local: → inlineData)...`);
     for (const imgUrl of options.referenceImages) {
       // 处理 data: 格式
       const match = imgUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
       if (match) {
-        console.log(
+        logger.info(
+          LogCategory.NETWORK,
           `[I2I:${traceId}] 参考图为 Base64 格式, 类型: ${match[1]}, 数据长度: ${match[2].length}`,
         );
         parts.push({
@@ -505,11 +534,12 @@ const callGeminiApi = async (
       // 处理 local: 格式
       if (imgUrl.startsWith('local:')) {
         const localId = imgUrl.replace('local:', '');
-        console.log(`[I2I:${traceId}] 从 IndexedDB 读取本地图片: ${localId}`);
+        logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 从 IndexedDB 读取本地图片: ${localId}`);
         try {
           const blob = await imageStorageService.getImage(localId);
           if (blob) {
-            console.log(
+            logger.info(
+              LogCategory.NETWORK,
               `[I2I:${traceId}] 本地图片读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
             );
             const base64 = await new Promise<string>((resolve, reject) => {
@@ -520,7 +550,10 @@ const callGeminiApi = async (
             });
             const base64Match = base64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
             if (base64Match) {
-              console.log(`[I2I:${traceId}] 图片已转为 Base64, 数据长度: ${base64Match[2].length}`);
+              logger.info(
+                LogCategory.NETWORK,
+                `[I2I:${traceId}] 图片已转为 Base64, 数据长度: ${base64Match[2].length}`,
+              );
               parts.push({
                 inlineData: {
                   mimeType: base64Match[1],
@@ -529,21 +562,22 @@ const callGeminiApi = async (
               });
             }
           } else {
-            console.warn(`[I2I:${traceId}] 本地图片不存在: ${localId}`);
+            logger.warn(LogCategory.NETWORK, `[I2I:${traceId}] 本地图片不存在: ${localId}`);
           }
         } catch (error) {
-          console.error(`[I2I:${traceId}] 解析本地图片失败:`, error);
+          logger.error(LogCategory.NETWORK, `[I2I:${traceId}] 解析本地图片失败:`, error);
         }
         continue;
       }
 
       // 处理 blob: 格式（临时对象 URL）
       if (imgUrl.startsWith('blob:')) {
-        console.log(`[I2I:${traceId}] 检测到 blob: URL，尝试 fetch 读取...`);
+        logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 检测到 blob: URL，尝试 fetch 读取...`);
         try {
           const response = await fetch(imgUrl);
           const blob = await response.blob();
-          console.log(
+          logger.info(
+            LogCategory.NETWORK,
             `[I2I:${traceId}] blob 读取成功, 大小: ${(blob.size / 1024).toFixed(1)}KB, 类型: ${blob.type}`,
           );
           const base64 = await new Promise<string>((resolve, reject) => {
@@ -554,7 +588,10 @@ const callGeminiApi = async (
           });
           const base64Match = base64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
           if (base64Match) {
-            console.log(`[I2I:${traceId}] blob 已转为 Base64, 数据长度: ${base64Match[2].length}`);
+            logger.info(
+              LogCategory.NETWORK,
+              `[I2I:${traceId}] blob 已转为 Base64, 数据长度: ${base64Match[2].length}`,
+            );
             parts.push({
               inlineData: {
                 mimeType: base64Match[1],
@@ -563,12 +600,15 @@ const callGeminiApi = async (
             });
           }
         } catch (error) {
-          console.error(`[I2I:${traceId}] blob URL 读取失败:`, error);
+          logger.error(LogCategory.NETWORK, `[I2I:${traceId}] blob URL 读取失败:`, error);
         }
         continue;
       }
     }
-    console.log(`[I2I:${traceId}] 参考图片解析完成, 共 ${parts.length - 1} 张图片附加到请求`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${traceId}] 参考图片解析完成, 共 ${parts.length - 1} 张图片附加到请求`,
+    );
   }
 
   // 构建请求体
@@ -589,10 +629,11 @@ const callGeminiApi = async (
     requestBody.generationConfig.imageConfig = {
       aspectRatio: aspectRatio,
     };
-    console.log(`[I2I:${traceId}] 设置宽高比: ${aspectRatio}`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 设置宽高比: ${aspectRatio}`);
   }
 
-  console.log(
+  logger.info(
+    LogCategory.NETWORK,
     `[I2I:${traceId}] 发送 Gemini API 请求 (parts: ${parts.length}, ${parts.filter((p) => p.inlineData).length} 张图片)...`,
   );
 
@@ -634,8 +675,11 @@ const callGeminiApi = async (
     }),
   );
 
-  console.log(`[I2I:${traceId}] Gemini 响应成功`);
-  console.log(`[I2I:${traceId}] 候选数量: ${response.candidates?.length || 0}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] Gemini 响应成功`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 候选数量: ${response.candidates?.length || 0}`,
+  );
 
   // 提取 base64 图片
   const candidates = response.candidates || [];
@@ -645,7 +689,8 @@ const callGeminiApi = async (
     for (const part of candidates[0].content.parts) {
       if (part.inlineData) {
         base64Image = `data:image/png;base64,${part.inlineData.data}`;
-        console.log(
+        logger.info(
+          LogCategory.NETWORK,
           `[I2I:${traceId}] 从响应中提取到图片, Base64长度: ${part.inlineData.data.length}`,
         );
         break;
@@ -667,13 +712,19 @@ const callGeminiApi = async (
   const byteArray = new Uint8Array(byteNumbers);
   const imageBlob = new Blob([byteArray], { type: 'image/png' });
 
-  console.log(`[I2I:${traceId}] 图片解码完成, Blob大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图片解码完成, Blob大小: ${(imageBlob.size / 1024).toFixed(1)}KB`,
+  );
 
   // 保存到本地 IndexedDB
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`,
+  );
 
   // 返回本地图片 ID，格式为 local:{id}
   return `local:${localImageId}`;
@@ -691,26 +742,29 @@ const callDramaBackendCharacterApi = async (
 ): Promise<string> => {
   Date.now();
 
-  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用角色立绘图 API`);
-  console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
-  console.log(`[I2I:${traceId}] 端点: /api/v1/generate/image2character`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 阶段 3/5 - 调用角色立绘图 API`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 端点: /api/v1/generate/image2character`);
 
   // 上传参考图（角色设计图）
   let imageFilename = '';
   if (options.referenceImages && options.referenceImages.length > 0) {
     const imageUrl = options.referenceImages[0];
-    console.log(`[I2I:${traceId}] 上传角色设计图到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 上传角色设计图到 Drama Backend...`);
     imageFilename = await measureTime('上传角色设计图', traceId, () =>
       uploadImageToDramaBackend(imageUrl, apiBase, traceId),
     );
-    console.log(`[I2I:${traceId}] 角色设计图上传成功 -> filename: ${imageFilename}`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${traceId}] 角色设计图上传成功 -> filename: ${imageFilename}`,
+    );
   } else {
     throw new Error('角色立绘图生成需要提供角色设计图');
   }
 
   const requestBody = { image: imageFilename };
 
-  console.log(`[I2I:${traceId}] 请求参数:`, JSON.stringify(requestBody));
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 请求参数:`, JSON.stringify(requestBody));
 
   const response = await measureTime('Drama Backend 角色立绘图生成', traceId, () =>
     retryOperation(async () => {
@@ -741,13 +795,13 @@ const callDramaBackendCharacterApi = async (
     throw new Error('角色立绘图生成失败：未能从响应中获取图片 URL');
   }
 
-  console.log(`[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   // 开发环境使用代理下载
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
-    console.log(`[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
   }
 
   const imageBlob = await measureTime('下载生成图片', traceId, async () => {
@@ -758,12 +812,18 @@ const callDramaBackendCharacterApi = async (
     return await imageResponse.blob();
   });
 
-  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`,
+  );
 
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`,
+  );
 
   return `local:${localImageId}`;
 };
@@ -778,19 +838,22 @@ const callDramaBackendStoryboardApi = async (
   apiBase: string,
   traceId: string,
 ): Promise<string> => {
-  console.log(`[I2I:${traceId}] 阶段 3/5 - 调用分镜生成 API`);
-  console.log(`[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
-  console.log(`[I2I:${traceId}] 端点: /api/v1/generate/image2storyboard`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 阶段 3/5 - 调用分镜生成 API`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 提供商: Drama Backend (WLDrama)`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 端点: /api/v1/generate/image2storyboard`);
 
   // 上传参考图（可选）
   let imageFilename = '';
   if (options.referenceImages && options.referenceImages.length > 0) {
     const imageUrl = options.referenceImages[0];
-    console.log(`[I2I:${traceId}] 上传参考图到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 上传参考图到 Drama Backend...`);
     imageFilename = await measureTime('上传参考图', traceId, () =>
       uploadImageToDramaBackend(imageUrl, apiBase, traceId),
     );
-    console.log(`[I2I:${traceId}] 参考图上传成功 -> filename: ${imageFilename}`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${traceId}] 参考图上传成功 -> filename: ${imageFilename}`,
+    );
   }
 
   const requestBody: any = {
@@ -802,7 +865,11 @@ const callDramaBackendStoryboardApi = async (
     requestBody.image = imageFilename;
   }
 
-  console.log(`[I2I:${traceId}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 请求参数:`,
+    JSON.stringify(requestBody, null, 2),
+  );
 
   const response = await measureTime('Drama Backend 分镜生成', traceId, () =>
     retryOperation(async () => {
@@ -833,12 +900,12 @@ const callDramaBackendStoryboardApi = async (
     throw new Error('分镜生成失败：未能从响应中获取图片 URL');
   }
 
-  console.log(`[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${traceId}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
     downloadUrl = imageUrl.replace('http://117.50.108.73:8082', '/drama-api');
-    console.log(`[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
+    logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 开发环境使用代理下载: ${downloadUrl}`);
   }
 
   const imageBlob = await measureTime('下载生成图片', traceId, async () => {
@@ -849,12 +916,18 @@ const callDramaBackendStoryboardApi = async (
     return await imageResponse.blob();
   });
 
-  console.log(`[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 图片下载成功，大小: ${(imageBlob.size / 1024).toFixed(1)}KB`,
+  );
 
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${traceId}] 阶段 4/5 - 图片已保存到 IndexedDB: ${localImageId}`,
+  );
 
   return `local:${localImageId}`;
 };
@@ -878,17 +951,17 @@ export const callDramaBackendSpliteGridApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[SG:${tid}] 调用图像分割网格 API`);
-  console.log(`[SG:${tid}] 端点: /api/v1/generate/image2splitegrid`);
-  console.log(`[SG:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[SG:${tid}] 调用图像分割网格 API`);
+  logger.info(LogCategory.NETWORK, `[SG:${tid}] 端点: /api/v1/generate/image2splitegrid`);
+  logger.info(LogCategory.NETWORK, `[SG:${tid}] API基础地址: ${apiBase}`);
 
   // 上传参考图（必填）
   let imageFilename = '';
   if (options.referenceImages && options.referenceImages.length > 0) {
     const imageUrl = options.referenceImages[0];
-    console.log(`[SG:${tid}] 上传参考图到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[SG:${tid}] 上传参考图到 Drama Backend...`);
     imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
-    console.log(`[SG:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
+    logger.info(LogCategory.NETWORK, `[SG:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
   } else {
     throw new Error('图像分割网格需要提供参考图像');
   }
@@ -901,7 +974,7 @@ export const callDramaBackendSpliteGridApi = async (
     image: imageFilename,
   };
 
-  console.log(`[SG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[SG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2splitegrid`, {
@@ -930,7 +1003,7 @@ export const callDramaBackendSpliteGridApi = async (
     throw new Error(`图像分割网格失败：响应中未找到图片列表: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[SG:${tid}] Drama Backend 返回 ${images.length} 张分割图片`);
+  logger.info(LogCategory.NETWORK, `[SG:${tid}] Drama Backend 返回 ${images.length} 张分割图片`);
 
   // 只下载需要的格子（用户选中 + 占位保留未选中）
   const selectedSet = selectedIndices ? new Set(selectedIndices) : null;
@@ -940,7 +1013,7 @@ export const callDramaBackendSpliteGridApi = async (
     // 如果指定了选中索引且当前格不在选中列表，跳过下载，留 null 占位
     if (selectedSet && !selectedSet.has(i)) {
       localUrls.push(null);
-      console.log(`[SG:${tid}] 第 ${i + 1} 格未选中，跳过下载`);
+      logger.info(LogCategory.NETWORK, `[SG:${tid}] 第 ${i + 1} 格未选中，跳过下载`);
       continue;
     }
 
@@ -948,7 +1021,7 @@ export const callDramaBackendSpliteGridApi = async (
     const imageUrl = item.url;
 
     if (!imageUrl) {
-      console.warn(`[SG:${tid}] 第 ${i + 1} 张图片无 URL，跳过`);
+      logger.warn(LogCategory.NETWORK, `[SG:${tid}] 第 ${i + 1} 张图片无 URL，跳过`);
       localUrls.push(null);
       continue;
     }
@@ -967,11 +1040,17 @@ export const callDramaBackendSpliteGridApi = async (
     await imageStorageService.saveImage(localImageId, imageBlob);
     localUrls.push(`local:${localImageId}`);
 
-    console.log(`[SG:${tid}] 第 ${i + 1}/${images.length} 张分割图片已保存: ${localImageId}`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[SG:${tid}] 第 ${i + 1}/${images.length} 张分割图片已保存: ${localImageId}`,
+    );
   }
 
   const downloaded = localUrls.filter(Boolean).length;
-  console.log(`[SG:${tid}] 图像分割网格完成，共下载 ${downloaded}/${localUrls.length} 张图片`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[SG:${tid}] 图像分割网格完成，共下载 ${downloaded}/${localUrls.length} 张图片`,
+  );
   return localUrls as string[];
 };
 
@@ -993,17 +1072,17 @@ export const callDramaBackendInpaintApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[INP:${tid}] 调用图像修复 API`);
-  console.log(`[INP:${tid}] 端点: /api/v1/generate/image2inpaint`);
-  console.log(`[INP:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[INP:${tid}] 调用图像修复 API`);
+  logger.info(LogCategory.NETWORK, `[INP:${tid}] 端点: /api/v1/generate/image2inpaint`);
+  logger.info(LogCategory.NETWORK, `[INP:${tid}] API基础地址: ${apiBase}`);
 
   // 上传参考图（要修复的图像）
   let imageFilename = '';
   if (options.referenceImages && options.referenceImages.length > 0) {
     const imageUrl = options.referenceImages[0];
-    console.log(`[INP:${tid}] 上传待修复图像到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[INP:${tid}] 上传待修复图像到 Drama Backend...`);
     imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
-    console.log(`[INP:${tid}] 图像上传成功 -> filename: ${imageFilename}`);
+    logger.info(LogCategory.NETWORK, `[INP:${tid}] 图像上传成功 -> filename: ${imageFilename}`);
   } else {
     throw new Error('图像修复需要提供待修复的图像');
   }
@@ -1013,7 +1092,7 @@ export const callDramaBackendInpaintApi = async (
     image: imageFilename,
   };
 
-  console.log(`[INP:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[INP:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2inpaint`, {
@@ -1042,7 +1121,7 @@ export const callDramaBackendInpaintApi = async (
     throw new Error(`图像修复失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[INP:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[INP:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1057,7 +1136,7 @@ export const callDramaBackendInpaintApi = async (
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[INP:${tid}] 修复后图片已保存: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[INP:${tid}] 修复后图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1079,20 +1158,20 @@ export const callDramaBackend360HdriApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[HDRI:${tid}] 调用 360° HDRI 图像生成 API`);
-  console.log(`[HDRI:${tid}] 端点: /api/v1/generate/image2360hdri`);
-  console.log(`[HDRI:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[HDRI:${tid}] 调用 360° HDRI 图像生成 API`);
+  logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 端点: /api/v1/generate/image2360hdri`);
+  logger.info(LogCategory.NETWORK, `[HDRI:${tid}] API基础地址: ${apiBase}`);
 
   const requestBody: any = {};
 
   if (imageUrl) {
-    console.log(`[HDRI:${tid}] 上传参考图像到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 上传参考图像到 Drama Backend...`);
     const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
     requestBody.image = filename;
-    console.log(`[HDRI:${tid}] 参考图像上传成功 -> filename: ${filename}`);
+    logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 参考图像上传成功 -> filename: ${filename}`);
   }
 
-  console.log(`[HDRI:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2360hdri`, {
@@ -1121,7 +1200,7 @@ export const callDramaBackend360HdriApi = async (
     throw new Error(`360° HDRI 生成失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[HDRI:${tid}] Drama Backend 返回图片URL: ${imageUrl_}`);
+  logger.info(LogCategory.NETWORK, `[HDRI:${tid}] Drama Backend 返回图片URL: ${imageUrl_}`);
 
   let downloadUrl = imageUrl_;
   if (import.meta.env.DEV && imageUrl_.startsWith('http://117.50.108.73:8082')) {
@@ -1136,7 +1215,7 @@ export const callDramaBackend360HdriApi = async (
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[HDRI:${tid}] 360° HDRI 图片已保存: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 360° HDRI 图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1161,15 +1240,15 @@ export const callDramaBackendStyleTransferApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[ST:${tid}] 调用风格迁移 API`);
-  console.log(`[ST:${tid}] 端点: /api/v1/generate/image2styletransfer`);
-  console.log(`[ST:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[ST:${tid}] 调用风格迁移 API`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] 端点: /api/v1/generate/image2styletransfer`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] API基础地址: ${apiBase}`);
 
   const targetFilename = await uploadImageToDramaBackend(targetImageUrl, baseUrl, tid);
-  console.log(`[ST:${tid}] 目标图像上传成功 -> filename: ${targetFilename}`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] 目标图像上传成功 -> filename: ${targetFilename}`);
 
   const styleFilename = await uploadImageToDramaBackend(styleImageUrl, baseUrl, tid);
-  console.log(`[ST:${tid}] 风格参考图上传成功 -> filename: ${styleFilename}`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] 风格参考图上传成功 -> filename: ${styleFilename}`);
 
   const requestBody: any = {
     image1: targetFilename,
@@ -1178,15 +1257,15 @@ export const callDramaBackendStyleTransferApi = async (
 
   if (prompt) {
     requestBody.prompt = prompt;
-    console.log(`[ST:${tid}] 增强提示词: ${prompt}`);
+    logger.info(LogCategory.NETWORK, `[ST:${tid}] 增强提示词: ${prompt}`);
   }
 
   if (enhance !== undefined) {
     requestBody.enhance = enhance;
-    console.log(`[ST:${tid}] 增强风格迁移效果: ${enhance}`);
+    logger.info(LogCategory.NETWORK, `[ST:${tid}] 增强风格迁移效果: ${enhance}`);
   }
 
-  console.log(`[ST:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2styletransfer`, {
@@ -1215,7 +1294,7 @@ export const callDramaBackendStyleTransferApi = async (
     throw new Error(`风格迁移失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[ST:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1230,7 +1309,7 @@ export const callDramaBackendStyleTransferApi = async (
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[ST:${tid}] 风格迁移图片已保存: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[ST:${tid}] 风格迁移图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1252,9 +1331,9 @@ export const callDramaBackendIPAStyleTransferApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[IPA:${tid}] 调用 IPA 风格迁移 API`);
-  console.log(`[IPA:${tid}] 端点: /api/v1/generate/image2ipastyletransfer`);
-  console.log(`[IPA:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[IPA:${tid}] 调用 IPA 风格迁移 API`);
+  logger.info(LogCategory.NETWORK, `[IPA:${tid}] 端点: /api/v1/generate/image2ipastyletransfer`);
+  logger.info(LogCategory.NETWORK, `[IPA:${tid}] API基础地址: ${apiBase}`);
 
   const size =
     IMAGE_IPA_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_IPA_SIZE] ||
@@ -1272,22 +1351,28 @@ export const callDramaBackendIPAStyleTransferApi = async (
       const imageUrl = options.referenceImages[i];
       const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
       requestBody[imgKey] = filename;
-      console.log(`[IPA:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[IPA:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
+      );
     }
   }
 
   if (options.refImage) {
     const filename = await uploadImageToDramaBackend(options.refImage, baseUrl, tid);
     requestBody.ref_image = filename;
-    console.log(`[IPA:${tid}] 风格迁移参考图(ref_image)上传成功 -> filename: ${filename}`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[IPA:${tid}] 风格迁移参考图(ref_image)上传成功 -> filename: ${filename}`,
+    );
   }
 
   if (options.enhance !== undefined) {
     requestBody.enhance = options.enhance;
-    console.log(`[IPA:${tid}] 增强风格迁移: ${options.enhance}`);
+    logger.info(LogCategory.NETWORK, `[IPA:${tid}] 增强风格迁移: ${options.enhance}`);
   }
 
-  console.log(`[IPA:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[IPA:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2ipastyletransfer`, {
@@ -1316,7 +1401,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
     throw new Error(`IPA 风格迁移失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[IPA:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[IPA:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1331,7 +1416,7 @@ export const callDramaBackendIPAStyleTransferApi = async (
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[IPA:${tid}] IPA 风格迁移图片已保存: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[IPA:${tid}] IPA 风格迁移图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1353,9 +1438,9 @@ export const callDramaBackendAnimeApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[ANIME:${tid}] 调用动漫风格生成 API`);
-  console.log(`[ANIME:${tid}] 端点: /api/v1/generate/txt2imageanime`);
-  console.log(`[ANIME:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[ANIME:${tid}] 调用动漫风格生成 API`);
+  logger.info(LogCategory.NETWORK, `[ANIME:${tid}] 端点: /api/v1/generate/txt2imageanime`);
+  logger.info(LogCategory.NETWORK, `[ANIME:${tid}] API基础地址: ${apiBase}`);
 
   const size =
     IMAGE_ANIME_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_ANIME_SIZE] ||
@@ -1371,7 +1456,11 @@ export const callDramaBackendAnimeApi = async (
     requestBody.negative_prompt = options.negativePrompt;
   }
 
-  console.log(`[ANIME:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(
+    LogCategory.NETWORK,
+    `[ANIME:${tid}] 请求参数:`,
+    JSON.stringify(requestBody, null, 2),
+  );
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/txt2imageanime`, {
@@ -1400,7 +1489,7 @@ export const callDramaBackendAnimeApi = async (
     throw new Error(`动漫风格生成失败：响应中未找到图片 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[ANIME:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
+  logger.info(LogCategory.NETWORK, `[ANIME:${tid}] Drama Backend 返回图片URL: ${imageUrl}`);
 
   let downloadUrl = imageUrl;
   if (import.meta.env.DEV && imageUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1415,7 +1504,7 @@ export const callDramaBackendAnimeApi = async (
   const localImageId = generateImageId();
   await imageStorageService.saveImage(localImageId, imageBlob);
 
-  console.log(`[ANIME:${tid}] 动漫风格图片已保存: ${localImageId}`);
+  logger.info(LogCategory.NETWORK, `[ANIME:${tid}] 动漫风格图片已保存: ${localImageId}`);
   return `local:${localImageId}`;
 };
 
@@ -1437,17 +1526,17 @@ export const callDramaBackendVLApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[VL:${tid}] 调用视觉语言推理 API`);
-  console.log(`[VL:${tid}] 端点: /api/v1/generate/image2vl`);
-  console.log(`[VL:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[VL:${tid}] 调用视觉语言推理 API`);
+  logger.info(LogCategory.NETWORK, `[VL:${tid}] 端点: /api/v1/generate/image2vl`);
+  logger.info(LogCategory.NETWORK, `[VL:${tid}] API基础地址: ${apiBase}`);
 
   // 上传参考图（可选）
   let imageFilename = '';
   if (options.referenceImages && options.referenceImages.length > 0) {
     const imageUrl = options.referenceImages[0];
-    console.log(`[VL:${tid}] 上传参考图到 Drama Backend...`);
+    logger.info(LogCategory.NETWORK, `[VL:${tid}] 上传参考图到 Drama Backend...`);
     imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
-    console.log(`[VL:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
+    logger.info(LogCategory.NETWORK, `[VL:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
   }
 
   const requestBody: any = {
@@ -1458,7 +1547,7 @@ export const callDramaBackendVLApi = async (
     requestBody.image = imageFilename;
   }
 
-  console.log(`[VL:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[VL:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2vl`, {
@@ -1486,7 +1575,10 @@ export const callDramaBackendVLApi = async (
     throw new Error(`视觉语言推理失败：响应中未找到 output 字段: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[VL:${tid}] 推理完成，输出长度: ${response.output.length} 字符`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[VL:${tid}] 推理完成，输出长度: ${response.output.length} 字符`,
+  );
 
   return response.output;
 };
@@ -1568,11 +1660,11 @@ export const callDramaBackendDeductionApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[DED:${tid}] 调用剧情推演 API`);
-  console.log(`[DED:${tid}] 端点: /api/v1/generate/deduction`);
+  logger.info(LogCategory.NETWORK, `\n[DED:${tid}] 调用剧情推演 API`);
+  logger.info(LogCategory.NETWORK, `[DED:${tid}] 端点: /api/v1/generate/deduction`);
 
   const imageFilename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
-  console.log(`[DED:${tid}] 图片上传成功 -> filename: ${imageFilename}`);
+  logger.info(LogCategory.NETWORK, `[DED:${tid}] 图片上传成功 -> filename: ${imageFilename}`);
 
   const requestBody: DeductionRequest = {
     image: imageFilename,
@@ -1582,7 +1674,7 @@ export const callDramaBackendDeductionApi = async (
     deduction_prompt: prompts?.deductionPrompt || DEFAULT_DEDUCTION_PROMPT,
   };
 
-  console.log(`[DED:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[DED:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/deduction`, {
@@ -1610,9 +1702,17 @@ export const callDramaBackendDeductionApi = async (
     throw new Error(`剧情推演失败：响应结构不完整: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[DED:${tid}] 推演完成`);
-  console.log(`[DED:${tid}] 画面分析:`, JSON.stringify(response.analysis, null, 2));
-  console.log(`[DED:${tid}] 推演结果:`, JSON.stringify(response.deduction, null, 2));
+  logger.info(LogCategory.NETWORK, `[DED:${tid}] 推演完成`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[DED:${tid}] 画面分析:`,
+    JSON.stringify(response.analysis, null, 2),
+  );
+  logger.info(
+    LogCategory.NETWORK,
+    `[DED:${tid}] 推演结果:`,
+    JSON.stringify(response.deduction, null, 2),
+  );
 
   return response as DeductionResponse;
 };
@@ -1635,13 +1735,13 @@ export const callDramaBackendPromptEnhanceApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[PE:${tid}] 调用提示词增强 API`);
-  console.log(`[PE:${tid}] 端点: /api/v1/generate/image2promptenhance`);
-  console.log(`[PE:${tid}] API基础地址: ${apiBase}`);
+  logger.info(LogCategory.NETWORK, `\n[PE:${tid}] 调用提示词增强 API`);
+  logger.info(LogCategory.NETWORK, `[PE:${tid}] 端点: /api/v1/generate/image2promptenhance`);
+  logger.info(LogCategory.NETWORK, `[PE:${tid}] API基础地址: ${apiBase}`);
 
   const requestBody: any = { prompt };
 
-  console.log(`[PE:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[PE:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2promptenhance`, {
@@ -1669,8 +1769,11 @@ export const callDramaBackendPromptEnhanceApi = async (
     throw new Error(`提示词增强失败：响应中未找到 output 字段: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[PE:${tid}] 增强完成，输出长度: ${response.output.length} 字符`);
-  console.log(`[PE:${tid}] 增强结果: ${response.output}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[PE:${tid}] 增强完成，输出长度: ${response.output.length} 字符`,
+  );
+  logger.info(LogCategory.NETWORK, `[PE:${tid}] 增强结果: ${response.output}`);
 
   return response.output;
 };
@@ -1694,8 +1797,8 @@ export const callDramaBackendVideoMsrApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[VMSR:${tid}] 调用图像转视频 MSR API`);
-  console.log(`[VMSR:${tid}] 端点: /api/v1/generate/image2videomsr`);
+  logger.info(LogCategory.NETWORK, `\n[VMSR:${tid}] 调用图像转视频 MSR API`);
+  logger.info(LogCategory.NETWORK, `[VMSR:${tid}] 端点: /api/v1/generate/image2videomsr`);
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1708,12 +1811,15 @@ export const callDramaBackendVideoMsrApi = async (
   if (options.videoMsrBackground) {
     const bgFilename = await uploadImageToDramaBackend(options.videoMsrBackground, baseUrl, tid);
     requestBody.background = bgFilename;
-    console.log(`[VMSR:${tid}] 背景图上传成功 -> filename: ${bgFilename}`);
+    logger.info(LogCategory.NETWORK, `[VMSR:${tid}] 背景图上传成功 -> filename: ${bgFilename}`);
   } else if (options.referenceImages && options.referenceImages.length > 0) {
     // 未指定 background 时，使用第一张参考图作为背景
     const bgFilename = await uploadImageToDramaBackend(options.referenceImages[0], baseUrl, tid);
     requestBody.background = bgFilename;
-    console.log(`[VMSR:${tid}] 使用第一张参考图作为背景 -> filename: ${bgFilename}`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[VMSR:${tid}] 使用第一张参考图作为背景 -> filename: ${bgFilename}`,
+    );
   } else {
     throw new Error('图像转视频需要提供背景图像');
   }
@@ -1724,11 +1830,14 @@ export const callDramaBackendVideoMsrApi = async (
       const imageUrl = options.referenceImages[i];
       const filename = await uploadImageToDramaBackend(imageUrl, baseUrl, tid);
       requestBody[imgKey] = filename;
-      console.log(`[VMSR:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[VMSR:${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
+      );
     }
   }
 
-  console.log(`[VMSR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[VMSR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2videomsr`, {
@@ -1741,7 +1850,11 @@ export const callDramaBackendVideoMsrApi = async (
       let errorMessage = `HTTP ${res.status}`;
       try {
         const errorText = await res.text();
-        console.error(`[VMSR:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
+        logger.error(
+          LogCategory.NETWORK,
+          `[VMSR:${tid}] 服务端响应 ${res.status}:`,
+          errorText.slice(0, 500),
+        );
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -1770,7 +1883,7 @@ export const callDramaBackendVideoMsrApi = async (
     throw new Error(`图像转视频失败：响应中未找到视频 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[VMSR:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
+  logger.info(LogCategory.NETWORK, `[VMSR:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
 
   let downloadUrl = videoUrl;
   if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1787,7 +1900,7 @@ export const callDramaBackendVideoMsrApi = async (
   const videoId = `vid_msr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   await videoStorageService.saveVideo(videoId, videoBlob);
 
-  console.log(`[VMSR:${tid}] 视频已保存: ${videoId}`);
+  logger.info(LogCategory.NETWORK, `[VMSR:${tid}] 视频已保存: ${videoId}`);
   return `video:${videoId}`;
 };
 
@@ -1810,8 +1923,8 @@ export const callDramaBackendVideoMkrGridApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[VMKRG:${tid}] 调用图像转视频 MKR Grid API`);
-  console.log(`[VMKRG:${tid}] 端点: /api/v1/generate/image2videomkrgrid`);
+  logger.info(LogCategory.NETWORK, `\n[VMKRG:${tid}] 调用图像转视频 MKR Grid API`);
+  logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 端点: /api/v1/generate/image2videomkrgrid`);
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1827,10 +1940,14 @@ export const callDramaBackendVideoMkrGridApi = async (
   if (options.refImage) {
     const filename = await uploadImageToDramaBackend(options.refImage, baseUrl, tid);
     requestBody.image = filename;
-    console.log(`[VMKRG:${tid}] 参考图上传成功 -> image: ${filename}`);
+    logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 参考图上传成功 -> image: ${filename}`);
   }
 
-  console.log(`[VMKRG:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(
+    LogCategory.NETWORK,
+    `[VMKRG:${tid}] 请求参数:`,
+    JSON.stringify(requestBody, null, 2),
+  );
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时
@@ -1849,7 +1966,11 @@ export const callDramaBackendVideoMkrGridApi = async (
         let errorMessage = `HTTP ${res.status}`;
         try {
           const errorText = await res.text();
-          console.error(`[VMKRG:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
+          logger.error(
+            LogCategory.NETWORK,
+            `[VMKRG:${tid}] 服务端响应 ${res.status}:`,
+            errorText.slice(0, 500),
+          );
           if (errorText) {
             try {
               const errorData = JSON.parse(errorText);
@@ -1881,7 +2002,7 @@ export const callDramaBackendVideoMkrGridApi = async (
     throw new Error(`图像转视频 Grid 失败：响应中未找到视频 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[VMKRG:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
+  logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
 
   let downloadUrl = videoUrl;
   if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
@@ -1889,23 +2010,27 @@ export const callDramaBackendVideoMkrGridApi = async (
   }
 
   try {
-    console.log(`[VMKRG:${tid}] 开始下载视频...`);
+    logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 开始下载视频...`);
     const response = await fetch(downloadUrl);
     if (!response.ok) {
       throw new Error(`下载失败: ${response.status}`);
     }
 
     const videoBlob = await response.blob();
-    console.log(`[VMKRG:${tid}] 视频下载成功，大小:`, videoBlob.size);
+    logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 视频下载成功，大小:`, videoBlob.size);
 
     const videoId = `vmkrg_${Date.now()}`;
     const { videoStorageService } = await import('../imageStorageService');
     await videoStorageService.saveVideo(videoId, videoBlob);
-    console.log(`[VMKRG:${tid}] 视频保存到本地: ${videoId}`);
+    logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 视频保存到本地: ${videoId}`);
 
     return `video:${videoId}`;
   } catch (downloadError: any) {
-    console.warn(`[VMKRG:${tid}] 视频下载失败，使用外部 URL:`, downloadError.message);
+    logger.warn(
+      LogCategory.NETWORK,
+      `[VMKRG:${tid}] 视频下载失败，使用外部 URL:`,
+      downloadError.message,
+    );
     return videoUrl;
   }
 };
@@ -1924,8 +2049,8 @@ export const callDramaBackendVideoMkrApi = async (
   const apiBase = getApiBaseUrlForModel(activeModel.id);
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
-  console.log(`\n[VMKR:${tid}] 调用图像转视频 MKR API`);
-  console.log(`[VMKR:${tid}] 端点: /api/v1/generate/image2videomkr`);
+  logger.info(LogCategory.NETWORK, `\n[VMKR:${tid}] 调用图像转视频 MKR API`);
+  logger.info(LogCategory.NETWORK, `[VMKR:${tid}] 端点: /api/v1/generate/image2videomkr`);
 
   const requestBody: any = {
     prompt: options.prompt,
@@ -1941,14 +2066,15 @@ export const callDramaBackendVideoMkrApi = async (
     for (const item of options.videoMkrImages) {
       const filename = await uploadImageToDramaBackend(item.image, baseUrl, tid);
       images.push({ image: filename, frame_index: item.frame_index });
-      console.log(
+      logger.info(
+        LogCategory.NETWORK,
         `[VMKR:${tid}] 关键帧上传成功 -> image: ${filename}, frame_index: ${item.frame_index}`,
       );
     }
     requestBody.images = images;
   }
 
-  console.log(`[VMKR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[VMKR:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
   const response = await retryOperation(async () => {
     const res = await fetch(`${baseUrl}/api/v1/generate/image2videomkr`, {
@@ -1961,7 +2087,11 @@ export const callDramaBackendVideoMkrApi = async (
       let errorMessage = `HTTP ${res.status}`;
       try {
         const errorText = await res.text();
-        console.error(`[VMKR:${tid}] 服务端响应 ${res.status}:`, errorText.slice(0, 500));
+        logger.error(
+          LogCategory.NETWORK,
+          `[VMKR:${tid}] 服务端响应 ${res.status}:`,
+          errorText.slice(0, 500),
+        );
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -1990,7 +2120,7 @@ export const callDramaBackendVideoMkrApi = async (
     throw new Error(`图像转视频失败：响应中未找到视频 URL: ${JSON.stringify(response)}`);
   }
 
-  console.log(`[VMKR:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
+  logger.info(LogCategory.NETWORK, `[VMKR:${tid}] Drama Backend 返回视频URL: ${videoUrl}`);
 
   let downloadUrl = videoUrl;
   if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
@@ -2007,7 +2137,7 @@ export const callDramaBackendVideoMkrApi = async (
   const videoId = `vid_mkr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   await videoStorageService.saveVideo(videoId, videoBlob);
 
-  console.log(`[VMKR:${tid}] 视频已保存: ${videoId}`);
+  logger.info(LogCategory.NETWORK, `[VMKR:${tid}] 视频已保存: ${videoId}`);
   return `video:${videoId}`;
 };
 
@@ -2035,12 +2165,18 @@ export const callImageApi = async (
 
   const isImageToImage = options.referenceImages && options.referenceImages.length > 0;
 
-  console.log(`\n[I2I:${tid}] 阶段 2/5 - ImageAdapter 分发`);
-  console.log(`[I2I:${tid}] 模型: ${activeModel.name} (${activeModel.id})`);
-  console.log(`[I2I:${tid}] 提供商: ${activeModel.providerId}`);
-  console.log(`[I2I:${tid}] API基础地址: ${apiBase}`);
-  console.log(`[I2I:${tid}] 图生图: ${isImageToImage ? '是' : '否（文生图）'}`);
-  console.log(`[I2I:${tid}] 参考图数量: ${options.referenceImages?.length || 0}`);
+  logger.info(LogCategory.NETWORK, `\n[I2I:${tid}] 阶段 2/5 - ImageAdapter 分发`);
+  logger.info(LogCategory.NETWORK, `[I2I:${tid}] 模型: ${activeModel.name} (${activeModel.id})`);
+  logger.info(LogCategory.NETWORK, `[I2I:${tid}] 提供商: ${activeModel.providerId}`);
+  logger.info(LogCategory.NETWORK, `[I2I:${tid}] API基础地址: ${apiBase}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${tid}] 图生图: ${isImageToImage ? '是' : '否（文生图）'}`,
+  );
+  logger.info(
+    LogCategory.NETWORK,
+    `[I2I:${tid}] 参考图数量: ${options.referenceImages?.length || 0}`,
+  );
 
   // 根据提供商选择不同的 API
   if (isDramaBackendProvider(activeModel)) {
@@ -2048,64 +2184,93 @@ export const callImageApi = async (
     const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
     if (options.isPromptEnhance) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (提示词增强 image2promptenhance 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (提示词增强 image2promptenhance 端点)`,
+      );
       return callDramaBackendPromptEnhanceApi(options.prompt, tid);
     }
 
     if (options.isCharacterTurnaround) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2character 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (专用 image2character 端点)`,
+      );
       return callDramaBackendCharacterApi(options, activeModel, baseUrl, tid);
     }
 
     if (options.isStoryboard) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (分镜生成 image2storyboard 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (分镜生成 image2storyboard 端点)`,
+      );
       return callDramaBackendStoryboardApi(options, activeModel, baseUrl, tid);
     }
 
     if (options.isIPAStyleTransfer) {
-      console.log(
+      logger.info(
+        LogCategory.NETWORK,
         `[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`,
       );
       return callDramaBackendIPAStyleTransferApi(options, tid);
     }
 
     if (options.isAnime) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (动漫风格生成 txt2imageanime 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (动漫风格生成 txt2imageanime 端点)`,
+      );
       return callDramaBackendAnimeApi(options, tid);
     }
 
     if (options.isVideoMkrGrid) {
-      console.log(
+      logger.info(
+        LogCategory.NETWORK,
         `[I2I:${tid}] → 路由到: Drama Backend (MKR Grid 宫格视频 image2videomkrgrid 端点)`,
       );
       return callDramaBackendVideoMkrGridApi(options, tid);
     }
 
     if (options.isVideoMkr) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (MKR 多关键帧视频 image2videomkr 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (MKR 多关键帧视频 image2videomkr 端点)`,
+      );
       return callDramaBackendVideoMkrApi(options, tid);
     }
 
     if (options.is360HDRI) {
-      console.log(`[I2I:${tid}] → 路由到: Drama Backend (360° HDRI 全景图像 image2360hdri 端点)`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (360° HDRI 全景图像 image2360hdri 端点)`,
+      );
       const refImage = options.referenceImages?.[0];
       return callDramaBackend360HdriApi(refImage, tid);
     }
 
-    console.log(`[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${tid}] → 路由到: Drama Backend (专用 image2image 端点)`,
+    );
     return callDramaBackendApi(options, activeModel, baseUrl, tid);
   } else if (isBigModelProvider(activeModel)) {
     if (!apiKey) {
       throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
     }
     apiBase = '/bigmodel';
-    console.log(`[I2I:${tid}] → 路由到: BigModel CogView (注意: 不支持参考图)`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${tid}] → 路由到: BigModel CogView (注意: 不支持参考图)`,
+    );
     return callCogViewApi(options, activeModel, apiKey, apiBase, tid);
   } else {
     if (!apiKey) {
       throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
     }
-    console.log(`[I2I:${tid}] → 路由到: Gemini Image (inlineData 方式传入参考图)`);
+    logger.info(
+      LogCategory.NETWORK,
+      `[I2I:${tid}] → 路由到: Gemini Image (inlineData 方式传入参考图)`,
+    );
     return callGeminiApi(options, activeModel, apiKey, apiBase, tid);
   }
 };

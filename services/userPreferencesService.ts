@@ -1,3 +1,4 @@
+import { logger, LogCategory } from './logger.ts';
 /**
  * 用户偏好设置服务
  * 通过 localStorage 持久化用户的项目配置偏好，新建项目时自动应用
@@ -44,7 +45,7 @@ export const savePreferences = (prefs: Partial<UserPreferences>): void => {
     const merged = { ...current, ...prefs };
     localStorage.setItem(PREFS_KEY, JSON.stringify(merged));
   } catch (e) {
-    console.warn('[UserPreferences] 保存偏好失败:', e);
+    logger.warn(LogCategory.STORAGE, '[UserPreferences] 保存偏好失败:', e);
   }
 };
 
@@ -52,7 +53,7 @@ export const resetPreferences = (): void => {
   try {
     localStorage.removeItem(PREFS_KEY);
   } catch (e) {
-    console.warn('[UserPreferences] 重置偏好失败:', e);
+    logger.warn(LogCategory.STORAGE, '[UserPreferences] 重置偏好失败:', e);
   }
 };
 

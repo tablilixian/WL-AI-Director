@@ -20,6 +20,7 @@ import { unifiedImageService } from '../unifiedImageService';
 import { uploadImageToDramaBackend } from './imageAdapter';
 import { videoStorageService } from '../imageStorageService';
 import { VIDEO_SORA_SIZE, VIDEO_DRAMA_SIZE, VIDEO_DRAMA_FALLBACK } from '../../config/sizeConfig';
+import { logger, LogCategory } from '../logger.ts';
 
 /**
  * 解析图片引用为 Base64 格式
@@ -309,8 +310,11 @@ const callSoraApi = async (
 
   const { width, height, size } = getSizeFromAspectRatio(aspectRatio);
 
-  console.log(`🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`);
-  console.log('[VideoAdapter] 参考图数量:', references.length);
+  logger.info(
+    LogCategory.NETWORK,
+    `🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`,
+  );
+  logger.info(LogCategory.NETWORK, '[VideoAdapter] 参考图数量:', references.length);
 
   const isCogVideo = resolvedModel.toLowerCase().includes('cogvideo');
   const isBigModel = model.providerId === 'bigmodel';
@@ -334,7 +338,11 @@ const callSoraApi = async (
       jsonData.image_url = `data:image/png;base64,${cleanBase64}`;
     }
 
-    console.log('[VideoAdapter] JSON 请求体:', JSON.stringify(jsonData, null, 2));
+    logger.info(
+      LogCategory.NETWORK,
+      '[VideoAdapter] JSON 请求体:',
+      JSON.stringify(jsonData, null, 2),
+    );
 
     requestBody = JSON.stringify(jsonData);
     headers['Content-Type'] = 'application/json';
@@ -396,11 +404,11 @@ const callSoraApi = async (
 
   const createData = await createResponse.json();
 
-  console.log('=== [VideoAdapter] 创建任务响应 ===');
-  console.log('[响应数据]', JSON.stringify(createData, null, 2));
+  logger.info(LogCategory.NETWORK, '=== [VideoAdapter] 创建任务响应 ===');
+  logger.info(LogCategory.NETWORK, '[响应数据]', JSON.stringify(createData, null, 2));
 
   if (createData.error) {
-    console.error('API 返回错误:', createData.error);
+    logger.error(LogCategory.NETWORK, 'API 返回错误:', createData.error);
     throw new Error(
       `视频生成失败: ${createData.error.message || createData.error.msg || JSON.stringify(createData.error)}`,
     );
@@ -409,11 +417,11 @@ const callSoraApi = async (
   const taskId = createData.id || createData.task_id || createData.taskId;
 
   if (!taskId) {
-    console.error('未找到任务 ID，完整响应:', createData);
+    logger.error(LogCategory.NETWORK, '未找到任务 ID，完整响应:', createData);
     throw new Error('创建视频任务失败：未返回任务 ID');
   }
 
-  console.log('📋 视频任务已创建，任务 ID:', taskId);
+  logger.info(LogCategory.NETWORK, '📋 视频任务已创建，任务 ID:', taskId);
 
   // 轮询状态
   const maxPollingTime = 1200000; // 20 分钟
@@ -440,7 +448,7 @@ const callSoraApi = async (
     });
 
     if (!statusResponse.ok) {
-      console.warn('⚠️ 查询任务状态失败，继续重试...');
+      logger.warn(LogCategory.NETWORK, '⚠️ 查询任务状态失败，继续重试...');
       continue;
     }
 
@@ -449,14 +457,18 @@ const callSoraApi = async (
     const status = statusData.task_status || statusData.status;
     const isBigModel = model.providerId === 'bigmodel';
 
-    console.log(`🔄 ${model.id} 任务状态:`, status, '进度:', statusData.progress);
-    console.log('[完整状态响应]', JSON.stringify(statusData, null, 2));
+    logger.info(LogCategory.NETWORK, `🔄 ${model.id} 任务状态:`, [
+      status,
+      '进度:',
+      statusData.progress,
+    ]);
+    logger.info(LogCategory.NETWORK, '[完整状态响应]', JSON.stringify(statusData, null, 2));
 
     if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
       // BigModel 返回 video_result 数组
       if (isBigModel && statusData.video_result && statusData.video_result.length > 0) {
         videoUrlFromStatus = statusData.video_result[0].url || statusData.video_result[0];
-        console.log('✅ BigModel 视频 URL:', videoUrlFromStatus);
+        logger.info(LogCategory.NETWORK, '✅ BigModel 视频 URL:', videoUrlFromStatus);
       } else {
         videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
         if (statusData.id && statusData.id.startsWith('video_')) {
@@ -472,7 +484,7 @@ const callSoraApi = async (
           videoId = statusData.outputs[0];
         }
       }
-      console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
+      logger.info(LogCategory.NETWORK, '✅ 任务完成，视频:', videoUrlFromStatus || videoId);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
       const errorMsg =
@@ -481,11 +493,11 @@ const callSoraApi = async (
         statusData.error_message ||
         statusData.result?.error ||
         JSON.stringify(statusData);
-      console.error('❌ 视频生成失败，完整响应:', statusData);
+      logger.error(LogCategory.NETWORK, '❌ 视频生成失败，完整响应:', statusData);
       throw new Error(`视频生成失败: ${errorMsg}`);
     }
 
-    console.log('🔄 Sora-2 任务状态:', status, '进度:', statusData.progress);
+    logger.info(LogCategory.NETWORK, '🔄 Sora-2 任务状态:', [status, '进度:', statusData.progress]);
 
     if (status === 'completed' || status === 'succeeded') {
       videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
@@ -501,7 +513,7 @@ const callSoraApi = async (
       if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
         videoId = statusData.outputs[0];
       }
-      console.log('✅ 任务完成，视频 ID:', videoId);
+      logger.info(LogCategory.NETWORK, '✅ 任务完成，视频 ID:', videoId);
       break;
     } else if (status === 'failed' || status === 'error') {
       throw new Error(`视频生成失败: ${statusData.error || statusData.message || '未知错误'}`);
@@ -513,7 +525,7 @@ const callSoraApi = async (
   }
 
   if (videoUrlFromStatus) {
-    console.log('✅ 视频生成完成，URL:', videoUrlFromStatus);
+    logger.info(LogCategory.NETWORK, '✅ 视频生成完成，URL:', videoUrlFromStatus);
     return videoUrlFromStatus;
   }
 
@@ -523,7 +535,7 @@ const callSoraApi = async (
 
   for (let attempt = 1; attempt <= maxDownloadRetries; attempt++) {
     try {
-      console.log(`📥 尝试下载视频 (第${attempt}/${maxDownloadRetries}次)...`);
+      logger.info(LogCategory.NETWORK, `📥 尝试下载视频 (第${attempt}/${maxDownloadRetries}次)...`);
 
       const downloadController = new AbortController();
       const downloadTimeoutId = setTimeout(() => downloadController.abort(), downloadTimeout);
@@ -541,7 +553,10 @@ const callSoraApi = async (
 
       if (!downloadResponse.ok) {
         if (downloadResponse.status >= 500 && attempt < maxDownloadRetries) {
-          console.warn(`⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`);
+          logger.warn(
+            LogCategory.NETWORK,
+            `⚠️ 下载失败 HTTP ${downloadResponse.status}，${5 * attempt}秒后重试...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
           continue;
         }
@@ -555,7 +570,7 @@ const callSoraApi = async (
         reader.onloadend = () => {
           const result = reader.result as string;
           if (result && result.startsWith('data:')) {
-            console.log('✅ 视频下载完成并转换为 base64');
+            logger.info(LogCategory.NETWORK, '✅ 视频下载完成并转换为 base64');
             resolve(result);
           } else {
             reject(new Error('视频转换失败'));
@@ -568,7 +583,7 @@ const callSoraApi = async (
       if (attempt === maxDownloadRetries) {
         throw error;
       }
-      console.warn(`⚠️ 下载出错: ${error.message}，重试中...`);
+      logger.warn(LogCategory.NETWORK, `⚠️ 下载出错: ${error.message}，重试中...`);
       await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
     }
   }
@@ -587,10 +602,16 @@ const callDramaBackendVideoApi = async (
 ): Promise<string> => {
   const tid = `drama_video_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-  console.log(`\n========== [${tid}] Drama Backend 视频生成请求开始 ==========`);
-  console.log(`[${tid}] 端点: POST /api/v1/generate/image2videomsr`);
-  console.log(`[${tid}] 目标地址: ${apiBase}`);
-  console.log(`[${tid}] 代理模式: ${import.meta.env.DEV ? '开发环境 (/drama-api)' : '生产环境'}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `\n========== [${tid}] Drama Backend 视频生成请求开始 ==========`,
+  );
+  logger.info(LogCategory.NETWORK, `[${tid}] 端点: POST /api/v1/generate/image2videomsr`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 目标地址: ${apiBase}`);
+  logger.info(
+    LogCategory.NETWORK,
+    `[${tid}] 代理模式: ${import.meta.env.DEV ? '开发环境 (/drama-api)' : '生产环境'}`,
+  );
 
   const baseUrl = import.meta.env.DEV ? '/drama-api' : apiBase;
 
@@ -616,34 +637,40 @@ const callDramaBackendVideoApi = async (
   // 第一张图作为 background
   const firstFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
   requestBody.background = firstFilename;
-  console.log(`[${tid}] 背景图上传成功 -> filename: ${firstFilename}`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 背景图上传成功 -> filename: ${firstFilename}`);
 
   if (allImages.length === 1) {
     requestBody.image1 = firstFilename;
-    console.log(`[${tid}] 仅一张图，image1 复用背景图`);
+    logger.info(LogCategory.NETWORK, `[${tid}] 仅一张图，image1 复用背景图`);
   } else {
     // 第二张图作为 image1
     const secondFilename = await uploadImageToDramaBackend(allImages[1], baseUrl, tid);
     requestBody.image1 = secondFilename;
-    console.log(`[${tid}] image1 上传成功 -> filename: ${secondFilename}`);
+    logger.info(LogCategory.NETWORK, `[${tid}] image1 上传成功 -> filename: ${secondFilename}`);
 
     // 后续图片依次为 image2/image3/image4
     for (let i = 2; i < Math.min(allImages.length, 5); i++) {
       const imgKey = `image${i}`;
-      console.log(`[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`,
+      );
       const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
       requestBody[imgKey] = filename;
-      console.log(`[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`);
+      logger.info(
+        LogCategory.NETWORK,
+        `[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
+      );
     }
   }
 
-  console.log(`\n[${tid}] ========== 请求参数 (JSON) ==========`);
-  console.log(JSON.stringify(requestBody, null, 2));
-  console.log(`[${tid}] ====================================\n`);
+  logger.info(LogCategory.NETWORK, `\n[${tid}] ========== 请求参数 (JSON) ==========`);
+  logger.info(LogCategory.NETWORK, '', JSON.stringify(requestBody, null, 2));
+  logger.info(LogCategory.NETWORK, `[${tid}] ====================================\n`);
 
   const data = await retryOperation(async () => {
     const requestUrl = `${baseUrl}/api/v1/generate/image2videomsr`;
-    console.log(`[${tid}] 发送请求: POST ${requestUrl}`);
+    logger.info(LogCategory.NETWORK, `[${tid}] 发送请求: POST ${requestUrl}`);
 
     const res = await fetch(requestUrl, {
       method: 'POST',
@@ -651,16 +678,16 @@ const callDramaBackendVideoApi = async (
       body: JSON.stringify(requestBody),
     });
 
-    console.log(`[${tid}] 响应状态: ${res.status} ${res.statusText}`);
-    console.log(`[${tid}] 响应头:`, Object.fromEntries(res.headers.entries()));
+    logger.info(LogCategory.NETWORK, `[${tid}] 响应状态: ${res.status} ${res.statusText}`);
+    logger.info(LogCategory.NETWORK, `[${tid}] 响应头:`, Object.fromEntries(res.headers.entries()));
 
     if (!res.ok) {
       let errorMessage = `HTTP 错误: ${res.status} ${res.statusText}`;
       try {
         const errorText = await res.text();
-        console.log(`[${tid}] ========== 错误响应 Body ==========`);
-        console.log(errorText);
-        console.log(`[${tid}] ===================================`);
+        logger.info(LogCategory.NETWORK, `[${tid}] ========== 错误响应 Body ==========`);
+        logger.info(LogCategory.NETWORK, '', errorText);
+        logger.info(LogCategory.NETWORK, `[${tid}] ===================================`);
         if (errorText) {
           try {
             const errorData = JSON.parse(errorText);
@@ -674,16 +701,16 @@ const callDramaBackendVideoApi = async (
           }
         }
       } catch (e) {
-        console.log(`[${tid}] 读取响应 Body 失败:`, e);
+        logger.info(LogCategory.NETWORK, `[${tid}] 读取响应 Body 失败:`, e);
         errorMessage = `HTTP 错误: ${res.status}`;
       }
       throw new Error(errorMessage);
     }
 
     const responseData = await res.json();
-    console.log(`[${tid}] ========== 成功响应 Body ==========`);
-    console.log(JSON.stringify(responseData, null, 2));
-    console.log(`[${tid}] ===================================`);
+    logger.info(LogCategory.NETWORK, `[${tid}] ========== 成功响应 Body ==========`);
+    logger.info(LogCategory.NETWORK, '', JSON.stringify(responseData, null, 2));
+    logger.info(LogCategory.NETWORK, `[${tid}] ===================================`);
     return responseData;
   });
   const videoUrl = data.full_url;
@@ -691,7 +718,7 @@ const callDramaBackendVideoApi = async (
     throw new Error(`视频生成失败：响应中未找到视频 URL: ${JSON.stringify(data)}`);
   }
 
-  console.log(`[${tid}] 视频URL: ${videoUrl}`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 视频URL: ${videoUrl}`);
 
   let downloadUrl = videoUrl;
   if (import.meta.env.DEV && videoUrl.startsWith('http://117.50.108.73:8082')) {
@@ -707,7 +734,7 @@ const callDramaBackendVideoApi = async (
   const videoId = `vid_drama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   await videoStorageService.saveVideo(videoId, videoBlob);
 
-  console.log(`[${tid}] 视频已保存: ${videoId}`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 视频已保存: ${videoId}`);
   return `video:${videoId}`;
 };
 

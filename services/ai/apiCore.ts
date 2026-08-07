@@ -399,7 +399,7 @@ export const chatCompletion = async (
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
       if (resolved?.providerId === 'wldramallm') {
-        console.log('[WLDramaLLM Request]', JSON.stringify(requestBody, null, 2));
+        logger.info(LogCategory.AI, '[WLDramaLLM Request]', JSON.stringify(requestBody, null, 2));
       }
 
       const response = await fetch(`${apiBase}${endpoint}`, {
@@ -470,7 +470,11 @@ export const chatCompletionStream = async (
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
       if (resolved?.providerId === 'wldramallm') {
-        console.log('[WLDramaLLM Stream Request]', JSON.stringify(requestBody, null, 2));
+        logger.info(
+          LogCategory.AI,
+          '[WLDramaLLM Stream Request]',
+          JSON.stringify(requestBody, null, 2),
+        );
       }
 
       const response = await fetch(`${apiBase}${endpoint}`, {

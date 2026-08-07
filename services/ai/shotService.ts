@@ -164,14 +164,14 @@ ${styleDesc}
       throw new Error('AI返回的JSON格式不正确');
     }
 
-    console.log('✅ AI同时优化起始帧和结束帧成功，耗时:', duration, 'ms');
+    logger.info(LogCategory.AI, '✅ AI同时优化起始帧和结束帧成功，耗时:', [duration, 'ms']);
 
     return {
       startPrompt: parsed.startFrame.trim(),
       endPrompt: parsed.endFrame.trim(),
     };
   } catch (error: any) {
-    console.error('❌ AI关键帧优化失败:', error);
+    logger.error(LogCategory.AI, '❌ AI关键帧优化失败:', error);
     throw new Error(`AI关键帧优化失败: ${error.message}`);
   }
 };
@@ -189,7 +189,8 @@ export const optimizeKeyframePrompt = async (
   model?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log(
+  logger.info(
+    LogCategory.AI,
     `🎨 optimizeKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`,
     resolvedModel,
   );
@@ -307,11 +308,11 @@ ${
     const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 1024));
     const duration = Date.now() - startTime;
 
-    console.log(`✅ AI ${frameLabel}优化成功，耗时:`, duration, 'ms');
+    logger.info(LogCategory.AI, `✅ AI ${frameLabel}优化成功，耗时:`, [duration, 'ms']);
 
     return result.trim();
   } catch (error: any) {
-    console.error(`❌ AI ${frameLabel}优化失败:`, error);
+    logger.error(LogCategory.AI, `❌ AI ${frameLabel}优化失败:`, error);
     throw new Error(`AI ${frameLabel}优化失败: ${error.message}`);
   }
 };
@@ -353,7 +354,7 @@ export const generateActionSuggestion = async (
   endImageUrl?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('🎬 generateActionSuggestion 调用 - 使用模型:', resolvedModel);
+  logger.info(LogCategory.AI, '🎬 generateActionSuggestion 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   // 并行分析首尾帧的实际画面（有图时）
@@ -421,11 +422,11 @@ ${
     const result = await retryOperation(() => chatCompletion(prompt, model, 0.8, 2048));
     const duration = Date.now() - startTime;
 
-    console.log('✅ AI动作生成成功，耗时:', duration, 'ms');
+    logger.info(LogCategory.AI, '✅ AI动作生成成功，耗时:', [duration, 'ms']);
 
     return result.trim();
   } catch (error: any) {
-    console.error('❌ AI动作生成失败:', error);
+    logger.error(LogCategory.AI, '❌ AI动作生成失败:', error);
     throw new Error(`AI动作生成失败: ${error.message}`);
   }
 };
@@ -445,7 +446,7 @@ export const splitShotIntoSubShots = async (
   model?: string,
 ): Promise<{ subShots: any[] }> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log('✂️ splitShotIntoSubShots 调用 - 使用模型:', resolvedModel);
+  logger.info(LogCategory.AI, '✂️ splitShotIntoSubShots 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
@@ -599,7 +600,10 @@ ${
       }
     }
 
-    console.log(`✅ 镜头拆分成功，生成 ${parsed.subShots.length} 个子镜头，耗时:`, duration, 'ms');
+    logger.info(LogCategory.AI, `✅ 镜头拆分成功，生成 ${parsed.subShots.length} 个子镜头，耗时:`, [
+      duration,
+      'ms',
+    ]);
 
     addRenderLogWithTokens({
       type: 'script-parsing',
@@ -613,7 +617,7 @@ ${
 
     return parsed;
   } catch (error: any) {
-    console.error('❌ 镜头拆分失败:', error);
+    logger.error(LogCategory.AI, '❌ 镜头拆分失败:', error);
 
     addRenderLogWithTokens({
       type: 'script-parsing',
@@ -646,7 +650,8 @@ export const enhanceKeyframePrompt = async (
   propsInfo?: { name: string; description: string; hasImage: boolean }[],
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
-  console.log(
+  logger.info(
+    LogCategory.AI,
     `🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`,
     resolvedModel,
   );
@@ -726,12 +731,12 @@ Output now:
     const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 3072));
     const duration = Date.now() - startTime;
 
-    console.log(`✅ AI ${frameLabel}增强成功，耗时:`, duration, 'ms');
+    logger.info(LogCategory.AI, `✅ AI ${frameLabel}增强成功，耗时:`, [duration, 'ms']);
 
     return result.trim();
   } catch (error: any) {
-    console.error(`❌ AI ${frameLabel}增强失败:`, error);
-    console.warn('⚠️ 回退到基础提示词');
+    logger.error(LogCategory.AI, `❌ AI ${frameLabel}增强失败:`, error);
+    logger.warn(LogCategory.AI, '⚠️ 回退到基础提示词');
     const fallbackStyle = getStylePrompt(visualStyle);
     return `${basePrompt}
 
@@ -764,12 +769,12 @@ export const generateNineGridPanels = async (
   _model?: string,
 ): Promise<NineGridPanel[]> => {
   const startTime = Date.now();
-  console.log('🎬 九宫格分镜 - 开始AI拆分视角...');
+  logger.info(LogCategory.AI, '🎬 九宫格分镜 - 开始AI拆分视角...');
 
   // 直接使用激活的模型，忽略传入的 model 参数
   const resolvedModel = getDefaultChatModelId();
   const resolvedModelObj = resolveModel('chat', resolvedModel);
-  console.log('🎬 九宫格分镜 - 使用模型:', resolvedModel, resolvedModelObj?.name);
+  logger.info(LogCategory.AI, '🎬 九宫格分镜 - 使用模型:', [resolvedModel, resolvedModelObj?.name]);
 
   const systemPrompt = `你是一位专业的电影分镜师和摄影指导。你的任务是将一个镜头动作拆解为9个不同的摄影视角，用于九宫格分镜预览。
 每个视角必须展示相同场景的不同景别和机位角度组合，确保覆盖从远景到特写、从俯拍到仰拍的多样化视角。`;
@@ -836,10 +841,10 @@ export const generateNineGridPanels = async (
 
     panels = panels.map((p, idx) => ({ ...p, index: idx }));
 
-    console.log(`✅ 九宫格分镜 - AI拆分完成，耗时: ${duration}ms`);
+    logger.info(LogCategory.AI, `✅ 九宫格分镜 - AI拆分完成，耗时: ${duration}ms`);
     return panels;
   } catch (error: any) {
-    console.error('❌ 九宫格分镜 - AI拆分失败:', error);
+    logger.error(LogCategory.AI, '❌ 九宫格分镜 - AI拆分失败:', error);
     throw new Error(`九宫格视角拆分失败: ${error.message}`);
   }
 };
@@ -855,7 +860,7 @@ export const generateNineGridImage = async (
   shotId?: string,
 ): Promise<string> => {
   const startTime = Date.now();
-  console.log('🎬 九宫格分镜 - 开始生成九宫格图片...');
+  logger.info(LogCategory.AI, '🎬 九宫格分镜 - 开始生成九宫格图片...');
 
   // 将 9 个 panel 描述拼接为多行 prompt（每行对应一个格子）
   const panelLines = panels.map(
@@ -864,8 +869,8 @@ export const generateNineGridImage = async (
   );
   const storyboardPrompt = panelLines.join('\n');
 
-  console.log('🎬 九宫格分镜 - 调用 Drama Backend image2storyboard 接口');
-  console.log(`🎬 九宫格分镜 - 格子数: ${panels.length}`);
+  logger.info(LogCategory.AI, '🎬 九宫格分镜 - 调用 Drama Backend image2storyboard 接口');
+  logger.info(LogCategory.AI, `🎬 九宫格分镜 - 格子数: ${panels.length}`);
 
   try {
     const imageUrl = await generateStoryboardImage(
@@ -878,10 +883,10 @@ export const generateNineGridImage = async (
     );
     const duration = Date.now() - startTime;
 
-    console.log(`✅ 九宫格分镜 - 图片生成完成，耗时: ${duration}ms`);
+    logger.info(LogCategory.AI, `✅ 九宫格分镜 - 图片生成完成，耗时: ${duration}ms`);
     return imageUrl;
   } catch (error: any) {
-    console.error('❌ 九宫格分镜 - 图片生成失败:', error);
+    logger.error(LogCategory.AI, '❌ 九宫格分镜 - 图片生成失败:', error);
     throw new Error(`九宫格图片生成失败: ${error.message}`);
   }
 };

@@ -1,6 +1,7 @@
 import { AssetLibraryItem, Character, ProjectState, Prop, Scene } from '../types';
 import type { LayerData } from '../src/modules/canvas/types/canvas';
 import { unifiedImageService } from '../services/unifiedImageService';
+import { logger, LogCategory } from './logger.ts';
 
 /**
  * 生成统一的 UUID（本地和云端共用）
@@ -13,8 +14,8 @@ const generateId = (): string => {
   }
   // 降级方案（旧浏览器）
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
@@ -36,10 +37,10 @@ async function ensureImageSavedToLocal(layer: LayerData): Promise<string> {
       const response = await fetch(layer.src);
       const blob = await response.blob();
       await unifiedImageService.saveImage(imageId, blob);
-      console.log('[AssetLibrary] 图片已保存到 IndexedDB:', imageId);
+      logger.info(LogCategory.IMAGE, '[AssetLibrary] 图片已保存到 IndexedDB:', imageId);
       return `local:${imageId}`;
     } catch (e) {
-      console.warn('[AssetLibrary] 保存图片到 IndexedDB 失败:', e);
+      logger.warn(LogCategory.IMAGE, '[AssetLibrary] 保存图片到 IndexedDB 失败:', e);
       // 降级：直接使用 data: URL（虽然云端同步可能不工作）
       return layer.src;
     }
@@ -49,18 +50,20 @@ async function ensureImageSavedToLocal(layer: LayerData): Promise<string> {
   return layer.src;
 }
 
-const cloneCharacterVariation = (variation: Character['variations'][number]): Character['variations'][number] => ({
+const cloneCharacterVariation = (
+  variation: Character['variations'][number],
+): Character['variations'][number] => ({
   ...variation,
   id: generateId(),
-  status: variation.imageUrl ? 'completed' : 'pending'
+  status: variation.imageUrl ? 'completed' : 'pending',
 });
 
 export const createLibraryItemFromTurnaround = (
   character: Character,
-  project?: Pick<ProjectState, 'id' | 'title'>
+  project?: Pick<ProjectState, 'id' | 'title'>,
 ): AssetLibraryItem => {
   const now = Date.now();
-  
+
   // 创建一个简化的角色对象，只包含九宫格图片信息
   const turnaroundCharacter: Character = {
     id: generateId(),
@@ -74,7 +77,7 @@ export const createLibraryItemFromTurnaround = (
     imageUrl: character.turnaround?.imageUrl,
     turnaround: character.turnaround,
     variations: [],
-    status: 'completed'
+    status: 'completed',
   };
 
   return {
@@ -85,13 +88,13 @@ export const createLibraryItemFromTurnaround = (
     projectName: project?.title,
     createdAt: now,
     updatedAt: now,
-    data: turnaroundCharacter
+    data: turnaroundCharacter,
   };
 };
 
 export const createLibraryItemFromCharacter = (
   character: Character,
-  project?: Pick<ProjectState, 'id' | 'title'>
+  project?: Pick<ProjectState, 'id' | 'title'>,
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
@@ -104,14 +107,14 @@ export const createLibraryItemFromCharacter = (
     updatedAt: now,
     data: {
       ...character,
-      variations: (character.variations || []).map((v) => ({ ...v }))
-    }
+      variations: (character.variations || []).map((v) => ({ ...v })),
+    },
   };
 };
 
 export const createLibraryItemFromScene = (
   scene: Scene,
-  project?: Pick<ProjectState, 'id' | 'title'>
+  project?: Pick<ProjectState, 'id' | 'title'>,
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
@@ -122,7 +125,7 @@ export const createLibraryItemFromScene = (
     projectName: project?.title,
     createdAt: now,
     updatedAt: now,
-    data: { ...scene }
+    data: { ...scene },
   };
 };
 
@@ -131,7 +134,7 @@ export const cloneCharacterForProject = (character: Character): Character => {
     ...character,
     id: generateId(),
     variations: (character.variations || []).map(cloneCharacterVariation),
-    status: character.imageUrl ? 'completed' : 'pending'
+    status: character.imageUrl ? 'completed' : 'pending',
   };
 };
 
@@ -139,13 +142,13 @@ export const cloneSceneForProject = (scene: Scene): Scene => {
   return {
     ...scene,
     id: generateId(),
-    status: scene.imageUrl ? 'completed' : 'pending'
+    status: scene.imageUrl ? 'completed' : 'pending',
   };
 };
 
 export const createLibraryItemFromProp = (
   prop: Prop,
-  project?: Pick<ProjectState, 'id' | 'title'>
+  project?: Pick<ProjectState, 'id' | 'title'>,
 ): AssetLibraryItem => {
   const now = Date.now();
   return {
@@ -156,7 +159,7 @@ export const createLibraryItemFromProp = (
     projectName: project?.title,
     createdAt: now,
     updatedAt: now,
-    data: { ...prop }
+    data: { ...prop },
   };
 };
 
@@ -164,11 +167,14 @@ export const clonePropForProject = (prop: Prop): Prop => {
   return {
     ...prop,
     id: generateId(),
-    status: prop.imageUrl ? 'completed' : 'pending'
+    status: prop.imageUrl ? 'completed' : 'pending',
   };
 };
 
-export const applyLibraryItemToProject = (project: ProjectState, item: AssetLibraryItem): ProjectState => {
+export const applyLibraryItemToProject = (
+  project: ProjectState,
+  item: AssetLibraryItem,
+): ProjectState => {
   if (!project.scriptData) {
     throw new Error('项目尚未生成角色和场景，无法导入资产。');
   }
@@ -186,7 +192,7 @@ export const applyLibraryItemToProject = (project: ProjectState, item: AssetLibr
     newData.props = [...(newData.props || []), prop];
   } else if (item.type === 'turnaround') {
     const turnaroundChar = item.data as Character;
-    const existingChar = newData.characters.find(c => c.name === turnaroundChar.name);
+    const existingChar = newData.characters.find((c) => c.name === turnaroundChar.name);
     if (existingChar) {
       existingChar.turnaround = turnaroundChar.turnaround;
     } else {
@@ -198,14 +204,14 @@ export const applyLibraryItemToProject = (project: ProjectState, item: AssetLibr
 
   return {
     ...project,
-    scriptData: newData
+    scriptData: newData,
   };
 };
 
 /**
  * 从画布图层创建资产库项
  * 智能识别图层来源，保存完整的角色/场景数据或创建新资产
- * 
+ *
  * @param layer - 画布图层数据
  * @param project - 当前项目状态
  * @param assetType - 目标资产类型（当无法从图层识别时使用）
@@ -216,33 +222,47 @@ export const createLibraryItemFromLayer = async (
   layer: LayerData,
   project: ProjectState,
   assetType: 'character' | 'scene' | 'prop',
-  customName?: string
+  customName?: string,
 ): Promise<AssetLibraryItem> => {
   // 优先尝试从图层关联的资源 ID 获取完整的角色/场景数据
   // 这样能保存完整的结构化数据（如角色设定、场景描述等），而不仅仅是一张图片
   if (layer.linkedResourceId && layer.linkedResourceType !== 'keyframe') {
     if (layer.linkedResourceType === 'character') {
-      const character = project.scriptData?.characters.find(c => c.id === layer.linkedResourceId);
+      const character = project.scriptData?.characters.find((c) => c.id === layer.linkedResourceId);
       if (character) {
-        console.log('[AssetLibrary] 从图层关联的角色创建资产库项:', character.name);
+        logger.info(
+          LogCategory.IMAGE,
+          '[AssetLibrary] 从图层关联的角色创建资产库项:',
+          character.name,
+        );
         return createLibraryItemFromCharacter(character, project);
       }
     } else if (layer.linkedResourceType === 'scene') {
-      const scene = project.scriptData?.scenes.find(s => s.id === layer.linkedResourceId);
+      const scene = project.scriptData?.scenes.find((s) => s.id === layer.linkedResourceId);
       if (scene) {
-        console.log('[AssetLibrary] 从图层关联的场景创建资产库项:', scene.location);
+        logger.info(
+          LogCategory.IMAGE,
+          '[AssetLibrary] 从图层关联的场景创建资产库项:',
+          scene.location,
+        );
         return createLibraryItemFromScene(scene, project);
       }
     }
   }
-  
+
   // 如果图层没有关联资源 ID 或关联的是关键帧，则从图层图片创建新资产
   // 这种情况适用于：AI 生成的图片、导入的本地图片等
   // 优先使用 imageId 创建 local: 引用，确保云端同步能工作
   const imageUrl = await ensureImageSavedToLocal(layer);
-  
-  console.log('[AssetLibrary] 从图层图片创建新资产，类型:', assetType, '图层标题:', layer.title, 'imageUrl:', imageUrl?.substring(0, 50));
-  
+
+  logger.info(LogCategory.IMAGE, '[AssetLibrary] 从图层图片创建新资产，类型:', [
+    assetType,
+    '图层标题:',
+    layer.title,
+    'imageUrl:',
+    imageUrl?.substring(0, 50),
+  ]);
+
   if (assetType === 'character') {
     // 创建新的角色资产
     const character: Character = {
@@ -257,7 +277,7 @@ export const createLibraryItemFromLayer = async (
       imageUrl,
       turnaround: undefined,
       variations: [],
-      status: 'completed'
+      status: 'completed',
     };
     return createLibraryItemFromCharacter(character, project);
   } else if (assetType === 'scene') {
@@ -270,7 +290,7 @@ export const createLibraryItemFromLayer = async (
       visualPrompt: '',
       negativePrompt: '',
       imageUrl,
-      status: 'completed'
+      status: 'completed',
     };
     return createLibraryItemFromScene(scene, project);
   } else {
@@ -283,7 +303,7 @@ export const createLibraryItemFromLayer = async (
       visualPrompt: '',
       negativePrompt: '',
       imageUrl,
-      status: 'completed'
+      status: 'completed',
     };
     return createLibraryItemFromProp(prop, project);
   }

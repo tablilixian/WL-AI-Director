@@ -1,4 +1,5 @@
 import { pb } from '../src/api/pocketbase';
+import { logger, LogCategory } from './logger.ts';
 
 export interface CloudCanvasData {
   projectId: string;
@@ -27,7 +28,7 @@ export const canvasCloudApi = {
       };
     } catch (error: any) {
       if (error?.status !== 0) {
-        console.error('[CanvasCloudApi] get failed:', error);
+        logger.error(LogCategory.STORAGE, '[CanvasCloudApi] get failed:', error);
       }
       throw error;
     }
@@ -52,7 +53,7 @@ export const canvasCloudApi = {
       }
     } catch (error: any) {
       if (error?.status !== 0) {
-        console.error('[CanvasCloudApi] save failed:', error);
+        logger.error(LogCategory.STORAGE, '[CanvasCloudApi] save failed:', error);
       }
       throw error;
     }
@@ -68,7 +69,7 @@ export const canvasCloudApi = {
       }
     } catch (error: any) {
       if (error?.status !== 0) {
-        console.error('[CanvasCloudApi] delete failed:', error);
+        logger.error(LogCategory.STORAGE, '[CanvasCloudApi] delete failed:', error);
       }
       throw error;
     }
