@@ -52,7 +52,9 @@ export default tseslint.config(
       // 渐进收紧（当前 warn，后续升级 error）
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      // 优先升级：no-non-null-assertion 是运行时崩溃直接来源（obj!.prop 在 null 时抛错白屏），
+      // 提为 error。门禁增量特性：仅校验暂存文件，存量 117 处不阻塞全仓，改到哪清到哪。
+      '@typescript-eslint/no-non-null-assertion': 'error',
 
       // 日志纪律：禁止裸 console.*（替换为统一 logger，见 services/logger）
       'no-console': 'warn',

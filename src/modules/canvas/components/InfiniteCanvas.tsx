@@ -5,6 +5,7 @@
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Film, Sparkles, Orbit } from 'lucide-react';
+import { ErrorBoundary } from '../../../../components/ErrorBoundary';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -979,7 +980,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
         {connectionDragRef.current &&
           (() => {
-            const d = connectionDragRef.current!;
+            const d = connectionDragRef.current;
             const controlOffset = Math.abs(d.toX - d.fromX) * 0.5;
             const store = useCanvasStore.getState();
             const src = store.layers.find((l) => l.id === d.sourceLayerId);
@@ -1101,9 +1102,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       )}
 
       {/* 推演流程面板（从 ImageActionMenu 打开） */}
-      {showStoryDeductionFlow && (
+      {showStoryDeductionFlow && storyDeductionFlowLayerId && (
         <StoryDeductionFlowPanel
-          flowLayerId={storyDeductionFlowLayerId!}
+          flowLayerId={storyDeductionFlowLayerId}
           onClose={() => {
             setShowStoryDeductionFlow(false);
             setStoryDeductionFlowLayerId(null);
@@ -1161,20 +1162,24 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           }
 
           return (
-            <GenerateVideoPanel
-              selectedLayerIds={videoLayer.sourceLayerIds || []}
-              initialConfig={initialConfig}
-              onClose={() => setShowAiVideoReGen(false)}
-            />
+            <ErrorBoundary name="GenerateVideoPanel">
+              <GenerateVideoPanel
+                selectedLayerIds={videoLayer.sourceLayerIds || []}
+                initialConfig={initialConfig}
+                onClose={() => setShowAiVideoReGen(false)}
+              />
+            </ErrorBoundary>
           );
         })()}
 
       {/* 视频节点面板：通过右键菜单打开，选中变化时关闭 */}
       {videoNodePanelLayerId && (
-        <VideoNodePanel
-          layerId={videoNodePanelLayerId}
-          onClose={() => setVideoNodePanelLayerId(null)}
-        />
+        <ErrorBoundary name="VideoNodePanel">
+          <VideoNodePanel
+            layerId={videoNodePanelLayerId}
+            onClose={() => setVideoNodePanelLayerId(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {/* 多图操作栏：当选中 2+ 图片时显示 */}
@@ -1311,10 +1316,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         />
       )}
 
-      {showSaveToLibraryDialog && saveToLibraryLayer && (
+      {showSaveToLibraryDialog && saveToLibraryLayer && project && (
         <SaveToLibraryDialog
           layer={saveToLibraryLayer}
-          project={project!}
+          project={project}
           onClose={() => {
             setShowSaveToLibraryDialog(false);
             setSaveToLibraryLayer(null);
@@ -1323,18 +1328,22 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       )}
 
       {generateVideoLayerIds && (
-        <GenerateVideoPanel
-          selectedLayerIds={generateVideoLayerIds}
-          onClose={() => setGenerateVideoLayerIds(null)}
-        />
+        <ErrorBoundary name="GenerateVideoPanel">
+          <GenerateVideoPanel
+            selectedLayerIds={generateVideoLayerIds}
+            onClose={() => setGenerateVideoLayerIds(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {regenerateVideoConfig && (
-        <GenerateVideoPanel
-          selectedLayerIds={regenerateVideoConfig.sourceLayerIds}
-          initialConfig={regenerateVideoConfig.config}
-          onClose={() => setRegenerateVideoConfig(null)}
-        />
+        <ErrorBoundary name="GenerateVideoPanel">
+          <GenerateVideoPanel
+            selectedLayerIds={regenerateVideoConfig.sourceLayerIds}
+            initialConfig={regenerateVideoConfig.config}
+            onClose={() => setRegenerateVideoConfig(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {contextMenu && (
