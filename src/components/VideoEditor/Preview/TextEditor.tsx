@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlignLeft, AlignCenter, AlignRight, Volume2, FileAudio, Loader2, Check, AlertCircle } from 'lucide-react';
+import {
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Volume2,
+  FileAudio,
+  Loader2,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
 import { TextClip, TextAnimation, AudioClip } from '../../../types/editor';
 import { getTTSProvider, TTSVoice } from '../../../services/tts';
 import { useTimelineStore } from '../../../stores/timelineStore';
@@ -27,11 +36,7 @@ const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: 'pop', label: '弹出' },
 ];
 
-export const TextEditor: React.FC<TextEditorProps> = ({
-  clip,
-  onUpdate,
-  onClose,
-}) => {
+export const TextEditor: React.FC<TextEditorProps> = ({ clip, onUpdate, onClose }) => {
   const [voices, setVoices] = useState<TTSVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');
   const [speaking, setSpeaking] = useState(false);
@@ -40,22 +45,28 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   const provider = getTTSProvider();
 
   useEffect(() => {
-    provider.getVoices().then(setVoices).catch(() => {});
+    provider
+      .getVoices()
+      .then(setVoices)
+      .catch(() => {});
   }, [provider]);
 
-  const handleTextChange = useCallback((text: string) => {
-    if (clip.ttsStatus === 'done' && clip.text !== text) {
-      onUpdate({ text, ttsStatus: 'none', ttsAudioClipId: undefined });
-    } else {
-      onUpdate({ text });
-    }
-  }, [clip, onUpdate]);
+  const handleTextChange = useCallback(
+    (text: string) => {
+      if (clip.ttsStatus === 'done' && clip.text !== text) {
+        onUpdate({ text, ttsStatus: 'none', ttsAudioClipId: undefined });
+      } else {
+        onUpdate({ text });
+      }
+    },
+    [clip, onUpdate],
+  );
 
   const handleSpeak = useCallback(async () => {
     if (!clip.text || speaking) return;
     setSpeaking(true);
     try {
-      await provider.speak(clip.text, selectedVoice || undefined);
+      await provider.speak(clip.text, selectedVoice ?? '');
     } catch (e) {
       console.warn('[TTS] 试听失败:', e);
     } finally {
@@ -78,7 +89,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
       const addClip = useTimelineStore.getState().addClip;
       const tracks = useTimelineStore.getState().tracks;
-      const audioTrack = tracks.find(t => t.type === 'audio');
+      const audioTrack = tracks.find((t) => t.type === 'audio');
       if (!audioTrack) {
         throw new Error('未找到音频轨道');
       }
@@ -107,7 +118,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       onUpdate({
         ttsStatus: 'done',
         ttsVoiceId: selectedVoice,
-        ttsVoiceName: voices.find(v => v.id === selectedVoice)?.name,
+        ttsVoiceName: voices.find((v) => v.id === selectedVoice)?.name,
         ttsAudioClipId: audioClip.id,
       });
     } catch (e: any) {
@@ -117,7 +128,16 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     } finally {
       setGenerating(false);
     }
-  }, [clip.text, clip.startTime, clip.duration, clip.id, selectedVoice, generating, voices, onUpdate]);
+  }, [
+    clip.text,
+    clip.startTime,
+    clip.duration,
+    clip.id,
+    selectedVoice,
+    generating,
+    voices,
+    onUpdate,
+  ]);
 
   return (
     <div className="bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-lg p-4 space-y-4">
@@ -152,8 +172,10 @@ export const TextEditor: React.FC<TextEditorProps> = ({
               onChange={(e) => onUpdate({ fontFamily: e.target.value })}
               className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] focus:outline-none"
             >
-              {FONTS.map(f => (
-                <option key={f.value} value={f.value}>{f.label}</option>
+              {FONTS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
               ))}
             </select>
           </div>
@@ -255,8 +277,10 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             onChange={(e) => onUpdate({ animation: e.target.value as TextAnimation })}
             className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] focus:outline-none"
           >
-            {ANIMATIONS.map(a => (
-              <option key={a.value} value={a.value}>{a.label}</option>
+            {ANIMATIONS.map((a) => (
+              <option key={a.value} value={a.value}>
+                {a.label}
+              </option>
             ))}
           </select>
         </div>
@@ -274,8 +298,10 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] focus:outline-none"
           >
             <option value="">选择语音...</option>
-            {voices.map(v => (
-              <option key={v.id} value={v.id}>{v.name}</option>
+            {voices.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
             ))}
           </select>
         </div>
@@ -286,7 +312,11 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             disabled={!clip.text || !selectedVoice || speaking}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {speaking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {speaking ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5" />
+            )}
             试听
           </button>
 
@@ -296,7 +326,11 @@ export const TextEditor: React.FC<TextEditorProps> = ({
               disabled={!clip.text || !selectedVoice || generating}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded text-xs font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileAudio className="w-3.5 h-3.5" />}
+              {generating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileAudio className="w-3.5 h-3.5" />
+              )}
               生成配音
             </button>
           )}
@@ -305,13 +339,22 @@ export const TextEditor: React.FC<TextEditorProps> = ({
         {clip.ttsStatus && clip.ttsStatus !== 'none' && (
           <div className="flex items-center gap-1.5 text-xs">
             {clip.ttsStatus === 'generating' && (
-              <><Loader2 className="w-3 h-3 animate-spin text-[var(--text-muted)]" /><span className="text-[var(--text-muted)]">生成中...</span></>
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-[var(--text-muted)]" />
+                <span className="text-[var(--text-muted)]">生成中...</span>
+              </>
             )}
             {clip.ttsStatus === 'done' && (
-              <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">配音已生成</span></>
+              <>
+                <Check className="w-3 h-3 text-green-500" />
+                <span className="text-green-500">配音已生成</span>
+              </>
             )}
             {clip.ttsStatus === 'error' && (
-              <><AlertCircle className="w-3 h-3 text-red-500" /><span className="text-red-500">生成失败</span></>
+              <>
+                <AlertCircle className="w-3 h-3 text-red-500" />
+                <span className="text-red-500">生成失败</span>
+              </>
             )}
           </div>
         )}

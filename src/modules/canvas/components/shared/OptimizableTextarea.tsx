@@ -1,6 +1,6 @@
 /**
  * OptimizableTextarea
- * 
+ *
  * 通用的"AI 提示词优化"输入组件。
  * 原始输入框 + AI 优化按钮 + 优化结果独立展示，用户可对比和编辑。
  */
@@ -94,7 +94,7 @@ export const OptimizableTextarea: React.FC<OptimizableTextareaProps> = ({
         setErrorMessage('');
       }
     },
-    [onChange, status]
+    [onChange, status],
   );
 
   return (
@@ -102,7 +102,9 @@ export const OptimizableTextarea: React.FC<OptimizableTextareaProps> = ({
       {/* 原始输入区域 */}
       <div>
         {label && (
-          <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">{label}</label>
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
+            {label}
+          </label>
         )}
         <textarea
           value={value}
@@ -184,10 +186,10 @@ export const OptimizableTextarea: React.FC<OptimizableTextareaProps> = ({
             </span>
             <button
               onClick={handleRedoOptimize}
-              disabled={status === 'loading'}
+              disabled={(status as string) === 'loading'}
               className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-50"
             >
-              {status === 'loading' ? (
+              {(status as string) === 'loading' ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
                 <RotateCcw className="w-3 h-3" />

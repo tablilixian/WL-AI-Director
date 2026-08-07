@@ -7,9 +7,15 @@ interface StoryDeductionPanelProps {
   onClose: () => void;
 }
 
-export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ selectedLayerId, onClose }) => {
-  const [systemPrompt, setSystemPrompt] = useState('你是一个专业的影视分镜师。请分析当前画面后，创作后续4个分镜的详细描述。');
-  const [userPrompt, setUserPrompt] = useState(`分析这张画面的场景、构图、光影、角色和情绪，然后为下一帧的4个分镜画面做详细描述：
+export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({
+  selectedLayerId,
+  onClose,
+}) => {
+  const [systemPrompt, setSystemPrompt] = useState(
+    '你是一个专业的影视分镜师。请分析当前画面后，创作后续4个分镜的详细描述。',
+  );
+  const [userPrompt, setUserPrompt] =
+    useState(`分析这张画面的场景、构图、光影、角色和情绪，然后为下一帧的4个分镜画面做详细描述：
 
 要求：
 - 输出4个分镜描述，每个描述一句话，每行一个
@@ -25,8 +31,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
   const [resultImageRef, setResultImageRef] = useState<string | null>(null);
   const { layers, addLayer } = useCanvasStore();
 
-  const selectedLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
-  const displaySrc = selectedLayer?.type === 'image' && selectedLayer?.src ? selectedLayer.src : null;
+  const selectedLayer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
+  const displaySrc =
+    selectedLayer?.type === 'image' && selectedLayer?.src ? selectedLayer.src : null;
 
   const handleAnalyze = async () => {
     if (!displaySrc || !selectedLayer || isProcessing) return;
@@ -99,8 +106,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
     const actualDimensions = await new Promise<{ width: number; height: number }>((resolve) => {
       const img = new Image();
       img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = () => resolve({ width: STORYBOARD_4GRID.LAYER_WIDTH, height: STORYBOARD_4GRID.LAYER_HEIGHT });
-      img.src = resultImageUrl;
+      img.onerror = () =>
+        resolve({ width: STORYBOARD_4GRID.LAYER_WIDTH, height: STORYBOARD_4GRID.LAYER_HEIGHT });
+      img.src = resultImageUrl!;
     });
 
     addLayer({
@@ -127,7 +135,12 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
         <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
           <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">剧情推演</h3>
           <p className="text-sm text-[var(--text-muted)] mb-4">请先选中一张关键帧图片。</p>
-          <button onClick={onClose} className="w-full py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors">关闭</button>
+          <button
+            onClick={onClose}
+            className="w-full py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            关闭
+          </button>
         </div>
       </div>
     );
@@ -143,9 +156,17 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
               基于「{selectedLayer?.title}」推演后续四宫格分镜
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors p-1"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -154,7 +175,12 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-sm text-red-400">{error}</p>
-              <button onClick={() => setError(null)} className="text-xs text-red-400 underline mt-1">关闭</button>
+              <button
+                onClick={() => setError(null)}
+                className="text-xs text-red-400 underline mt-1"
+              >
+                关闭
+              </button>
             </div>
           )}
 
@@ -162,8 +188,12 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
             <>
               <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
                 <div className="px-4 py-2 bg-gray-800 border-b border-[var(--border-primary)] flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">参考图片</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">{selectedLayer?.title}</span>
+                  <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    参考图片
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {selectedLayer?.title}
+                  </span>
                 </div>
                 <div className="p-3">
                   <div className="aspect-video bg-[var(--bg-hover)] rounded-lg overflow-hidden">
@@ -174,7 +204,8 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
 
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-                  System Prompt <span className="text-[var(--text-muted)] font-normal">（系统提示词）</span>
+                  System Prompt{' '}
+                  <span className="text-[var(--text-muted)] font-normal">（系统提示词）</span>
                 </label>
                 <textarea
                   value={systemPrompt}
@@ -186,7 +217,8 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
 
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
-                  User Prompt <span className="text-[var(--text-muted)] font-normal">（用户提示词）</span>
+                  User Prompt{' '}
+                  <span className="text-[var(--text-muted)] font-normal">（用户提示词）</span>
                 </label>
                 <textarea
                   value={userPrompt}
@@ -201,9 +233,14 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
                   <div className="flex items-center justify-center mb-4">
                     <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                   </div>
-                  <p className="text-sm text-[var(--text-muted)] mb-2">AI 正在分析画面并生成分镜描述... {progress}%</p>
+                  <p className="text-sm text-[var(--text-muted)] mb-2">
+                    AI 正在分析画面并生成分镜描述... {progress}%
+                  </p>
                   <div className="mt-4 h-2 bg-gray-700 rounded-full overflow-hidden max-w-md mx-auto">
-                    <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
                 </div>
               ) : (
@@ -212,7 +249,12 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
                   className="w-full py-2.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                   AI 分析并生成分镜描述
                 </button>
@@ -224,7 +266,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
             <div className="space-y-4">
               <div className="bg-[var(--bg-base)] rounded-lg border border-amber-500/30 overflow-hidden">
                 <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
-                  <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">分镜描述结果（可编辑）</p>
+                  <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    分镜描述结果（可编辑）
+                  </p>
                 </div>
                 <div className="p-4">
                   <div className="flex gap-3 mb-3">
@@ -232,7 +276,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
                       <img src={displaySrc} className="w-full h-full object-cover" alt="参考" />
                     </div>
                     <div className="text-[10px] text-[var(--text-muted)] leading-relaxed">
-                      基于当前画面生成4个分镜描述，<br />修改后点击下方按钮生成四宫格
+                      基于当前画面生成4个分镜描述，
+                      <br />
+                      修改后点击下方按钮生成四宫格
                     </div>
                   </div>
                   <textarea
@@ -247,7 +293,9 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
               {resultImageUrl && (
                 <div className="bg-[var(--bg-base)] rounded-lg border border-green-500/30 overflow-hidden">
                   <div className="px-4 py-2 bg-green-500/10 border-b border-green-500/20">
-                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider">生成结果</p>
+                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider">
+                      生成结果
+                    </p>
                   </div>
                   <div className="p-4">
                     <img src={resultImageUrl} className="w-full rounded-lg" alt="四宫格推演结果" />
@@ -257,7 +305,11 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setVlOutput(''); setResultImageUrl(null); setResultImageRef(null); }}
+                  onClick={() => {
+                    setVlOutput('');
+                    setResultImageUrl(null);
+                    setResultImageRef(null);
+                  }}
                   className="flex-1 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-sm rounded-lg hover:text-[var(--text-primary)] transition-colors"
                 >
                   重新分析
@@ -276,8 +328,18 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
                         </svg>
                         生成四宫格推演
                       </>
@@ -298,9 +360,16 @@ export const StoryDeductionPanel: React.FC<StoryDeductionPanelProps> = ({ select
 
         <div className="p-6 pt-4 border-t border-[var(--border-primary)] flex justify-between items-center shrink-0">
           <p className="text-[10px] text-[var(--text-muted)]">
-            {vlOutput ? (resultImageUrl ? '保存四宫格到画布' : '编辑分镜描述后生成四宫格') : '填写 prompt → VLM 分析 → 生成四宫格'}
+            {vlOutput
+              ? resultImageUrl
+                ? '保存四宫格到画布'
+                : '编辑分镜描述后生成四宫格'
+              : '填写 prompt → VLM 分析 → 生成四宫格'}
           </p>
-          <button onClick={onClose} className="px-4 py-2 text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors"
+          >
             {resultImageUrl ? '关闭' : '取消'}
           </button>
         </div>

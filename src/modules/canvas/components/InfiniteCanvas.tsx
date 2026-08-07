@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Film, Sparkles, Plus, Orbit } from 'lucide-react';
+import { Film, Sparkles, Orbit } from 'lucide-react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useCanvasControls } from '../hooks/useCanvasControls';
 import { CanvasLayer } from './CanvasLayer';
@@ -46,13 +46,13 @@ interface DrawingState {
 }
 
 export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', project }) => {
-  const { 
-    layers, 
-    offset, 
-    scale, 
-    selectedLayerId, 
-    selectedLayerIds, 
-    selectLayer, 
+  const {
+    layers,
+    offset,
+    scale,
+    selectedLayerId,
+    selectedLayerIds,
+    selectLayer,
     selectAllLayers,
     clearSelection,
     deleteLayer,
@@ -63,15 +63,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     addLayer,
     updateLayer,
     duplicateLayer,
-    undo, 
+    undo,
     redo,
     templatePanelOpen,
     activeTool,
     strokeColor,
     strokeWidth,
-    setActiveTool,
-    setStrokeColor,
-    setStrokeWidth
   } = useCanvasStore();
   const { canvasRef, handleMouseDown } = useCanvasControls();
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,7 +82,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     toX: number;
     toY: number;
   } | null>(null);
-  
+
   const [showLayerDetail, setShowLayerDetail] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
@@ -93,7 +90,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   const [gridSnap, setGridSnap] = useState(false);
   const [gridSize, setGridSize] = useState(50);
   const [promptLinkLayerId, setPromptLinkLayerId] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(
+    null,
+  );
   const [showSaveToLibraryDialog, setShowSaveToLibraryDialog] = useState(false);
   const [saveToLibraryLayer, setSaveToLibraryLayer] = useState<LayerData | null>(null);
   const [generateVideoLayerIds, setGenerateVideoLayerIds] = useState<string[] | null>(null);
@@ -103,7 +102,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   } | null>(null);
   const [showAiVideoReGen, setShowAiVideoReGen] = useState(false);
   const [videoNodePanelLayerId, setVideoNodePanelLayerId] = useState<string | null>(null);
-  const [showFlowOperationCard, setShowFlowOperationCard] = useState(false);
+  const [, setShowFlowOperationCard] = useState(false);
   const [flowCardLayerId, setFlowCardLayerId] = useState<string | null>(null);
   const [showFlowPanel, setShowFlowPanel] = useState(false);
   const [activeFlowLayerId, setActiveFlowLayerId] = useState<string | null>(null);
@@ -115,14 +114,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     startY: 0,
     currentX: 0,
     currentY: 0,
-    points: []
+    points: [],
   });
 
   const [, forceRender] = useState(0);
   const isConnectingRef = useRef(false);
 
   useEffect(() => {
-    const layer = selectedLayerId ? layers.find(l => l.id === selectedLayerId) : null;
+    const layer = selectedLayerId ? layers.find((l) => l.id === selectedLayerId) : null;
     if (!(layer?.type === 'video' && layer?.operationType === 'image-to-video')) {
       setShowAiVideoReGen(false);
     }
@@ -135,135 +134,151 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     }
   }, [selectedLayerId, videoNodePanelLayerId]);
 
-  const createMkrNode = useCallback((sourceImageIds: string[]) => {
-    const currentLayers = useCanvasStore.getState().layers;
-    const sourceLayers = currentLayers.filter(l => sourceImageIds.includes(l.id) && l.type === 'image');
-    if (sourceLayers.length === 0) return;
-
-    const firstSource = sourceLayers[0];
-    const lastSource = sourceLayers[sourceLayers.length - 1];
-    const mkrX = firstSource.x;
-    const mkrY = lastSource.y + lastSource.height + 40;
-    const totalFrames = 360;
-
-    const initialFrames = sourceLayers.map((l, i) => ({
-      layerId: l.id,
-      frameIndex: i === 0 ? 0 : i === sourceLayers.length - 1 ? -1 : Math.round(i * totalFrames / (sourceLayers.length - 1)),
-      prompt: '',
-    }));
-
-    addLayer({
-      id: crypto.randomUUID(),
-      type: 'video',
-      x: mkrX,
-      y: mkrY,
-      width: 640,
-      height: 360,
-      src: '',
-      title: 'MKR视频节点',
-      createdAt: Date.now(),
-      sourceLayerIds: sourceImageIds,
-      operationType: 'mkr-video',
-      generationPrompt: JSON.stringify({
-        frames: initialFrames,
-        globalPrompt: '',
-        duration: 12,
-        fps: 30,
-        width: 640,
-        height: 360,
-      }),
-    });
-
-    // Select the new node after it's added (it will be the last layer)
-    const newLayers = useCanvasStore.getState().layers;
-    const newNode = newLayers[newLayers.length - 1];
-    if (newNode) {
-      selectLayer(newNode.id);
-      setVideoNodePanelLayerId(newNode.id);
-    }
-  }, [addLayer, selectLayer]);
-
-  const [stitchLoading, setStitchLoading] = useState(false);
-
-  const stitchPanorama = useCallback(async (sourceImageIds: string[]) => {
-    if (stitchLoading) return;
-    const currentLayers = useCanvasStore.getState().layers;
-    const sourceLayers = currentLayers.filter(l => sourceImageIds.includes(l.id) && l.type === 'image' && l.src);
-    if (sourceLayers.length === 0) return;
-
-    setStitchLoading(true);
-    try {
-      const refImages = sourceLayers.map(l => l.src).filter(Boolean) as string[];
-      const result = await canvasModelService.generateImage({
-        prompt: '720 degree equirectangular panorama, seamless stitching of multiple views, wide angle, 360 degree spatial scene',
-        referenceImages: refImages,
-        aspectRatio: '16:9',
-      });
-
-      let panoramaSrc = '';
-      if (typeof result === 'string') {
-        panoramaSrc = result;
-      } else if (result && typeof result === 'object' && 'images' in result) {
-        panoramaSrc = (result as any).images?.[0]?.url || (result as any).images?.[0] || '';
-      }
-
-      if (!panoramaSrc) throw new Error('生成结果为空');
-
-      const { imageStorageService } = await import('../../../../services/imageStorageService');
-      let resolvedUrl = panoramaSrc;
-      let imageId: string | undefined;
-
-      if (panoramaSrc.startsWith('local:')) {
-        const localId = panoramaSrc.replace('local:', '');
-        imageId = localId;
-        const blob = await imageStorageService.getImage(localId);
-        if (blob) {
-          const reader = new FileReader();
-          resolvedUrl = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        }
-      } else if (panoramaSrc.startsWith('data:')) {
-        try {
-          const imgId = `panorama_stitch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          const response = await fetch(panoramaSrc);
-          const blob = await response.blob();
-          await imageStorageService.saveImage(imgId, blob);
-          imageId = imgId;
-        } catch (e) {
-          console.warn('[stitchPanorama] 保存到 IndexedDB 失败:', e);
-        }
-        resolvedUrl = panoramaSrc;
-      } else {
-        resolvedUrl = await unifiedImageService.resolveForDisplay(panoramaSrc);
-      }
+  const createMkrNode = useCallback(
+    (sourceImageIds: string[]) => {
+      const currentLayers = useCanvasStore.getState().layers;
+      const sourceLayers = currentLayers.filter(
+        (l) => sourceImageIds.includes(l.id) && l.type === 'image',
+      );
+      if (sourceLayers.length === 0) return;
 
       const firstSource = sourceLayers[0];
+      const lastSource = sourceLayers[sourceLayers.length - 1];
+      const mkrX = firstSource.x;
+      const mkrY = lastSource.y + lastSource.height + 40;
+      const totalFrames = 360;
+
+      const initialFrames = sourceLayers.map((l, i) => ({
+        layerId: l.id,
+        frameIndex:
+          i === 0
+            ? 0
+            : i === sourceLayers.length - 1
+              ? -1
+              : Math.round((i * totalFrames) / (sourceLayers.length - 1)),
+        prompt: '',
+      }));
 
       addLayer({
         id: crypto.randomUUID(),
-        type: 'panorama',
-        x: firstSource.x,
-        y: firstSource.y + firstSource.height + 40,
+        type: 'video',
+        x: mkrX,
+        y: mkrY,
         width: 640,
         height: 360,
-        src: resolvedUrl,
-        imageId,
-        title: `全景拼接 ${new Date().toLocaleTimeString()}`,
+        src: '',
+        title: 'MKR视频节点',
         createdAt: Date.now(),
-        operationType: 'panorama-generation',
         sourceLayerIds: sourceImageIds,
-        isLoading: false,
-        progress: 100,
+        operationType: 'mkr-video',
+        generationPrompt: JSON.stringify({
+          frames: initialFrames,
+          globalPrompt: '',
+          duration: 12,
+          fps: 30,
+          width: 640,
+          height: 360,
+        }),
       });
-    } catch (e) {
-      console.error('[stitchPanorama] 拼接失败:', e);
-      alert(`拼接失败: ${(e as Error).message}`);
-    } finally {
-      setStitchLoading(false);
-    }
-  }, [addLayer, stitchLoading]);
+
+      // Select the new node after it's added (it will be the last layer)
+      const newLayers = useCanvasStore.getState().layers;
+      const newNode = newLayers[newLayers.length - 1];
+      if (newNode) {
+        selectLayer(newNode.id);
+        setVideoNodePanelLayerId(newNode.id);
+      }
+    },
+    [addLayer, selectLayer],
+  );
+
+  const [stitchLoading, setStitchLoading] = useState(false);
+
+  const stitchPanorama = useCallback(
+    async (sourceImageIds: string[]) => {
+      if (stitchLoading) return;
+      const currentLayers = useCanvasStore.getState().layers;
+      const sourceLayers = currentLayers.filter(
+        (l) => sourceImageIds.includes(l.id) && l.type === 'image' && l.src,
+      );
+      if (sourceLayers.length === 0) return;
+
+      setStitchLoading(true);
+      try {
+        const refImages = sourceLayers.map((l) => l.src).filter(Boolean) as string[];
+        const result = await canvasModelService.generateImage({
+          prompt:
+            '720 degree equirectangular panorama, seamless stitching of multiple views, wide angle, 360 degree spatial scene',
+          referenceImages: refImages,
+          aspectRatio: '16:9',
+        });
+
+        let panoramaSrc = '';
+        if (typeof result === 'string') {
+          panoramaSrc = result;
+        } else if (result && typeof result === 'object' && 'images' in result) {
+          panoramaSrc = (result as any).images?.[0]?.url || (result as any).images?.[0] || '';
+        }
+
+        if (!panoramaSrc) throw new Error('生成结果为空');
+
+        const { imageStorageService } = await import('../../../../services/imageStorageService');
+        let resolvedUrl = panoramaSrc;
+        let imageId: string | undefined;
+
+        if (panoramaSrc.startsWith('local:')) {
+          const localId = panoramaSrc.replace('local:', '');
+          imageId = localId;
+          const blob = await imageStorageService.getImage(localId);
+          if (blob) {
+            const reader = new FileReader();
+            resolvedUrl = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } else if (panoramaSrc.startsWith('data:')) {
+          try {
+            const imgId = `panorama_stitch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const response = await fetch(panoramaSrc);
+            const blob = await response.blob();
+            await imageStorageService.saveImage(imgId, blob);
+            imageId = imgId;
+          } catch (e) {
+            console.warn('[stitchPanorama] 保存到 IndexedDB 失败:', e);
+          }
+          resolvedUrl = panoramaSrc;
+        } else {
+          resolvedUrl = await unifiedImageService.resolveForDisplay(panoramaSrc);
+        }
+
+        const firstSource = sourceLayers[0];
+
+        addLayer({
+          id: crypto.randomUUID(),
+          type: 'panorama',
+          x: firstSource.x,
+          y: firstSource.y + firstSource.height + 40,
+          width: 640,
+          height: 360,
+          src: resolvedUrl,
+          imageId,
+          title: `全景拼接 ${new Date().toLocaleTimeString()}`,
+          createdAt: Date.now(),
+          operationType: 'panorama-generation',
+          sourceLayerIds: sourceImageIds,
+          isLoading: false,
+          progress: 100,
+        });
+      } catch (e) {
+        console.error('[stitchPanorama] 拼接失败:', e);
+        alert(`拼接失败: ${(e as Error).message}`);
+      } finally {
+        setStitchLoading(false);
+      }
+    },
+    [addLayer, stitchLoading],
+  );
 
   const handleResumeFlow = useCallback((flowLayerId: string) => {
     setActiveFlowLayerId(flowLayerId);
@@ -271,16 +286,19 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     setShowFlowPanel(true);
   }, []);
 
-  const handleLayerClick = useCallback((layerId: string) => {
-    const layer = layers.find(l => l.id === layerId);
-    if (layer?.operationType === 'story-deduction-flow') {
-      setFlowCardLayerId(layerId);
-    }
-    // 单击 MKR 视频节点打开视频生成配置面板（按下/拖动不触发）
-    if (layer?.type === 'video' && layer?.operationType === 'mkr-video') {
-      setVideoNodePanelLayerId(layerId);
-    }
-  }, [layers]);
+  const handleLayerClick = useCallback(
+    (layerId: string) => {
+      const layer = layers.find((l) => l.id === layerId);
+      if (layer?.operationType === 'story-deduction-flow') {
+        setFlowCardLayerId(layerId);
+      }
+      // 单击 MKR 视频节点打开视频生成配置面板（按下/拖动不触发）
+      if (layer?.type === 'video' && layer?.operationType === 'mkr-video') {
+        setVideoNodePanelLayerId(layerId);
+      }
+    },
+    [layers],
+  );
 
   const handleCloseFlowOperationCard = useCallback(() => {
     setFlowCardLayerId(null);
@@ -292,58 +310,65 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     setActiveFlowLayerId(null);
   }, []);
 
-  const handleStartFlow = useCallback((sourceLayerId: string) => {
-    const { layers: currentLayers } = useCanvasStore.getState();
-    const sourceLayer = currentLayers.find(l => l.id === sourceLayerId);
-    if (!sourceLayer) return;
+  const handleStartFlow = useCallback(
+    (sourceLayerId: string) => {
+      const { layers: currentLayers } = useCanvasStore.getState();
+      const sourceLayer = currentLayers.find((l) => l.id === sourceLayerId);
+      if (!sourceLayer) return;
 
-    // 计算新 flow 的位置：在源图下方，如果有已有的 flow 则往下叠
-    const existingFlows = currentLayers.filter(l =>
-      l.operationType === 'story-deduction-flow' &&
-      l.generationPrompt?.includes(`"sourceLayerId":"${sourceLayerId}"`)
-    );
-    const baseY = sourceLayer.y + sourceLayer.height + 30;
-    const flowY = baseY + existingFlows.length * 340;
+      // 计算新 flow 的位置：在源图下方，如果有已有的 flow 则往下叠
+      const existingFlows = currentLayers.filter(
+        (l) =>
+          l.operationType === 'story-deduction-flow' &&
+          l.generationPrompt?.includes(`"sourceLayerId":"${sourceLayerId}"`),
+      );
+      const baseY = sourceLayer.y + sourceLayer.height + 30;
+      const flowY = baseY + existingFlows.length * 340;
 
-    const flowId = crypto.randomUUID();
-    const flowState: FlowState = {
-      phase: 'analyze',
-      sourceLayerId,
-      vlmAnalysis: null,
-      deduction: null,
-      storyboard: null,
-      video: null,
-    };
-    addLayer({
-      id: flowId,
-      type: 'image',
-      x: sourceLayer.x,
-      y: flowY,
-      width: 640,
-      height: 320,
-      src: '',
-      title: `推演→视频 ${existingFlows.length + 1}`,
-      createdAt: Date.now(),
-      sourceLayerIds: [sourceLayerId],
-      operationType: 'story-deduction-flow',
-      generationPrompt: JSON.stringify(flowState),
-    });
-    setActiveFlowLayerId(flowId);
-    setShowFlowPanel(true);
-  }, [addLayer]);
+      const flowId = crypto.randomUUID();
+      const flowState: FlowState = {
+        phase: 'analyze',
+        sourceLayerId,
+        vlmAnalysis: null,
+        deduction: null,
+        storyboard: null,
+        video: null,
+      };
+      addLayer({
+        id: flowId,
+        type: 'image',
+        x: sourceLayer.x,
+        y: flowY,
+        width: 640,
+        height: 320,
+        src: '',
+        title: `推演→视频 ${existingFlows.length + 1}`,
+        createdAt: Date.now(),
+        sourceLayerIds: [sourceLayerId],
+        operationType: 'story-deduction-flow',
+        generationPrompt: JSON.stringify(flowState),
+      });
+      setActiveFlowLayerId(flowId);
+      setShowFlowPanel(true);
+    },
+    [addLayer],
+  );
 
-  const handleEdgeSelect = useCallback((edgeId: string | null) => {
-    setSelectedEdgeId(edgeId);
-    if (edgeId) {
-      selectLayer(null);
-    }
-  }, [selectLayer]);
+  const handleEdgeSelect = useCallback(
+    (edgeId: string | null) => {
+      setSelectedEdgeId(edgeId);
+      if (edgeId) {
+        selectLayer(null);
+      }
+    },
+    [selectLayer],
+  );
 
   const deleteSelectedEdge = useCallback(() => {
     if (!selectedEdgeId) return;
     const [targetId, sourceId] = selectedEdgeId.split('::');
-    const target = layers.find(l => l.id === targetId);
-    const newSourceLayerIds = (target?.sourceLayerIds || []).filter(id => id !== sourceId);
+    const target = layers.find((l) => l.id === targetId);
+    const newSourceLayerIds = (target?.sourceLayerIds || []).filter((id) => id !== sourceId);
     const updates: Partial<LayerData> = { sourceLayerIds: newSourceLayerIds };
     if (target?.sourceLayerId === sourceId) {
       updates.sourceLayerId = newSourceLayerIds.length > 0 ? newSourceLayerIds[0] : undefined;
@@ -353,31 +378,34 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       try {
         const config = JSON.parse(target.generationPrompt);
         if (config.mkr?.frames) {
-          config.mkr.frames = config.mkr.frames.filter(
-            (f: any) => f.layerId !== sourceId
-          );
+          config.mkr.frames = config.mkr.frames.filter((f: any) => f.layerId !== sourceId);
           updates.generationPrompt = JSON.stringify(config);
         }
-      } catch {}
+      } catch {
+        /* empty */
+      }
     }
     updateLayer(targetId, updates);
     setSelectedEdgeId(null);
   }, [selectedEdgeId, layers, updateLayer]);
 
-  const handleConnectionStart = useCallback((layerId: string, clientX: number, clientY: number) => {
-    const sourceLayer = layers.find(l => l.id === layerId);
-    if (!sourceLayer || !canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    connectionDragRef.current = {
-      sourceLayerId: layerId,
-      fromX: (sourceLayer.x + sourceLayer.width) * scale + offset.x,
-      fromY: (sourceLayer.y + sourceLayer.height / 2) * scale + offset.y,
-      toX: clientX - rect.left,
-      toY: clientY - rect.top,
-    };
-    isConnectingRef.current = true;
-    forceRender(n => n + 1);
-  }, [layers, offset, scale]);
+  const handleConnectionStart = useCallback(
+    (layerId: string, clientX: number, clientY: number) => {
+      const sourceLayer = layers.find((l) => l.id === layerId);
+      if (!sourceLayer || !canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      connectionDragRef.current = {
+        sourceLayerId: layerId,
+        fromX: (sourceLayer.x + sourceLayer.width) * scale + offset.x,
+        fromY: (sourceLayer.y + sourceLayer.height / 2) * scale + offset.y,
+        toX: clientX - rect.left,
+        toY: clientY - rect.top,
+      };
+      isConnectingRef.current = true;
+      forceRender((n) => n + 1);
+    },
+    [layers, offset, scale],
+  );
 
   const handlePromptLinkRequest = useCallback((layerId: string) => {
     setPromptLinkLayerId(layerId);
@@ -389,7 +417,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   useEffect(() => {
     if (!contextMenu) return;
-    
+
     const handleClick = () => setContextMenu(null);
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
@@ -397,8 +425,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   // 鼠标事件处理器通过 ref 封装，避免闭包过时问题
   const mouseHandlersRef = useRef({
-    mousemove: (e: MouseEvent) => {},
-    mouseup: (e: MouseEvent) => {},
+    mousemove: (_e: MouseEvent) => {},
+    mouseup: (_e: MouseEvent) => {},
   });
 
   // 每次渲染后更新 ref（保证 handler 内捕获最新值）
@@ -410,7 +438,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           connectionDragRef.current.toX = e.clientX - rect.left;
           connectionDragRef.current.toY = e.clientY - rect.top;
         }
-        forceRender(n => n + 1);
+        forceRender((n) => n + 1);
         return;
       }
       if (isDraggingRef.current) {
@@ -429,22 +457,29 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         isConnectingRef.current = false;
         const dragState = connectionDragRef.current;
         connectionDragRef.current = null;
-        forceRender(n => n + 1);
+        forceRender((n) => n + 1);
         if (dragState && canvasRef.current) {
           const rect = canvasRef.current.getBoundingClientRect();
           const store = useCanvasStore.getState();
           const mcX = (e.clientX - rect.left - store.offset.x) / store.scale;
           const mcY = (e.clientY - rect.top - store.offset.y) / store.scale;
-          const sourceLayer = store.layers.find(l => l.id === dragState.sourceLayerId);
-          const target = store.layers.find(l =>
-            l.id !== dragState.sourceLayerId &&
-            mcX >= l.x && mcX <= l.x + l.width &&
-            mcY >= l.y && mcY <= l.y + l.height
+          const sourceLayer = store.layers.find((l) => l.id === dragState.sourceLayerId);
+          const target = store.layers.find(
+            (l) =>
+              l.id !== dragState.sourceLayerId &&
+              mcX >= l.x &&
+              mcX <= l.x + l.width &&
+              mcY >= l.y &&
+              mcY <= l.y + l.height,
           );
           // Strict mode: only allow image/panorama → video
-          const isValid = target && (sourceLayer?.type === 'image' || sourceLayer?.type === 'panorama') && target.type === 'video';
+          const isValid =
+            target &&
+            (sourceLayer?.type === 'image' || sourceLayer?.type === 'panorama') &&
+            target.type === 'video';
           if (isValid) {
-            const existing = target.sourceLayerIds || (target.sourceLayerId ? [target.sourceLayerId] : []);
+            const existing =
+              target.sourceLayerIds || (target.sourceLayerId ? [target.sourceLayerId] : []);
             if (!existing.includes(dragState.sourceLayerId)) {
               const newSourceIds = [...existing, dragState.sourceLayerId];
               const updates: Partial<LayerData> = {
@@ -463,7 +498,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
                     });
                     updates.generationPrompt = JSON.stringify(config);
                   }
-                } catch {}
+                } catch {
+                  /* empty */
+                }
               }
               store.updateLayer(target.id, updates);
             }
@@ -496,183 +533,224 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
     };
   }, []);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        return;
 
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'z':
-          e.preventDefault();
-          e.shiftKey ? redo() : undo();
-          break;
-        case 'y':
-          e.preventDefault();
-          redo();
-          break;
-        case 'a':
-          e.preventDefault();
-          selectAllLayers();
-          break;
-        case 'c':
-          e.preventDefault();
-          copySelectedLayers();
-          break;
-        case 'v':
-          e.preventDefault();
-          pasteLayers();
-          break;
-        case 'l':
-          e.preventDefault();
-          if (selectedLayerId) {
-            if (selectedLayerIds.length > 1) {
-              selectedLayerIds.forEach(id => toggleLayerLock(id));
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'z':
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
             } else {
-              toggleLayerLock(selectedLayerId);
+              undo();
             }
-          }
-          break;
-        case 'h':
-          e.preventDefault();
-          if (selectedLayerId) {
-            if (selectedLayerIds.length > 1) {
-              selectedLayerIds.forEach(id => toggleLayerVisibility(id));
-            } else {
-              toggleLayerVisibility(selectedLayerId);
+            break;
+          case 'y':
+            e.preventDefault();
+            redo();
+            break;
+          case 'a':
+            e.preventDefault();
+            selectAllLayers();
+            break;
+          case 'c':
+            e.preventDefault();
+            copySelectedLayers();
+            break;
+          case 'v':
+            e.preventDefault();
+            pasteLayers();
+            break;
+          case 'l':
+            e.preventDefault();
+            if (selectedLayerId) {
+              if (selectedLayerIds.length > 1) {
+                selectedLayerIds.forEach((id) => toggleLayerLock(id));
+              } else {
+                toggleLayerLock(selectedLayerId);
+              }
             }
-          }
-          break;
-      }
-    } else {
-      switch (e.key) {
-        case 'Delete':
-        case 'Backspace':
-          e.preventDefault();
-          if (selectedEdgeId) {
-            const [targetId] = selectedEdgeId.split('::');
-            const target = layers.find(l => l.id === targetId);
-            if (target && !target.isLoading && !target.error && target.src) break;
-            deleteSelectedEdge();
-          } else if (selectedLayerIds.length > 0) {
-            selectedLayerIds.forEach(id => deleteLayer(id));
+            break;
+          case 'h':
+            e.preventDefault();
+            if (selectedLayerId) {
+              if (selectedLayerIds.length > 1) {
+                selectedLayerIds.forEach((id) => toggleLayerVisibility(id));
+              } else {
+                toggleLayerVisibility(selectedLayerId);
+              }
+            }
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case 'Delete':
+          case 'Backspace':
+            e.preventDefault();
+            if (selectedEdgeId) {
+              const [targetId] = selectedEdgeId.split('::');
+              const target = layers.find((l) => l.id === targetId);
+              if (target && !target.isLoading && !target.error && target.src) break;
+              deleteSelectedEdge();
+            } else if (selectedLayerIds.length > 0) {
+              selectedLayerIds.forEach((id) => deleteLayer(id));
+              clearSelection();
+            }
+            break;
+          case 'Escape':
+            e.preventDefault();
+            setSelectedEdgeId(null);
             clearSelection();
-          }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          setSelectedEdgeId(null);
-          clearSelection();
-          break;
+            break;
+        }
       }
-    }
-  }, [undo, redo, selectedLayerId, selectedLayerIds, selectedEdgeId, layers, selectAllLayers, copySelectedLayers, pasteLayers, toggleLayerLock, toggleLayerVisibility, deleteLayer, clearSelection, updateLayer]);
+    },
+    [
+      undo,
+      redo,
+      selectedLayerId,
+      selectedLayerIds,
+      selectedEdgeId,
+      layers,
+      selectAllLayers,
+      copySelectedLayers,
+      pasteLayers,
+      toggleLayerLock,
+      toggleLayerVisibility,
+      deleteLayer,
+      clearSelection,
+      updateLayer,
+    ],
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === canvasRef.current || e.target === e.currentTarget) {
-      if (activeTool === 'select') {
-        setSelectedEdgeId(null);
-        selectLayer(null);
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === canvasRef.current || e.target === e.currentTarget) {
+        if (activeTool === 'select') {
+          setSelectedEdgeId(null);
+          selectLayer(null);
+        }
       }
-    }
-  }, [selectLayer, activeTool]);
+    },
+    [selectLayer, activeTool],
+  );
 
-  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
-      isDraggingRef.current = true;
-      lastMouseRef.current = { x: e.clientX, y: e.clientY };
-      e.preventDefault();
-      return;
-    }
+  const handleCanvasMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+        isDraggingRef.current = true;
+        lastMouseRef.current = { x: e.clientX, y: e.clientY };
+        e.preventDefault();
+        return;
+      }
 
-    if (activeTool === 'select') {
-      handleMouseDown(e);
-    } else if (e.button === 0) {
+      if (activeTool === 'select') {
+        handleMouseDown(e);
+      } else if (e.button === 0) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        setDrawingState({
+          isDrawing: true,
+          startX: screenX,
+          startY: screenY,
+          currentX: screenX,
+          currentY: screenY,
+          points: [{ x: screenX, y: screenY }],
+        });
+      }
+    },
+    [activeTool, handleMouseDown],
+  );
+
+  const handleCanvasMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!drawingState.isDrawing) return;
+
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
 
-      setDrawingState({
-        isDrawing: true,
-        startX: screenX,
-        startY: screenY,
+      setDrawingState((prev) => ({
+        ...prev,
         currentX: screenX,
         currentY: screenY,
-        points: [{ x: screenX, y: screenY }]
-      });
-    }
-  }, [activeTool, handleMouseDown]);
+        points:
+          activeTool === 'pencil' ? [...prev.points, { x: screenX, y: screenY }] : prev.points,
+      }));
 
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!drawingState.isDrawing) return;
+      if (drawingCanvasRef.current) {
+        const ctx = drawingCanvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, drawingCanvasRef.current.width, drawingCanvasRef.current.height);
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = strokeWidth;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
 
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+          if (activeTool === 'pencil') {
+            ctx.beginPath();
+            drawingState.points.forEach((point, i) => {
+              if (i === 0) {
+                ctx.moveTo(point.x, point.y);
+              } else {
+                ctx.lineTo(point.x, point.y);
+              }
+            });
+            ctx.lineTo(screenX, screenY);
+            ctx.stroke();
+          } else if (activeTool === 'rectangle') {
+            const width = screenX - drawingState.startX;
+            const height = screenY - drawingState.startY;
+            ctx.strokeRect(drawingState.startX, drawingState.startY, width, height);
+          } else if (activeTool === 'arrow') {
+            ctx.beginPath();
+            ctx.moveTo(drawingState.startX, drawingState.startY);
+            ctx.lineTo(screenX, screenY);
+            ctx.stroke();
 
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-
-    setDrawingState(prev => ({
-      ...prev,
-      currentX: screenX,
-      currentY: screenY,
-      points: activeTool === 'pencil' ? [...prev.points, { x: screenX, y: screenY }] : prev.points
-    }));
-
-    if (drawingCanvasRef.current) {
-      const ctx = drawingCanvasRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, drawingCanvasRef.current.width, drawingCanvasRef.current.height);
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = strokeWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        if (activeTool === 'pencil') {
-          ctx.beginPath();
-          drawingState.points.forEach((point, i) => {
-            if (i === 0) {
-              ctx.moveTo(point.x, point.y);
-            } else {
-              ctx.lineTo(point.x, point.y);
-            }
-          });
-          ctx.lineTo(screenX, screenY);
-          ctx.stroke();
-        } else if (activeTool === 'rectangle') {
-          const width = screenX - drawingState.startX;
-          const height = screenY - drawingState.startY;
-          ctx.strokeRect(drawingState.startX, drawingState.startY, width, height);
-        } else if (activeTool === 'arrow') {
-          ctx.beginPath();
-          ctx.moveTo(drawingState.startX, drawingState.startY);
-          ctx.lineTo(screenX, screenY);
-          ctx.stroke();
-
-          const angle = Math.atan2(screenY - drawingState.startY, screenX - drawingState.startX);
-          const arrowLength = 15;
-          ctx.beginPath();
-          ctx.moveTo(screenX, screenY);
-          ctx.lineTo(
-            screenX - arrowLength * Math.cos(angle - Math.PI / 6),
-            screenY - arrowLength * Math.sin(angle - Math.PI / 6)
-          );
-          ctx.moveTo(screenX, screenY);
-          ctx.lineTo(
-            screenX - arrowLength * Math.cos(angle + Math.PI / 6),
-            screenY - arrowLength * Math.sin(angle + Math.PI / 6)
-          );
-          ctx.stroke();
+            const angle = Math.atan2(screenY - drawingState.startY, screenX - drawingState.startX);
+            const arrowLength = 15;
+            ctx.beginPath();
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(
+              screenX - arrowLength * Math.cos(angle - Math.PI / 6),
+              screenY - arrowLength * Math.sin(angle - Math.PI / 6),
+            );
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(
+              screenX - arrowLength * Math.cos(angle + Math.PI / 6),
+              screenY - arrowLength * Math.sin(angle + Math.PI / 6),
+            );
+            ctx.stroke();
+          }
         }
       }
-    }
-  }, [drawingState.isDrawing, drawingState.startX, drawingState.startY, drawingState.points, activeTool, strokeColor, strokeWidth]);
+    },
+    [
+      drawingState.isDrawing,
+      drawingState.startX,
+      drawingState.startY,
+      drawingState.points,
+      activeTool,
+      strokeColor,
+      strokeWidth,
+    ],
+  );
 
   const handleCanvasMouseUp = useCallback(() => {
     if (drawingState.isDrawing) {
@@ -708,27 +786,33 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
             ctx.lineTo(drawingState.currentX, drawingState.currentY);
             ctx.stroke();
 
-            const angle = Math.atan2(drawingState.currentY - drawingState.startY, drawingState.currentX - drawingState.startX);
+            const angle = Math.atan2(
+              drawingState.currentY - drawingState.startY,
+              drawingState.currentX - drawingState.startX,
+            );
             const arrowLength = 15;
             ctx.beginPath();
             ctx.moveTo(drawingState.currentX, drawingState.currentY);
             ctx.lineTo(
               drawingState.currentX - arrowLength * Math.cos(angle - Math.PI / 6),
-              drawingState.currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+              drawingState.currentY - arrowLength * Math.sin(angle - Math.PI / 6),
             );
             ctx.moveTo(drawingState.currentX, drawingState.currentY);
             ctx.lineTo(
               drawingState.currentX - arrowLength * Math.cos(angle + Math.PI / 6),
-              drawingState.currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+              drawingState.currentY - arrowLength * Math.sin(angle + Math.PI / 6),
             );
             ctx.stroke();
           }
 
           const padding = strokeWidth + 2;
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
 
           if (activeTool === 'pencil') {
-            drawingState.points.forEach(point => {
+            drawingState.points.forEach((point) => {
               minX = Math.min(minX, point.x);
               minY = Math.min(minY, point.y);
               maxX = Math.max(maxX, point.x);
@@ -773,7 +857,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               height: canvasHeight,
               src: dataUrl,
               title: `${activeTool === 'pencil' ? '铅笔' : activeTool === 'rectangle' ? '矩形' : '箭头'}标注`,
-              createdAt: Date.now()
+              createdAt: Date.now(),
             });
           }
         }
@@ -792,7 +876,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         startY: 0,
         currentX: 0,
         currentY: 0,
-        points: []
+        points: [],
       });
     }
   }, [drawingState, activeTool, strokeColor, strokeWidth, scale, offset, addLayer]);
@@ -809,9 +893,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
         onClick={handleCanvasClick}
-        style={{ 
+        style={{
           cursor: activeTool !== 'select' ? 'crosshair' : undefined,
-          backgroundColor: backgroundColor
+          backgroundColor: backgroundColor,
         }}
       >
         {showGrid && (
@@ -844,114 +928,147 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           height={canvasRef.current?.clientHeight || 1080}
         />
 
-        <ConnectionLines offset={offset} scale={scale} selectedEdgeId={selectedEdgeId} onEdgeSelect={handleEdgeSelect} />
+        <ConnectionLines
+          offset={offset}
+          scale={scale}
+          selectedEdgeId={selectedEdgeId}
+          onEdgeSelect={handleEdgeSelect}
+        />
 
         {/* 连线可点击命中区（HTML div，不受 SVG pointer-events 影响） */}
-        {layers.flatMap(layer => {
-          const sourceIds = layer.sourceLayerIds && layer.sourceLayerIds.length > 0
-            ? layer.sourceLayerIds
-            : (layer.sourceLayerId ? [layer.sourceLayerId] : []);
-          return sourceIds.map(sourceId => {
-            const source = layers.find(l => l.id === sourceId);
-            if (!source) return null;
-            const edgeId = `${layer.id}::${sourceId}`;
-            const isThisEdgeSelected = selectedEdgeId === edgeId;
+        {layers
+          .flatMap((layer) => {
+            const sourceIds =
+              layer.sourceLayerIds && layer.sourceLayerIds.length > 0
+                ? layer.sourceLayerIds
+                : layer.sourceLayerId
+                  ? [layer.sourceLayerId]
+                  : [];
+            return sourceIds.map((sourceId) => {
+              const source = layers.find((l) => l.id === sourceId);
+              if (!source) return null;
+              const edgeId = `${layer.id}::${sourceId}`;
+              const isThisEdgeSelected = selectedEdgeId === edgeId;
+              const fromX = (source.x + source.width) * scale + offset.x;
+              const fromY = (source.y + source.height / 2) * scale + offset.y;
+              const toX = layer.x * scale + offset.x;
+              const toY = (layer.y + layer.height / 2) * scale + offset.y;
+              const midX = (fromX + toX) / 2;
+              const midY = (fromY + toY) / 2;
+              return (
+                <div
+                  key={`hit-${edgeId}`}
+                  className="absolute z-[3]"
+                  style={{
+                    left: midX - 15,
+                    top: midY - 15,
+                    width: 30,
+                    height: 30,
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdgeSelect(isThisEdgeSelected ? null : edgeId);
+                  }}
+                />
+              );
+            });
+          })
+          .filter(Boolean)}
+
+        {connectionDragRef.current &&
+          (() => {
+            const d = connectionDragRef.current!;
+            const controlOffset = Math.abs(d.toX - d.fromX) * 0.5;
+            const store = useCanvasStore.getState();
+            const src = store.layers.find((l) => l.id === d.sourceLayerId);
+            const isValidSource = src?.type === 'image' || src?.type === 'panorama';
+            return (
+              <>
+                <svg
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ zIndex: 60 }}
+                >
+                  <defs>
+                    <marker
+                      id="arrow-connect"
+                      viewBox="0 0 10 10"
+                      refX="9"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
+                    </marker>
+                  </defs>
+                  <path
+                    d={`M ${d.fromX} ${d.fromY} C ${d.fromX + controlOffset} ${d.fromY}, ${d.toX - controlOffset} ${d.toY}, ${d.toX} ${d.toY}`}
+                    fill="none"
+                    stroke={isValidSource ? '#a855f7' : '#ef4444'}
+                    strokeWidth={2.5}
+                    strokeDasharray="8,4"
+                    markerEnd="url(#arrow-connect)"
+                  />
+                </svg>
+                {!isValidSource && (
+                  <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[300] px-3 py-1.5 bg-red-900/80 text-red-300 text-[10px] rounded-lg border border-red-700/60 pointer-events-none">
+                    仅支持图片 → 视频连线
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+        {/* 选中连线的删除按钮 */}
+        {selectedEdgeId &&
+          (() => {
+            const [targetId, sourceId] = selectedEdgeId.split('::');
+            const target = layers.find((l) => l.id === targetId);
+            const source = layers.find((l) => l.id === sourceId);
+            if (!target || !source) return null;
             const fromX = (source.x + source.width) * scale + offset.x;
             const fromY = (source.y + source.height / 2) * scale + offset.y;
-            const toX = layer.x * scale + offset.x;
-            const toY = (layer.y + layer.height / 2) * scale + offset.y;
+            const toX = target.x * scale + offset.x;
+            const toY = (target.y + target.height / 2) * scale + offset.y;
             const midX = (fromX + toX) / 2;
             const midY = (fromY + toY) / 2;
             return (
               <div
-                key={`hit-${edgeId}`}
-                className="absolute z-[3]"
-                style={{
-                  left: midX - 15,
-                  top: midY - 15,
-                  width: 30,
-                  height: 30,
-                  cursor: 'pointer',
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEdgeSelect(isThisEdgeSelected ? null : edgeId);
-                }}
-              />
-            );
-          });
-        }).filter(Boolean)}
-
-        {connectionDragRef.current && (() => {
-          const d = connectionDragRef.current!;
-          const controlOffset = Math.abs(d.toX - d.fromX) * 0.5;
-          const store = useCanvasStore.getState();
-          const src = store.layers.find(l => l.id === d.sourceLayerId);
-          const isValidSource = src?.type === 'image' || src?.type === 'panorama';
-          return (
-            <>
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 60 }}>
-                <defs>
-                  <marker id="arrow-connect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
-                  </marker>
-                </defs>
-                <path
-                  d={`M ${d.fromX} ${d.fromY} C ${d.fromX + controlOffset} ${d.fromY}, ${d.toX - controlOffset} ${d.toY}, ${d.toX} ${d.toY}`}
-                  fill="none"
-                  stroke={isValidSource ? '#a855f7' : '#ef4444'}
-                  strokeWidth={2.5}
-                  strokeDasharray="8,4"
-                  markerEnd="url(#arrow-connect)"
-                />
-              </svg>
-              {!isValidSource && (
-                <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[300] px-3 py-1.5 bg-red-900/80 text-red-300 text-[10px] rounded-lg border border-red-700/60 pointer-events-none">
-                  仅支持图片 → 视频连线
-                </div>
-              )}
-            </>
-          );
-        })()}
-
-        {/* 选中连线的删除按钮 */}
-        {selectedEdgeId && (() => {
-          const [targetId, sourceId] = selectedEdgeId.split('::');
-          const target = layers.find(l => l.id === targetId);
-          const source = layers.find(l => l.id === sourceId);
-          if (!target || !source) return null;
-          const fromX = (source.x + source.width) * scale + offset.x;
-          const fromY = (source.y + source.height / 2) * scale + offset.y;
-          const toX = target.x * scale + offset.x;
-          const toY = (target.y + target.height / 2) * scale + offset.y;
-          const midX = (fromX + toX) / 2;
-          const midY = (fromY + toY) / 2;
-          return (
-            <div
-              className="absolute z-[70]"
-              style={{ left: midX - 14, top: midY - 14, width: 28, height: 28 }}
-            >
-              <button
-                className="w-full h-full rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg transition-colors cursor-pointer"
-                title="删除该连线"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteSelectedEdge();
-                }}
+                className="absolute z-[70]"
+                style={{ left: midX - 14, top: midY - 14, width: 28, height: 28 }}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          );
-        })()}
+                <button
+                  className="w-full h-full rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg transition-colors cursor-pointer"
+                  title="删除该连线"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSelectedEdge();
+                  }}
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            );
+          })()}
 
         <div
           className="absolute origin-top-left"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: '0 0'
+            transformOrigin: '0 0',
           }}
         >
           {layers.map((layer) => (
@@ -979,23 +1096,30 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
       {/* 推演流程面板 */}
       {showFlowPanel && activeFlowLayerId && (
-        <StoryDeductionFlowPanel
-          flowLayerId={activeFlowLayerId}
-          onClose={handleCloseFlowPanel}
-        />
+        <StoryDeductionFlowPanel flowLayerId={activeFlowLayerId} onClose={handleCloseFlowPanel} />
       )}
 
       {/* 推演流程面板（从 ImageActionMenu 打开） */}
       {showStoryDeductionFlow && (
         <StoryDeductionFlowPanel
           flowLayerId={storyDeductionFlowLayerId!}
-          onClose={() => { setShowStoryDeductionFlow(false); setStoryDeductionFlowLayerId(null); }}
+          onClose={() => {
+            setShowStoryDeductionFlow(false);
+            setStoryDeductionFlowLayerId(null);
+          }}
         />
       )}
 
       {/* 单图操作菜单 — 仅对普通图片（非 flow 图层） */}
       {(() => {
-        const imgLayer = selectedLayerId ? layers.find(l => l.id === selectedLayerId && l.type === 'image' && l.operationType !== 'story-deduction-flow') : undefined;
+        const imgLayer = selectedLayerId
+          ? layers.find(
+              (l) =>
+                l.id === selectedLayerId &&
+                l.type === 'image' &&
+                l.operationType !== 'story-deduction-flow',
+            )
+          : undefined;
         if (!imgLayer || !canvasRef.current) return null;
         const cr = canvasRef.current.getBoundingClientRect();
         return (
@@ -1014,32 +1138,35 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       })()}
 
       {/* AI 生成视频 - 重新生成弹窗 */}
-      {showAiVideoReGen && (() => {
-        const videoLayer = selectedLayerId
-          ? layers.find(
-              l =>
-                l.id === selectedLayerId &&
-                l.type === 'video' &&
-                l.operationType === 'image-to-video'
-            )
-          : null;
-        if (!videoLayer) return null;
+      {showAiVideoReGen &&
+        (() => {
+          const videoLayer = selectedLayerId
+            ? layers.find(
+                (l) =>
+                  l.id === selectedLayerId &&
+                  l.type === 'video' &&
+                  l.operationType === 'image-to-video',
+              )
+            : null;
+          if (!videoLayer) return null;
 
-        let initialConfig: GenerationConfig | undefined;
-        try {
-          if (videoLayer.generationPrompt) {
-            initialConfig = JSON.parse(videoLayer.generationPrompt) as GenerationConfig;
+          let initialConfig: GenerationConfig | undefined;
+          try {
+            if (videoLayer.generationPrompt) {
+              initialConfig = JSON.parse(videoLayer.generationPrompt) as GenerationConfig;
+            }
+          } catch {
+            /* empty */
           }
-        } catch {}
 
-        return (
-          <GenerateVideoPanel
-            selectedLayerIds={videoLayer.sourceLayerIds || []}
-            initialConfig={initialConfig}
-            onClose={() => setShowAiVideoReGen(false)}
-          />
-        );
-      })()}
+          return (
+            <GenerateVideoPanel
+              selectedLayerIds={videoLayer.sourceLayerIds || []}
+              initialConfig={initialConfig}
+              onClose={() => setShowAiVideoReGen(false)}
+            />
+          );
+        })()}
 
       {/* 视频节点面板：通过右键菜单打开，选中变化时关闭 */}
       {videoNodePanelLayerId && (
@@ -1051,23 +1178,25 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
       {/* 多图操作栏：当选中 2+ 图片时显示 */}
       {(() => {
-        const selectedImages = selectedLayerIds.filter(id => {
-          const l = layers.find(la => la.id === id);
+        const selectedImages = selectedLayerIds.filter((id) => {
+          const l = layers.find((la) => la.id === id);
           return l && l.type === 'image' && !l.isLoading;
         });
         if (selectedImages.length < 2 || !canvasRef.current) return null;
-        const hasSingleImageMenu = selectedLayerId && layers.find(l => l.id === selectedLayerId && l.type === 'image');
+        const hasSingleImageMenu =
+          selectedLayerId && layers.find((l) => l.id === selectedLayerId && l.type === 'image');
         if (hasSingleImageMenu) return null;
         return (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
             <div className="flex items-center gap-3 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-2xl px-5 py-3">
               <Film className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-300">
-                已选 <span className="text-white font-semibold">{selectedImages.length}</span> 张图片
+                已选 <span className="text-white font-semibold">{selectedImages.length}</span>{' '}
+                张图片
               </span>
               <div className="flex items-center -space-x-2">
-                {selectedImages.slice(0, 5).map(id => {
-                  const l = layers.find(la => la.id === id);
+                {selectedImages.slice(0, 5).map((id) => {
+                  const l = layers.find((la) => la.id === id);
                   if (!l) return null;
                   return (
                     <div
@@ -1124,8 +1253,18 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         title="画布设置"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
         </svg>
       </button>
 
@@ -1136,14 +1275,17 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           title="图层详情"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </button>
       )}
 
-      {showLayerDetail && (
-        <LayerDetailPanel onClose={() => setShowLayerDetail(false)} />
-      )}
+      {showLayerDetail && <LayerDetailPanel onClose={() => setShowLayerDetail(false)} />}
 
       {templatePanelOpen && <StyleTemplatePanel />}
 
@@ -1171,7 +1313,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       {showSaveToLibraryDialog && saveToLibraryLayer && (
         <SaveToLibraryDialog
           layer={saveToLibraryLayer}
-          project={project}
+          project={project!}
           onClose={() => {
             setShowSaveToLibraryDialog(false);
             setSaveToLibraryLayer(null);
@@ -1195,7 +1337,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       )}
 
       {contextMenu && (
-        <div 
+        <div
           className="fixed z-[200] bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
@@ -1222,51 +1364,52 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
           </button>
 
           {/* 重新生成视频 - 仅对 image-to-video 视频图层显示 */}
-          {layers.find(l => l.id === contextMenu.layerId)?.type === 'video' &&
-            layers.find(l => l.id === contextMenu.layerId)?.operationType === 'image-to-video' && (
-            <>
-              <div className="border-t border-gray-700 my-1" />
-              <button
-                onClick={() => {
-                  selectLayer(contextMenu.layerId);
-                  setShowAiVideoReGen(true);
-                  setContextMenu(null);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
-              >
-                <span>✨</span>
-                <span>重新生成视频</span>
-              </button>
-            </>
-          )}
+          {layers.find((l) => l.id === contextMenu.layerId)?.type === 'video' &&
+            layers.find((l) => l.id === contextMenu.layerId)?.operationType ===
+              'image-to-video' && (
+              <>
+                <div className="border-t border-gray-700 my-1" />
+                <button
+                  onClick={() => {
+                    selectLayer(contextMenu.layerId);
+                    setShowAiVideoReGen(true);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+                >
+                  <span>✨</span>
+                  <span>重新生成视频</span>
+                </button>
+              </>
+            )}
 
           {/* 视频生成配置 - 仅对 mkr-video 视频节点显示 */}
-          {layers.find(l => l.id === contextMenu.layerId)?.type === 'video' &&
-            layers.find(l => l.id === contextMenu.layerId)?.operationType === 'mkr-video' && (
-            <>
-              <div className="border-t border-gray-700 my-1" />
-              <button
-                onClick={() => {
-                  selectLayer(contextMenu.layerId);
-                  setVideoNodePanelLayerId(contextMenu.layerId);
-                  setContextMenu(null);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
-              >
-                <span>🎬</span>
-                <span>视频生成配置</span>
-              </button>
-            </>
-          )}
-          
+          {layers.find((l) => l.id === contextMenu.layerId)?.type === 'video' &&
+            layers.find((l) => l.id === contextMenu.layerId)?.operationType === 'mkr-video' && (
+              <>
+                <div className="border-t border-gray-700 my-1" />
+                <button
+                  onClick={() => {
+                    selectLayer(contextMenu.layerId);
+                    setVideoNodePanelLayerId(contextMenu.layerId);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+                >
+                  <span>🎬</span>
+                  <span>视频生成配置</span>
+                </button>
+              </>
+            )}
+
           {/* 保存到资产库 - 仅对图片和视频图层显示 */}
-          {(layers.find(l => l.id === contextMenu.layerId)?.type === 'image' || 
-            layers.find(l => l.id === contextMenu.layerId)?.type === 'video') && (
+          {(layers.find((l) => l.id === contextMenu.layerId)?.type === 'image' ||
+            layers.find((l) => l.id === contextMenu.layerId)?.type === 'video') && (
             <>
               <div className="border-t border-gray-700 my-1" />
               <button
                 onClick={() => {
-                  const layer = layers.find(l => l.id === contextMenu.layerId);
+                  const layer = layers.find((l) => l.id === contextMenu.layerId);
                   if (layer) {
                     setSaveToLibraryLayer(layer);
                     setShowSaveToLibraryDialog(true);
@@ -1280,7 +1423,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               </button>
             </>
           )}
-          
+
           <div className="border-t border-gray-700 my-1" />
           <button
             onClick={() => {

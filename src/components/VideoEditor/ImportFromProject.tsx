@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Video, X, Loader2, Plus } from 'lucide-react';
+import { Video, Loader2, Plus } from 'lucide-react';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
 
@@ -17,15 +17,12 @@ interface ImportFromProjectProps {
   onImport: (shots: ProjectShot[]) => void;
 }
 
-export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
-  project,
-  onImport,
-}) => {
+export const ImportFromProject: React.FC<ImportFromProjectProps> = ({ project, onImport }) => {
   const [loading, setLoading] = useState(false);
   const [selectedShots, setSelectedShots] = useState<Set<number>>(new Set());
 
   const handleSelectShot = useCallback((index: number) => {
-    setSelectedShots(prev => {
+    setSelectedShots((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -39,9 +36,9 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
   const handleSelectAll = useCallback(() => {
     if (!project?.shots) return;
     const allIndices = project.shots
-      .map((shot, index) => shot.interval?.videoUrl ? index : -1)
-      .filter(index => index !== -1);
-    
+      .map((shot, index) => (shot.interval?.videoUrl ? index : -1))
+      .filter((index) => index !== -1);
+
     if (selectedShots.size === allIndices.length) {
       setSelectedShots(new Set());
     } else {
@@ -55,7 +52,9 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
     setLoading(true);
 
     const shotsToImport: ProjectShot[] = [];
-    const sortedIndices = Array.from(selectedShots).map(Number).sort((a, b) => a - b);
+    const sortedIndices = Array.from(selectedShots)
+      .map(Number)
+      .sort((a, b) => a - b);
 
     for (const index of sortedIndices) {
       const shot = project.shots[index];
@@ -80,7 +79,7 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
             index,
             videoUrl: resolvedUrl,
             duration: shot.interval.duration || 3,
-            thumbnail: shot.interval.thumbnailUrl,
+            thumbnail: undefined,
             dialogue: shot.dialogue,
           });
         }
@@ -113,10 +112,7 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
         <h4 className="text-xs font-medium text-[var(--text-primary)]">
           选择要导入的片段 ({selectedShots.size}/{availableShots.length})
         </h4>
-        <button
-          onClick={handleSelectAll}
-          className="text-xs text-[var(--accent)] hover:underline"
-        >
+        <button onClick={handleSelectAll} className="text-xs text-[var(--accent)] hover:underline">
           {selectedShots.size === availableShots.length ? '取消全选' : '全选'}
         </button>
       </div>
@@ -143,14 +139,22 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({
                 时长: {shot.interval?.duration || 3}s
               </p>
             </div>
-            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-              selectedShots.has(index)
-                ? 'border-[var(--accent)] bg-[var(--accent)]'
-                : 'border-[var(--border-primary)]'
-            }`}>
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center ${
+                selectedShots.has(index)
+                  ? 'border-[var(--accent)] bg-[var(--accent)]'
+                  : 'border-[var(--border-primary)]'
+              }`}
+            >
               {selectedShots.has(index) && (
                 <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path
+                    d="M2 6L5 9L10 3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               )}
             </div>

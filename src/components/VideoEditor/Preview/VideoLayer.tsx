@@ -17,19 +17,23 @@ interface VideoLayerProps {
 const PRELOAD_THRESHOLD = 2000;
 
 export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
-  const isActive = props.visible && props.currentTime >= props.startTime && props.currentTime < props.startTime + props.duration;
-  const isUpcoming = props.visible && 
-    props.currentTime >= props.startTime - PRELOAD_THRESHOLD && 
+  const isActive =
+    props.visible &&
+    props.currentTime >= props.startTime &&
+    props.currentTime < props.startTime + props.duration;
+  const isUpcoming =
+    props.visible &&
+    props.currentTime >= props.startTime - PRELOAD_THRESHOLD &&
     props.currentTime < props.startTime;
   const shouldBeLoaded = isActive || isUpcoming;
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playState = useEditorStore(s => s.playState);
-  const [videoReady, setVideoReady] = useState(false);
+  const playState = useEditorStore((s) => s.playState);
+  const [, setVideoReady] = useState(false);
 
   useEffect(() => {
     if (!videoRef.current) return;
-    
+
     if (playState === 'playing' && isActive) {
       videoRef.current.play().catch(() => {});
     } else {
@@ -40,7 +44,7 @@ export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !shouldBeLoaded) return;
-    
+
     const targetTime = (props.currentTime - props.startTime + props.inPoint) / 1000;
     if (Math.abs(video.currentTime - targetTime) > 0.1) {
       video.currentTime = targetTime;
@@ -49,11 +53,16 @@ export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
 
   useEffect(() => {
     const video = videoRef.current;
+    if (video) video.volume = props.volume;
+  }, [props.volume]);
+
+  useEffect(() => {
+    const video = videoRef.current;
     if (!video) return;
 
     const handleCanPlay = () => setVideoReady(true);
     video.addEventListener('canplay', handleCanPlay);
-    
+
     if (video.readyState >= 3) {
       setVideoReady(true);
     }
@@ -72,12 +81,11 @@ export const VideoLayer: React.FC<VideoLayerProps> = (props) => {
       ref={videoRef}
       src={props.src || undefined}
       className="absolute inset-0 w-full h-full object-contain"
-      style={{ 
+      style={{
         opacity: props.opacity,
         display: isActive ? 'block' : 'none',
       }}
       muted={props.volume === 0}
-      volume={props.volume}
       playsInline
       preload={shouldBeLoaded ? 'auto' : 'metadata'}
     />

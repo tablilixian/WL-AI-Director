@@ -25,7 +25,9 @@ function log(...args: any[]) {
 function logTree(node: TreeNode, indent = 0) {
   if (!DEBUG) return;
   const prefix = '  '.repeat(indent);
-  console.log(`${prefix}├─ ${node.layer.title} (${node.layer.id.slice(0,8)}) type=${node.layer.type} w=${node.layer.width} h=${node.layer.height} parentId=${node.layer.parentId?.slice(0,8)} sourceLayerId=${node.layer.sourceLayerId?.slice(0,8)}`);
+  console.log(
+    `${prefix}├─ ${node.layer.title} (${node.layer.id.slice(0, 8)}) type=${node.layer.type} w=${node.layer.width} h=${node.layer.height} parentId=${node.layer.parentId?.slice(0, 8)} sourceLayerId=${node.layer.sourceLayerId?.slice(0, 8)}`,
+  );
   for (const child of node.children) {
     logTree(child, indent + 1);
   }
@@ -33,7 +35,15 @@ function logTree(node: TreeNode, indent = 0) {
 
 function logRow(row: LayerData[], rowIndex: number) {
   if (!DEBUG) return;
-  console.log(`[AutoLayout] Row ${rowIndex}:`, row.map(l => `${l.title}(${l.id.slice(0,8)}) y=${l.y} h=${l.height} parent=${l.parentId?.slice(0,8)} src=${l.sourceLayerId?.slice(0,8)}`).join(' | '));
+  console.log(
+    `[AutoLayout] Row ${rowIndex}:`,
+    row
+      .map(
+        (l) =>
+          `${l.title}(${l.id.slice(0, 8)}) y=${l.y} h=${l.height} parent=${l.parentId?.slice(0, 8)} src=${l.sourceLayerId?.slice(0, 8)}`,
+      )
+      .join(' | '),
+  );
 }
 
 /** Build a map of layerId → layers whose sourceLayerId or parentId points to it */
@@ -47,7 +57,12 @@ function buildChildrenMap(visibleLayers: LayerData[]): Map<string, LayerData[]> 
       map.set(parentKey, list);
     }
   }
-  log('childrenMap:', Array.from(map.entries()).map(([k, v]) => `${k.slice(0,8)} → [${v.map(x => x.title).join(', ')}]`));
+  log(
+    'childrenMap:',
+    Array.from(map.entries()).map(
+      ([k, v]) => `${k.slice(0, 8)} → [${v.map((x) => x.title).join(', ')}]`,
+    ),
+  );
   return map;
 }
 
@@ -99,7 +114,7 @@ function detectRows(
   visibleLayers: LayerData[],
   childrenMap: Map<string, LayerData[]>,
 ): LayerData[][] {
-  const allLayerMap = new Map(visibleLayers.map(l => [l.id, l]));
+  const allLayerMap = new Map(visibleLayers.map((l) => [l.id, l]));
   const sorted = [...visibleLayers].sort((a, b) => a.y - b.y);
   const rows: LayerData[][] = [];
   const usedIds = new Set<string>();
@@ -127,7 +142,9 @@ function detectRows(
         rows[rowIndex].push(layer);
         usedIds.add(layer.id);
         rowOfLayer.set(layer.id, rowIndex);
-        log(`  ${layer.title} (y=${layer.y}) → Row ${rowIndex} (anchor: ${anchor.title} y=${anchor.y})`);
+        log(
+          `  ${layer.title} (y=${layer.y}) → Row ${rowIndex} (anchor: ${anchor.title} y=${anchor.y})`,
+        );
         placed = true;
         break;
       }
@@ -144,7 +161,7 @@ function detectRows(
 
   // Step 2: Pull descendants into ancestor's row
   // Process ancestors in reverse order so deeper lineage is handled first
-  const ancestorIds = [...allLayerMap.keys()].filter(id => {
+  const ancestorIds = [...allLayerMap.keys()].filter((id) => {
     const children = childrenMap.get(id);
     return children && children.length > 0;
   });
@@ -166,7 +183,9 @@ function detectRows(
         if (idx !== -1) srcRow.splice(idx, 1);
         rows[ancestorRow].push(descLayer);
         rowOfLayer.set(descId, ancestorRow);
-        log(`  MOVED: ${descLayer.title} from Row ${descRow} → Row ${ancestorRow} (child of ${allLayerMap.get(ancestorId)?.title})`);
+        log(
+          `  MOVED: ${descLayer.title} from Row ${descRow} → Row ${ancestorRow} (child of ${allLayerMap.get(ancestorId)?.title})`,
+        );
       } else if (descRow === undefined) {
         // Descendant wasn't placed yet
         rows[ancestorRow].push(descLayer);
@@ -177,9 +196,12 @@ function detectRows(
   }
 
   // Step 3: Remove empty rows
-  const nonEmptyRows = rows.filter(r => r.length > 0);
+  const nonEmptyRows = rows.filter((r) => r.length > 0);
 
-  log('Final rows:', nonEmptyRows.map((r, i) => `Row${i}: [${r.map(l => l.title).join(', ')}]`));
+  log(
+    'Final rows:',
+    nonEmptyRows.map((r, i) => `Row${i}: [${r.map((l) => l.title).join(', ')}]`),
+  );
   return nonEmptyRows;
 }
 
@@ -188,8 +210,8 @@ function detectRows(
  * then recursively build trees.
  */
 function buildForest(row: LayerData[], childrenMap: Map<string, LayerData[]>): TreeNode[] {
-  const allLayerMap = new Map(row.map(l => [l.id, l]));
-  const rowSet = new Set(row.map(l => l.id));
+  const allLayerMap = new Map(row.map((l) => [l.id, l]));
+  const rowSet = new Set(row.map((l) => l.id));
   const nonRoots = new Set<string>();
 
   for (const layer of row) {
@@ -206,7 +228,10 @@ function buildForest(row: LayerData[], childrenMap: Map<string, LayerData[]>): T
   }
 
   trees.sort((a, b) => a.layer.x - b.layer.x);
-  log('Forest:', trees.map(t => t.layer.title));
+  log(
+    'Forest:',
+    trees.map((t) => t.layer.title),
+  );
   for (const tree of trees) {
     logTree(tree);
   }
@@ -238,9 +263,10 @@ function calcTreeSize(node: TreeNode, cache?: Map<string, PlacedNode>): PlacedNo
       totalChildH -= VERTICAL_GAP;
     }
 
-    const totalHeight = Math.max(node.layer.height, totalChildH);
     size = { width: maxRightExtent, height: totalChildH };
-    log(`  calcTreeSize: ${node.layer.title} (parent) → ${size.width}x${size.height} (childX=${childX}, children=${node.children.length})`);
+    log(
+      `  calcTreeSize: ${node.layer.title} (parent) → ${size.width}x${size.height} (childX=${childX}, children=${node.children.length})`,
+    );
   }
 
   if (cache) {
@@ -274,7 +300,9 @@ function placeTree(
       const childSize = sizeCache.get(node.children[i].layer.id) || calcTreeSize(node.children[i]);
       const childHeight = childSize.height;
       childY += childHeight + VERTICAL_GAP;
-      log(`    next child Y: ${Math.round(childY)} (prev height=${childHeight} + VERTICAL_GAP=${VERTICAL_GAP})`);
+      log(
+        `    next child Y: ${Math.round(childY)} (prev height=${childHeight} + VERTICAL_GAP=${VERTICAL_GAP})`,
+      );
     }
   }
 }
@@ -282,14 +310,17 @@ function placeTree(
 export function autoLayout(
   layers: LayerData[],
   viewportWidth: number,
-  viewportHeight: number
-): { updatedLayers: LayerData[]; bounds: { minX: number; minY: number; maxX: number; maxY: number } } {
+  viewportHeight: number,
+): {
+  updatedLayers: LayerData[];
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
+} {
   log('========== autoLayout START ==========');
   log(`Viewport: ${viewportWidth}x${viewportHeight}, Total layers: ${layers.length}`);
-  
-  const visibleLayers = layers.filter(l => l.visible !== false);
+
+  const visibleLayers = layers.filter((l) => l.visible !== false);
   log(`Visible layers: ${visibleLayers.length}`);
-  
+
   if (visibleLayers.length === 0) {
     return { updatedLayers: layers, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } };
   }
@@ -308,11 +339,11 @@ export function autoLayout(
     const row = rows[rowIndex];
     log(`\n--- Processing Row ${rowIndex} (startY=${currentRowY}) ---`);
     logRow(row, rowIndex);
-    
+
     const forest = buildForest(row, childrenMap);
 
     let rowHeight = 0;
-    const treeSizes = forest.map(tree => {
+    const treeSizes = forest.map((tree) => {
       const size = calcTreeSize(tree, sizeCache);
       rowHeight = Math.max(rowHeight, size.height);
       return { tree, ...size };
@@ -330,12 +361,14 @@ export function autoLayout(
   }
 
   // Step 3: apply positions to all layers
-  const updatedLayers = layers.map(layer => {
+  const updatedLayers = layers.map((layer) => {
     const pos = layerPositionMap.get(layer.id);
     if (pos) {
       const moved = layer.x !== pos.x || layer.y !== pos.y;
       if (moved) {
-        log(`  MOVE: ${layer.title} (${layer.x},${layer.y}) → (${Math.round(pos.x)},${Math.round(pos.y)})`);
+        log(
+          `  MOVE: ${layer.title} (${layer.x},${layer.y}) → (${Math.round(pos.x)},${Math.round(pos.y)})`,
+        );
       }
       return { ...layer, x: pos.x, y: pos.y };
     }
@@ -343,7 +376,10 @@ export function autoLayout(
   });
 
   // Step 4: compute bounds
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const layer of updatedLayers) {
     if (layer.visible === false) continue;
     minX = Math.min(minX, layer.x);
@@ -353,9 +389,11 @@ export function autoLayout(
   }
 
   log(`\n========== autoLayout END ==========`);
-  log(`Bounds: (${Math.round(minX)},${Math.round(minY)}) - (${Math.round(maxX)},${Math.round(maxY)})`);
-  log(`Content size: ${Math.round(maxX-minY)}x${Math.round(maxY-minY)}`);
-  
+  log(
+    `Bounds: (${Math.round(minX)},${Math.round(minY)}) - (${Math.round(maxX)},${Math.round(maxY)})`,
+  );
+  log(`Content size: ${Math.round(maxX - minY)}x${Math.round(maxY - minY)}`);
+
   // Check for overlaps
   log('\n--- Overlap Check ---');
   for (let i = 0; i < updatedLayers.length; i++) {
@@ -372,22 +410,26 @@ export function autoLayout(
       }
     }
   }
-  
+
   // Check parent-child distances
   log('\n--- Parent-Child Distance Check ---');
   for (const layer of updatedLayers) {
     if (layer.parentId || layer.sourceLayerId) {
       const parentId = layer.parentId || layer.sourceLayerId;
-      const parent = updatedLayers.find(l => l.id === parentId);
+      const parent = updatedLayers.find((l) => l.id === parentId);
       if (parent) {
         const dx = layer.x - (parent.x + parent.width);
         const dy = Math.abs(layer.y - parent.y);
-        log(`  ${layer.title} ← ${parent.title}: dx=${Math.round(dx)} (expected ~${PARENT_CHILD_GAP}), dy=${Math.round(dy)}`);
+        log(
+          `  ${layer.title} ← ${parent.title}: dx=${Math.round(dx)} (expected ~${PARENT_CHILD_GAP}), dy=${Math.round(dy)}`,
+        );
         if (dx < PARENT_CHILD_GAP * 0.5 || dx > PARENT_CHILD_GAP * 2) {
           log(`    ⚠️ ABNORMAL dx!`);
         }
       } else {
-        log(`  ${layer.title}: parent ${parentId.slice(0,8)} NOT FOUND in updatedLayers!`);
+        log(
+          `  ${layer.title}: parent ${parentId?.slice(0, 8) ?? '(none)'} NOT FOUND in updatedLayers!`,
+        );
       }
     }
   }
