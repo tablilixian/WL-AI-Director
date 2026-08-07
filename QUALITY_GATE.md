@@ -86,12 +86,12 @@ push / PR → GitHub Actions: quality-gate
 
 诊断时量化出的存量（**非门禁范围**，门禁只管增量）：
 
-| 类别             | 量级              | 计划                                                  |
-| ---------------- | ----------------- | ----------------------------------------------------- |
-| ESLint error     | ~750              | 按模块分批修，纳入日常 PR                             |
-| ESLint warning   | ~1411             | 含 `no-explicit-any`/`no-console` 等，逐步收紧        |
-| `console.*` 散落 | ~285 处           | 统一日志层后替换                                      |
-| 巨型组件         | 12 个文件 >500 行 | `GenerateVideoPanel.tsx` 达 2323 行，需拆分 (Phase 2) |
+| 类别             | 量级              | 计划                                                                             |
+| ---------------- | ----------------- | -------------------------------------------------------------------------------- |
+| ESLint error     | **0 ✅**          | 已偿还：忽略 vendored ffmpeg(408) + 机械修复 242 处                              |
+| ESLint warning   | 1404              | `no-console` 764 / `no-explicit-any` 524 / `no-non-null-assertion` 117，逐步收紧 |
+| `console.*` 散落 | 764 处            | 统一日志层后替换 (Phase 4)                                                       |
+| 巨型组件         | 12 个文件 >500 行 | `GenerateVideoPanel.tsx` 达 2323 行，需拆分 (Phase 3)                            |
 
 **偿还原则**：新代码必须遵守门禁；存量债通过"顺手清"（改到哪个文件顺手修该文件的相关告警）逐步消化，不做一次性大改以免引入回归。
 
@@ -100,8 +100,9 @@ push / PR → GitHub Actions: quality-gate
 ## 5. 路线图（下一步，待排期）
 
 - **Phase 1 — CI 接入**：✅ 已完成（`.github/workflows/ci.yml`，GitHub Actions）。
-- **Phase 2 — 重构还债**：巨型组件拆分、统一日志层、逐步把 `any` 换成精确类型。
-- **Phase 3 — 规范加固**：随债减少，把部分 warn 提升为 error（如 `no-explicit-any`）。
+- **Phase 2 — error 级债偿还**：✅ 已完成（全仓 ESLint error 0 → 见上表）。warning 级软债留待下。
+- **Phase 3 — 巨型组件拆分**：`GenerateVideoPanel.tsx` 等 12 个文件 >500 行，按职责拆分。
+- **Phase 4 — 统一日志 + 警告收紧**：替换 764 处 `console.*` 为统一 logger；随后将 `no-explicit-any` / `no-non-null-assertion` / `no-console` 由 warn 提升为 error（`--max-warnings=0`）。
 
 ---
 
