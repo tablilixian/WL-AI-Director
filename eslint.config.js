@@ -27,6 +27,8 @@ export default tseslint.config(
       'scripts/**',
       '**/*.config.ts',
       '**/*.config.js',
+      // 第三方生成代码（ffmpeg wasm core），非源码、不在清理范围内
+      'public/ffmpeg/**',
     ],
   },
   js.configs.recommended,
