@@ -2,13 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Search, Film } from 'lucide-react';
 import { ProjectState } from '../../types';
 import { PromptCategory, EditingPrompt } from './constants';
-import { 
-  savePromptEdit, 
-  filterCharacters, 
-  filterScenes, 
-  filterProps,
-  filterShots 
-} from './utils';
+import { savePromptEdit, filterCharacters, filterScenes, filterProps, filterShots } from './utils';
 import CharacterSection from './CharacterSection';
 import SceneSection from './SceneSection';
 import PropSection from './PropSection';
@@ -24,7 +18,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
   const [category, setCategory] = useState<PromptCategory>('all');
   const [editingPrompt, setEditingPrompt] = useState<EditingPrompt>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['characters', 'scenes', 'props', 'shots'])
+    new Set(['characters', 'scenes', 'props', 'shots']),
   );
 
   const toggleSection = (section: string) => {
@@ -42,7 +36,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
     id: string,
     currentValue: string,
     variationId?: string,
-    shotId?: string
+    shotId?: string,
   ) => {
     setEditingPrompt({ type, id, value: currentValue, variationId, shotId });
   };
@@ -76,21 +70,25 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
   }, []);
 
   // Filter data
-  const filteredCharacters = category === 'all' || category === 'characters'
-    ? filterCharacters(project.scriptData?.characters || [], searchQuery)
-    : [];
+  const filteredCharacters =
+    category === 'all' || category === 'characters'
+      ? filterCharacters(project.scriptData?.characters || [], searchQuery)
+      : [];
 
-  const filteredScenes = category === 'all' || category === 'scenes'
-    ? filterScenes(project.scriptData?.scenes || [], searchQuery)
-    : [];
+  const filteredScenes =
+    category === 'all' || category === 'scenes'
+      ? filterScenes(project.scriptData?.scenes || [], searchQuery)
+      : [];
 
-  const filteredProps = category === 'all' || category === 'props'
-    ? filterProps(project.scriptData?.props || [], searchQuery)
-    : [];
+  const filteredProps =
+    category === 'all' || category === 'props'
+      ? filterProps(project.scriptData?.props || [], searchQuery)
+      : [];
 
-  const filteredShots = category === 'all' || category === 'keyframes'
-    ? filterShots(project.shots || [], searchQuery)
-    : [];
+  const filteredShots =
+    category === 'all' || category === 'keyframes'
+      ? filterShots(project.shots || [], searchQuery)
+      : [];
 
   const hasNoData = !project.scriptData && !project.shots.length;
 
@@ -102,7 +100,9 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-1">提示词管理</h1>
-              <p className="text-sm text-[var(--text-tertiary)]">查看和编辑所有生成任务的提示词和变量</p>
+              <p className="text-sm text-[var(--text-tertiary)]">
+                查看和编辑所有生成任务的提示词和变量
+              </p>
             </div>
           </div>
 
@@ -179,7 +179,7 @@ const StagePrompts: React.FC<Props> = ({ project, updateProject }) => {
           {project.shots.length > 0 && (
             <KeyframeSection
               shots={filteredShots}
-              scriptData={project.scriptData}
+              scriptData={project.scriptData ?? undefined}
               isExpanded={expandedSections.has('shots')}
               onToggle={() => toggleSection('shots')}
               editingPrompt={editingPrompt}

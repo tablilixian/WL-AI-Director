@@ -4,12 +4,21 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Info, CheckCircle, ExternalLink, Building, Key, Loader2, ChevronDown, ChevronRight, AlertCircle, Trash2, X } from 'lucide-react';
-import { 
-  ModelType, 
-  ModelDefinition, 
-  ModelProvider,
-} from '../../types/model';
+import {
+  Plus,
+  Info,
+  CheckCircle,
+  ExternalLink,
+  Building,
+  Key,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  AlertCircle,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { ModelType, ModelDefinition, ModelProvider } from '../../types/model';
 import {
   getModels,
   updateModel,
@@ -22,9 +31,6 @@ import {
   addProvider,
   removeProvider,
   updateProvider,
-  getApiKeyForModel,
-  getApiKeySource,
-  validateApiKey,
 } from '../../services/modelRegistry';
 import { verifyApiKey } from '../../services/modelService';
 import { useAlert } from '../GlobalAlert';
@@ -35,12 +41,6 @@ interface ModelListProps {
   type: ModelType;
   onRefresh: () => void;
 }
-
-const typeDescriptions: Record<ModelType, string> = {
-  chat: '用于剧本解析、分镜生成、提示词优化等文本生成任务',
-  image: '用于角色定妆、场景生成、关键帧生成等图片生成任务',
-  video: '用于视频片段生成任务',
-};
 
 const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
   const [models, setModels] = useState<ModelDefinition[]>([]);
@@ -136,14 +136,16 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
     } catch (error) {
       setVerifyStatus('error');
       setVerifyMessage(`验证失败: ${error instanceof Error ? error.message : '未知错误'}`);
-      showAlert(`API Key 验证失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+      showAlert(`API Key 验证失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+        type: 'error',
+      });
     } finally {
       setIsVerifying(false);
     }
   };
 
   const toggleProviderExpanded = (providerId: string) => {
-    setExpandedProviders(prev => {
+    setExpandedProviders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(providerId)) {
         newSet.delete(providerId);
@@ -160,7 +162,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
 
   const groupModelsByProvider = () => {
     const grouped: Record<string, ModelDefinition[]> = {};
-    models.forEach(model => {
+    models.forEach((model) => {
       if (!grouped[model.providerId]) {
         grouped[model.providerId] = [];
       }
@@ -177,12 +179,11 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
   const handleSetActiveModel = (modelId: string) => {
     if (setActiveModel(type, modelId)) {
       setActiveModelId(modelId);
-      const model = models.find(m => m.id === modelId);
+      const model = models.find((m) => m.id === modelId);
       const provider = model ? getProviderById(model.providerId) : null;
-      showAlert(
-        `已切换到 ${model?.name}${provider ? ` (${provider.name})` : ''}`, 
-        { type: 'success' }
-      );
+      showAlert(`已切换到 ${model?.name}${provider ? ` (${provider.name})` : ''}`, {
+        type: 'success',
+      });
       onRefresh();
     } else {
       showAlert('设置激活模型失败，请确保模型已启用', { type: 'error' });
@@ -206,11 +207,11 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           onRefresh();
           showAlert('模型已删除', { type: 'success' });
         }
-      }
+      },
     });
   };
 
-  const handleAddModel = (model: Omit<ModelDefinition, 'isBuiltIn'> & { id?: string }) => {
+  const handleAddModel = (model: Omit<ModelDefinition, 'id' | 'isBuiltIn'>) => {
     try {
       registerModel(model);
       setIsAddingModel(false);
@@ -259,7 +260,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
       showAlert('不能删除内置厂商', { type: 'warning' });
       return;
     }
-    const modelCount = models.filter(m => m.providerId === providerId).length;
+    const modelCount = models.filter((m) => m.providerId === providerId).length;
     showAlert(
       modelCount > 0
         ? `确定要删除厂商 "${provider.name}" 吗？该厂商下的 ${modelCount} 个模型也将被删除。`
@@ -283,8 +284,8 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           } else {
             showAlert('删除厂商失败', { type: 'error' });
           }
-        }
-      }
+        },
+      },
     );
   };
 
@@ -297,7 +298,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           <span className="text-xs font-bold text-[var(--accent-text-hover)]">当前使用</span>
         </div>
         {(() => {
-          const activeModel = models.find(m => m.id === activeModelId);
+          const activeModel = models.find((m) => m.id === activeModelId);
           const provider = activeModel ? getProviderById(activeModel.providerId) : null;
           return (
             <p className="text-[11px] text-[var(--text-secondary)]">
@@ -333,7 +334,9 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           <div className="mb-3 p-3 bg-[var(--bg-hover)] rounded-lg border border-[var(--border-secondary)] space-y-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">厂商名称 *</label>
+                <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                  厂商名称 *
+                </label>
                 <input
                   type="text"
                   value={newProviderName}
@@ -343,7 +346,9 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">API 基础 URL *</label>
+                <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                  API 基础 URL *
+                </label>
                 <input
                   type="text"
                   value={newProviderBaseUrl}
@@ -354,7 +359,9 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">厂商 API Key（可选）</label>
+              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                厂商 API Key（可选）
+              </label>
               <input
                 type="password"
                 value={newProviderApiKey}
@@ -371,19 +378,17 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
             </button>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <div className="md:col-span-1">
-            <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
-              选择厂商
-            </label>
+            <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">选择厂商</label>
             <div className="flex gap-2">
               <select
                 value={selectedProvider}
                 onChange={(e) => handleProviderChange(e.target.value)}
                 className="flex-1 bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)]"
               >
-                {providers.map(provider => (
+                {providers.map((provider) => (
                   <option key={provider.id} value={provider.id}>
                     {provider.isBuiltIn ? '🏢' : '🔧'} {provider.name}
                   </option>
@@ -400,7 +405,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
               )}
             </div>
           </div>
-          
+
           <div className="md:col-span-2">
             <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
               厂商 API Key（中等优先级）
@@ -423,7 +428,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={handleVerifyApiKey}
@@ -437,7 +442,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
             )}
             验证 API Key
           </button>
-          
+
           {verifyStatus !== 'idle' && (
             <div className="flex items-center gap-1 text-xs">
               {verifyStatus === 'success' ? (
@@ -445,7 +450,11 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
               ) : (
                 <AlertCircle className="w-3.5 h-3.5 text-[var(--error-text)]" />
               )}
-              <span className={verifyStatus === 'success' ? 'text-[var(--success)]' : 'text-[var(--error-text)]'}>
+              <span
+                className={
+                  verifyStatus === 'success' ? 'text-[var(--success)]' : 'text-[var(--error-text)]'
+                }
+              >
                 {verifyMessage}
               </span>
             </div>
@@ -468,19 +477,22 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full flex-shrink-0"></span>
             <span className="text-[10px] text-[var(--text-secondary)]">
-              <span className="font-medium text-[var(--text-primary)]">模型专属 API Key</span>（最高优先级）- 为每个模型单独配置
+              <span className="font-medium text-[var(--text-primary)]">模型专属 API Key</span>
+              （最高优先级）- 为每个模型单独配置
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[var(--text-tertiary)] rounded-full flex-shrink-0"></span>
             <span className="text-[10px] text-[var(--text-secondary)]">
-              <span className="font-medium text-[var(--text-primary)]">厂商 API Key</span>（中等优先级）- 为同一厂商的所有模型配置
+              <span className="font-medium text-[var(--text-primary)]">厂商 API Key</span>
+              （中等优先级）- 为同一厂商的所有模型配置
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[var(--text-tertiary)] rounded-full flex-shrink-0"></span>
             <span className="text-[10px] text-[var(--text-secondary)]">
-              <span className="font-medium text-[var(--text-primary)]">全局 API Key</span>（最低优先级）- 所有模型共享
+              <span className="font-medium text-[var(--text-primary)]">全局 API Key</span>
+              （最低优先级）- 所有模型共享
             </span>
           </div>
         </div>
@@ -495,15 +507,18 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
           <Info className="w-4 h-4 text-[var(--text-tertiary)]" />
           <h4 className="text-xs font-bold text-[var(--text-primary)]">模型列表（按厂商分组）</h4>
         </div>
-        
+
         {Object.entries(groupModelsByProvider()).map(([providerId, providerModels]) => {
           const providerName = getProviderName(providerId);
           const expanded = isProviderExpanded(providerId);
-          
+
           return (
-            <div key={providerId} className="border border-[var(--border-primary)] rounded-lg overflow-hidden">
+            <div
+              key={providerId}
+              className="border border-[var(--border-primary)] rounded-lg overflow-hidden"
+            >
               {/* 厂商分组头部 */}
-              <div 
+              <div
                 className="bg-[var(--bg-elevated)]/30 p-3 flex items-center justify-between cursor-pointer hover:bg-[var(--bg-elevated)]/50 transition-colors"
                 onClick={() => toggleProviderExpanded(providerId)}
               >
@@ -514,11 +529,15 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
                     <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
                   )}
                   <Building className="w-4 h-4 text-[var(--accent-text)]" />
-                  <span className="text-sm font-medium text-[var(--text-primary)]">{providerName}</span>
-                  <span className="text-xs text-[var(--text-tertiary)]">({providerModels.length} 个模型)</span>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                    {providerName}
+                  </span>
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    ({providerModels.length} 个模型)
+                  </span>
                 </div>
               </div>
-              
+
               {/* 厂商模型列表 */}
               {expanded && (
                 <div className="divide-y divide-[var(--border-primary)]">

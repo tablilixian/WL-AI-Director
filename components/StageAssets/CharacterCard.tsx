@@ -22,9 +22,8 @@ import {
   FolderPlus,
   Grid3x3,
   Loader2,
-  Wand2,
   Sparkles,
-  ImageIcon
+  ImageIcon,
 } from 'lucide-react';
 import { Character, VisualDescriptionField, AspectRatio } from '../../types';
 import PromptEditor from './PromptEditor';
@@ -63,9 +62,17 @@ interface CharacterCardProps {
   onAddToLibrary: () => void;
   onReplaceFromLibrary: () => void;
   /** AI 润色文本回调 */
-  onPolishText?: (text: string, fieldType: 'signaturePose' | 'microAction', character: Character) => Promise<string>;
+  onPolishText?: (
+    text: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character,
+  ) => Promise<string>;
   /** 生成预览图回调 */
-  onGeneratePreview?: (text: string, fieldType: 'signaturePose' | 'microAction', character: Character) => Promise<string>;
+  onGeneratePreview?: (
+    text: string,
+    fieldType: 'signaturePose' | 'microAction',
+    character: Character,
+  ) => Promise<string>;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -96,7 +103,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   // ========== Modal 状态 ==========
   /** 当前打开的 VisualDescription Modal 类型 */
-  const [editingVisualField, setEditingVisualField] = useState<'signaturePose' | 'microAction' | null>(null);
+  const [editingVisualField, setEditingVisualField] = useState<
+    'signaturePose' | 'microAction' | null
+  >(null);
 
   const { src: imageSrc, loading: imageLoading } = useImageLoader(character.imageUrl);
 
@@ -150,7 +159,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const defaultPolishText = async (
     text: string,
     fieldType: 'signaturePose' | 'microAction',
-    _character: Character
+    _character: Character,
   ): Promise<string> => {
     // 默认返回原文本 + 标注
     if (fieldType === 'signaturePose') {
@@ -165,9 +174,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
    * 如果外部没有提供 onGeneratePreview，则返回空字符串
    */
   const defaultGeneratePreview = async (
-    text: string,
-    fieldType: 'signaturePose' | 'microAction',
-    char: Character
+    _text: string,
+    _fieldType: 'signaturePose' | 'microAction',
+    _char: Character,
   ): Promise<string> => {
     // 默认实现：返回空字符串（需要外部提供真实实现）
     console.warn('onGeneratePreview not provided, using default implementation');
@@ -177,27 +186,24 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   /**
    * 获取字段按钮的显示状态
    */
-  const getFieldButtonContent = (
-    fieldValue: VisualDescriptionField | undefined,
-    label: string
-  ) => {
+  const getFieldButtonContent = (fieldValue: VisualDescriptionField | undefined, label: string) => {
     if (!fieldValue || !fieldValue.original) {
       return {
         text: `+ ${label}`,
         hasPolish: false,
-        hasPreview: false
+        hasPreview: false,
       };
     }
     return {
       text: fieldValue.original,
       hasPolish: !!fieldValue.polished,
-      hasPreview: !!fieldValue.previewImageUrl
+      hasPreview: !!fieldValue.previewImageUrl,
     };
   };
 
   // 获取各字段状态
-  const signaturePoseState = getFieldButtonContent(character.signaturePose, '标志性姿态');
-  const microActionState = getFieldButtonContent(character.microAction, '病态微动作');
+  getFieldButtonContent(character.signaturePose, '标志性姿态');
+  getFieldButtonContent(character.microAction, '病态微动作');
 
   return (
     <>
@@ -274,7 +280,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                 />
               ) : (
                 <div className="flex items-center gap-2 mb-1 group/name">
-                  <h3 className="font-bold text-[var(--text-primary)] text-base">{character.name}</h3>
+                  <h3 className="font-bold text-[var(--text-primary)] text-base">
+                    {character.name}
+                  </h3>
                   <button
                     onClick={() => {
                       setEditName(character.name);
@@ -349,26 +357,36 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Edit2 className={`w-3.5 h-3.5 flex-shrink-0 ${
-                      character.signaturePose?.original
-                        ? 'text-[var(--accent-text)]'
-                        : 'text-[var(--text-muted)]'
-                    }`} />
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                      character.signaturePose?.original
-                        ? 'text-[var(--accent-text)]'
-                        : 'text-[var(--text-muted)]'
-                    }`}>
+                    <Edit2
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${
+                        character.signaturePose?.original
+                          ? 'text-[var(--accent-text)]'
+                          : 'text-[var(--text-muted)]'
+                      }`}
+                    />
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider ${
+                        character.signaturePose?.original
+                          ? 'text-[var(--accent-text)]'
+                          : 'text-[var(--text-muted)]'
+                      }`}
+                    >
                       标志性姿态
                     </span>
                   </div>
                   {/* 状态图标 */}
                   <div className="flex items-center gap-1.5">
                     {character.signaturePose?.polished && (
-                      <Sparkles className="w-3.5 h-3.5 text-[var(--warning-text)]" title="已润色" />
+                      <Sparkles
+                        className="w-3.5 h-3.5 text-[var(--warning-text)]"
+                        aria-label="已润色"
+                      />
                     )}
                     {character.signaturePose?.previewImageUrl && (
-                      <Check className="w-3.5 h-3.5 text-[var(--success-text)]" title="有预览图" />
+                      <Check
+                        className="w-3.5 h-3.5 text-[var(--success-text)]"
+                        aria-label="有预览图"
+                      />
                     )}
                   </div>
                 </button>
@@ -385,26 +403,36 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <AlertCircle className={`w-3.5 h-3.5 flex-shrink-0 ${
-                      character.microAction?.original
-                        ? 'text-[var(--error-text)]'
-                        : 'text-[var(--text-muted)]'
-                    }`} />
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                      character.microAction?.original
-                        ? 'text-[var(--error-text)]'
-                        : 'text-[var(--text-muted)]'
-                    }`}>
+                    <AlertCircle
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${
+                        character.microAction?.original
+                          ? 'text-[var(--error-text)]'
+                          : 'text-[var(--text-muted)]'
+                      }`}
+                    />
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider ${
+                        character.microAction?.original
+                          ? 'text-[var(--error-text)]'
+                          : 'text-[var(--text-muted)]'
+                      }`}
+                    >
                       病态微动作
                     </span>
                   </div>
                   {/* 状态图标 */}
                   <div className="flex items-center gap-1.5">
                     {character.microAction?.polished && (
-                      <Sparkles className="w-3.5 h-3.5 text-[var(--warning-text)]" title="已润色" />
+                      <Sparkles
+                        className="w-3.5 h-3.5 text-[var(--warning-text)]"
+                        aria-label="已润色"
+                      />
                     )}
                     {character.microAction?.previewImageUrl && (
-                      <Check className="w-3.5 h-3.5 text-[var(--success-text)]" title="有预览图" />
+                      <Check
+                        className="w-3.5 h-3.5 text-[var(--success-text)]"
+                        aria-label="有预览图"
+                      />
                     )}
                   </div>
                 </button>
@@ -433,9 +461,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               >
                 <Grid3x3 className="w-3 h-3" />
                 造型九宫格
-                {character.turnaround?.status === 'completed' && (
-                  <Check className="w-2.5 h-2.5" />
-                )}
+                {character.turnaround?.status === 'completed' && <Check className="w-2.5 h-2.5" />}
               </button>
 
               {/* 三视图立绘图 */}
@@ -449,9 +475,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               >
                 <ImageIcon className="w-3 h-3" />
                 三视图
-                {character.threeViewImageUrl && (
-                  <Check className="w-2.5 h-2.5" />
-                )}
+                {character.threeViewImageUrl && <Check className="w-2.5 h-2.5" />}
               </button>
 
               {/* 上传按钮 */}
@@ -519,9 +543,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       {editingVisualField && (
         <VisualDescriptionModal
           fieldType={editingVisualField}
-          fieldValue={editingVisualField === 'signaturePose'
-            ? character.signaturePose
-            : character.microAction
+          fieldValue={
+            editingVisualField === 'signaturePose' ? character.signaturePose : character.microAction
           }
           character={character}
           onClose={() => setEditingVisualField(null)}

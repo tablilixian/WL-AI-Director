@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Video, Loader2, Edit2, Settings2 } from 'lucide-react';
-import { Shot, AspectRatio, VideoDuration, VideoGenerationMode, TimedKeyframe, VideoPreset, Keyframe, FourGridDeduction } from '../../types';
-import { getImageAspectRatio, getDefaultResolution, buildVideoPrompt } from './utils';
-import type { PipelineShotData } from './utils';
+import {
+  Shot,
+  AspectRatio,
+  VideoDuration,
+  VideoGenerationMode,
+  TimedKeyframe,
+  VideoPreset,
+  Keyframe,
+  FourGridDeduction,
+} from '../../types';
+import {
+  getImageAspectRatio,
+  getDefaultResolution,
+  buildVideoPrompt,
+  type PipelineShotData,
+} from './utils';
 import { VideoSettingsPanel } from '../AspectRatioSelector';
-import { 
-  getDefaultAspectRatio, 
+import {
+  getDefaultAspectRatio,
   getDefaultVideoDuration,
   getVideoModels,
   getActiveVideoModel,
@@ -51,7 +64,7 @@ interface VideoGeneratorProps {
     frameIndexes?: number[];
   }) => void;
   // Pipeline 字段自动打通
-  projectAspectRatio?: AspectRatio;  // 用于推断默认分辨率
+  projectAspectRatio?: AspectRatio; // 用于推断默认分辨率
   // 预设系统
   videoPresets?: VideoPreset[];
   onSavePreset: (name: string, description?: string) => void;
@@ -106,19 +119,21 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   };
 
   // 获取可用的视频模型
-  const videoModels = getVideoModels().filter(m => m.isEnabled);
+  const videoModels = getVideoModels().filter((m) => m.isEnabled);
   const defaultModel = getActiveVideoModel();
-  
+
   // 状态（废弃模型已在数据加载层迁移，此处无需额外处理）
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
   const [selectedModelId, setSelectedModelId] = useState<string>(
-    normalizeModelId(shot.videoModel) || defaultModel?.id || videoModels[0]?.id || 'sora-2'
+    normalizeModelId(shot.videoModel) || defaultModel?.id || videoModels[0]?.id || 'sora-2',
   );
   const [veoFastQuality, setVeoFastQuality] = useState<'standard' | '4k'>(
-    resolveVeoFastQuality(shot.videoModel)
+    resolveVeoFastQuality(shot.videoModel),
   );
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => getDefaultAspectRatio());
-  const [duration, setDuration] = useState<VideoDuration>(() => shot.interval?.duration || getDefaultVideoDuration());
+  const [duration, setDuration] = useState<VideoDuration>(
+    () => shot.interval?.duration || getDefaultVideoDuration(),
+  );
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // 从 shot 现有字段推断高级面板默认值
   const inferredResolution = getDefaultResolution(projectAspectRatio || '16:9');
@@ -134,7 +149,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     };
     add(shot.interval?.startKeyframeId, 0);
     add(shot.interval?.endKeyframeId, 100);
-    for (const tk of (shot.interval?.timedKeyframes || [])) {
+    for (const tk of shot.interval?.timedKeyframes || []) {
       add(tk.keyframeId, tk.positionPercent);
     }
     return result;
@@ -159,7 +174,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     gridType: shot.interval?.gridType,
     frameIndexes: shot.interval?.frameIndexes,
   });
-  
+
   // 推演弹框状态
   const [showDeductionModal, setShowDeductionModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -169,7 +184,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   useEffect(() => {
     setFourGrid(shot.fourGrid);
     setShowDeductionModal(false);
-    setAdvancedParams(prev => ({
+    setAdvancedParams((prev) => ({
       ...prev,
       mode: shot.interval?.mode || 'basic',
       fps: shot.interval?.fps || 30,
@@ -182,7 +197,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
     }));
   }, [shot.id]);
 
-  const startKf = shot.keyframes?.find(k => k.type === 'start');
+  const startKf = shot.keyframes?.find((k) => k.type === 'start');
   const startKeyframeImageUrl = startKf?.imageUrl;
 
   const handleSaveFourGrid = (data: FourGridDeduction) => {
@@ -200,7 +215,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       showAlert(`选择了 ${frameIndexes.length} 个分镜但当前网格是 ${grid} 格`, { type: 'warning' });
       return;
     }
-    setAdvancedParams(prev => ({ ...prev, frameIndexes }));
+    setAdvancedParams((prev) => ({ ...prev, frameIndexes }));
   };
 
   // 用 ref 稳定引用，避免父组件内联回调重渲染导致 cleanup 死循环
@@ -210,12 +225,16 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   paramsRef.current = advancedParams;
 
   // 当前选中的模型
-  const selectedModel = videoModels.find(m => m.id === selectedModelId) as VideoModelDefinition | undefined;
+  const selectedModel = videoModels.find((m) => m.id === selectedModelId) as
+    VideoModelDefinition | undefined;
   const modelType: 'sora' | 'veo' = selectedModel?.params.mode === 'async' ? 'sora' : 'veo';
-  const effectiveModelId = selectedModelId === 'veo_3_1-fast'
-    ? (veoFastQuality === '4k' ? 'veo_3_1-fast-4K' : 'veo_3_1-fast')
-    : selectedModelId;
-  
+  const effectiveModelId =
+    selectedModelId === 'veo_3_1-fast'
+      ? veoFastQuality === '4k'
+        ? 'veo_3_1-fast-4K'
+        : 'veo_3_1-fast'
+      : selectedModelId;
+
   const isGenerating = shot.interval?.status === 'generating';
   const hasVideo = !!shot.interval?.videoUrl;
 
@@ -235,7 +254,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
 
   useEffect(() => {
     if (!shot.videoModel) return;
-    setSelectedModelId(normalizeModelId(shot.videoModel));
+    setSelectedModelId(normalizeModelId(shot.videoModel)!);
     setVeoFastQuality(resolveVeoFastQuality(shot.videoModel));
   }, [shot.videoModel]);
 
@@ -286,29 +305,43 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
       shot.cameraChoreography,
       projectEraContext,
     );
-  }, [shot.actionSummary, shot.cameraMovement, effectiveModelId, projectLanguage, isNineGridMode, shot.nineGrid, duration, shot.cameraChoreography, projectEraContext]);
+  }, [
+    shot.actionSummary,
+    shot.cameraMovement,
+    effectiveModelId,
+    projectLanguage,
+    isNineGridMode,
+    shot.nineGrid,
+    duration,
+    shot.cameraChoreography,
+    projectEraContext,
+  ]);
 
   // 确认弹框需要的衍生数据
-  const timedKeyframeImages = advancedParams.mode === 'mkr' && advancedParams.timedKeyframes
-    ? advancedParams.timedKeyframes.map(tk => {
-        const kf = shot.keyframes?.find(k => k.id === tk.keyframeId);
-        return { positionPercent: tk.positionPercent, imageUrl: kf?.imageUrl };
-      })
-    : undefined;
-  const refGridImageUrl = fourGrid?.status === 'completed' && fourGrid?.imageUrl
-    ? fourGrid.imageUrl
-    : (shot.nineGrid?.status === 'completed' ? shot.nineGrid?.imageUrl : undefined);
-  const totalFrames = duration * advancedParams.fps;
+  const timedKeyframeImages =
+    advancedParams.mode === 'mkr' && advancedParams.timedKeyframes
+      ? advancedParams.timedKeyframes.map((tk) => {
+          const kf = shot.keyframes?.find((k) => k.id === tk.keyframeId);
+          return { positionPercent: tk.positionPercent, imageUrl: kf?.imageUrl };
+        })
+      : undefined;
+  const refGridImageUrl =
+    fourGrid?.status === 'completed' && fourGrid?.imageUrl
+      ? fourGrid.imageUrl
+      : shot.nineGrid?.status === 'completed'
+        ? shot.nineGrid?.imageUrl
+        : undefined;
 
   // Pipeline 字段自动打通：构建 shot 现有字段预览数据
-  const pipelineShotData: PipelineShotData | undefined = (shot.shotSize || shot.cameraMovement || shot.actionSummary || shot.cameraChoreography)
-    ? {
-        shotSize: shot.shotSize,
-        cameraMovement: shot.cameraMovement,
-        actionSummary: shot.actionSummary,
-        cameraChoreography: shot.cameraChoreography,
-      }
-    : undefined;
+  const pipelineShotData: PipelineShotData | undefined =
+    shot.shotSize || shot.cameraMovement || shot.actionSummary || shot.cameraChoreography
+      ? {
+          shotSize: shot.shotSize,
+          cameraMovement: shot.cameraMovement,
+          actionSummary: shot.actionSummary,
+          cameraChoreography: shot.cameraChoreography,
+        }
+      : undefined;
 
   // 九宫格模式下自动切换到高级 Tab 以配置网格参数
   useEffect(() => {
@@ -352,7 +385,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
               </button>
             </div>
           ) : (
-            <button 
+            <button
               onClick={onEditPrompt}
               className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
               title="预览/编辑视频提示词"
@@ -373,7 +406,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         <div className="flex items-start gap-2 px-3 py-2 bg-[var(--info-bg)]/30 border border-[var(--accent)]/30 rounded-lg">
           <div className="text-[10px] text-[var(--text-secondary)]">
             <span className="font-bold">网格分镜模式已激活。</span>
-            <span className="block mt-0.5">当前使用网格整图作为起始帧，可在高级面板中配置网格类型与帧位置。</span>
+            <span className="block mt-0.5">
+              当前使用网格整图作为起始帧，可在高级面板中配置网格类型与帧位置。
+            </span>
           </div>
         </div>
       )}
@@ -425,11 +460,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
             pipelineShotData={pipelineShotData}
             fourGrid={fourGrid}
             onOpenDeduction={() => setShowDeductionModal(true)}
-            onParamsChange={(params) => setAdvancedParams(prev => ({ ...prev, ...params }))}
+            onParamsChange={(params) => setAdvancedParams((prev) => ({ ...prev, ...params }))}
           />
         </div>
       )}
-      
+
       {/* Model Selector (always visible) */}
       <div className="space-y-2">
         <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest block">
@@ -440,9 +475,12 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           onChange={(e) => {
             const newModelId = e.target.value;
             setSelectedModelId(newModelId);
-            const resolvedModelId = newModelId === 'veo_3_1-fast'
-              ? (veoFastQuality === '4k' ? 'veo_3_1-fast-4K' : 'veo_3_1-fast')
-              : newModelId;
+            const resolvedModelId =
+              newModelId === 'veo_3_1-fast'
+                ? veoFastQuality === '4k'
+                  ? 'veo_3_1-fast-4K'
+                  : 'veo_3_1-fast'
+                : newModelId;
             onModelChange?.(resolvedModelId);
           }}
           className="w-full bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--accent)] transition-colors"
@@ -460,11 +498,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         </select>
         {selectedModel && (
           <p className="text-[9px] text-[var(--text-muted)] font-mono">
-            ✦ {selectedModel.name}: 
-            {selectedModel.params.mode === 'async' 
+            ✦ {selectedModel.name}:
+            {selectedModel.params.mode === 'async'
               ? ` 支持 ${selectedModel.params.supportedAspectRatios.join('/')}，可选 ${selectedModel.params.supportedDurations.join('/')}秒`
-              : ` 首尾帧模式，支持 ${selectedModel.params.supportedAspectRatios.join('/')}`
-            }
+              : ` 首尾帧模式，支持 ${selectedModel.params.supportedAspectRatios.join('/')}`}
           </p>
         )}
         {selectedModelId === 'veo_3_1-fast' && (
@@ -476,9 +513,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
                 disabled={isGenerating}
                 className={`
                   px-3 py-1.5 rounded-md text-xs transition-all
-                  ${veoFastQuality === 'standard'
-                    ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
+                  ${
+                    veoFastQuality === 'standard'
+                      ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                      : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
                   }
                   ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
@@ -490,9 +528,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
                 disabled={isGenerating}
                 className={`
                   px-3 py-1.5 rounded-md text-xs transition-all
-                  ${veoFastQuality === '4k'
-                    ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
+                  ${
+                    veoFastQuality === '4k'
+                      ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                      : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-secondary)] hover:text-[var(--text-secondary)]'
                   }
                   ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
@@ -520,14 +559,20 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           supportedDurations={selectedModel?.params.supportedDurations}
         />
       </div>
-      
+
       {/* Video Preview */}
       {videoUrl ? (
-        <div className="w-full bg-[var(--bg-base)] rounded-lg overflow-hidden border border-[var(--border-secondary)] relative shadow-lg" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
+        <div
+          className="w-full bg-[var(--bg-base)] rounded-lg overflow-hidden border border-[var(--border-secondary)] relative shadow-lg"
+          style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
+        >
           <video src={videoUrl} controls className="w-full h-full" />
         </div>
       ) : (
-        <div className="w-full bg-[var(--nav-hover-bg)] rounded-lg border border-dashed border-[var(--border-primary)] flex items-center justify-center" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
+        <div
+          className="w-full bg-[var(--nav-hover-bg)] rounded-lg border border-dashed border-[var(--border-primary)] flex items-center justify-center"
+          style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
+        >
           <span className="text-xs text-[var(--text-muted)] font-mono">PREVIEW AREA</span>
         </div>
       )}
@@ -537,10 +582,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         onClick={handleGenerate}
         disabled={!canGenerate || isGenerating}
         className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-          hasVideo 
+          hasVideo
             ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-secondary)]'
             : 'bg-[var(--accent)] text-[var(--text-primary)] hover:bg-[var(--accent-hover)] shadow-lg shadow-[var(--accent-shadow)]'
-        } ${(!canGenerate) ? 'opacity-50 cursor-not-allowed' : ''}`}
+        } ${!canGenerate ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {isGenerating ? (
           <>
@@ -566,7 +611,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
           </p>
         </div>
       )}
-      
+
       {/* Status Messages */}
       {!hasEndFrame && (
         <div className="text-[9px] text-[var(--text-tertiary)] text-center font-mono">
@@ -609,9 +654,13 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         fourGridDescriptions={fourGrid?.descriptions}
         nineGridPanels={shot.nineGrid?.panels}
         startKeyframeImageUrl={startKeyframeImageUrl}
-        endKeyframeImageUrl={shot.keyframes?.find(k => k.type === 'end')?.imageUrl}
+        endKeyframeImageUrl={shot.keyframes?.find((k) => k.type === 'end')?.imageUrl}
         refGridImageUrl={refGridImageUrl}
-        backgroundImage={advancedParams.mode === 'msr' ? (sceneImageUrl || advancedParams.backgroundImage) : advancedParams.backgroundImage}
+        backgroundImage={
+          advancedParams.mode === 'msr'
+            ? sceneImageUrl || advancedParams.backgroundImage
+            : advancedParams.backgroundImage
+        }
         timedKeyframeImages={timedKeyframeImages}
         gridType={advancedParams.gridType}
         frameIndexesPercent={advancedParams.frameIndexes}

@@ -13,7 +13,7 @@ interface OnboardingProps {
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart }) => {
-  const [currentPage, setCurrentPage] = useState(ONBOARDING_PAGES.WELCOME);
+  const [currentPage, setCurrentPage] = useState<number>(ONBOARDING_PAGES.WELCOME);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // 处理页面切换动画
@@ -71,7 +71,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart }) => 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center">
       {/* 背景遮罩 */}
-      <div 
+      <div
         className="absolute inset-0 bg-[var(--bg-base)]/90 backdrop-blur-sm"
         onClick={handleSkip}
       />
@@ -88,7 +88,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart }) => 
         </button>
 
         {/* 内容区域 */}
-        <div 
+        <div
           className={`p-8 pt-12 transition-opacity duration-150 ${
             isAnimating ? 'opacity-0' : 'opacity-100'
           }`}
@@ -98,10 +98,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onQuickStart }) => 
 
         {/* 进度指示 */}
         <div className="pb-6">
-          <ProgressDots 
-            currentPage={currentPage} 
-            onPageChange={handlePageChange} 
-          />
+          <ProgressDots currentPage={currentPage} onPageChange={handlePageChange} />
         </div>
       </div>
     </div>

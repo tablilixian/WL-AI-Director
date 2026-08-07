@@ -1,26 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, Package } from 'lucide-react';
-import { ProjectState, CharacterVariation, Character, Scene, Prop, AspectRatio, AssetLibraryItem, AssetLibraryItemType, CharacterTurnaroundPanel } from '../../types';
-import { 
-  generateImage, 
-  generateCharacterVisualPrompt, 
+import {
+  ProjectState,
+  CharacterVariation,
+  Character,
+  Scene,
+  Prop,
+  AspectRatio,
+  AssetLibraryItem,
+  CharacterTurnaroundPanel,
+} from '../../types';
+import {
+  generateImage,
+  generateCharacterVisualPrompt,
   generateSceneVisualPrompt,
-  generateCharacterTurnaroundPanels, 
+  generateCharacterTurnaroundPanels,
   generateCharacterTurnaroundImage,
-  generateCharacterFromDesignImage 
+  generateCharacterFromDesignImage,
+  getActiveChatModel,
+  getDefaultChatModelId,
 } from '../../services/aiService';
 import { imageStorageService } from '../../services/imageStorageService';
-import { unifiedImageService } from '../../services/unifiedImageService';
-import { 
-  getRegionalPrefix, 
-  handleImageUpload, 
-  getProjectLanguage, 
+import {
+  getRegionalPrefix,
+  handleImageUpload,
+  getProjectLanguage,
   getProjectVisualStyle,
   delay,
   generateId,
-  compareIds 
+  compareIds,
 } from './utils';
-import { getActiveChatModel, getDefaultChatModelId } from '../../services/aiService';
 import { DEFAULTS, STYLES, GRID_LAYOUTS } from './constants';
 import ImagePreviewModal from './ImagePreviewModal';
 import CharacterCard from './CharacterCard';
@@ -30,9 +39,15 @@ import WardrobeModal from './WardrobeModal';
 import TurnaroundModal from './TurnaroundModal';
 import ThreeViewModal from './ThreeViewModal';
 import { useAlert } from '../GlobalAlert';
-import { useImageLoader } from '../../hooks/useImageLoader';
 
-import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene, createLibraryItemFromProp, createLibraryItemFromTurnaround, cloneCharacterForProject } from '../../services/assetLibraryService';
+import {
+  applyLibraryItemToProject,
+  createLibraryItemFromCharacter,
+  createLibraryItemFromScene,
+  createLibraryItemFromProp,
+  createLibraryItemFromTurnaround,
+  cloneCharacterForProject,
+} from '../../services/assetLibraryService';
 import { hybridStorage } from '../../services/hybridStorageService';
 import { AssetLibraryModal } from '../../src/components/AssetLibrary';
 import { AspectRatioSelector } from '../AspectRatioSelector';
@@ -43,38 +58,17 @@ interface Props {
   onApiKeyError?: (error: any) => boolean;
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
-  
-const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; type: AssetLibraryItemType }> = ({ imageUrl, alt, type }) => {
-  const { src, loading } = useImageLoader(imageUrl);
-  
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-        <Loader2 className="w-5 h-5 animate-spin" />
-      </div>
-    );
-  }
-  
-  if (!src) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-        {type === 'character' || type === 'turnaround' ? (
-          <Users className="w-8 h-8 opacity-30" />
-        ) : type === 'scene' ? (
-          <MapPin className="w-8 h-8 opacity-30" />
-        ) : (
-          <Package className="w-8 h-8 opacity-30" />
-        )}
-      </div>
-    );
-  }
-  
-  return <img src={src} alt={alt} className="w-full h-full object-cover" />;
-};
 
-const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, onGeneratingChange }) => {
+const StageAssets: React.FC<Props> = ({
+  project,
+  updateProject,
+  onApiKeyError,
+  onGeneratingChange,
+}) => {
   const { showAlert } = useAlert();
-  const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
@@ -84,9 +78,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const [turnaroundCharId, setTurnaroundCharId] = useState<string | null>(null);
   const [threeViewCharId, setThreeViewCharId] = useState<string | null>(null);
   const [threeViewLoading, setThreeViewLoading] = useState(false);
-  
+
   // 横竖屏选择状态（优先读取工程级配置，向后兼容全局）
-  const [aspectRatio, setAspectRatioState] = useState<AspectRatio>(() => project.aspectRatio ?? getUserAspectRatio());
+  const [aspectRatio, setAspectRatioState] = useState<AspectRatio>(
+    () => project.aspectRatio ?? getUserAspectRatio(),
+  );
 
   // 同步工程外的 aspectRatio 变更（如从其他页面修改后返回）
   useEffect(() => {
@@ -100,12 +96,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     setAspectRatioState(ratio);
     updateProject({ aspectRatio: ratio });
   };
-  
 
   // 获取项目配置
   const language = getProjectLanguage(project.language, project.scriptData?.language);
   const visualStyle = getProjectVisualStyle(project.visualStyle, project.scriptData?.visualStyle);
-  const genre = project.scriptData?.genre || DEFAULTS.genre;
 
   /**
    * 组件加载时，检测并重置卡住的生成状态
@@ -114,46 +108,50 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   useEffect(() => {
     if (!project.scriptData) return;
 
-    const hasStuckCharacters = project.scriptData.characters.some(char => {
+    const hasStuckCharacters = project.scriptData.characters.some((char) => {
       const isCharStuck = char.status === 'generating' && !char.imageUrl;
-      const hasStuckVariations = char.variations?.some(v => v.status === 'generating' && !v.imageUrl);
+      const hasStuckVariations = char.variations?.some(
+        (v) => v.status === 'generating' && !v.imageUrl,
+      );
       return isCharStuck || hasStuckVariations;
     });
 
-    const hasStuckScenes = project.scriptData.scenes.some(scene => 
-      scene.status === 'generating' && !scene.imageUrl
+    const hasStuckScenes = project.scriptData.scenes.some(
+      (scene) => scene.status === 'generating' && !scene.imageUrl,
     );
 
-    const hasStuckProps = (project.scriptData.props || []).some(prop =>
-      prop.status === 'generating' && !prop.imageUrl
+    const hasStuckProps = (project.scriptData.props || []).some(
+      (prop) => prop.status === 'generating' && !prop.imageUrl,
     );
 
     if (hasStuckCharacters || hasStuckScenes || hasStuckProps) {
       console.log('🔧 [StageAssets] 检测到卡住的生成状态，正在重置...');
       console.log('🔧 [StageAssets] 重置前字符数:', project.scriptData.characters.length);
       const newData = { ...project.scriptData };
-      
-      newData.characters = newData.characters.map(char => ({
+
+      newData.characters = newData.characters.map((char) => ({
         ...char,
-        status: char.status === 'generating' && !char.imageUrl ? 'failed' as const : char.status,
-        variations: char.variations?.map(v => ({
+        status: char.status === 'generating' && !char.imageUrl ? ('failed' as const) : char.status,
+        variations: char.variations?.map((v) => ({
           ...v,
-          status: v.status === 'generating' && !v.imageUrl ? 'failed' as const : v.status
-        }))
+          status: v.status === 'generating' && !v.imageUrl ? ('failed' as const) : v.status,
+        })),
       }));
-      
-      newData.scenes = newData.scenes.map(scene => ({
+
+      newData.scenes = newData.scenes.map((scene) => ({
         ...scene,
-        status: scene.status === 'generating' && !scene.imageUrl ? 'failed' as const : scene.status
+        status:
+          scene.status === 'generating' && !scene.imageUrl ? ('failed' as const) : scene.status,
       }));
 
       if (newData.props) {
-        newData.props = newData.props.map(prop => ({
+        newData.props = newData.props.map((prop) => ({
           ...prop,
-          status: prop.status === 'generating' && !prop.imageUrl ? 'failed' as const : prop.status
+          status:
+            prop.status === 'generating' && !prop.imageUrl ? ('failed' as const) : prop.status,
         }));
       }
-      
+
       updateProject({ scriptData: newData });
     }
   }, [project.id]);
@@ -161,41 +159,50 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   // 定期检测卡住的生成状态（每30秒检测一次）
   useEffect(() => {
     if (!project.scriptData) return;
-    
+
     const checkStuckGeneration = () => {
-      const stuckChars = project.scriptData!.characters.filter(c => c.status === 'generating' && !c.imageUrl);
-      const stuckScenes = project.scriptData!.scenes.filter(s => s.status === 'generating' && !s.imageUrl);
-      const stuckProps = (project.scriptData!.props || []).filter(p => p.status === 'generating' && !p.imageUrl);
-      
+      const stuckChars = project.scriptData!.characters.filter(
+        (c) => c.status === 'generating' && !c.imageUrl,
+      );
+      const stuckScenes = project.scriptData!.scenes.filter(
+        (s) => s.status === 'generating' && !s.imageUrl,
+      );
+      const stuckProps = (project.scriptData!.props || []).filter(
+        (p) => p.status === 'generating' && !p.imageUrl,
+      );
+
       if (stuckChars.length > 0 || stuckScenes.length > 0 || stuckProps.length > 0) {
         console.log('🔧 检测到卡住的生成状态，自动重置...');
         const newData = { ...project.scriptData! };
-        
-        newData.characters = newData.characters.map(char => ({
+
+        newData.characters = newData.characters.map((char) => ({
           ...char,
-          status: char.status === 'generating' && !char.imageUrl ? 'failed' as const : char.status,
-          variations: char.variations?.map(v => ({
+          status:
+            char.status === 'generating' && !char.imageUrl ? ('failed' as const) : char.status,
+          variations: char.variations?.map((v) => ({
             ...v,
-            status: v.status === 'generating' && !v.imageUrl ? 'failed' as const : v.status
-          }))
+            status: v.status === 'generating' && !v.imageUrl ? ('failed' as const) : v.status,
+          })),
         }));
-        
-        newData.scenes = newData.scenes.map(scene => ({
+
+        newData.scenes = newData.scenes.map((scene) => ({
           ...scene,
-          status: scene.status === 'generating' && !scene.imageUrl ? 'failed' as const : scene.status
+          status:
+            scene.status === 'generating' && !scene.imageUrl ? ('failed' as const) : scene.status,
         }));
-        
+
         if (newData.props) {
-          newData.props = newData.props.map(prop => ({
+          newData.props = newData.props.map((prop) => ({
             ...prop,
-            status: prop.status === 'generating' && !prop.imageUrl ? 'failed' as const : prop.status
+            status:
+              prop.status === 'generating' && !prop.imageUrl ? ('failed' as const) : prop.status,
           }));
         }
-        
+
         updateProject({ scriptData: newData });
       }
     };
-    
+
     const intervalId = setInterval(checkStuckGeneration, 30000);
     return () => clearInterval(intervalId);
   }, [project.id]);
@@ -208,12 +215,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const chars = project.scriptData.characters;
     console.log('🎯 [StageAssets] 角色列表:', {
       count: chars.length,
-      chars: chars.map(c => ({ id: c.id, name: c.name, hasImg: !!c.imageUrl, status: c.status })),
+      chars: chars.map((c) => ({ id: c.id, name: c.name, hasImg: !!c.imageUrl, status: c.status })),
       scenesCount: project.scriptData.scenes.length,
       propsCount: (project.scriptData.props || []).length,
       projectId: project.id,
       projectStage: project.stage,
-      scriptDataChars: project.scriptData.characters
+      scriptDataChars: project.scriptData.characters,
     });
   }, [project.scriptData?.characters?.length, project.scriptData?.scenes?.length, project.id]);
 
@@ -222,21 +229,22 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 检测角色、场景、道具、角色变体的生成状态
    */
   useEffect(() => {
-    const hasGeneratingCharacters = project.scriptData?.characters.some(char => {
-      const isCharGenerating = char.status === 'generating';
-      const hasGeneratingVariations = char.variations?.some(v => v.status === 'generating');
-      return isCharGenerating || hasGeneratingVariations;
-    }) ?? false;
+    const hasGeneratingCharacters =
+      project.scriptData?.characters.some((char) => {
+        const isCharGenerating = char.status === 'generating';
+        const hasGeneratingVariations = char.variations?.some((v) => v.status === 'generating');
+        return isCharGenerating || hasGeneratingVariations;
+      }) ?? false;
 
-    const hasGeneratingScenes = project.scriptData?.scenes.some(scene => 
-      scene.status === 'generating'
-    ) ?? false;
+    const hasGeneratingScenes =
+      project.scriptData?.scenes.some((scene) => scene.status === 'generating') ?? false;
 
-    const hasGeneratingProps = (project.scriptData?.props || []).some(prop =>
-      prop.status === 'generating'
+    const hasGeneratingProps = (project.scriptData?.props || []).some(
+      (prop) => prop.status === 'generating',
     );
 
-    const generating = !!batchProgress || hasGeneratingCharacters || hasGeneratingScenes || hasGeneratingProps;
+    const generating =
+      !!batchProgress || hasGeneratingCharacters || hasGeneratingScenes || hasGeneratingProps;
     onGeneratingChange?.(generating);
   }, [batchProgress, project.scriptData]);
 
@@ -247,7 +255,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     };
   }, []);
 
-  const openLibrary = (filter: 'all' | 'character' | 'scene' | 'prop', targetType: 'character' | 'scene' | 'prop' | null = null, targetId: string | null = null) => {
+  const openLibrary = (
+    filter: 'all' | 'character' | 'scene' | 'prop',
+    targetType: 'character' | 'scene' | 'prop' | null = null,
+    targetId: string | null = null,
+  ) => {
     if (targetType === 'character') {
       setReplaceTargetCharId(targetId);
       setReplaceTargetSceneId(null);
@@ -276,30 +288,35 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     if (project.scriptData) {
       const newData = { ...project.scriptData };
       if (type === 'character') {
-        const c = newData.characters.find(c => compareIds(c.id, id));
+        const c = newData.characters.find((c) => compareIds(c.id, id));
         if (c) c.status = 'generating';
       } else {
-        const s = newData.scenes.find(s => compareIds(s.id, id));
+        const s = newData.scenes.find((s) => compareIds(s.id, id));
         if (s) s.status = 'generating';
       }
       updateProject({ scriptData: newData });
     }
     try {
-      let prompt = "";
-      
+      let prompt = '';
+
       if (type === 'character') {
-        const char = project.scriptData?.characters.find(c => compareIds(c.id, id));
+        const char = project.scriptData?.characters.find((c) => compareIds(c.id, id));
         if (char) {
           if (char.visualPrompt) {
             prompt = char.visualPrompt;
           } else {
-            const result = await generateCharacterVisualPrompt(char, project.scriptData?.artDirection, visualStyle, language);
+            const result = await generateCharacterVisualPrompt(
+              char,
+              project.scriptData?.artDirection,
+              visualStyle,
+              language,
+            );
             prompt = result.visualPrompt;
-            
+
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
-              const c = newData.characters.find(c => compareIds(c.id, id));
+              const c = newData.characters.find((c) => compareIds(c.id, id));
               if (c) {
                 c.visualPrompt = result.visualPrompt;
                 c.negativePrompt = result.negativePrompt;
@@ -309,18 +326,24 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           }
         }
       } else {
-        const scene = project.scriptData?.scenes.find(s => compareIds(s.id, id));
+        const scene = project.scriptData?.scenes.find((s) => compareIds(s.id, id));
         if (scene) {
           if (scene.visualPrompt) {
             prompt = scene.visualPrompt;
           } else {
-            const result = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, language, undefined, visualStyle);
+            const result = await generateSceneVisualPrompt(
+              scene,
+              project.scriptData?.artDirection,
+              language,
+              undefined,
+              visualStyle,
+            );
             prompt = result.visualPrompt;
-            
+
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
-              const s = newData.scenes.find(s => compareIds(s.id, id));
+              const s = newData.scenes.find((s) => compareIds(s.id, id));
               if (s) {
                 s.visualPrompt = result.visualPrompt;
                 s.negativePrompt = result.negativePrompt;
@@ -337,7 +360,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
       // 场景图片：追加纯环境指令（LLM 生成阶段已约束不产出人物描述）
       if (type === 'scene') {
-        enhancedPrompt += '. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.';
+        enhancedPrompt +=
+          '. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.';
       }
 
       const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio, false, false, type, id);
@@ -345,42 +369,41 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       if (project.scriptData) {
         const newData = { ...project.scriptData };
         if (type === 'character') {
-          const c = newData.characters.find(c => compareIds(c.id, id));
+          const c = newData.characters.find((c) => compareIds(c.id, id));
           if (c) {
             c.imageUrl = imageUrl;
             c.status = 'completed';
           }
         } else {
-          const s = newData.scenes.find(s => compareIds(s.id, id));
+          const s = newData.scenes.find((s) => compareIds(s.id, id));
           if (s) {
             s.imageUrl = imageUrl;
             s.status = 'completed';
           }
         }
-        updateProject({ scriptData: newData }, { forceSync: true });
+        updateProject({ scriptData: newData });
       }
-      
+
       // 生成成功后关闭图片预览 Modal
       setPreviewImage(null);
-
     } catch (e: any) {
       console.error('❌ [StageAssets] handleGenerateAsset 失败:', {
         type,
         id,
         error: (e as Error).message,
         charCount: project.scriptData?.characters?.length,
-        sceneCount: project.scriptData?.scenes?.length
+        sceneCount: project.scriptData?.scenes?.length,
       });
       if (project.scriptData) {
         const newData = { ...project.scriptData };
         if (type === 'character') {
-          const c = newData.characters.find(c => compareIds(c.id, id));
+          const c = newData.characters.find((c) => compareIds(c.id, id));
           if (c) c.status = 'failed';
         } else {
-          const s = newData.scenes.find(s => compareIds(s.id, id));
+          const s = newData.scenes.find((s) => compareIds(s.id, id));
           if (s) s.status = 'failed';
         }
-        updateProject({ scriptData: newData }, { forceSync: true });
+        updateProject({ scriptData: newData });
       }
       if (onApiKeyError && onApiKeyError(e)) {
         return;
@@ -392,13 +415,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 批量生成资源
    */
   const handleBatchGenerate = async (type: 'character' | 'scene') => {
-    const items = type === 'character' 
-      ? project.scriptData?.characters 
-      : project.scriptData?.scenes;
-    
+    const items =
+      type === 'character' ? project.scriptData?.characters : project.scriptData?.scenes;
+
     if (!items) return;
 
-    const itemsToGen = items.filter(i => !i.imageUrl);
+    const itemsToGen = items.filter((i) => !i.imageUrl);
     const isRegenerate = itemsToGen.length === 0;
 
     if (isRegenerate) {
@@ -407,7 +429,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showCancel: true,
         onConfirm: async () => {
           await executeBatchGenerate(items, type);
-        }
+        },
       });
       return;
     }
@@ -420,7 +442,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
     for (let i = 0; i < targetItems.length; i++) {
       if (i > 0) await delay(DEFAULTS.batchGenerateDelay);
-      
+
       await handleGenerateAsset(type, targetItems[i].id);
       setBatchProgress({ current: i + 1, total: targetItems.length });
     }
@@ -438,7 +460,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const char = newData.characters.find(c => compareIds(c.id, charId));
+        const char = newData.characters.find((c) => compareIds(c.id, charId));
         if (char) {
           char.imageUrl = imageUrl;
           char.status = 'completed';
@@ -457,7 +479,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const scene = newData.scenes.find(s => compareIds(s.id, sceneId));
+        const scene = newData.scenes.find((s) => compareIds(s.id, sceneId));
         if (scene) {
           scene.imageUrl = imageUrl;
           scene.status = 'completed';
@@ -473,10 +495,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const saveItem = async () => {
       try {
         const charToSave = { ...char };
-        
+
         const item = createLibraryItemFromCharacter(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
-        
+
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -488,7 +510,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       showAlert('该角色暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
-        onConfirm: saveItem
+        onConfirm: saveItem,
       });
       return;
     }
@@ -500,10 +522,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const saveItem = async () => {
       try {
         const sceneToSave = { ...scene };
-        
+
         const item = createLibraryItemFromScene(sceneToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
-        
+
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -515,7 +537,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       showAlert('该场景暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
-        onConfirm: saveItem
+        onConfirm: saveItem,
       });
       return;
     }
@@ -549,7 +571,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
     newData.characters[index] = {
       ...cloned,
-      id: previous.id
+      id: previous.id,
     };
 
     const nextShots = project.shots.map((shot) => {
@@ -557,7 +579,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const { [targetId]: _removed, ...rest } = shot.characterVariations;
       return {
         ...shot,
-        characterVariations: Object.keys(rest).length > 0 ? rest : undefined
+        characterVariations: Object.keys(rest).length > 0 ? rest : undefined,
       };
     });
 
@@ -583,7 +605,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
     newData.scenes[index] = {
       ...cloned,
-      id: previous.id
+      id: previous.id,
     };
 
     updateProject({ scriptData: newData });
@@ -609,7 +631,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     if (!newData.props) newData.props = [];
     newData.props[index] = {
       ...cloned,
-      id: previous.id
+      id: previous.id,
     };
 
     updateProject({ scriptData: newData });
@@ -624,7 +646,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleSaveCharacterPrompt = (charId: string, newPrompt: string) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const char = newData.characters.find(c => compareIds(c.id, charId));
+    const char = newData.characters.find((c) => compareIds(c.id, charId));
     if (char) {
       char.visualPrompt = newPrompt;
       updateProject({ scriptData: newData });
@@ -634,17 +656,20 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 更新角色基本信息
    */
-  const handleUpdateCharacterInfo = (charId: string, updates: {
-    name?: string;
-    gender?: string;
-    age?: string;
-    personality?: string;
-    signaturePose?: import('../../types').VisualDescriptionField;
-    microAction?: import('../../types').VisualDescriptionField;
-  }) => {
+  const handleUpdateCharacterInfo = (
+    charId: string,
+    updates: {
+      name?: string;
+      gender?: string;
+      age?: string;
+      personality?: string;
+      signaturePose?: import('../../types').VisualDescriptionField;
+      microAction?: import('../../types').VisualDescriptionField;
+    },
+  ) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const char = newData.characters.find(c => compareIds(c.id, charId));
+    const char = newData.characters.find((c) => compareIds(c.id, charId));
     if (char) {
       if (updates.name !== undefined) char.name = updates.name;
       if (updates.gender !== undefined) char.gender = updates.gender;
@@ -663,21 +688,22 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handlePolishVisualDescription = async (
     text: string,
     fieldType: 'signaturePose' | 'microAction',
-    character: Character  // 直接传入 character 对象，而不是通过 text 查找
+    character: Character, // 直接传入 character 对象，而不是通过 text 查找
   ): Promise<string> => {
     if (!text.trim()) return text;
 
     const char = character;
 
-    const instruction = fieldType === 'signaturePose'
-      ? `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色标志性姿态描述润色成专业的视觉指令。
+    const instruction =
+      fieldType === 'signaturePose'
+        ? `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色标志性姿态描述润色成专业的视觉指令。
 要求：
 1. 使用专业的视觉描述语言
 2. 包含镜头角度、光影、构图等电影感描述
 3. 保持角色特征一致性
 4. 控制在100字以内
 5. 只输出润色后的文本，不要其他解释`
-      : `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色病态微动作描述润色成专业的视觉指令。
+        : `你是一个专业的漫画分镜视觉描述专家。请将用户输入的角色病态微动作描述润色成专业的视觉指令。
 要求：
 1. 重点描述微动作的细节和表情变化
 2. 使用特写或近景镜头语言
@@ -714,14 +740,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleGenerateVisualPreview = async (
     text: string,
     fieldType: 'signaturePose' | 'microAction',
-    character: Character
+    character: Character,
   ): Promise<string> => {
     if (!text.trim()) return '';
 
     const regionalPrefix = getRegionalPrefix(language, 'character');
-    const fieldTypeInstruction = fieldType === 'signaturePose'
-      ? ', cinematic portrait, dramatic lighting, character consistent with description'
-      : ', extreme close-up detail, subtle movement capture, psychological tension';
+    const fieldTypeInstruction =
+      fieldType === 'signaturePose'
+        ? ', cinematic portrait, dramatic lighting, character consistent with description'
+        : ', extreme close-up detail, subtle movement capture, psychological tension';
 
     const enhancedPrompt = `${regionalPrefix}${text}${fieldTypeInstruction}`;
 
@@ -769,7 +796,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         false,
         false,
         'character',
-        character.id
+        character.id,
       );
       console.log('[预览图生成] 生成成功:', imageUrl);
       return imageUrl;
@@ -785,7 +812,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleSaveScenePrompt = (sceneId: string, newPrompt: string) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const scene = newData.scenes.find(s => compareIds(s.id, sceneId));
+    const scene = newData.scenes.find((s) => compareIds(s.id, sceneId));
     if (scene) {
       scene.visualPrompt = newPrompt;
       updateProject({ scriptData: newData });
@@ -795,10 +822,13 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 更新场景基本信息
    */
-  const handleUpdateSceneInfo = (sceneId: string, updates: { location?: string; time?: string; atmosphere?: string }) => {
+  const handleUpdateSceneInfo = (
+    sceneId: string,
+    updates: { location?: string; time?: string; atmosphere?: string },
+  ) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const scene = newData.scenes.find(s => compareIds(s.id, sceneId));
+    const scene = newData.scenes.find((s) => compareIds(s.id, sceneId));
     if (scene) {
       if (updates.location !== undefined) scene.location = updates.location;
       if (updates.time !== undefined) scene.time = updates.time;
@@ -812,7 +842,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleAddCharacter = () => {
     if (!project.scriptData) return;
-    
+
     const newChar: Character = {
       id: generateId('char'),
       name: '新角色',
@@ -821,7 +851,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       personality: '待补充',
       visualPrompt: '',
       variations: [],
-      status: 'pending'
+      status: 'pending',
     };
 
     const newData = { ...project.scriptData };
@@ -835,7 +865,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleDeleteCharacter = (charId: string) => {
     if (!project.scriptData) return;
-    const char = project.scriptData.characters.find(c => compareIds(c.id, charId));
+    const char = project.scriptData.characters.find((c) => compareIds(c.id, charId));
     if (!char) return;
 
     showAlert(
@@ -848,14 +878,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         cancelText: '取消',
         onConfirm: () => {
           console.log('🗑️ [StageAssets] 删除角色:', {
-            charId, charName: char.name, beforeCount: project.scriptData!.characters.length
+            charId,
+            charName: char.name,
+            beforeCount: project.scriptData!.characters.length,
           });
           const newData = { ...project.scriptData! };
-          newData.characters = newData.characters.filter(c => !compareIds(c.id, charId));
+          newData.characters = newData.characters.filter((c) => !compareIds(c.id, charId));
           updateProject({ scriptData: newData });
           showAlert(`角色 "${char.name}" 已删除`, { type: 'success' });
-        }
-      }
+        },
+      },
     );
   };
 
@@ -864,14 +896,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleAddScene = () => {
     if (!project.scriptData) return;
-    
+
     const newScene: Scene = {
       id: generateId('scene'),
       location: '新场景',
       time: '未设定',
       atmosphere: '待补充',
       visualPrompt: '',
-      status: 'pending'
+      status: 'pending',
     };
 
     const newData = { ...project.scriptData };
@@ -885,7 +917,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleDeleteScene = (sceneId: string) => {
     if (!project.scriptData) return;
-    const scene = project.scriptData.scenes.find(s => compareIds(s.id, sceneId));
+    const scene = project.scriptData.scenes.find((s) => compareIds(s.id, sceneId));
     if (!scene) return;
 
     showAlert(
@@ -898,11 +930,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         cancelText: '取消',
         onConfirm: () => {
           const newData = { ...project.scriptData! };
-          newData.scenes = newData.scenes.filter(s => !compareIds(s.id, sceneId));
+          newData.scenes = newData.scenes.filter((s) => !compareIds(s.id, sceneId));
           updateProject({ scriptData: newData });
           showAlert(`场景 "${scene.location}" 已删除`, { type: 'success' });
-        }
-      }
+        },
+      },
     );
   };
 
@@ -915,14 +947,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleAddProp = () => {
     if (!project.scriptData) return;
-    
+
     const newProp: Prop = {
       id: generateId('prop'),
       name: '新道具',
       category: '其他',
       description: '',
       visualPrompt: '',
-      status: 'pending'
+      status: 'pending',
     };
 
     const newData = { ...project.scriptData };
@@ -937,30 +969,27 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleDeleteProp = (propId: string) => {
     if (!project.scriptData) return;
-    const prop = (project.scriptData.props || []).find(p => compareIds(p.id, propId));
+    const prop = (project.scriptData.props || []).find((p) => compareIds(p.id, propId));
     if (!prop) return;
 
-    showAlert(
-      `确定要删除道具 "${prop.name}" 吗？\n\n注意：这将会影响所有使用该道具的分镜。`,
-      {
-        type: 'warning',
-        title: '删除道具',
-        showCancel: true,
-        confirmText: '删除',
-        cancelText: '取消',
-        onConfirm: () => {
-          const newData = { ...project.scriptData! };
-          newData.props = (newData.props || []).filter(p => !compareIds(p.id, propId));
-          // 清除所有镜头中对该道具的引用
-          const nextShots = project.shots.map(shot => {
-            if (!shot.props || !shot.props.includes(propId)) return shot;
-            return { ...shot, props: shot.props.filter(id => id !== propId) };
-          });
-          updateProject({ scriptData: newData, shots: nextShots });
-          showAlert(`道具 "${prop.name}" 已删除`, { type: 'success' });
-        }
-      }
-    );
+    showAlert(`确定要删除道具 "${prop.name}" 吗？\n\n注意：这将会影响所有使用该道具的分镜。`, {
+      type: 'warning',
+      title: '删除道具',
+      showCancel: true,
+      confirmText: '删除',
+      cancelText: '取消',
+      onConfirm: () => {
+        const newData = { ...project.scriptData! };
+        newData.props = (newData.props || []).filter((p) => !compareIds(p.id, propId));
+        // 清除所有镜头中对该道具的引用
+        const nextShots = project.shots.map((shot) => {
+          if (!shot.props || !shot.props.includes(propId)) return shot;
+          return { ...shot, props: shot.props.filter((id) => id !== propId) };
+        });
+        updateProject({ scriptData: newData, shots: nextShots });
+        showAlert(`道具 "${prop.name}" 已删除`, { type: 'success' });
+      },
+    });
   };
 
   /**
@@ -968,15 +997,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    */
   const handleGeneratePropAsset = async (propId: string) => {
     if (!project.scriptData) return;
-    
+
     // 设置生成状态
     const newData = { ...project.scriptData };
-    const p = (newData.props || []).find(p => compareIds(p.id, propId));
+    const p = (newData.props || []).find((p) => compareIds(p.id, propId));
     if (p) p.status = 'generating';
     updateProject({ scriptData: newData });
 
     try {
-      const prop = project.scriptData.props?.find(p => compareIds(p.id, propId));
+      const prop = project.scriptData.props?.find((p) => compareIds(p.id, propId));
       if (!prop) return;
 
       let prompt = '';
@@ -991,7 +1020,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
       // 更新状态
       const updatedData = { ...project.scriptData };
-      const updated = (updatedData.props || []).find(p => compareIds(p.id, propId));
+      const updated = (updatedData.props || []).find((p) => compareIds(p.id, propId));
       if (updated) {
         updated.imageUrl = imageUrl;
         updated.status = 'completed';
@@ -1003,7 +1032,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     } catch (e: any) {
       console.error(e);
       const errData = { ...project.scriptData };
-      const errP = (errData.props || []).find(p => compareIds(p.id, propId));
+      const errP = (errData.props || []).find((p) => compareIds(p.id, propId));
       if (errP) errP.status = 'failed';
       updateProject({ scriptData: errData });
       if (onApiKeyError && onApiKeyError(e)) return;
@@ -1019,7 +1048,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const prop = (newData.props || []).find(p => compareIds(p.id, propId));
+        const prop = (newData.props || []).find((p) => compareIds(p.id, propId));
         if (prop) {
           prop.imageUrl = localImageId;
           prop.status = 'completed';
@@ -1037,7 +1066,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleSavePropPrompt = (propId: string, newPrompt: string) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const prop = (newData.props || []).find(p => compareIds(p.id, propId));
+    const prop = (newData.props || []).find((p) => compareIds(p.id, propId));
     if (prop) {
       prop.visualPrompt = newPrompt;
       updateProject({ scriptData: newData });
@@ -1047,10 +1076,13 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 更新道具基本信息
    */
-  const handleUpdatePropInfo = (propId: string, updates: { name?: string; category?: string; description?: string }) => {
+  const handleUpdatePropInfo = (
+    propId: string,
+    updates: { name?: string; category?: string; description?: string },
+  ) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const prop = (newData.props || []).find(p => compareIds(p.id, propId));
+    const prop = (newData.props || []).find((p) => compareIds(p.id, propId));
     if (prop) {
       if (updates.name !== undefined) prop.name = updates.name;
       if (updates.category !== undefined) prop.category = updates.category;
@@ -1066,10 +1098,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const saveItem = async () => {
       try {
         const propToSave = { ...prop };
-        
+
         const item = createLibraryItemFromProp(propToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
-        
+
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -1081,7 +1113,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       showAlert('该道具暂无参考图，仍要加入资产库吗？', {
         type: 'warning',
         showCancel: true,
-        onConfirm: saveItem
+        onConfirm: saveItem,
       });
       return;
     }
@@ -1096,7 +1128,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const items = project.scriptData?.props || [];
     if (!items.length) return;
 
-    const itemsToGen = items.filter(p => !p.imageUrl);
+    const itemsToGen = items.filter((p) => !p.imageUrl);
     const isRegenerate = itemsToGen.length === 0;
 
     if (isRegenerate) {
@@ -1105,7 +1137,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         showCancel: true,
         onConfirm: async () => {
           await executeBatchGenerateProps(items);
-        }
+        },
       });
       return;
     }
@@ -1131,19 +1163,19 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleAddVariation = (charId: string, name: string, prompt: string) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const char = newData.characters.find(c => compareIds(c.id, charId));
+    const char = newData.characters.find((c) => compareIds(c.id, charId));
     if (!char) return;
 
     const newVar: CharacterVariation = {
       id: generateId('var'),
-      name: name || "New Outfit",
-      visualPrompt: prompt || char.visualPrompt || "",
-      imageUrl: undefined
+      name: name || 'New Outfit',
+      visualPrompt: prompt || char.visualPrompt || '',
+      imageUrl: undefined,
     };
 
     if (!char.variations) char.variations = [];
     char.variations.push(newVar);
-    
+
     updateProject({ scriptData: newData });
   };
 
@@ -1153,10 +1185,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   const handleDeleteVariation = (charId: string, varId: string) => {
     if (!project.scriptData) return;
     const newData = { ...project.scriptData };
-    const char = newData.characters.find(c => compareIds(c.id, charId));
+    const char = newData.characters.find((c) => compareIds(c.id, charId));
     if (!char) return;
-    
-    char.variations = char.variations?.filter(v => !compareIds(v.id, varId));
+
+    char.variations = char.variations?.filter((v) => !compareIds(v.id, varId));
     updateProject({ scriptData: newData });
   };
 
@@ -1164,15 +1196,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 生成角色变体
    */
   const handleGenerateVariation = async (charId: string, varId: string) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
-    const variation = char?.variations?.find(v => compareIds(v.id, varId));
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
+    const variation = char?.variations?.find((v) => compareIds(v.id, varId));
     if (!char || !variation) return;
 
     // 设置生成状态
     if (project.scriptData) {
       const newData = { ...project.scriptData };
-      const c = newData.characters.find(c => compareIds(c.id, charId));
-      const v = c?.variations?.find(v => compareIds(v.id, varId));
+      const c = newData.characters.find((c) => compareIds(c.id, charId));
+      const v = c?.variations?.find((v) => compareIds(v.id, varId));
       if (v) v.status = 'generating';
       updateProject({ scriptData: newData });
     }
@@ -1181,13 +1213,21 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const regionalPrefix = getRegionalPrefix(language, 'character');
       // 构建变体专用提示词：强调服装变化
       const enhancedPrompt = `${regionalPrefix}Character "${char.name}" wearing NEW OUTFIT: ${variation.visualPrompt}. This is a costume/outfit change - the character's face and identity must remain identical to the reference, but they should be wearing the described new outfit.`;
-      
+
       // 使用选择的横竖屏比例，启用变体模式
-      const imageUrl = await generateImage(enhancedPrompt, refImages, aspectRatio, true, false, 'character-variation', varId);
+      const imageUrl = await generateImage(
+        enhancedPrompt,
+        refImages,
+        aspectRatio,
+        true,
+        false,
+        'character-variation',
+        varId,
+      );
 
       const newData = { ...project.scriptData! };
-      const c = newData.characters.find(c => compareIds(c.id, charId));
-      const v = c?.variations?.find(v => compareIds(v.id, varId));
+      const c = newData.characters.find((c) => compareIds(c.id, charId));
+      const v = c?.variations?.find((v) => compareIds(v.id, varId));
       if (v) {
         v.imageUrl = imageUrl;
         v.status = 'completed';
@@ -1198,19 +1238,19 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       console.error('❌ [StageAssets] handleGenerateVariation 失败:', {
         charId,
         varId,
-        error: e.message
+        error: e.message,
       });
       if (project.scriptData) {
         const newData = { ...project.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
-        const v = c?.variations?.find(v => compareIds(v.id, varId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
+        const v = c?.variations?.find((v) => compareIds(v.id, varId));
         if (v) v.status = 'failed';
         updateProject({ scriptData: newData });
       }
       if (onApiKeyError && onApiKeyError(e)) {
         return;
       }
-      showAlert("Variation generation failed", { type: 'error' });
+      showAlert('Variation generation failed', { type: 'error' });
     }
   };
 
@@ -1224,8 +1264,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const char = newData.characters.find(c => compareIds(c.id, charId));
-        const variation = char?.variations?.find(v => compareIds(v.id, varId));
+        const char = newData.characters.find((c) => compareIds(c.id, charId));
+        const variation = char?.variations?.find((v) => compareIds(v.id, varId));
         if (variation) {
           variation.imageUrl = base64;
           variation.status = 'completed';
@@ -1245,7 +1285,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 生成角色九宫格造型的视角描述（Step 1）
    */
   const handleGenerateTurnaroundPanels = async (charId: string) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
     if (!char) return;
 
     const activeModel = getActiveChatModel();
@@ -1254,7 +1294,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     updateProject((prev) => {
       if (!prev.scriptData) return prev;
       const newData = { ...prev.scriptData };
-      const c = newData.characters.find(c => compareIds(c.id, charId));
+      const c = newData.characters.find((c) => compareIds(c.id, charId));
       if (c) {
         c.turnaround = {
           panels: [],
@@ -1270,14 +1310,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         project.scriptData?.artDirection,
         visualStyle,
         language,
-        activeModel?.id || getDefaultChatModelId()
+        activeModel?.id || getDefaultChatModelId(),
       );
 
       // 更新状态为 panels_ready
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
         if (c) {
           c.turnaround = {
             panels,
@@ -1291,7 +1331,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
         if (c && c.turnaround) {
           c.turnaround.status = 'failed';
         }
@@ -1305,8 +1345,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 确认视角描述并生成九宫格图片（Step 2）
    */
-  const handleConfirmTurnaroundPanels = async (charId: string, panels: CharacterTurnaroundPanel[]) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+  const handleConfirmTurnaroundPanels = async (
+    charId: string,
+    panels: CharacterTurnaroundPanel[],
+  ) => {
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
     if (!char) return;
 
     const activeModel = getActiveChatModel();
@@ -1315,7 +1358,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     updateProject((prev) => {
       if (!prev.scriptData) return prev;
       const newData = { ...prev.scriptData };
-      const c = newData.characters.find(c => compareIds(c.id, charId));
+      const c = newData.characters.find((c) => compareIds(c.id, charId));
       if (c && c.turnaround) {
         c.turnaround.status = 'generating_image';
         c.turnaround.panels = panels;
@@ -1331,14 +1374,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         visualStyle,
         '1:1',
         language,
-        activeModel?.id || getDefaultChatModelId()
+        activeModel?.id || getDefaultChatModelId(),
       );
 
       // 更新状态为 completed
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
         if (c && c.turnaround) {
           c.turnaround.imageUrl = imageUrl;
           c.turnaround.status = 'completed';
@@ -1350,7 +1393,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
         if (c && c.turnaround) {
           c.turnaround.status = 'failed';
         }
@@ -1364,11 +1407,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 更新九宫格造型的单个面板
    */
-  const handleUpdateTurnaroundPanel = (charId: string, index: number, updates: Partial<CharacterTurnaroundPanel>) => {
+  const handleUpdateTurnaroundPanel = (
+    charId: string,
+    index: number,
+    updates: Partial<CharacterTurnaroundPanel>,
+  ) => {
     updateProject((prev) => {
       if (!prev.scriptData) return prev;
       const newData = { ...prev.scriptData };
-      const c = newData.characters.find(c => compareIds(c.id, charId));
+      const c = newData.characters.find((c) => compareIds(c.id, charId));
       if (c && c.turnaround && c.turnaround.panels[index]) {
         c.turnaround.panels[index] = { ...c.turnaround.panels[index], ...updates };
       }
@@ -1388,9 +1435,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 当用户对文案满意但图片效果不好时使用
    */
   const handleRegenerateTurnaroundImage = (charId: string) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
     if (!char || !char.turnaround?.panels || char.turnaround.panels.length !== 9) return;
-    
+
     // 直接使用已有的面板描述重新生成图片
     handleConfirmTurnaroundPanels(charId, char.turnaround.panels);
   };
@@ -1399,7 +1446,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 将九宫格造型存入素材库
    */
   const handleAddTurnaroundToLibrary = async (charId: string) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
     if (!char || !char.turnaround?.imageUrl) {
       showAlert('该角色暂无九宫格造型图', { type: 'warning' });
       return;
@@ -1408,10 +1455,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const saveItem = async () => {
       try {
         const charToSave = { ...char };
-        
+
         const item = createLibraryItemFromTurnaround(charToSave, project);
         await hybridStorage.saveAssetToLibrary(item);
-        
+
         showAlert(`已加入资产库：${char.name} - 九宫格造型`, { type: 'success' });
       } catch (e: any) {
         console.error('[StageAssets] 加入资产库失败:', e);
@@ -1426,7 +1473,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
    * 生成角色三视图立绘图（调用 image2character API）
    */
   const handleGenerateThreeView = async (charId: string) => {
-    const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
+    const char = project.scriptData?.characters.find((c) => compareIds(c.id, charId));
     if (!char?.imageUrl) {
       showAlert('请先生成该角色的定妆照', { type: 'warning' });
       return;
@@ -1438,13 +1485,13 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         char,
         char.imageUrl,
         'character',
-        charId
+        charId,
       );
 
       updateProject((prev) => {
         if (!prev.scriptData) return prev;
         const newData = { ...prev.scriptData };
-        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const c = newData.characters.find((c) => compareIds(c.id, charId));
         if (c) {
           c.threeViewImageUrl = imageUrl;
         }
@@ -1470,20 +1517,20 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       </div>
     );
   }
-  
-  const allCharactersReady = project.scriptData.characters.every(c => c.imageUrl);
-  const allScenesReady = project.scriptData.scenes.every(s => s.imageUrl);
-  const allPropsReady = (project.scriptData.props || []).length > 0 && (project.scriptData.props || []).every(p => p.imageUrl);
-  const selectedChar = project.scriptData.characters.find(c => compareIds(c.id, selectedCharId));
+
+  const allCharactersReady = project.scriptData.characters.every((c) => c.imageUrl);
+  const allScenesReady = project.scriptData.scenes.every((s) => s.imageUrl);
+  const allPropsReady =
+    (project.scriptData.props || []).length > 0 &&
+    (project.scriptData.props || []).every((p) => p.imageUrl);
+  const selectedChar = project.scriptData.characters.find((c) =>
+    compareIds(c.id, selectedCharId ?? ''),
+  );
 
   return (
     <div className={STYLES.mainContainer}>
-      
       {/* Image Preview Modal */}
-      <ImagePreviewModal 
-        imageUrl={previewImage} 
-        onClose={() => setPreviewImage(null)} 
-      />
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
 
       {/* Global Progress Overlay */}
       {batchProgress && (
@@ -1491,8 +1538,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           <Loader2 className="w-12 h-12 text-[var(--accent)] animate-spin mb-6" />
           <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">正在批量生成资源...</h3>
           <div className="w-64 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden mb-2">
-            <div 
-              className="h-full bg-[var(--accent)] transition-all duration-300" 
+            <div
+              className="h-full bg-[var(--accent)] transition-all duration-300"
               style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
             />
           </div>
@@ -1516,40 +1563,46 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       )}
 
       {/* Turnaround Modal */}
-      {turnaroundCharId && (() => {
-        const turnaroundChar = project.scriptData?.characters.find(c => compareIds(c.id, turnaroundCharId));
-        return turnaroundChar ? (
-          <TurnaroundModal
-            character={turnaroundChar}
-            onClose={() => setTurnaroundCharId(null)}
-            onGeneratePanels={handleGenerateTurnaroundPanels}
-            onConfirmPanels={handleConfirmTurnaroundPanels}
-            onUpdatePanel={handleUpdateTurnaroundPanel}
-            onRegenerate={handleRegenerateTurnaround}
-            onRegenerateImage={handleRegenerateTurnaroundImage}
-            onImageClick={setPreviewImage}
-            onAddToLibrary={handleAddTurnaroundToLibrary}
-          />
-        ) : null;
-      })()}
+      {turnaroundCharId &&
+        (() => {
+          const turnaroundChar = project.scriptData?.characters.find((c) =>
+            compareIds(c.id, turnaroundCharId),
+          );
+          return turnaroundChar ? (
+            <TurnaroundModal
+              character={turnaroundChar}
+              onClose={() => setTurnaroundCharId(null)}
+              onGeneratePanels={handleGenerateTurnaroundPanels}
+              onConfirmPanels={handleConfirmTurnaroundPanels}
+              onUpdatePanel={handleUpdateTurnaroundPanel}
+              onRegenerate={handleRegenerateTurnaround}
+              onRegenerateImage={handleRegenerateTurnaroundImage}
+              onImageClick={setPreviewImage}
+              onAddToLibrary={handleAddTurnaroundToLibrary}
+            />
+          ) : null;
+        })()}
 
       {/* Three-View Modal */}
-      {threeViewCharId && (() => {
-        const threeViewChar = project.scriptData?.characters.find(c => compareIds(c.id, threeViewCharId));
-        return threeViewChar ? (
-          <ThreeViewModal
-            character={threeViewChar}
-            onClose={() => {
-              setThreeViewCharId(null);
-              setThreeViewLoading(false);
-            }}
-            onGenerate={handleGenerateThreeView}
-            onImageClick={setPreviewImage}
-            isGenerating={threeViewLoading}
-            aspectRatio={aspectRatio}
-          />
-        ) : null;
-      })()}
+      {threeViewCharId &&
+        (() => {
+          const threeViewChar = project.scriptData?.characters.find((c) =>
+            compareIds(c.id, threeViewCharId),
+          );
+          return threeViewChar ? (
+            <ThreeViewModal
+              character={threeViewChar}
+              onClose={() => {
+                setThreeViewCharId(null);
+                setThreeViewLoading(false);
+              }}
+              onGenerate={handleGenerateThreeView}
+              onImageClick={setPreviewImage}
+              isGenerating={threeViewLoading}
+              aspectRatio={aspectRatio}
+            />
+          ) : null;
+        })()}
 
       {/* Asset Library Modal */}
       <AssetLibraryModal
@@ -1570,7 +1623,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
             handleReplacePropFromLibrary(item, targetId);
           }
         }}
-        replaceTargetCharId={replaceTargetCharId || replaceTargetSceneId || replaceTargetPropId || null}
+        replaceTargetCharId={
+          replaceTargetCharId || replaceTargetSceneId || replaceTargetPropId || null
+        }
       />
 
       {/* Header */}
@@ -1609,15 +1664,9 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           </div>
           <div className="w-px h-6 bg-[var(--bg-hover)]" />
           <div className="flex gap-2">
-            <span className={STYLES.badge}>
-              {project.scriptData.characters.length} CHARS
-            </span>
-            <span className={STYLES.badge}>
-              {project.scriptData.scenes.length} SCENES
-            </span>
-            <span className={STYLES.badge}>
-              {(project.scriptData.props || []).length} PROPS
-            </span>
+            <span className={STYLES.badge}>{project.scriptData.characters.length} CHARS</span>
+            <span className={STYLES.badge}>{project.scriptData.scenes.length} SCENES</span>
+            <span className={STYLES.badge}>{(project.scriptData.props || []).length} PROPS</span>
           </div>
         </div>
       </div>
@@ -1631,10 +1680,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <div className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full" />
                 角色定妆 (Casting)
               </h3>
-              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">为剧本中的角色生成一致的参考形象</p>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">
+                为剧本中的角色生成一致的参考形象
+              </p>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleAddCharacter}
                 disabled={!!batchProgress}
                 className="px-3 py-1.5 bg-[var(--bg-hover)] hover:bg-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -1642,7 +1693,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <Users className="w-3 h-3" />
                 新建角色
               </button>
-              <button 
+              <button
                 onClick={() => openLibrary('character')}
                 disabled={!!batchProgress}
                 className={STYLES.secondaryButton}
@@ -1650,12 +1701,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <Archive className="w-3 h-3" />
                 从资产库选择
               </button>
-              <button 
+              <button
                 onClick={() => handleBatchGenerate('character')}
                 disabled={!!batchProgress}
                 className={allCharactersReady ? STYLES.secondaryButton : STYLES.primaryButton}
               >
-                {allCharactersReady ? <RefreshCw className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                {allCharactersReady ? (
+                  <RefreshCw className="w-3 h-3" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
                 {allCharactersReady ? '重新生成所有角色' : '一键生成所有角色'}
               </button>
             </div>
@@ -1678,7 +1733,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 onDelete={() => handleDeleteCharacter(char.id)}
                 onUpdateInfo={(updates) => handleUpdateCharacterInfo(char.id, updates)}
                 onAddToLibrary={() => handleAddCharacterToLibrary(char)}
-                onReplaceFromLibrary={() => openLibrary('character','character', char.id)}
+                onReplaceFromLibrary={() => openLibrary('character', 'character', char.id)}
                 onPolishText={handlePolishVisualDescription}
                 onGeneratePreview={handleGenerateVisualPreview}
               />
@@ -1694,10 +1749,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <div className="w-1.5 h-1.5 bg-[var(--success)] rounded-full" />
                 场景概念 (Locations)
               </h3>
-              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">为剧本场景生成环境参考图</p>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">
+                为剧本场景生成环境参考图
+              </p>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleAddScene}
                 disabled={!!batchProgress}
                 className="px-3 py-1.5 bg-[var(--bg-hover)] hover:bg-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -1705,7 +1762,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <MapPin className="w-3 h-3" />
                 新建场景
               </button>
-              <button 
+              <button
                 onClick={() => openLibrary('scene')}
                 disabled={!!batchProgress}
                 className={STYLES.secondaryButton}
@@ -1713,12 +1770,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <Archive className="w-3 h-3" />
                 从资产库选择
               </button>
-              <button 
+              <button
                 onClick={() => handleBatchGenerate('scene')}
                 disabled={!!batchProgress}
                 className={allScenesReady ? STYLES.secondaryButton : STYLES.primaryButton}
               >
-                {allScenesReady ? <RefreshCw className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                {allScenesReady ? (
+                  <RefreshCw className="w-3 h-3" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
                 {allScenesReady ? '重新生成所有场景' : '一键生成所有场景'}
               </button>
             </div>
@@ -1752,10 +1813,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
                 道具库 (Props)
               </h3>
-              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">管理分镜中需要保持一致性的道具/物品</p>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1 pl-3.5">
+                管理分镜中需要保持一致性的道具/物品
+              </p>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleAddProp}
                 disabled={!!batchProgress}
                 className="px-3 py-1.5 bg-[var(--bg-hover)] hover:bg-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -1763,7 +1826,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 <Package className="w-3 h-3" />
                 新建道具
               </button>
-              <button 
+              <button
                 onClick={() => openLibrary('prop')}
                 disabled={!!batchProgress}
                 className={STYLES.secondaryButton}
@@ -1772,12 +1835,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                 从资产库选择
               </button>
               {(project.scriptData.props || []).length > 0 && (
-                <button 
+                <button
                   onClick={handleBatchGenerateProps}
                   disabled={!!batchProgress}
                   className={allPropsReady ? STYLES.secondaryButton : STYLES.primaryButton}
                 >
-                  {allPropsReady ? <RefreshCw className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                  {allPropsReady ? (
+                    <RefreshCw className="w-3 h-3" />
+                  ) : (
+                    <Sparkles className="w-3 h-3" />
+                  )}
                   {allPropsReady ? '重新生成所有道具' : '一键生成所有道具'}
                 </button>
               )}
@@ -1810,7 +1877,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           )}
         </section>
       </div>
-
     </div>
   );
 };

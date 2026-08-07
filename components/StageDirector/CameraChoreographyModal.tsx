@@ -17,21 +17,28 @@ interface CameraChoreographyModalProps {
   initial?: CameraChoreography;
 }
 
-const SelectField: React.FC<{
+const SelectField = <T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
   label: string;
-  value: string;
+  value: T;
   options: readonly string[];
-  onChange: (v: string) => void;
-}> = ({ label, value, options, onChange }) => (
+  onChange: (v: T) => void;
+}) => (
   <div className="flex items-center gap-2">
     <span className="text-[11px] text-[var(--text-tertiary)] w-14 shrink-0">{label}</span>
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(e.target.value as T)}
       className="flex-1 bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-colors"
     >
-      {options.map(opt => (
-        <option key={opt} value={opt}>{opt}</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
       ))}
     </select>
   </div>
@@ -96,7 +103,9 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
     const remaining = 1 - v;
     setTimingMoveRatio(v);
     setTimingStartRatio(Math.round(Math.min(timingStartRatio, remaining - 0.1) * 100) / 100);
-    setTimingEndRatio(Math.round((remaining - Math.min(timingStartRatio, remaining - 0.1)) * 100) / 100);
+    setTimingEndRatio(
+      Math.round((remaining - Math.min(timingStartRatio, remaining - 0.1)) * 100) / 100,
+    );
   };
 
   const handleTimingEndChange = (v: number) => {
@@ -153,7 +162,7 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 镜头运动类型
               </h5>
               <div className="grid grid-cols-3 gap-1.5">
-                {CAMERA_MOVEMENT_TYPES.filter(m => m.id !== 'none').map(cam => (
+                {CAMERA_MOVEMENT_TYPES.filter((m) => m.id !== 'none').map((cam) => (
                   <button
                     key={cam.id}
                     onClick={() => setMovementType(cam.id)}
@@ -163,9 +172,13 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                         : 'border-[var(--border-secondary)] bg-[var(--bg-surface)] hover:border-[var(--border-primary)]'
                     }`}
                   >
-                    <div className={`text-[11px] font-medium ${
-                      movementType === cam.id ? 'text-[var(--accent-text)]' : 'text-[var(--text-secondary)]'
-                    }`}>
+                    <div
+                      className={`text-[11px] font-medium ${
+                        movementType === cam.id
+                          ? 'text-[var(--accent-text)]'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
                       {cam.label}
                     </div>
                   </button>
@@ -180,10 +193,30 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 起始帧姿态
               </h5>
               <div className="space-y-1.5">
-                <SelectField label="景别" value={startShotSize} options={CAMERA_SHOT_SIZES} onChange={setStartShotSize} />
-                <SelectField label="角度" value={startAngle} options={CAMERA_ANGLES} onChange={setStartAngle} />
-                <SelectField label="主体位置" value={startSubject} options={CAMERA_SUBJECT_POSITIONS} onChange={setStartSubject} />
-                <SelectField label="焦点" value={startFocus} options={CAMERA_FOCUS_TYPES} onChange={setStartFocus} />
+                <SelectField
+                  label="景别"
+                  value={startShotSize}
+                  options={CAMERA_SHOT_SIZES}
+                  onChange={setStartShotSize}
+                />
+                <SelectField
+                  label="角度"
+                  value={startAngle}
+                  options={CAMERA_ANGLES}
+                  onChange={setStartAngle}
+                />
+                <SelectField
+                  label="主体位置"
+                  value={startSubject}
+                  options={CAMERA_SUBJECT_POSITIONS}
+                  onChange={setStartSubject}
+                />
+                <SelectField
+                  label="焦点"
+                  value={startFocus}
+                  options={CAMERA_FOCUS_TYPES}
+                  onChange={setStartFocus}
+                />
               </div>
             </div>
 
@@ -194,9 +227,16 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 运镜路径
               </h5>
               <div className="space-y-1.5">
-                <SelectField label="速度" value={movementSpeed} options={CAMERA_MOVEMENT_SPEEDS} onChange={setMovementSpeed} />
+                <SelectField
+                  label="速度"
+                  value={movementSpeed}
+                  options={CAMERA_MOVEMENT_SPEEDS}
+                  onChange={setMovementSpeed}
+                />
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-[var(--text-tertiary)] w-14 shrink-0">路径</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] w-14 shrink-0">
+                    路径
+                  </span>
                   <input
                     type="text"
                     value={movementPath}
@@ -208,10 +248,15 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 <div>
                   <label className="text-[11px] text-[var(--text-tertiary)] flex items-center justify-between">
                     <span>强度</span>
-                    <span className="text-[var(--accent-text)] font-mono">{movementIntensity}/10</span>
+                    <span className="text-[var(--accent-text)] font-mono">
+                      {movementIntensity}/10
+                    </span>
                   </label>
                   <input
-                    type="range" min={1} max={10} value={movementIntensity}
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={movementIntensity}
                     onChange={(e) => setMovementIntensity(parseInt(e.target.value))}
                     className="w-full h-1.5 bg-[var(--border-primary)] rounded-full appearance-none cursor-pointer accent-[var(--accent)] mt-1"
                   />
@@ -226,9 +271,24 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 结束帧姿态
               </h5>
               <div className="space-y-1.5">
-                <SelectField label="景别" value={endShotSize} options={CAMERA_SHOT_SIZES} onChange={setEndShotSize} />
-                <SelectField label="角度" value={endAngle} options={CAMERA_ANGLES} onChange={setEndAngle} />
-                <SelectField label="主体位置" value={endSubject} options={CAMERA_SUBJECT_POSITIONS} onChange={setEndSubject} />
+                <SelectField
+                  label="景别"
+                  value={endShotSize}
+                  options={CAMERA_SHOT_SIZES}
+                  onChange={setEndShotSize}
+                />
+                <SelectField
+                  label="角度"
+                  value={endAngle}
+                  options={CAMERA_ANGLES}
+                  onChange={setEndAngle}
+                />
+                <SelectField
+                  label="主体位置"
+                  value={endSubject}
+                  options={CAMERA_SUBJECT_POSITIONS}
+                  onChange={setEndSubject}
+                />
               </div>
             </div>
 
@@ -242,10 +302,15 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 <div>
                   <label className="text-[10px] text-[var(--text-tertiary)] flex items-center justify-between">
                     <span>起始段占比</span>
-                    <span className="text-[var(--accent-text)] font-mono">{Math.round(timingStartRatio * 100)}%</span>
+                    <span className="text-[var(--accent-text)] font-mono">
+                      {Math.round(timingStartRatio * 100)}%
+                    </span>
                   </label>
                   <input
-                    type="range" min={10} max={60} value={Math.round(timingStartRatio * 100)}
+                    type="range"
+                    min={10}
+                    max={60}
+                    value={Math.round(timingStartRatio * 100)}
                     onChange={(e) => handleTimingStartChange(parseInt(e.target.value) / 100)}
                     className="w-full h-1.5 bg-[var(--border-primary)] rounded-full appearance-none cursor-pointer accent-[var(--accent)]"
                   />
@@ -253,10 +318,15 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 <div>
                   <label className="text-[10px] text-[var(--text-tertiary)] flex items-center justify-between">
                     <span>运镜段占比</span>
-                    <span className="text-[var(--accent-text)] font-mono">{Math.round(timingMoveRatio * 100)}%</span>
+                    <span className="text-[var(--accent-text)] font-mono">
+                      {Math.round(timingMoveRatio * 100)}%
+                    </span>
                   </label>
                   <input
-                    type="range" min={10} max={70} value={Math.round(timingMoveRatio * 100)}
+                    type="range"
+                    min={10}
+                    max={70}
+                    value={Math.round(timingMoveRatio * 100)}
                     onChange={(e) => handleTimingMoveChange(parseInt(e.target.value) / 100)}
                     className="w-full h-1.5 bg-[var(--border-primary)] rounded-full appearance-none cursor-pointer accent-[var(--accent)]"
                   />
@@ -264,10 +334,15 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
                 <div>
                   <label className="text-[10px] text-[var(--text-tertiary)] flex items-center justify-between">
                     <span>结束段占比</span>
-                    <span className="text-[var(--accent-text)] font-mono">{Math.round(timingEndRatio * 100)}%</span>
+                    <span className="text-[var(--accent-text)] font-mono">
+                      {Math.round(timingEndRatio * 100)}%
+                    </span>
                   </label>
                   <input
-                    type="range" min={10} max={60} value={Math.round(timingEndRatio * 100)}
+                    type="range"
+                    min={10}
+                    max={60}
+                    value={Math.round(timingEndRatio * 100)}
                     onChange={(e) => handleTimingEndChange(parseInt(e.target.value) / 100)}
                     className="w-full h-1.5 bg-[var(--border-primary)] rounded-full appearance-none cursor-pointer accent-[var(--accent)]"
                   />
@@ -277,16 +352,23 @@ export const CameraChoreographyModal: React.FC<CameraChoreographyModalProps> = (
 
             {/* Live Preview */}
             <div className="bg-[var(--bg-surface)] rounded-lg border border-[var(--border-primary)] p-3">
-              <h5 className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mb-1.5">预览</h5>
+              <h5 className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mb-1.5">
+                预览
+              </h5>
               <div className="bg-[var(--bg-base)] rounded p-2 text-[10px] text-[var(--text-muted)] font-mono leading-relaxed">
-                <div className="text-[var(--text-tertiary)]">起始: {startShotSize}/{startAngle}/{startSubject}</div>
+                <div className="text-[var(--text-tertiary)]">
+                  起始: {startShotSize}/{startAngle}/{startSubject}
+                </div>
                 <div className="text-[var(--accent-text)]">
-                  {CAMERA_MOVEMENT_TYPES.find(m => m.id === movementType)?.label || movementType}
+                  {CAMERA_MOVEMENT_TYPES.find((m) => m.id === movementType)?.label || movementType}
                   {movementPath ? ` → ${movementPath}` : ''}
                 </div>
-                <div className="text-[var(--text-tertiary)]">结束: {endShotSize}/{endAngle}/{endSubject}</div>
+                <div className="text-[var(--text-tertiary)]">
+                  结束: {endShotSize}/{endAngle}/{endSubject}
+                </div>
                 <div className="text-gray-600">
-                  时间: {Math.round(timingStartRatio * 100)}% / {Math.round(timingMoveRatio * 100)}% / {Math.round(timingEndRatio * 100)}%
+                  时间: {Math.round(timingStartRatio * 100)}% / {Math.round(timingMoveRatio * 100)}%
+                  / {Math.round(timingEndRatio * 100)}%
                 </div>
               </div>
             </div>

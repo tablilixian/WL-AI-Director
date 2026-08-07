@@ -2,7 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { ProjectState, Shot, ConsistencyCheckResult, ConsistencyConflict } from '../../types';
 import { useAlert } from '../GlobalAlert';
 import { logger, LogCategory } from '../../services/logger';
-import { parseScriptToData, generateShotList, continueScript, continueScriptStream, rewriteScript, rewriteScriptStream, setScriptLogCallback, clearScriptLogCallback, logScriptProgress, checkAllCharactersConsistency, fixKeyframeConsistency, parsePropsFromStory, generateAllPropPrompts, suggestVisualStyleFromScript } from '../../services/aiService';
+import {
+  parseScriptToData,
+  generateShotList,
+  continueScript,
+  continueScriptStream,
+  rewriteScript,
+  rewriteScriptStream,
+  setScriptLogCallback,
+  clearScriptLogCallback,
+  logScriptProgress,
+  checkAllCharactersConsistency,
+  fixKeyframeConsistency,
+  parsePropsFromStory,
+  generateAllPropPrompts,
+  suggestVisualStyleFromScript,
+} from '../../services/aiService';
 import { getActiveChatModel } from '../../services/modelRegistry';
 import { savePreferences } from '../../services/userPreferencesService';
 import { getFinalValue, validateConfig } from './utils';
@@ -21,7 +36,9 @@ const getDefaultChatModelId = (): string => {
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
-  updateProjectWithoutSave?: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
+  updateProjectWithoutSave?: (
+    updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState),
+  ) => void;
   finishAIProcessing?: () => void;
   onShowModelConfig?: () => void;
   onGeneratingChange?: (isGenerating: boolean) => void;
@@ -29,21 +46,32 @@ interface Props {
 
 type TabMode = 'story' | 'script';
 
-const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWithoutSave, finishAIProcessing, onShowModelConfig, onGeneratingChange }) => {
+const StageScript: React.FC<Props> = ({
+  project,
+  updateProject,
+  updateProjectWithoutSave,
+  finishAIProcessing,
+  onShowModelConfig,
+  onGeneratingChange,
+}) => {
   const { showAlert } = useAlert();
   const [activeTab, setActiveTab] = useState<TabMode>(project.scriptData ? 'script' : 'story');
-  
+
   // Configuration state
   const [localScript, setLocalScript] = useState(project.rawScript);
   const [localTitle, setLocalTitle] = useState(project.title);
   const [localDuration, setLocalDuration] = useState(project.targetDuration || DEFAULTS.duration);
   const [localLanguage, setLocalLanguage] = useState(project.language || DEFAULTS.language);
-  const [localModel, setLocalModel] = useState(project.shotGenerationModel || getDefaultChatModelId());
-  const [localVisualStyle, setLocalVisualStyle] = useState(project.scriptData?.visualStyle || project.visualStyle || DEFAULTS.visualStyle);
+  const [localModel, setLocalModel] = useState(
+    project.shotGenerationModel || getDefaultChatModelId(),
+  );
+  const [localVisualStyle, setLocalVisualStyle] = useState(
+    project.scriptData?.visualStyle || project.visualStyle || DEFAULTS.visualStyle,
+  );
   const [customDurationInput, setCustomDurationInput] = useState('');
   const [customModelInput, setCustomModelInput] = useState('');
   const [customStyleInput, setCustomStyleInput] = useState('');
-  
+
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDetectingStyle, setIsDetectingStyle] = useState(false);
@@ -97,7 +125,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   useEffect(() => {
     setScriptLogCallback((message) => {
-      setProcessingLogs(prev => {
+      setProcessingLogs((prev) => {
         const next = [...prev, message];
         return next.slice(-8);
       });
@@ -123,10 +151,14 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
         setLocalVisualStyle(result.suggestedStyle);
       }
 
-      const confidenceLabel = { high: '高', medium: '中', low: '低' }[result.confidence] || result.confidence;
-      showAlert(`检测到风格：${result.suggestedStyle}（置信度: ${confidenceLabel}）\n${result.reason}`, {
-        type: 'info',
-      });
+      const confidenceLabel =
+        { high: '高', medium: '中', low: '低' }[result.confidence] || result.confidence;
+      showAlert(
+        `检测到风格：${result.suggestedStyle}（置信度: ${confidenceLabel}）\n${result.reason}`,
+        {
+          type: 'info',
+        },
+      );
     } catch (err: any) {
       showAlert(`风格检测失败：${err.message || '请检查网络后重试'}`, { type: 'error' });
     } finally {
@@ -143,7 +175,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       script: localScript,
       duration: finalDuration,
       model: finalModel,
-      visualStyle: finalVisualStyle
+      visualStyle: finalVisualStyle,
     });
 
     if (!validation.valid) {
@@ -170,19 +202,24 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
         language: localLanguage,
         visualStyle: finalVisualStyle,
         shotGenerationModel: finalModel,
-        isParsingScript: true
+        isParsingScript: true,
       });
 
       logger.debug(LogCategory.AI, `📞 调用 parseScriptToData, 传入模型: ${finalModel}`);
       logScriptProgress('开始解析剧本...');
-      const scriptData = await parseScriptToData(localScript, localLanguage, finalModel, finalVisualStyle);
-      
+      const scriptData = await parseScriptToData(
+        localScript,
+        localLanguage,
+        finalModel,
+        finalVisualStyle,
+      );
+
       scriptData.targetDuration = finalDuration;
       scriptData.language = localLanguage;
       scriptData.visualStyle = finalVisualStyle;
       scriptData.shotGenerationModel = finalModel;
 
-      if (localTitle && localTitle !== "未命名项目") {
+      if (localTitle && localTitle !== '未命名项目') {
         scriptData.title = localTitle;
       }
 
@@ -195,14 +232,14 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
         ...project,
         rawScript: localScript,
         visualStyle: finalVisualStyle,
-        scriptData, 
-        shots, 
+        scriptData,
+        shots,
         isParsingScript: false,
-        title: scriptData.title 
+        title: scriptData.title,
       };
-      
+
       updateProject(updatedProject);
-      
+
       // 立即保存到云端
       try {
         await saveProjectToCloud(updatedProject);
@@ -210,17 +247,16 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       } catch (error) {
         logger.error(LogCategory.AI, '❌ 保存分镜失败:', error);
       }
-      
+
       setActiveTab('script');
 
       // 非阻塞启动视觉一致性检查
       runConsistencyCheck(scriptData, shots, finalModel);
       // 非阻塞启动道具提取
       runPropsExtraction(scriptData, true);
-
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
-      setError(`错误: ${err.message || "AI 连接失败"}`);
+      setError(`错误: ${err.message || 'AI 连接失败'}`);
       updateProject({ isParsingScript: false });
     } finally {
       setIsProcessing(false);
@@ -230,13 +266,13 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const handleContinueScript = async () => {
     const finalModel = getFinalValue(localModel, customModelInput);
-    
+
     if (!localScript.trim()) {
-      setError("请先输入一些剧本内容作为基础。");
+      setError('请先输入一些剧本内容作为基础。');
       return;
     }
     if (!finalModel) {
-      setError("请选择或输入模型名称。");
+      setError('请选择或输入模型名称。');
       return;
     }
 
@@ -256,7 +292,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           const newScript = baseScript + '\n\n' + streamed;
           setLocalScript(newScript);
           updateProjectWithoutSave?.({ rawScript: newScript });
-        }
+        },
       );
       if (continuedContent) {
         const newScript = baseScript + '\n\n' + continuedContent;
@@ -265,7 +301,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       }
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
-      setError(`AI续写失败: ${err.message || "连接失败"}`);
+      setError(`AI续写失败: ${err.message || '连接失败'}`);
       try {
         const continuedContent = await continueScript(baseScript, localLanguage, finalModel);
         const newScript = baseScript + '\n\n' + continuedContent;
@@ -283,13 +319,13 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const handleRewriteScript = async () => {
     const finalModel = getFinalValue(localModel, customModelInput);
-    
+
     if (!localScript.trim()) {
-      setError("请先输入剧本内容。");
+      setError('请先输入剧本内容。');
       return;
     }
     if (!finalModel) {
-      setError("请选择或输入模型名称。");
+      setError('请选择或输入模型名称。');
       return;
     }
 
@@ -310,7 +346,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           streamed += delta;
           setLocalScript(streamed);
           updateProjectWithoutSave?.({ rawScript: streamed });
-        }
+        },
       );
       if (rewrittenContent) {
         setLocalScript(rewrittenContent);
@@ -318,7 +354,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       }
     } catch (err: any) {
       logger.error(LogCategory.AI, err);
-      setError(`AI改写失败: ${err.message || "连接失败"}`);
+      setError(`AI改写失败: ${err.message || '连接失败'}`);
       try {
         const rewrittenContent = await rewriteScript(baseScript, localLanguage, finalModel);
         setLocalScript(rewrittenContent);
@@ -334,13 +370,15 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const showProcessingToast = isProcessing || isContinuing || isRewriting;
-  const toastMessage = processingMessage || (isProcessing
-    ? '正在生成剧本...'
-    : isContinuing
-      ? 'AI续写中...'
-      : isRewriting
-        ? 'AI改写中...'
-        : '');
+  const toastMessage =
+    processingMessage ||
+    (isProcessing
+      ? '正在生成剧本...'
+      : isContinuing
+        ? 'AI续写中...'
+        : isRewriting
+          ? 'AI改写中...'
+          : '');
 
   // Character editing handlers
   const handleEditCharacter = (charId: string, prompt: string) => {
@@ -350,18 +388,18 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const handleSaveCharacter = (charId: string, prompt: string) => {
     if (!project.scriptData) return;
-    
-    const updatedCharacters = project.scriptData.characters.map(c => 
-      c.id === charId ? { ...c, visualPrompt: prompt } : c
+
+    const updatedCharacters = project.scriptData.characters.map((c) =>
+      c.id === charId ? { ...c, visualPrompt: prompt } : c,
     );
-    
+
     updateProject({
       scriptData: {
         ...project.scriptData,
-        characters: updatedCharacters
-      }
+        characters: updatedCharacters,
+      },
     });
-    
+
     setEditingCharacterId(null);
     setEditingCharacterPrompt('');
   };
@@ -379,19 +417,19 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const handleSaveShotPrompt = () => {
     if (!editingShotId) return;
-    
-    const updatedShots = project.shots.map(shot => {
+
+    const updatedShots = project.shots.map((shot) => {
       if (shot.id === editingShotId && shot.keyframes.length > 0) {
         return {
           ...shot,
-          keyframes: shot.keyframes.map((kf, idx) => 
-            idx === 0 ? { ...kf, visualPrompt: editingShotPrompt } : kf
-          )
+          keyframes: shot.keyframes.map((kf, idx) =>
+            idx === 0 ? { ...kf, visualPrompt: editingShotPrompt } : kf,
+          ),
         };
       }
       return shot;
     });
-    
+
     updateProject({ shots: updatedShots });
     setEditingShotId(null);
     setEditingShotPrompt('');
@@ -408,7 +446,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleAddCharacterToShot = (shotId: string, characterId: string) => {
-    const updatedShots = project.shots.map(shot => {
+    const updatedShots = project.shots.map((shot) => {
       if (shot.id === shotId && !shot.characters.includes(characterId)) {
         return { ...shot, characters: [...shot.characters, characterId] };
       }
@@ -418,9 +456,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleRemoveCharacterFromShot = (shotId: string, characterId: string) => {
-    const updatedShots = project.shots.map(shot => {
+    const updatedShots = project.shots.map((shot) => {
       if (shot.id === shotId) {
-        return { ...shot, characters: shot.characters.filter(cid => cid !== characterId) };
+        return { ...shot, characters: shot.characters.filter((cid) => cid !== characterId) };
       }
       return shot;
     });
@@ -440,18 +478,18 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
 
   const handleSaveShotAction = () => {
     if (!editingShotActionId) return;
-    
-    const updatedShots = project.shots.map(shot => {
+
+    const updatedShots = project.shots.map((shot) => {
       if (shot.id === editingShotActionId) {
         return {
           ...shot,
           actionSummary: editingShotActionText,
-          dialogue: editingShotDialogueText.trim() || undefined
+          dialogue: editingShotDialogueText.trim() || undefined,
         };
       }
       return shot;
     });
-    
+
     updateProject({ shots: updatedShots });
     setEditingShotActionId(null);
     setEditingShotActionText('');
@@ -470,7 +508,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleSaveShotCamera = (shotId: string, cameraMovement: string, shotSize: string) => {
-    const updatedShots = project.shots.map(shot => {
+    const updatedShots = project.shots.map((shot) => {
       if (shot.id === shotId) {
         return { ...shot, cameraMovement, shotSize };
       }
@@ -495,7 +533,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleAddSubShot = (anchorShotId: string) => {
-    const anchorShot = project.shots.find(s => s.id === anchorShotId);
+    const anchorShot = project.shots.find((s) => s.id === anchorShotId);
     if (!anchorShot) return;
 
     const parts = anchorShotId.split('-');
@@ -512,7 +550,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     }, 0);
 
     const newId = `${baseId}-${maxSuffix + 1}`;
-    const baseShot = project.shots.find(s => s.id === baseId) || anchorShot;
+    const baseShot = project.shots.find((s) => s.id === baseId) || anchorShot;
     const newShot: Shot = {
       id: newId,
       sceneId: baseShot.sceneId,
@@ -520,7 +558,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       cameraMovement: baseShot.cameraMovement || '平移',
       shotSize: baseShot.shotSize || '中景',
       characters: [...(baseShot.characters || [])],
-      characterVariations: baseShot.characterVariations ? { ...baseShot.characterVariations } : undefined,
+      characterVariations: baseShot.characterVariations
+        ? { ...baseShot.characterVariations }
+        : undefined,
       props: baseShot.props ? [...baseShot.props] : undefined,
       videoModel: baseShot.videoModel,
       keyframes: [
@@ -528,9 +568,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           id: `kf-${newId}-start`,
           type: 'start',
           visualPrompt: '',
-          status: 'pending'
-        }
-      ]
+          status: 'pending',
+        },
+      ],
     };
 
     const lastIndexInGroup = project.shots.reduce((idx, shot, i) => {
@@ -542,7 +582,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     const nextShots = [
       ...project.shots.slice(0, insertAt),
       newShot,
-      ...project.shots.slice(insertAt)
+      ...project.shots.slice(insertAt),
     ];
 
     updateProject({ shots: nextShots });
@@ -554,7 +594,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   const handleAddShot = (sceneId: string) => {
     if (!project.scriptData) return;
 
-    const sceneShots = project.shots.filter(s => s.sceneId === sceneId);
+    const sceneShots = project.shots.filter((s) => s.sceneId === sceneId);
     if (sceneShots.length > 0) {
       handleAddSubShot(sceneShots[sceneShots.length - 1].id);
       return;
@@ -573,15 +613,16 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           id: `kf-${newId}-start`,
           type: 'start',
           visualPrompt: '',
-          status: 'pending'
-        }
-      ]
+          status: 'pending',
+        },
+      ],
     };
 
-    const sceneIndex = project.scriptData.scenes.findIndex(s => s.id === sceneId);
-    const lastIndexInScene = project.shots.reduce((idx, shot, i) => (
-      shot.sceneId === sceneId ? i : idx
-    ), -1);
+    const sceneIndex = project.scriptData.scenes.findIndex((s) => s.id === sceneId);
+    const lastIndexInScene = project.shots.reduce(
+      (idx, shot, i) => (shot.sceneId === sceneId ? i : idx),
+      -1,
+    );
 
     let insertAt = project.shots.length;
     if (lastIndexInScene >= 0) {
@@ -589,7 +630,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     } else if (sceneIndex >= 0) {
       for (let i = sceneIndex + 1; i < project.scriptData.scenes.length; i += 1) {
         const nextSceneId = project.scriptData.scenes[i].id;
-        const nextIndex = project.shots.findIndex(s => s.sceneId === nextSceneId);
+        const nextIndex = project.shots.findIndex((s) => s.sceneId === nextSceneId);
         if (nextIndex >= 0) {
           insertAt = nextIndex;
           break;
@@ -600,7 +641,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     const nextShots = [
       ...project.shots.slice(0, insertAt),
       newShot,
-      ...project.shots.slice(insertAt)
+      ...project.shots.slice(insertAt),
     ];
 
     updateProject({ shots: nextShots });
@@ -620,7 +661,9 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     return `SHOT ${String(fallbackIndex + 1).padStart(3, '0')}`;
   };
 
-  const consistencyConflicts: ConsistencyConflict[] = consistencyResults.flatMap(r => r.conflicts);
+  const consistencyConflicts: ConsistencyConflict[] = consistencyResults.flatMap(
+    (r) => r.conflicts,
+  );
 
   const runPropsExtraction = async (scriptData?: any, silent?: boolean) => {
     const data = scriptData || project.scriptData;
@@ -636,7 +679,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           data.artDirection,
           data.visualStyle || project.visualStyle,
           data.language || '中文',
-          finalModel
+          finalModel,
         );
         propsWithPrompts = props.map((p, i) => ({
           ...p,
@@ -661,7 +704,12 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
     setConsistencyResults([]);
     setIsConsistencyChecking(true);
     try {
-      const results = await checkAllCharactersConsistency(scriptData, shots, scriptData.scenes, model);
+      const results = await checkAllCharactersConsistency(
+        scriptData,
+        shots,
+        scriptData.scenes,
+        model,
+      );
       setConsistencyResults(results);
     } catch (err: any) {
       logger.warn(LogCategory.AI, '一致性检查异常:', err);
@@ -671,16 +719,18 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleDismissConflict = (conflictId: string) => {
-    setConsistencyResults(prev => prev.map(r => ({
-      ...r,
-      conflicts: r.conflicts.map(c =>
-        c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c
-      ),
-    })));
+    setConsistencyResults((prev) =>
+      prev.map((r) => ({
+        ...r,
+        conflicts: r.conflicts.map((c) =>
+          c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c,
+        ),
+      })),
+    );
   };
 
   const handleFixShot = (shotId: string) => {
-    const shot = project.shots.find(s => s.id === shotId);
+    const shot = project.shots.find((s) => s.id === shotId);
     if (!shot) return;
     setEditingShotId(shotId);
     setEditingShotPrompt(shot.keyframes[0]?.visualPrompt || '');
@@ -691,30 +741,37 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleIgnoreConflict = (conflictId: string) => {
-    setConsistencyResults(prev => prev.map(r => ({
-      ...r,
-      conflicts: r.conflicts.map(c =>
-        c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c
-      ),
-    })));
+    setConsistencyResults((prev) =>
+      prev.map((r) => ({
+        ...r,
+        conflicts: r.conflicts.map((c) =>
+          c.id === conflictId ? { ...c, userDecision: 'dismissed' } : c,
+        ),
+      })),
+    );
   };
 
   const handleRegenerateWithFix = async (conflict: ConsistencyConflict) => {
     if (!project.scriptData) return;
     const shotId = conflict.shotIds[0];
-    const shot = project.shots.find(s => s.id === shotId);
+    const shot = project.shots.find((s) => s.id === shotId);
     if (!shot) return;
 
     const finalModel = getFinalValue(localModel, customModelInput);
     setRegeneratingConflictId(conflict.id);
     setIsConsistencyRegenerating(true);
     try {
-      const newPrompts = await fixKeyframeConsistency(shot, conflict, project.scriptData, finalModel);
-      const updatedShots = project.shots.map(s => {
+      const newPrompts = await fixKeyframeConsistency(
+        shot,
+        conflict,
+        project.scriptData,
+        finalModel,
+      );
+      const updatedShots = project.shots.map((s) => {
         if (s.id !== shotId) return s;
         return {
           ...s,
-          keyframes: s.keyframes.map(kf => {
+          keyframes: s.keyframes.map((kf) => {
             if (kf.type === 'start') return { ...kf, visualPrompt: newPrompts.startPrompt };
             if (kf.type === 'end') return { ...kf, visualPrompt: newPrompts.endPrompt };
             return kf;
@@ -733,7 +790,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
   };
 
   const handleDeleteShot = (shotId: string) => {
-    const shotIndex = project.shots.findIndex(s => s.id === shotId);
+    const shotIndex = project.shots.findIndex((s) => s.id === shotId);
     const shot = shotIndex >= 0 ? project.shots[shotIndex] : null;
     if (!shot) return;
 
@@ -742,7 +799,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
       type: 'warning',
       showCancel: true,
       onConfirm: () => {
-        updateProject({ shots: project.shots.filter(s => s.id !== shotId) });
+        updateProject({ shots: project.shots.filter((s) => s.id !== shotId) });
         if (editingShotId === shotId) {
           setEditingShotId(null);
           setEditingShotPrompt('');
@@ -759,7 +816,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
           setEditingShotCameraId(null);
         }
         showAlert(`${displayName} 已删除`, { type: 'success' });
-      }
+      },
     });
   };
 
@@ -799,10 +856,22 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
             onShowModelConfig={onShowModelConfig}
             onAutoDetectStyle={handleAutoDetectStyle}
             onTitleChange={setLocalTitle}
-            onDurationChange={(val) => { setLocalDuration(val); savePreferences({ targetDuration: val }); }}
-            onLanguageChange={(val) => { setLocalLanguage(val); savePreferences({ language: val }); }}
-            onModelChange={(val) => { setLocalModel(val); savePreferences({ shotGenerationModel: val }); }}
-            onVisualStyleChange={(val) => { setLocalVisualStyle(val); savePreferences({ visualStyle: val }); }}
+            onDurationChange={(val) => {
+              setLocalDuration(val);
+              savePreferences({ targetDuration: val });
+            }}
+            onLanguageChange={(val) => {
+              setLocalLanguage(val);
+              savePreferences({ language: val });
+            }}
+            onModelChange={(val) => {
+              setLocalModel(val);
+              savePreferences({ shotGenerationModel: val });
+            }}
+            onVisualStyleChange={(val) => {
+              setLocalVisualStyle(val);
+              savePreferences({ visualStyle: val });
+            }}
             onCustomDurationChange={setCustomDurationInput}
             onCustomModelChange={setCustomModelInput}
             onCustomStyleChange={setCustomStyleInput}
@@ -817,7 +886,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject, updateProjectWit
             isContinuing={isContinuing}
             isRewriting={isRewriting}
             isExtractingProps={isExtractingProps}
-            lastModified={project.lastModified}
+            lastModified={String(project.lastModified)}
           />
         </div>
       ) : (
