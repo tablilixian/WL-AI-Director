@@ -1,10 +1,10 @@
-import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach, vi } from 'vitest';
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 vi.mock('../src/api/pocketbase', () => ({
   pb: {
@@ -22,22 +22,26 @@ vi.mock('../src/api/pocketbase', () => ({
       create: vi.fn(() => Promise.resolve({ id: 'mock-id' })),
       update: vi.fn(() => Promise.resolve({ id: 'mock-id' })),
       delete: vi.fn(() => Promise.resolve(true)),
-      authWithPassword: vi.fn(() => Promise.resolve({ token: 'mock-token', record: { id: 'mock-user' } })),
+      authWithPassword: vi.fn(() =>
+        Promise.resolve({ token: 'mock-token', record: { id: 'mock-user' } }),
+      ),
     })),
   },
-}))
+}));
 
 vi.mock('i18next', () => ({
   default: {
     t: (key: string) => key,
     init: vi.fn(() => Promise.resolve()),
     language: 'zh-CN',
-    use: vi.fn(function() { return this; }),
+    use: vi.fn(function (this: any) {
+      return this;
+    }),
   },
   t: (key: string) => key,
   init: vi.fn(() => Promise.resolve()),
   language: 'zh-CN',
-}))
+}));
 
 vi.mock('i18next-browser-languagedetector', () => ({
   default: {
@@ -46,7 +50,7 @@ vi.mock('i18next-browser-languagedetector', () => ({
     detect: vi.fn(() => 'zh-CN'),
     cacheUserLanguage: vi.fn(),
   },
-}))
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -60,4 +64,4 @@ vi.mock('react-i18next', () => ({
     type: '3rdParty',
     init: vi.fn(),
   },
-}))
+}));

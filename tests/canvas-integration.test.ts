@@ -32,9 +32,8 @@ vi.mock('../services/unifiedImageService', () => ({
 
 // ── Import after mocks ───────────────────────────────────
 
-const { canvasIntegrationService } = await import(
-  '../src/modules/canvas/services/canvasIntegrationService'
-);
+const { canvasIntegrationService } =
+  await import('../src/modules/canvas/services/canvasIntegrationService');
 
 function createLayer(overrides: Partial<LayerData> = {}): LayerData {
   return {
@@ -128,7 +127,7 @@ describe('canvasIntegrationService', () => {
         savedAt: Date.now(),
         version: 2,
         syncStatus: 'synced',
-      });
+      } as any);
 
       await canvasIntegrationService.enter('proj-1');
 
@@ -166,15 +165,21 @@ describe('canvasIntegrationService', () => {
 
       // Enqueue a slow save
       let slowSaveResolve: () => void = () => {};
-      const slowSave = new Promise<void>(resolve => { slowSaveResolve = resolve; });
-      const saveInQueue = vi.fn(async () => { await slowSave; });
+      const slowSave = new Promise<void>((resolve) => {
+        slowSaveResolve = resolve;
+      });
+      const saveInQueue = vi.fn(async () => {
+        await slowSave;
+      });
       const queued = (canvasIntegrationService as any).enqueueSave(saveInQueue);
 
       // Start exit (will wait for queue)
       const exitPromise = canvasIntegrationService.exit();
 
       // Queue is still processing the slow save, exit should be waiting
-      await expect(Promise.race([exitPromise, Promise.resolve('still-waiting')])).resolves.toBe('still-waiting');
+      await expect(Promise.race([exitPromise, Promise.resolve('still-waiting')])).resolves.toBe(
+        'still-waiting',
+      );
 
       // Complete the slow save
       slowSaveResolve();
@@ -227,7 +232,7 @@ describe('canvasIntegrationService', () => {
         savedAt: Date.now(),
         version: 2,
         syncStatus: 'synced',
-      });
+      } as any);
       await canvasIntegrationService.enter('proj-a');
       expect(useCanvasStore.getState().layers.length).toBe(2);
 
@@ -240,7 +245,7 @@ describe('canvasIntegrationService', () => {
         savedAt: Date.now(),
         version: 2,
         syncStatus: 'synced',
-      });
+      } as any);
       await canvasIntegrationService.enter('proj-b');
 
       // store 应该是 proj-b 的 1 个图层，不是 proj-a 的 2 个
@@ -296,7 +301,7 @@ describe('canvasIntegrationService', () => {
         'proj-1',
         expect.any(Array),
         expect.any(Object),
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -357,7 +362,7 @@ describe('canvasIntegrationService', () => {
         'proj-1',
         expect.arrayContaining([expect.objectContaining({ id: 'l1' })]),
         { x: 100, y: 200 },
-        2
+        2,
       );
     });
 
@@ -382,7 +387,7 @@ describe('canvasIntegrationService', () => {
         'proj-1',
         [],
         expect.any(Object),
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -393,7 +398,7 @@ describe('canvasIntegrationService', () => {
       // clearCanvas enqueues -> saveNow([])
       // If undo happened during queue, it would be queued AFTER clear
       const clearPromise = canvasIntegrationService.clearCanvas();
-      
+
       // Simulate undo (adds layer back)
       useCanvasStore.getState().addLayer(createLayer({ id: 'l2' }));
 
@@ -416,7 +421,6 @@ describe('canvasIntegrationService', () => {
       await canvasIntegrationService.enter('proj-1');
 
       const executionOrder: string[] = [];
-      const enqueueSave = (canvasIntegrationService as any).enqueueSave as ReturnType<typeof vi.fn>;
 
       await (canvasIntegrationService as any).enqueueSave(async () => {
         executionOrder.push('a');
