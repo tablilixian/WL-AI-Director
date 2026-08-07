@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface LoginPageProps {
   onSwitchToRegister: () => void;
@@ -23,7 +24,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister, onLogi
       await signIn(email, password);
       onLoginSuccess();
     } catch (err) {
-      console.error('Login error:', err);
+      logger.error(LogCategory.AUTH, 'Login error:', err);
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
@@ -35,7 +36,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
       await signUp(email, password);
       setEmailSent(true);
     } catch (err) {
-      console.error('Register error:', err);
+      logger.error(LogCategory.AUTH, 'Register error:', err);
     }
   };
 

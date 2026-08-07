@@ -1,49 +1,53 @@
-import PocketBase from 'pocketbase'
+import PocketBase from 'pocketbase';
+import { logger, LogCategory } from '../../services/logger.ts';
 
-const pocketbaseUrl = import.meta.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090'
+const pocketbaseUrl = import.meta.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
 
-export const pb = new PocketBase(pocketbaseUrl)
+export const pb = new PocketBase(pocketbaseUrl);
 
-console.log('[PocketBase] 初始化:', {
+logger.info(LogCategory.NETWORK, '[PocketBase] 初始化:', {
   url: pocketbaseUrl,
   isValid: pb.authStore.isValid,
   modelId: pb.authStore.model?.id,
-  hasToken: !!pb.authStore.token
-})
+  hasToken: !!pb.authStore.token,
+});
 
 export async function ensureValidAuth(): Promise<boolean> {
-  if (!pb.authStore.isValid) return false
+  if (!pb.authStore.isValid) return false;
   try {
     // authRefresh will auto-extend the token
-    await pb.collection('users').authRefresh()
-    return true
+    await pb.collection('users').authRefresh();
+    return true;
   } catch {
     // Don't clear auth store on transient network errors.
     // Returning false falls back to offline save; the stale token
     // will be retried next time and eventually cleared server-side.
-    return false
+    return false;
   }
 }
 
 // Periodically refresh the auth token every 30 minutes
-let refreshInterval: ReturnType<typeof setInterval> | null = null
+let refreshInterval: ReturnType<typeof setInterval> | null = null;
 export function startTokenRefresh(): void {
-  stopTokenRefresh()
-  refreshInterval = setInterval(async () => {
-    if (pb.authStore.isValid) {
-      try {
-        await pb.collection('users').authRefresh()
-        console.log('[PocketBase] Token auto-refreshed')
-      } catch {
-        console.warn('[PocketBase] Token refresh failed')
+  stopTokenRefresh();
+  refreshInterval = setInterval(
+    async () => {
+      if (pb.authStore.isValid) {
+        try {
+          await pb.collection('users').authRefresh();
+          logger.info(LogCategory.NETWORK, '[PocketBase] Token auto-refreshed');
+        } catch {
+          logger.warn(LogCategory.NETWORK, '[PocketBase] Token refresh failed');
+        }
       }
-    }
-  }, 30 * 60 * 1000)
+    },
+    30 * 60 * 1000,
+  );
 }
 
 export function stopTokenRefresh(): void {
   if (refreshInterval) {
-    clearInterval(refreshInterval)
-    refreshInterval = null
+    clearInterval(refreshInterval);
+    refreshInterval = null;
   }
 }

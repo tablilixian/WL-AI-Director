@@ -17,6 +17,7 @@ import { Playhead } from './Playhead';
 import { Ruler } from './Ruler';
 import { SnapControls } from './SnapControls';
 import { SnapLine } from './SnapLine';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface TimelineProps {
   /** 视口宽度，默认 800 */
@@ -71,7 +72,12 @@ export const Timeline: React.FC<TimelineProps> = ({
   const totalWidth = useMemo(() => {
     const minWidth = Math.max(duration * 2, viewportWidth);
     const result = Math.max(calculateTimelineWidth(minWidth, zoom), viewportWidth);
-    console.log('[Timeline] 计算 totalWidth', { duration, minWidth, result, zoom });
+    logger.info(LogCategory.VIDEO, '[Timeline] 计算 totalWidth', {
+      duration,
+      minWidth,
+      result,
+      zoom,
+    });
     return result;
   }, [duration, zoom, viewportWidth]);
 

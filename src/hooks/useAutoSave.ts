@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useEditorStore } from '../stores/editorStore';
 import { editorStorage } from '../services/editorStorage';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 const AUTO_SAVE_INTERVAL = 30000;
 
@@ -26,7 +27,7 @@ export function useAutoSave(projectId: string) {
       });
       lastSavedRef.current = currentHash;
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      logger.error(LogCategory.APP, 'Auto-save failed:', error);
     }
   }, [projectId, tracks, zoom, getStateHash]);
 
@@ -61,7 +62,7 @@ export function useLoadProject(projectId: string) {
 
       return true;
     } catch (error) {
-      console.error('Load project failed:', error);
+      logger.error(LogCategory.APP, 'Load project failed:', error);
       return false;
     }
   }, [addTrack, addClip]);

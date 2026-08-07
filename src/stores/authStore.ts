@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { pb, startTokenRefresh, stopTokenRefresh } from '../api/pocketbase';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 interface AuthState {
   user: any;
@@ -22,7 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
 
   initialize: async () => {
-    console.log('[Auth] initialize:', {
+    logger.info(LogCategory.APP, '[Auth] initialize:', {
       isValid: pb.authStore.isValid,
       model: pb.authStore.model?.id,
       token: pb.authStore.token?.slice(0, 20),
@@ -37,7 +38,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     // 监听认证状态变化
     pb.authStore.onChange((token, model) => {
-      console.log('[Auth] onChange:', { modelId: model?.id, token: token?.slice(0, 20) });
+      logger.info(LogCategory.APP, '[Auth] onChange:', {
+        modelId: model?.id,
+        token: token?.slice(0, 20),
+      });
       set({ user: model });
       if (model) {
         startTokenRefresh();
@@ -51,7 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const authData = await pb.collection('users').authWithPassword(email, password);
-      console.log('[Auth] signIn authData:', {
+      logger.info(LogCategory.APP, '[Auth] signIn authData:', {
         recordId: authData.record?.id,
         token: authData.token?.slice(0, 20) + '...',
         modelId: pb.authStore.model?.id,
@@ -65,17 +69,20 @@ export const useAuthStore = create<AuthState>((set) => ({
           .then(({ syncFromCloud, hybridStorage }) => {
             syncFromCloud()
               .then((result: any) => {
-                console.log(
+                logger.info(
+                  LogCategory.APP,
                   `[Auth] 登录同步完成: 上传 ${result.uploaded}, 下载 ${result.downloaded}`,
                 );
                 if (result.uploaded > 0 || result.downloaded > 0) {
                   window.dispatchEvent(new CustomEvent('projects-synced'));
                 }
               })
-              .catch(console.error);
-            hybridStorage.getAllAssetLibraryItems().catch(console.error);
+              .catch((err) => logger.error(LogCategory.APP, '[Auth] 云端同步失败', err));
+            hybridStorage
+              .getAllAssetLibraryItems()
+              .catch((err) => logger.error(LogCategory.APP, '[Auth] 资产库读取失败', err));
           })
-          .catch(console.error);
+          .catch((err) => logger.error(LogCategory.APP, '[Auth] 同步模块加载失败', err));
       }, 100);
     } catch (error: any) {
       set({ loading: false, error: error.message || error.response?.message });
@@ -91,11 +98,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
         passwordConfirm: password,
       });
-      console.log('[Auth] signUp create record:', { recordId: record?.id });
+      logger.info(LogCategory.APP, '[Auth] signUp create record:', { recordId: record?.id });
 
       // 注册后自动登录
       const authData = await pb.collection('users').authWithPassword(email, password);
-      console.log('[Auth] signUp authData:', {
+      logger.info(LogCategory.APP, '[Auth] signUp authData:', {
         recordId: authData.record?.id,
         token: authData.token?.slice(0, 20) + '...',
         modelId: pb.authStore.model?.id,
@@ -109,17 +116,20 @@ export const useAuthStore = create<AuthState>((set) => ({
           .then(({ syncFromCloud, hybridStorage }) => {
             syncFromCloud()
               .then((result: any) => {
-                console.log(
+                logger.info(
+                  LogCategory.APP,
                   `[Auth] 注册同步完成: 上传 ${result.uploaded}, 下载 ${result.downloaded}`,
                 );
                 if (result.uploaded > 0 || result.downloaded > 0) {
                   window.dispatchEvent(new CustomEvent('projects-synced'));
                 }
               })
-              .catch(console.error);
-            hybridStorage.getAllAssetLibraryItems().catch(console.error);
+              .catch((err) => logger.error(LogCategory.APP, '[Auth] 云端同步失败', err));
+            hybridStorage
+              .getAllAssetLibraryItems()
+              .catch((err) => logger.error(LogCategory.APP, '[Auth] 资产库读取失败', err));
           })
-          .catch(console.error);
+          .catch((err) => logger.error(LogCategory.APP, '[Auth] 同步模块加载失败', err));
       }, 100);
     } catch (error: any) {
       set({ loading: false, error: error.message || error.response?.message });

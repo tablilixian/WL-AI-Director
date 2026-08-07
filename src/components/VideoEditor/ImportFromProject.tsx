@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Video, Loader2, Plus } from 'lucide-react';
 import { ProjectState } from '../../../types';
 import { unifiedImageService } from '../../../services/unifiedImageService';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 interface ProjectShot {
   id: string;
@@ -69,7 +70,7 @@ export const ImportFromProject: React.FC<ImportFromProjectProps> = ({ project, o
             try {
               sourceId = await unifiedImageService.saveVideoToLocal(resolvedUrl);
             } catch (err) {
-              console.error('[ImportFromProject] 保存视频到本地存储失败:', err);
+              logger.error(LogCategory.VIDEO, '[ImportFromProject] 保存视频到本地存储失败:', err);
               sourceId = originalUrl;
             }
           }

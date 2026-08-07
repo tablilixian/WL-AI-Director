@@ -6,6 +6,7 @@
 
 import { Track } from '../types/editor';
 import { indexedDBService } from './indexedDB';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 const PREFERENCES_KEY = 'video-editor-preferences';
 
@@ -40,7 +41,7 @@ class EditorStorageService {
       await indexedDBService.saveState(projectId, state);
       return true;
     } catch (error) {
-      console.error('[EditorStorage] 保存失败:', error);
+      logger.error(LogCategory.STORAGE, '[EditorStorage] 保存失败:', error);
       return false;
     }
   }
@@ -58,7 +59,7 @@ class EditorStorageService {
         version: state.version,
       };
     } catch (error) {
-      console.error('[EditorStorage] 加载失败:', error);
+      logger.error(LogCategory.STORAGE, '[EditorStorage] 加载失败:', error);
       return null;
     }
   }
@@ -68,7 +69,7 @@ class EditorStorageService {
       await indexedDBService.deleteState(projectId);
       return true;
     } catch (error) {
-      console.error('[EditorStorage] 删除失败:', error);
+      logger.error(LogCategory.STORAGE, '[EditorStorage] 删除失败:', error);
       return false;
     }
   }
@@ -77,7 +78,7 @@ class EditorStorageService {
     try {
       return await indexedDBService.listStateProjects();
     } catch (error) {
-      console.error('[EditorStorage] 列出项目失败:', error);
+      logger.error(LogCategory.STORAGE, '[EditorStorage] 列出项目失败:', error);
       return [];
     }
   }
@@ -122,7 +123,7 @@ class EditorStorageService {
     try {
       await indexedDBService.clearAllStates();
     } catch (error) {
-      console.error('[EditorStorage] 清空失败:', error);
+      logger.error(LogCategory.STORAGE, '[EditorStorage] 清空失败:', error);
     }
   }
 
@@ -136,20 +137,16 @@ export const editorStorage = new EditorStorageService();
 export async function saveEditorState(
   projectId: string,
   tracks: Track[],
-  zoom: number
+  zoom: number,
 ): Promise<boolean> {
   return editorStorage.save(projectId, { tracks, zoom });
 }
 
-export async function loadEditorState(
-  projectId: string
-): Promise<StoredEditorState | null> {
+export async function loadEditorState(projectId: string): Promise<StoredEditorState | null> {
   return editorStorage.load(projectId);
 }
 
-export async function deleteEditorState(
-  projectId: string
-): Promise<boolean> {
+export async function deleteEditorState(projectId: string): Promise<boolean> {
   return editorStorage.delete(projectId);
 }
 

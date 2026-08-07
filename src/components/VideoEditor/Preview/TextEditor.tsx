@@ -14,6 +14,7 @@ import { getTTSProvider, TTSVoice } from '../../../services/tts';
 import { useTimelineStore } from '../../../stores/timelineStore';
 import { indexedDBService } from '../../../services/indexedDB';
 import { nanoid } from 'nanoid';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface TextEditorProps {
   clip: TextClip;
@@ -68,7 +69,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({ clip, onUpdate, onClose 
     try {
       await provider.speak(clip.text, selectedVoice ?? '');
     } catch (e) {
-      console.warn('[TTS] 试听失败:', e);
+      logger.warn(LogCategory.VIDEO, '[TTS] 试听失败:', e);
     } finally {
       setSpeaking(false);
     }
@@ -122,7 +123,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({ clip, onUpdate, onClose 
         ttsAudioClipId: audioClip.id,
       });
     } catch (e: any) {
-      console.error('[TTS] 生成配音失败:', e);
+      logger.error(LogCategory.VIDEO, '[TTS] 生成配音失败:', e);
       onUpdate({ ttsStatus: 'error' });
       alert(`配音生成失败: ${e.message}`);
     } finally {

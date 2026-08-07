@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { AudioClip } from '../../../types/editor';
 import { useEditorStore } from '../../../stores/editorStore';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface AudioLayerProps {
   clip: AudioClip;
@@ -22,7 +23,7 @@ export const AudioLayer: React.FC<AudioLayerProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const clipEnd = startTime + duration;
   const isActive = currentTime >= startTime && currentTime < clipEnd;
-  const playState = useEditorStore(s => s.playState);
+  const playState = useEditorStore((s) => s.playState);
 
   // ── 播放/暂停（playState + isActive 触发，确保用户手势链） ──
   useEffect(() => {
@@ -32,7 +33,7 @@ export const AudioLayer: React.FC<AudioLayerProps> = ({
     if (playState === 'playing' && isActive && !muted) {
       const promise = el.play();
       if (promise) {
-        promise.catch(e => console.warn(`[Audio] play() failed:`, e.message));
+        promise.catch((e) => logger.warn(LogCategory.VIDEO, `[Audio] play() failed:`, e.message));
       }
     } else if (!isActive || muted || playState !== 'playing') {
       el.pause();
@@ -67,17 +68,11 @@ export const AudioLayer: React.FC<AudioLayerProps> = ({
   }, [muted]);
 
   if (!clip.sourceUrl) {
-    console.warn('[Audio] 无 sourceUrl，不渲染');
+    logger.warn(LogCategory.VIDEO, '[Audio] 无 sourceUrl，不渲染');
     return null;
   }
 
   return (
-    <audio
-      ref={audioRef}
-      src={clip.sourceUrl}
-      preload="auto"
-      className="hidden"
-      loop={false}
-    />
+    <audio ref={audioRef} src={clip.sourceUrl} preload="auto" className="hidden" loop={false} />
   );
 };

@@ -31,6 +31,7 @@ import { ExportDialog } from './ExportDialog';
 import { GenerateSubtitleDialog } from './GenerateSubtitleDialog';
 import { BatchTTSDialog } from './BatchTTSDialog';
 import { TextEditor } from './Preview/TextEditor';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 interface VideoEditorProps {
   project?: ProjectState;
@@ -105,7 +106,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
       .resume()
       .then(() => {
         audioUnlockedRef.current = true;
-        console.log('[Audio] 已解锁');
+        logger.info(LogCategory.VIDEO, '[Audio] 已解锁');
       })
       .catch(() => {});
   }, []);
@@ -165,7 +166,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
     const init = async () => {
       clear();
       const hasSaved = await load(project?.id);
-      console.log('[VideoEditor] 加载状态:', hasSaved ? '已恢复' : '无保存状态');
+      logger.info(LogCategory.VIDEO, '[VideoEditor] 加载状态:', hasSaved ? '已恢复' : '无保存状态');
 
       if (!hasSaved && project?.id) {
         useEditorStore.setState({ projectId: project.id });
@@ -192,25 +193,27 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
     if (!hasClips) return;
 
     const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
-    console.log('[VideoEditor] tracks 变化，执行保存，片段数:', clipCount);
+    logger.info(LogCategory.VIDEO, '[VideoEditor] tracks 变化，执行保存，片段数:', clipCount);
     save();
   }, [tracks, save]);
 
   useEffect(() => {
     return () => {
       const clipCount = tracks.reduce((sum, t) => sum + t.clips.length, 0);
-      console.log('[VideoEditor] 组件卸载，同步保存，片段数:', clipCount);
+      logger.info(LogCategory.VIDEO, '[VideoEditor] 组件卸载，同步保存，片段数:', clipCount);
       save();
     };
   }, [save, tracks]);
 
   useEffect(() => {
-    console.log(
+    logger.info(
+      LogCategory.VIDEO,
       '[VideoEditor] 组件挂载，当前片段数:',
       tracks.reduce((sum, t) => sum + t.clips.length, 0),
     );
     return () => {
-      console.log(
+      logger.info(
+        LogCategory.VIDEO,
         '[VideoEditor] 组件卸载，当前片段数:',
         tracks.reduce((sum, t) => sum + t.clips.length, 0),
       );
@@ -301,7 +304,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
     a.download = `video-editor-state-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    console.log('[VideoEditor] 导出 JSON:', exportData);
+    logger.info(LogCategory.VIDEO, '[VideoEditor] 导出 JSON:', exportData);
   }, []);
 
   const editingClipId = useTimelineStore((s) => s.editingClipId);
@@ -344,7 +347,7 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({ project }) => {
         playbackRate: 1,
       });
       setInitVersion((v) => v + 1);
-      console.log('[VideoEditor] 已重置编辑器');
+      logger.info(LogCategory.VIDEO, '[VideoEditor] 已重置编辑器');
     }
   }, [reset]);
 

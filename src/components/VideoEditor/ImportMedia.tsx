@@ -7,6 +7,7 @@ import { ProjectState } from '../../../types';
 import { TextClip } from '../../types/editor';
 import { parseDialogueLines } from '../../utils/textUtils';
 import { ImportFromProject } from './ImportFromProject';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 interface ImportMediaProps {
   onImport?: (clips: any[]) => void;
@@ -26,11 +27,14 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({ project }) => {
         const media = document.createElement(type.startsWith('video') ? 'video' : 'audio');
         media.preload = 'metadata';
         media.onloadedmetadata = () => {
-          console.log('[ImportMedia] 获取视频时长成功', { type, duration: media.duration * 1000 });
+          logger.info(LogCategory.VIDEO, '[ImportMedia] 获取视频时长成功', {
+            type,
+            duration: media.duration * 1000,
+          });
           resolve(media.duration * 1000);
         };
         media.onerror = () => {
-          console.warn('[ImportMedia] 获取视频时长失败，使用默认值');
+          logger.warn(LogCategory.VIDEO, '[ImportMedia] 获取视频时长失败，使用默认值');
           resolve(5000);
         };
         media.src = url;
@@ -73,7 +77,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({ project }) => {
         try {
           await indexedDBService.saveFile(sourceId, file);
         } catch (err) {
-          console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+          logger.error(LogCategory.VIDEO, '[ImportMedia] 保存文件到 IndexedDB 失败:', err);
         }
 
         const clip: any = {
@@ -136,7 +140,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({ project }) => {
         try {
           await indexedDBService.saveFile(sourceId, file);
         } catch (err) {
-          console.error('[ImportMedia] 保存文件到 IndexedDB 失败:', err);
+          logger.error(LogCategory.VIDEO, '[ImportMedia] 保存文件到 IndexedDB 失败:', err);
         }
 
         const clip: any = {
@@ -177,7 +181,7 @@ export const ImportMedia: React.FC<ImportMediaProps> = ({ project }) => {
 
       const videoTrack = findTrackByType('video');
       if (!videoTrack) {
-        console.warn('[ImportMedia] 未找到视频轨道，跳过导入');
+        logger.warn(LogCategory.VIDEO, '[ImportMedia] 未找到视频轨道，跳过导入');
         setImporting(false);
         return;
       }

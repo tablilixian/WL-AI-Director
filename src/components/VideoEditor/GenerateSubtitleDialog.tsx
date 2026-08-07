@@ -4,6 +4,7 @@ import { useTimelineStore } from '../../stores/timelineStore';
 import { TextClip } from '../../types/editor';
 import { chatCompletion } from '../../../services/ai/apiCore';
 import { Shot } from '../../../types';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 interface GenerateSubtitleDialogProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ ${clipTable}
 
       setProgress('正在分析片段内容并生成字幕...');
       const response = await chatCompletion(prompt, 'glm-4-flash', 0.8, 4096, 'json_object');
-      console.log('[GenerateSubtitle] LLM 返回:', response);
+      logger.info(LogCategory.VIDEO, '[GenerateSubtitle] LLM 返回:', response);
       const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       let subtitles: { index: number; text: string }[];
@@ -137,7 +138,7 @@ ${clipTable}
       setProgress(`成功生成 ${createdCount} 条字幕`);
       setResult('done');
     } catch (e: any) {
-      console.error('[GenerateSubtitle] 失败:', e);
+      logger.error(LogCategory.VIDEO, '[GenerateSubtitle] 失败:', e);
       setProgress(`生成失败: ${e.message}`);
       setResult('error');
     } finally {

@@ -4,6 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { isAudioClip } from '../../types/editor';
 import { fetchFile } from '@ffmpeg/util';
 import { FFmpegWorker } from '../../lib/ffmpegWorker';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 const FFMPEG_LOAD_TIMEOUT = 60_000;
 
@@ -127,7 +128,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
             source.start(when, offset, clipDur);
             audioBuffers.push({ source, gain: gainNode });
           } catch (e) {
-            console.warn('[Export] Audio load failed:', e);
+            logger.warn(LogCategory.VIDEO, '[Export] Audio load failed:', e);
           }
         }
       }
@@ -280,14 +281,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       if (cancelRef.current) return;
 
       const webmBlob = new Blob(chunks, { type: mimeType });
-      console.log('[Export] WebM 生成完成, 大小:', webmBlob.size, 'bytes');
+      logger.info(LogCategory.VIDEO, '[Export] WebM 生成完成, 大小:', [webmBlob.size, 'bytes']);
       setStage('transcoding');
       setProgress(65);
 
       // Transcode to MP4 via ffmpeg.wasm
-      console.log('[Export] 开始调用 transcodeToMp4');
+      logger.info(LogCategory.VIDEO, '[Export] 开始调用 transcodeToMp4');
       transcodeToMp4(webmBlob, dur, (p) => {
-        console.log('[Export] transcodeToMp4 进度回调:', (p * 100).toFixed(1) + '%');
+        logger.info(
+          LogCategory.VIDEO,
+          '[Export] transcodeToMp4 进度回调:',
+          (p * 100).toFixed(1) + '%',
+        );
         if (!cancelRef.current) setProgress(65 + p * 30);
       })
         .then((mp4Blob) => {
@@ -300,7 +305,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
           downloadFile(mp4Blob, fileName);
         })
         .catch((err) => {
-          console.warn('[Export] ffmpeg failed, fallback to WebM:', err);
+          logger.warn(LogCategory.VIDEO, '[Export] ffmpeg failed, fallback to WebM:', err);
           setOutputSize(webmBlob.size);
           setProgress(100);
           setStage('done');
@@ -464,16 +469,16 @@ async function transcodeToMp4(
   totalDurationMs: number,
   onProgress?: (pct: number) => void,
 ): Promise<Blob> {
-  console.log('[ffmpeg] 开始转码');
+  logger.info(LogCategory.VIDEO, '[ffmpeg] 开始转码');
   const ffmpeg = new FFmpegWorker();
 
-  console.log('[ffmpeg] 开始加载 ffmpeg WASM...');
+  logger.info(LogCategory.VIDEO, '[ffmpeg] 开始加载 ffmpeg WASM...');
   onProgress?.(0);
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-      console.error('[ffmpeg] load timed out after 60s');
+      logger.error(LogCategory.VIDEO, '[ffmpeg] load timed out after 60s');
     }, FFMPEG_LOAD_TIMEOUT);
     try {
       await ffmpeg.load(
@@ -483,29 +488,29 @@ async function transcodeToMp4(
         },
         controller.signal,
       );
-      console.log('[ffmpeg] WASM 加载完成');
+      logger.info(LogCategory.VIDEO, '[ffmpeg] WASM 加载完成');
     } finally {
       clearTimeout(timeoutId);
     }
   } catch (e) {
-    console.error('[ffmpeg] WASM 加载失败:', e);
+    logger.error(LogCategory.VIDEO, '[ffmpeg] WASM 加载失败:', e);
     throw e;
   }
 
-  console.log('[ffmpeg] 开始写入输入文件...');
+  logger.info(LogCategory.VIDEO, '[ffmpeg] 开始写入输入文件...');
   onProgress?.(0.1);
   try {
     const data = await fetchFile(webmBlob);
     await ffmpeg.writeFile('input.webm', data as Uint8Array);
-    console.log('[ffmpeg] 输入文件写入完成');
+    logger.info(LogCategory.VIDEO, '[ffmpeg] 输入文件写入完成');
   } catch (e) {
-    console.error('[ffmpeg] 写入输入文件失败:', e);
+    logger.error(LogCategory.VIDEO, '[ffmpeg] 写入输入文件失败:', e);
     throw e;
   }
 
-  console.log('[ffmpeg] 开始转码命令...');
+  logger.info(LogCategory.VIDEO, '[ffmpeg] 开始转码命令...');
   ffmpeg.onProgress((p) => {
-    console.log('[ffmpeg] 转码进度原始数据:', JSON.stringify(p));
+    logger.info(LogCategory.VIDEO, '[ffmpeg] 转码进度原始数据:', JSON.stringify(p));
     const totalUsec = totalDurationMs * 1000;
     const elapsed = typeof p.time === 'number' ? p.time : 0;
     const ratio = totalUsec > 0 ? elapsed / totalUsec : 0;
@@ -529,21 +534,21 @@ async function transcodeToMp4(
       '-y',
       'output.mp4',
     );
-    console.log('[ffmpeg] 转码命令完成');
+    logger.info(LogCategory.VIDEO, '[ffmpeg] 转码命令完成');
   } catch (e) {
-    console.error('[ffmpeg] 转码失败:', e);
+    logger.error(LogCategory.VIDEO, '[ffmpeg] 转码失败:', e);
     throw e;
   }
 
-  console.log('[ffmpeg] 开始读取输出文件...');
+  logger.info(LogCategory.VIDEO, '[ffmpeg] 开始读取输出文件...');
   onProgress?.(0.95);
   try {
     const data = await ffmpeg.readFile('output.mp4');
-    console.log('[ffmpeg] 读取完成, 大小:', (data as any).length || 'unknown');
+    logger.info(LogCategory.VIDEO, '[ffmpeg] 读取完成, 大小:', (data as any).length || 'unknown');
     onProgress?.(1);
     return new Blob([data], { type: 'video/mp4' });
   } catch (e) {
-    console.error('[ffmpeg] 读取输出文件失败:', e);
+    logger.error(LogCategory.VIDEO, '[ffmpeg] 读取输出文件失败:', e);
     throw e;
   }
 }

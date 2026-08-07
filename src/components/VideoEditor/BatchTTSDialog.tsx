@@ -6,6 +6,7 @@ import { getTTSProvider, TTSVoice } from '../../services/tts';
 import { cleanDialogueText } from '../../utils/textUtils';
 import { indexedDBService } from '../../services/indexedDB';
 import { nanoid } from 'nanoid';
+import { logger, LogCategory } from '../../../services/logger.ts';
 
 interface BatchTTSDialogProps {
   isOpen: boolean;
@@ -116,7 +117,7 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({ isOpen, onClose 
       const voiceId = voiceMap[character];
 
       if (!voiceId) {
-        console.warn(`[BatchTTS] ${character} 未选择语音，跳过`);
+        logger.warn(LogCategory.VIDEO, `[BatchTTS] ${character} 未选择语音，跳过`);
         setClipStatus((prev) => ({ ...prev, [clip.id]: 'error' }));
         failCount++;
         continue;
@@ -201,7 +202,7 @@ export const BatchTTSDialog: React.FC<BatchTTSDialogProps> = ({ isOpen, onClose 
         setClipStatus((prev) => ({ ...prev, [clip.id]: 'done' }));
         successCount++;
       } catch (e: any) {
-        console.error(`[BatchTTS] ${shortText} 失败:`, e);
+        logger.error(LogCategory.VIDEO, `[BatchTTS] ${shortText} 失败:`, e);
         updateClip(clip.id, { ttsStatus: 'error' } as any);
         setClipStatus((prev) => ({ ...prev, [clip.id]: 'error' }));
         failCount++;

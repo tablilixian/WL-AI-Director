@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { generateRulerTicks, pixelsToTime } from '../../../utils/timeCalculation';
 import { formatTime } from '../../../utils/timeFormat';
+import { logger, LogCategory } from '../../../../services/logger.ts';
 
 interface RulerProps {
   width: number;
@@ -29,7 +30,13 @@ export const Ruler: React.FC<RulerProps> = ({
     const fullDuration = duration * 2;
     const result = generateRulerTicks(fullDuration, zoom, scrollPosition, width);
     if (result.length > 0) {
-      console.log('[Ruler] ticks 详情', { width, height, tickCount: result.length, firstX: result[0]?.x, lastX: result[result.length-1]?.x });
+      logger.info(LogCategory.VIDEO, '[Ruler] ticks 详情', {
+        width,
+        height,
+        tickCount: result.length,
+        firstX: result[0]?.x,
+        lastX: result[result.length - 1]?.x,
+      });
     }
     return result;
   }, [duration, zoom, scrollPosition, width]);
@@ -53,7 +60,7 @@ export const Ruler: React.FC<RulerProps> = ({
         <div
           key={time}
           className="absolute top-0 w-px bg-[var(--border-subtle)]"
-          style={{ 
+          style={{
             left: x,
             height: major ? '100%' : '40%',
             opacity: major ? 1 : 0.5,
@@ -62,19 +69,21 @@ export const Ruler: React.FC<RulerProps> = ({
       ))}
 
       {/* 刻度标签 */}
-      {ticks.filter(t => t.major).map(({ time, x }) => (
-        <div
-          key={`label-${time}`}
-          className="absolute text-[9px] text-[var(--text-muted)] font-mono"
-          style={{
-            left: x,
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }}
-        >
-          {formatTime(time)}
-        </div>
-      ))}
+      {ticks
+        .filter((t) => t.major)
+        .map(({ time, x }) => (
+          <div
+            key={`label-${time}`}
+            className="absolute text-[9px] text-[var(--text-muted)] font-mono"
+            style={{
+              left: x,
+              top: '50%',
+              transform: 'translateY(-50%)',
+            }}
+          >
+            {formatTime(time)}
+          </div>
+        ))}
 
       {/* 顶部高亮线 */}
       <div className="absolute top-0 left-0 right-0 h-px bg-[var(--border-primary)]" />

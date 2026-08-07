@@ -30,6 +30,7 @@ import {
 import { clampTime } from '../utils/timeFormat';
 import { indexedDBService } from '../services/indexedDB';
 import { unifiedImageService } from '../../services/unifiedImageService';
+import { logger, LogCategory } from '../../services/logger.ts';
 
 // ============================================================
 // Store 接口
@@ -165,7 +166,7 @@ export const useEditorStore = create<EditorStore>()(
       ];
 
       if (initialClips.length > 0) {
-        const videoTrack = tracks.find(t => t.type === 'video');
+        const videoTrack = tracks.find((t) => t.type === 'video');
         if (videoTrack) {
           videoTrack.clips = initialClips.map((c, index) => ({
             id: `clip-${Date.now()}-${index}`,
@@ -177,7 +178,7 @@ export const useEditorStore = create<EditorStore>()(
             startTime: c.startTime ?? index * 5000,
             duration: c.duration ?? 4000,
             inPoint: c.inPoint ?? 0,
-            outPoint: c.outPoint ?? (c.duration ?? 4000),
+            outPoint: c.outPoint ?? c.duration ?? 4000,
             volume: c.volume ?? 1,
             speed: c.speed ?? 1,
             opacity: c.opacity ?? 1,
@@ -206,18 +207,23 @@ export const useEditorStore = create<EditorStore>()(
     // ---------- 轨道操作 ----------
     addTrack: (type, name) => {
       const id = `${type}-${Date.now()}`;
-      const trackCount = get().tracks.filter(t => t.type === type).length + 1;
-      const defaultName = name || `${type === 'video' ? '视频' : type === 'audio' ? '音频' : '字幕'}轨道 ${trackCount}`;
+      const trackCount = get().tracks.filter((t) => t.type === type).length + 1;
+      const defaultName =
+        name ||
+        `${type === 'video' ? '视频' : type === 'audio' ? '音频' : '字幕'}轨道 ${trackCount}`;
 
-      set(state => ({
-        tracks: [...state.tracks, {
-          id,
-          name: defaultName,
-          type,
-          locked: false,
-          visible: true,
-          clips: [],
-        }],
+      set((state) => ({
+        tracks: [
+          ...state.tracks,
+          {
+            id,
+            name: defaultName,
+            type,
+            locked: false,
+            visible: true,
+            clips: [],
+          },
+        ],
         updatedAt: Date.now(),
       }));
 
@@ -229,10 +235,10 @@ export const useEditorStore = create<EditorStore>()(
       const track = get().findTrack(trackId);
       if (!track) return;
 
-      set(state => ({
-        tracks: state.tracks.filter(t => t.id !== trackId),
-        selectedClipIds: state.selectedClipIds.filter(id => {
-          return !track.clips.some(c => c.id === id);
+      set((state) => ({
+        tracks: state.tracks.filter((t) => t.id !== trackId),
+        selectedClipIds: state.selectedClipIds.filter((id) => {
+          return !track.clips.some((c) => c.id === id);
         }),
         activeTrackId: state.activeTrackId === trackId ? null : state.activeTrackId,
         updatedAt: Date.now(),
@@ -242,16 +248,14 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     updateTrack: (trackId, updates) => {
-      set(state => ({
-        tracks: state.tracks.map(t =>
-          t.id === trackId ? { ...t, ...updates } : t
-        ),
+      set((state) => ({
+        tracks: state.tracks.map((t) => (t.id === trackId ? { ...t, ...updates } : t)),
         updatedAt: Date.now(),
       }));
     },
 
     reorderTracks: (fromIndex, toIndex) => {
-      set(state => {
+      set((state) => {
         const newTracks = [...state.tracks];
         const [removed] = newTracks.splice(fromIndex, 1);
         newTracks.splice(toIndex, 0, removed);
@@ -262,8 +266,8 @@ export const useEditorStore = create<EditorStore>()(
 
     // ---------- 片段操作 ----------
     addClip: (trackId, clip) => {
-      set(state => {
-        const track = state.tracks.find(t => t.id === trackId);
+      set((state) => {
+        const track = state.tracks.find((t) => t.id === trackId);
         if (!track) return state;
 
         let startTime = clip.startTime;
@@ -273,10 +277,8 @@ export const useEditorStore = create<EditorStore>()(
         }
 
         const newClip = { ...clip, trackId, startTime };
-        const newTracks = state.tracks.map(t =>
-          t.id === trackId
-            ? { ...t, clips: [...t.clips, newClip] }
-            : t
+        const newTracks = state.tracks.map((t) =>
+          t.id === trackId ? { ...t, clips: [...t.clips, newClip] } : t,
         );
         let maxEnd = 0;
         for (const t of newTracks) {
@@ -303,12 +305,12 @@ export const useEditorStore = create<EditorStore>()(
           }
         }
       }
-      set(state => ({
-        tracks: state.tracks.map(t => ({
+      set((state) => ({
+        tracks: state.tracks.map((t) => ({
           ...t,
-          clips: t.clips.filter(c => !clipIds.includes(c.id)),
+          clips: t.clips.filter((c) => !clipIds.includes(c.id)),
         })),
-        selectedClipIds: state.selectedClipIds.filter(id => !clipIds.includes(id)),
+        selectedClipIds: state.selectedClipIds.filter((id) => !clipIds.includes(id)),
         duration: get().calculateDuration(),
         updatedAt: Date.now(),
       }));
@@ -316,12 +318,10 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     updateClip: (clipId, updates) => {
-      set(state => ({
-        tracks: state.tracks.map(t => ({
+      set((state) => ({
+        tracks: state.tracks.map((t) => ({
           ...t,
-          clips: t.clips.map(c =>
-            c.id === clipId ? { ...c, ...updates } : c
-          ),
+          clips: t.clips.map((c) => (c.id === clipId ? { ...c, ...updates } : c)),
         })),
         duration: get().calculateDuration(),
         updatedAt: Date.now(),
@@ -337,18 +337,18 @@ export const useEditorStore = create<EditorStore>()(
 
       const clampedStartTime = clampTime(startTime, 0);
 
-      set(state => {
-        const newTracks = state.tracks.map(t => {
+      set((state) => {
+        const newTracks = state.tracks.map((t) => {
           if (t.id === oldTrack.id && t.id === newTrackId) {
             return {
               ...t,
-              clips: t.clips.map(c =>
-                c.id === clipId ? { ...c, trackId: newTrackId, startTime: clampedStartTime } : c
+              clips: t.clips.map((c) =>
+                c.id === clipId ? { ...c, trackId: newTrackId, startTime: clampedStartTime } : c,
               ),
             };
           }
           if (t.id === oldTrack.id) {
-            return { ...t, clips: t.clips.filter(c => c.id !== clipId) };
+            return { ...t, clips: t.clips.filter((c) => c.id !== clipId) };
           }
           if (t.id === newTrackId) {
             const updatedClip = { ...clip, trackId: newTrackId, startTime: clampedStartTime };
@@ -389,12 +389,10 @@ export const useEditorStore = create<EditorStore>()(
         inPoint: clip.inPoint + splitPosition,
       };
 
-      set(state => ({
-        tracks: state.tracks.map(t => ({
+      set((state) => ({
+        tracks: state.tracks.map((t) => ({
           ...t,
-          clips: t.clips.flatMap(c =>
-            c.id === clipId ? [firstPart, secondPart] : [c]
-          ),
+          clips: t.clips.flatMap((c) => (c.id === clipId ? [firstPart, secondPart] : [c])),
         })),
         updatedAt: Date.now(),
       }));
@@ -412,11 +410,9 @@ export const useEditorStore = create<EditorStore>()(
         startTime: clip.startTime + clip.duration,
       };
 
-      set(state => ({
-        tracks: state.tracks.map(t =>
-          t.id === clip.trackId
-            ? { ...t, clips: [...t.clips, newClip] }
-            : t
+      set((state) => ({
+        tracks: state.tracks.map((t) =>
+          t.id === clip.trackId ? { ...t, clips: [...t.clips, newClip] } : t,
         ),
         duration: get().calculateDuration(),
         updatedAt: Date.now(),
@@ -436,15 +432,15 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     setPlaybackRate: (rate) => set({ playbackRate: rate }),
-    toggleLoop: () => set(state => ({ loop: !state.loop })),
+    toggleLoop: () => set((state) => ({ loop: !state.loop })),
     setDuration: (duration) => set({ duration }),
 
     // ---------- 选择 ----------
     selectClip: (clipId, multi = false) => {
-      set(state => ({
+      set((state) => ({
         selectedClipIds: multi
           ? state.selectedClipIds.includes(clipId)
-            ? state.selectedClipIds.filter(id => id !== clipId)
+            ? state.selectedClipIds.filter((id) => id !== clipId)
             : [...state.selectedClipIds, clipId]
           : [clipId],
       }));
@@ -452,9 +448,10 @@ export const useEditorStore = create<EditorStore>()(
 
     deselectAll: () => set({ selectedClipIds: [] }),
 
-    selectAll: () => set(state => ({
-      selectedClipIds: state.tracks.flatMap(t => t.clips.map(c => c.id)),
-    })),
+    selectAll: () =>
+      set((state) => ({
+        selectedClipIds: state.tracks.flatMap((t) => t.clips.map((c) => c.id)),
+      })),
 
     // ---------- 视图 ----------
     setActiveTool: (tool) => set({ activeTool: tool }),
@@ -534,9 +531,9 @@ export const useEditorStore = create<EditorStore>()(
         projectId: pid,
         createdAt: state.createdAt,
         updatedAt: state.updatedAt,
-        tracks: state.tracks.map(t => ({
+        tracks: state.tracks.map((t) => ({
           ...t,
-          clips: t.clips.map(c => ({
+          clips: t.clips.map((c) => ({
             ...c,
             sourceUrl: undefined,
           })),
@@ -548,7 +545,7 @@ export const useEditorStore = create<EditorStore>()(
       try {
         await indexedDBService.saveState(pid, data);
       } catch (error) {
-        console.error('[EditorStore] 保存失败:', error);
+        logger.error(LogCategory.APP, '[EditorStore] 保存失败:', error);
       }
     },
 
@@ -613,7 +610,7 @@ export const useEditorStore = create<EditorStore>()(
 
         return true;
       } catch (error) {
-        console.error('[EditorStore] 加载失败:', error);
+        logger.error(LogCategory.APP, '[EditorStore] 加载失败:', error);
       }
       return false;
     },
@@ -649,7 +646,7 @@ export const useEditorStore = create<EditorStore>()(
         if (!pid) return;
         await indexedDBService.deleteState(pid);
       } catch (error) {
-        console.error('[EditorStore] 清除 IndexedDB 失败:', error);
+        logger.error(LogCategory.APP, '[EditorStore] 清除 IndexedDB 失败:', error);
       }
 
       set({ ...initialState });
@@ -672,20 +669,20 @@ export const useEditorStore = create<EditorStore>()(
 
     findClip: (clipId) => {
       for (const track of get().tracks) {
-        const clip = track.clips.find(c => c.id === clipId);
+        const clip = track.clips.find((c) => c.id === clipId);
         if (clip) return clip;
       }
       return undefined;
     },
 
     findTrack: (trackId) => {
-      return get().tracks.find(t => t.id === trackId);
+      return get().tracks.find((t) => t.id === trackId);
     },
 
     findTrackByClip: (clipId) => {
-      return get().tracks.find(t => t.clips.some(c => c.id === clipId));
+      return get().tracks.find((t) => t.clips.some((c) => c.id === clipId));
     },
-  }))
+  })),
 );
 
 // ============================================================
@@ -695,7 +692,7 @@ export const useEditorStore = create<EditorStore>()(
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 useEditorStore.subscribe(
-  state => state.updatedAt,
+  (state) => state.updatedAt,
   () => {
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
@@ -704,7 +701,7 @@ useEditorStore.subscribe(
         state.save();
       }
     }, 30000);
-  }
+  },
 );
 
 // ============================================================
