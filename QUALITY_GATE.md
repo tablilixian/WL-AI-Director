@@ -86,12 +86,12 @@ push / PR → GitHub Actions: quality-gate
 
 诊断时量化出的存量（**非门禁范围**，门禁只管增量）：
 
-| 类别             | 量级                 | 计划                                                                                                                                                                                              |
-| ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ESLint error     | **0 ✅**             | 已偿还：忽略 vendored ffmpeg(408) + 机械修复 242 处                                                                                                                                               |
-| ESLint warning   | ~665                 | `no-explicit-any` 524 / `no-non-null-assertion` 117 / `no-console`(仅 logger 原语 + vite 插件 + 测试) 残留，逐步收紧                                                                              |
-| `console.*` 散落 | 764 → 0 (app 运行时) | ✅ 已偿还：Phase 4 统一日志层，74 文件 739 处替换为 `logger`；`authStore` 6 处 `.catch(console.error)` 改写为 `logger.error`；`logger.ts` 自身 7 处与 vite 插件/测试里的 `console` 为正当用途保留 |
-| 巨型组件         | 11 个文件 >500 行    | ✅ 已拆首个：`GenerateVideoPanel.tsx` 2323→1116 行，拆为 9 个展示型子组件 + `types.ts`（聚合强类型 prop 模式，行为零回归，242 用例全绿）；其余 11 个待拆                                          |
+| 类别             | 量级                 | 计划                                                                                                                                                                                                                                     |
+| ---------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ESLint error     | **0 ✅**             | 已偿还：忽略 vendored ffmpeg(408) + 机械修复 242 处                                                                                                                                                                                      |
+| ESLint warning   | ~665                 | `no-explicit-any` 524 / `no-non-null-assertion` 117 / `no-console`(仅 logger 原语 + vite 插件 + 测试) 残留，逐步收紧                                                                                                                     |
+| `console.*` 散落 | 764 → 0 (app 运行时) | ✅ 已偿还：Phase 4 统一日志层，74 文件 739 处替换为 `logger`；`authStore` 6 处 `.catch(console.error)` 改写为 `logger.error`；`logger.ts` 自身 7 处与 vite 插件/测试里的 `console` 为正当用途保留                                        |
+| 巨型组件         | 10 个文件 >500 行    | ✅ 已拆 2 个：①`GenerateVideoPanel.tsx` 2323→1116 行（9 子组件 + types.ts）；②`VideoNodePanel.tsx` 1136→535 行（抽取 3 个已自洽的内容组件 MsrContent/MkrContent/MkrGridContent 到 `VideoNodePanel/` 子目录，零行为变化）；其余 10 个待拆 |
 
 **偿还原则**：新代码必须遵守门禁；存量债通过"顺手清"（改到哪个文件顺手修该文件的相关告警）逐步消化，不做一次性大改以免引入回归。
 
@@ -101,7 +101,7 @@ push / PR → GitHub Actions: quality-gate
 
 - **Phase 1 — CI 接入**：✅ 已完成（`.github/workflows/ci.yml`，GitHub Actions）。
 - **Phase 2 — error 级债偿还**：✅ 已完成（全仓 ESLint error 0 → 见上表）。warning 级软债留待下。
-- **Phase 3 — 巨型组件拆分**：✅ 首个完成——`GenerateVideoPanel.tsx` 2323→1116 行，拆为 9 个展示型子组件 + `types.ts`（聚合强类型 prop 模式：主组件持有 state，构造 `GenerationPanelState` 对象经 `panel={panel}` 下发给各子组件；因解构变量名与原闭包名一致，JSX 字节级不变、行为零变化，tsc 强制校验字段完整性）。剩余 11 个 >500 行文件待按同模式推广。
+- **Phase 3 — 巨型组件拆分**：✅ 进行中（已拆 2 个）——①`GenerateVideoPanel.tsx` 2323→1116 行（9 子组件 + types.ts，聚合强类型 prop 模式）；②`VideoNodePanel.tsx` 1136→535 行（抽取 3 个已自洽的内容组件 MsrContent/MkrContent/MkrGridContent 到 `VideoNodePanel/` 子目录）。剩余 10 个 >500 行文件待按同模式推广。
 - **Phase 4 — 统一日志**：✅ 已完成（74 文件 / 739 处 `console.*` → `logger`，按文件域归入 `LogCategory`；`no-console` 在 app 源已归零）。**下一步子项**：将 `no-explicit-any` / `no-non-null-assertion` / `no-console` 由 warn 提升为 error（`--max-warnings=0`），实现"警告收紧"。
 
 ---
