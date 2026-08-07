@@ -1,0 +1,77 @@
+name: CI Quality Gate
+
+# 质量门禁：提交即质检、风格自动齐（与本地 pre-commit 一致）
+# - typecheck / unit test 走全量，必须全绿
+# - lint / prettier 走增量（仅校验本次改动文件），不阻塞存量技术债
+# 失败即阻塞合并（需在仓库 Settings → Branch protection 中把此 check 设为 Required）
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+# 同一 ref 的多次触发，取消进行中的旧运行，节省资源
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Quality Gate (typecheck · test · lint · format)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 需要完整历史才能与 base 分支做 diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (strict mode)
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:ci
+
+      - name: Lint & format changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          BASE="${BASE_SHA}"
+          if [ -z "$BASE" ]; then
+            echo "No base SHA available; skipping incremental lint."
+            exit 0
+          fi
+          echo "Diffing against base: $BASE"
+          CHANGED=$(git diff --name-only "$BASE"...HEAD -- \
+            '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md' '*.css' '*.html' \
+            | grep -v '^tests/e2e/' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No changed source files to lint/format-check."
+            exit 0
+          fi
+          echo "Changed files:"
+          echo "$CHANGED"
+          echo "--- ESLint (errors block merge) ---"
+          # 仅 error 级会阻塞；warning 暂作 advisory。
+          # 待存量 warning 债清理后，可收紧为: npx eslint --max-warnings=0
+          CODE_CHANGED=$(echo "$CHANGED" | grep -E '\.(ts|tsx|js|jsx)$' || true)
+          if [ -n "$CODE_CHANGED" ]; then
+            echo "$CODE_CHANGED" | xargs npx eslint
+          else
+            echo "No changed code files to lint."
+          fi
+          echo "--- Prettier check ---"
+          echo "$CHANGED" | xargs npx prettier --check
