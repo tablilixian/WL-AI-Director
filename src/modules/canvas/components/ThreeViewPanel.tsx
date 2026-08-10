@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { canvasModelService } from '../services/canvasModelService';
-import { logger, LogCategory } from '../../../../services/logger.ts';
+import { createLogger, LogCategory } from '../../../../services/logger.ts';
+
+// 本面板统一日志器：绑定 CANVAS 类别，调用时无需再传 category，也绝不直接碰 console
+const log = createLogger(LogCategory.CANVAS);
 
 interface ThreeViewPanelProps {
   selectedLayerId: string | null;
@@ -82,9 +85,11 @@ export const ThreeViewPanel: React.FC<ThreeViewPanelProps> = ({ selectedLayerId,
       });
 
       onClose();
-    } catch (error: any) {
-      logger.error(LogCategory.CANVAS, '三视图生成失败:', error);
-      alert(`三视图生成失败: ${error.message}`);
+    } catch (error: unknown) {
+      // errorFrom 自动记录：出错位置(file:line) + 原因 + 完整堆栈
+      log.errorFrom(error, '三视图生成失败');
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`三视图生成失败: ${message}`);
     } finally {
       setIsProcessing(false);
     }
