@@ -1,13 +1,14 @@
 import { useRef, useEffect, useCallback, useState, RefObject } from 'react';
+import * as THREE from 'three';
 import { PANORAMA_DEFAULTS, clampFov, clampPitch, normalizeYaw } from '../utils/panoramaUtils';
 import type { PanoramaCameraState } from '../types/canvas';
 
 interface EngineRef {
-  THREE: any;
-  renderer: any;
-  scene: any;
-  camera: any;
-  sphere: any;
+  THREE: typeof import('three');
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  sphere: THREE.Mesh;
 }
 
 interface UsePanoramaEngineOptions {
@@ -228,7 +229,7 @@ export function usePanoramaEngine({
       };
       img.src = panoramaSrc;
       if (img.complete && img.naturalWidth) {
-        img.onload(new Event('load') as any);
+        img.onload(new Event('load'));
       }
     })();
 
@@ -240,11 +241,16 @@ export function usePanoramaEngine({
       const e = engineRef.current;
       if (e) {
         e.renderer.dispose();
-        e.scene.traverse((child: any) => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (child.material.map) child.material.map.dispose();
-            child.material.dispose();
+        // 强制释放 WebGL 上下文，否则连续开关全景查看器会耗尽浏览器上下文上限(约16个)，
+        // 导致后续所有 WebGL 渲染静默失败
+        e.renderer.forceContextLoss();
+        e.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (child.material) {
+              if (child.material.map) child.material.map.dispose();
+              child.material.dispose();
+            }
           }
         });
       }

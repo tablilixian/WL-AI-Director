@@ -84,6 +84,9 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
 
     setIsProcessing(true);
     setProgress(0);
+    // 跟踪由本函数创建的 blob URL，加载完即释放，避免累积泄漏
+    // 必须在 try 块外声明，否则 finally 中不可见(try 块内 let 作用域不延伸到 finally)
+    let blobUrl: string | null = null;
 
     try {
       const baseLayer = selectedLayer;
@@ -105,7 +108,8 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
       if (typeof result === 'string') {
         panoramaSrc = result;
       } else if (result && typeof result === 'object' && 'images' in result) {
-        panoramaSrc = (result as any).images?.[0]?.url || (result as any).images?.[0] || '';
+        const images = (result as { images?: Array<{ url?: string } | string> }).images;
+        panoramaSrc = (typeof images?.[0] === 'string' ? images[0] : images?.[0]?.url) ?? '';
       }
 
       if (!panoramaSrc) {
@@ -121,7 +125,10 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
         imageId = panoramaSrc.replace('local:', '');
         finalSrc = panoramaSrc;
         const blob = await imageStorageService.getImage(imageId);
-        if (blob) displayUrl = URL.createObjectURL(blob);
+        if (blob) {
+          displayUrl = URL.createObjectURL(blob);
+          blobUrl = displayUrl;
+        }
       } else if (panoramaSrc.startsWith('data:')) {
         const imgId = `panorama_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const response = await fetch(panoramaSrc);
@@ -140,6 +147,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
           imageId = imgId;
           finalSrc = `local:${imgId}`;
           displayUrl = URL.createObjectURL(blob);
+          blobUrl = displayUrl;
         } catch (e) {
           logger.warn(LogCategory.CANVAS, '[PanoramaPanel] 外部 URL 保存到 IndexedDB 失败:', e);
           imageId = undefined;
@@ -181,6 +189,7 @@ export const PanoramaPanel: React.FC<PanoramaPanelProps> = ({ selectedLayerId, o
       logger.error(LogCategory.CANVAS, '[PanoramaPanel] 生成失败:', e);
       alert(`生成失败: ${(e as Error).message}`);
     } finally {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
       setIsProcessing(false);
     }
   };

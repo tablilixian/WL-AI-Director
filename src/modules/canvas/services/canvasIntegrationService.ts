@@ -339,7 +339,7 @@ export class CanvasIntegrationService {
         // data: URI 和 http(s) URL 可以保存，但 data: URI 可能非常大
         // 最佳实践：保留 imageId 用于 IndexedDB 恢复，保留非 blob 的 src
         const safeSrc = src && !src.startsWith('blob:') ? src : undefined;
-        return { ...rest, src: safeSrc } as any;
+        return { ...rest, src: safeSrc };
       }),
       offset: state.offset,
       scale: state.scale,
@@ -421,7 +421,7 @@ export class CanvasIntegrationService {
    * - 图片保存失败 → 保留原始 src，下次保存可重试
    * - 不修改原始 layer 对象
    */
-  private async serializeLayerForSave(layer: LayerData): Promise<any> {
+  private async serializeLayerForSave(layer: LayerData): Promise<LayerData> {
     const src = layer.src;
     let imageId = layer.imageId;
 
@@ -443,9 +443,8 @@ export class CanvasIntegrationService {
       }
     }
 
-    // 图片已保存成功，安全地移除 src 以减小存储
-    const { src: _, ...rest } = layer;
-    return { ...rest, imageId } as any;
+    // 图片已保存成功：保留 imageId 用于 IndexedDB 恢复，src 保持持久引用(非 blob)
+    return { ...layer, imageId };
   }
 
   /**
@@ -823,10 +822,9 @@ export class CanvasIntegrationService {
     }
 
     if (this.currentProjectId) {
+      const projectId = this.currentProjectId;
       // 通过保存队列串行化：清空操作会等待之前的 auto-save 完成，undo 触发的 auto-save 会等待清空完成
-      await this.enqueueSave(() =>
-        canvasSyncService.saveNow(this.currentProjectId!, [], offset, scale),
-      );
+      await this.enqueueSave(() => canvasSyncService.saveNow(projectId, [], offset, scale));
     }
 
     logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布已清空');
@@ -922,13 +920,14 @@ export class CanvasIntegrationService {
 
     if (canvasData.layers && canvasData.layers.length > 0) {
       const restoredLayers = await Promise.all(
-        canvasData.layers.map(async (layer: any) => {
+        canvasData.layers.map(async (layer) => {
           if (layer.type === 'image') {
             if (layer.imageId) {
               try {
                 const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复图片失败 (imageId):', e);
@@ -940,7 +939,8 @@ export class CanvasIntegrationService {
                 const localId = layer.src.replace('local:', '');
                 const blob = await unifiedImageService.getImage(localId);
                 if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复图片失败 (local:):', e);
@@ -956,7 +956,8 @@ export class CanvasIntegrationService {
                     '[CanvasIntegration] 恢复视频成功 (imageId):',
                     layer.imageId,
                   );
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复视频失败 (imageId):', e);
@@ -967,7 +968,8 @@ export class CanvasIntegrationService {
                 const videoId = layer.src.replace('video:', '');
                 const blob = await unifiedImageService.getVideo(videoId);
                 if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复视频失败:', e);
@@ -978,7 +980,8 @@ export class CanvasIntegrationService {
               try {
                 const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复全景图失败 (imageId):', e);
@@ -989,7 +992,8 @@ export class CanvasIntegrationService {
                 const localId = layer.src.replace('local:', '');
                 const blob = await unifiedImageService.getImage(localId);
                 if (blob) {
-                  return { ...layer, src: URL.createObjectURL(blob) };
+                  // 保留持久引用(local:/video:)，blob 仅用于校验资源存在，不写入 layer.src
+                  return { ...layer };
                 }
               } catch (e) {
                 logger.warn(LogCategory.CANVAS, '恢复全景图失败 (local:):', e);
@@ -1007,13 +1011,13 @@ export class CanvasIntegrationService {
               try {
                 const blob = await unifiedImageService.getImage(layer.imageId);
                 if (blob) {
-                  const src = URL.createObjectURL(blob);
                   logger.info(LogCategory.CANVAS, '[CanvasIntegration] 恢复 drawing 图层成功:', [
                     layer.id,
                     'blob size:',
                     blob.size,
                   ]);
-                  return { ...layer, src };
+                  // 保留持久引用(local:/video:)，blob 仅校验存在，不写入 layer.src
+                  return { ...layer };
                 } else {
                   logger.warn(
                     LogCategory.CANVAS,
