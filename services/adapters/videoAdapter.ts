@@ -18,6 +18,16 @@ import {
 import { ApiKeyError } from './chatAdapter';
 import { unifiedImageService } from '../unifiedImageService';
 import { uploadImageToDramaBackend } from './imageAdapter';
+
+/** OpenAI 兼容 Chat 消息中的 content 内容（纯文本或带图文片段的数组） */
+type ChatMessageContent =
+  | string
+  | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
+
+interface ChatMessage {
+  role: 'user';
+  content: ChatMessageContent;
+}
 import { videoStorageService } from '../imageStorageService';
 import { VIDEO_SORA_SIZE, VIDEO_DRAMA_SIZE, VIDEO_DRAMA_FALLBACK } from '../../config/sizeConfig';
 import { logger, LogCategory } from '../logger.ts';
@@ -63,14 +73,15 @@ const retryOperation = async <T>(
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
-    } catch (error: any) {
-      lastError = error;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      lastError = err;
       if (
-        error.message?.includes('400') ||
-        error.message?.includes('401') ||
-        error.message?.includes('403')
+        err.message?.includes('400') ||
+        err.message?.includes('401') ||
+        err.message?.includes('403')
       ) {
-        throw error;
+        throw err;
       }
       if (i < maxRetries - 1) {
         await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
@@ -180,7 +191,7 @@ const callVeoApi = async (
   const cleanEnd = options.endImage?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
 
   // 构建消息
-  const messages: any[] = [{ role: 'user', content: options.prompt }];
+  const messages: ChatMessage[] = [{ role: 'user', content: options.prompt }];
 
   if (cleanStart) {
     messages[0].content = [
@@ -275,9 +286,9 @@ const callVeoApi = async (
       reader.onerror = () => reject(new Error('视频读取失败'));
       reader.readAsDataURL(videoBlob);
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('视频生成超时 (20分钟)');
     }
     throw error;
@@ -325,7 +336,7 @@ const callSoraApi = async (
   };
 
   if (isCogVideo || isBigModel) {
-    const jsonData: any = {
+    const jsonData: Record<string, unknown> = {
       model: resolvedModel,
       prompt: options.prompt,
       duration: duration,
@@ -579,11 +590,12 @@ const callSoraApi = async (
         reader.onerror = () => reject(new Error('视频读取失败'));
         reader.readAsDataURL(videoBlob);
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (attempt === maxDownloadRetries) {
         throw error;
       }
-      logger.warn(LogCategory.NETWORK, `⚠️ 下载出错: ${error.message}，重试中...`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(LogCategory.NETWORK, `⚠️ 下载出错: ${message}，重试中...`);
       await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
     }
   }
@@ -595,18 +607,23 @@ const callSoraApi = async (
  * 调用 Drama Backend 视频生成 API (image2videomsr)
  * 基于图像生成视频（MSR 多帧超分辨率技术）
  */
-const callDramaBackendVideoApi = async (
+export const callDramaBackendVideoApi = async (
   options: VideoGenerateOptions,
   model: VideoModelDefinition,
   apiBase: string,
 ): Promise<string> => {
   const tid = `drama_video_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
+  // 首尾帧判定：尾帧存在时走 MKR 多关键帧接口（首尾帧精确插值），否则走 MSR
+  const useMkr = Boolean(options.endImage);
+  const endpoint = useMkr ? 'image2videomkr' : 'image2videomsr';
+
   logger.info(
     LogCategory.NETWORK,
     `\n========== [${tid}] Drama Backend 视频生成请求开始 ==========`,
   );
-  logger.info(LogCategory.NETWORK, `[${tid}] 端点: POST /api/v1/generate/image2videomsr`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 端点: POST /api/v1/generate/${endpoint}`);
+  logger.info(LogCategory.NETWORK, `[${tid}] 模式: ${useMkr ? 'MKR 首尾帧' : 'MSR 单图/参考图'}`);
   logger.info(LogCategory.NETWORK, `[${tid}] 目标地址: ${apiBase}`);
   logger.info(
     LogCategory.NETWORK,
@@ -617,50 +634,70 @@ const callDramaBackendVideoApi = async (
 
   const size = VIDEO_DRAMA_SIZE[options.aspectRatio || '16:9'] || VIDEO_DRAMA_FALLBACK;
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: size.width,
     height: size.height,
-    duration: options.duration || 5,
+    duration: options.duration || (useMkr ? 12 : 5),
     fps: 30,
   };
 
-  // 收集所有图片：优先使用 referenceImages，否则回退 startImage + endImage
-  const allImages = options.referenceImages?.length
-    ? options.referenceImages
-    : ([options.startImage, options.endImage].filter(Boolean) as string[]);
-
-  if (allImages.length === 0) {
-    throw new Error('视频生成需要提供至少一张图片');
-  }
-
-  // 第一张图作为 background
-  const firstFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
-  requestBody.background = firstFilename;
-  logger.info(LogCategory.NETWORK, `[${tid}] 背景图上传成功 -> filename: ${firstFilename}`);
-
-  if (allImages.length === 1) {
-    requestBody.image1 = firstFilename;
-    logger.info(LogCategory.NETWORK, `[${tid}] 仅一张图，image1 复用背景图`);
+  if (useMkr) {
+    // MKR 首尾帧模式：首帧 frame_index=0，尾帧 frame_index=-1（api.md 约定 -1 表示结束帧）
+    if (!options.startImage) {
+      throw new Error('首尾帧模式需要提供起始帧（startImage）');
+    }
+    if (!options.endImage) {
+      throw new Error('首尾帧模式需要提供结束帧（endImage）');
+    }
+    const startFilename = await uploadImageToDramaBackend(options.startImage, baseUrl, tid);
+    const endFilename = await uploadImageToDramaBackend(options.endImage, baseUrl, tid);
+    requestBody.images = [
+      { image: startFilename, frame_index: 0 },
+      { image: endFilename, frame_index: -1 },
+    ];
+    logger.info(
+      LogCategory.NETWORK,
+      `[${tid}] MKR 首尾帧: 起始帧=${startFilename}, 尾帧=${endFilename}`,
+    );
   } else {
-    // 第二张图作为 image1
-    const secondFilename = await uploadImageToDramaBackend(allImages[1], baseUrl, tid);
-    requestBody.image1 = secondFilename;
-    logger.info(LogCategory.NETWORK, `[${tid}] image1 上传成功 -> filename: ${secondFilename}`);
+    // 收集所有图片：优先使用 referenceImages，否则回退 startImage（+endImage，但此时 endImage 必为空）
+    const allImages = options.referenceImages?.length
+      ? options.referenceImages
+      : ([options.startImage, options.endImage].filter(Boolean) as string[]);
 
-    // 后续图片依次为 image2/image3/image4
-    for (let i = 2; i < Math.min(allImages.length, 5); i++) {
-      const imgKey = `image${i}`;
-      logger.info(
-        LogCategory.NETWORK,
-        `[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`,
-      );
-      const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
-      requestBody[imgKey] = filename;
-      logger.info(
-        LogCategory.NETWORK,
-        `[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
-      );
+    if (allImages.length === 0) {
+      throw new Error('视频生成需要提供至少一张图片');
+    }
+
+    // 第一张图作为 background
+    const firstFilename = await uploadImageToDramaBackend(allImages[0], baseUrl, tid);
+    requestBody.background = firstFilename;
+    logger.info(LogCategory.NETWORK, `[${tid}] 背景图上传成功 -> filename: ${firstFilename}`);
+
+    if (allImages.length === 1) {
+      requestBody.image1 = firstFilename;
+      logger.info(LogCategory.NETWORK, `[${tid}] 仅一张图，image1 复用背景图`);
+    } else {
+      // 第二张图作为 image1
+      const secondFilename = await uploadImageToDramaBackend(allImages[1], baseUrl, tid);
+      requestBody.image1 = secondFilename;
+      logger.info(LogCategory.NETWORK, `[${tid}] image1 上传成功 -> filename: ${secondFilename}`);
+
+      // 后续图片依次为 image2/image3/image4
+      for (let i = 2; i < Math.min(allImages.length, 5); i++) {
+        const imgKey = `image${i}`;
+        logger.info(
+          LogCategory.NETWORK,
+          `[${tid}] 开始上传参考图 ${imgKey}: ${allImages[i].substring(0, 100)}...`,
+        );
+        const filename = await uploadImageToDramaBackend(allImages[i], baseUrl, tid);
+        requestBody[imgKey] = filename;
+        logger.info(
+          LogCategory.NETWORK,
+          `[${tid}] 参考图 ${imgKey} 上传成功 -> filename: ${filename}`,
+        );
+      }
     }
   }
 
@@ -669,7 +706,7 @@ const callDramaBackendVideoApi = async (
   logger.info(LogCategory.NETWORK, `[${tid}] ====================================\n`);
 
   const data = await retryOperation(async () => {
-    const requestUrl = `${baseUrl}/api/v1/generate/image2videomsr`;
+    const requestUrl = `${baseUrl}/api/v1/generate/${endpoint}`;
     logger.info(LogCategory.NETWORK, `[${tid}] 发送请求: POST ${requestUrl}`);
 
     const res = await fetch(requestUrl, {

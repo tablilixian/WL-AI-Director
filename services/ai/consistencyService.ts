@@ -7,7 +7,15 @@ import {
   ScriptData,
 } from '../../types';
 import { logger, LogCategory } from '../logger';
-import { retryOperation, cleanJsonString, chatCompletion, getDefaultChatModelId } from './apiCore';
+import {
+  retryOperation,
+  chatCompletion,
+  getDefaultChatModelId,
+  getErrorMessage,
+  parseLlmJson,
+  MAX_TOKENS_LONG,
+  MAX_TOKENS_SHORT,
+} from './apiCore';
 
 let conflictIdCounter = 0;
 const nextConflictId = (): string => `conflict-${Date.now()}-${++conflictIdCounter}`;
@@ -15,6 +23,16 @@ const nextConflictId = (): string => `conflict-${Date.now()}-${++conflictIdCount
 interface ShotWithScene {
   shot: Shot;
   scene: Scene;
+}
+
+interface RawConflict {
+  type?: string;
+  isPlotDriven?: boolean;
+  severity?: string;
+  shotIds?: string[];
+  description?: string;
+  plotExplanation?: string | null;
+  suggestion?: string | null;
 }
 
 const buildConsistencyPrompt = (
@@ -131,22 +149,27 @@ export const checkCharacterConsistency = async (
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.3, 4096, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.3, MAX_TOKENS_LONG, 'json_object'),
     );
 
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as {
+      consistencyScore?: number;
+      conflicts?: RawConflict[];
+    };
 
     const score = typeof parsed.consistencyScore === 'number' ? parsed.consistencyScore : 10;
 
+    const isRawConflict = (c: unknown): c is RawConflict => typeof c === 'object' && c !== null;
     const conflicts: ConsistencyConflict[] = (
       Array.isArray(parsed.conflicts) ? parsed.conflicts : []
     )
-      .filter((c: any) => c && typeof c === 'object')
-      .map((c: any) => ({
+      .filter(isRawConflict)
+      .map((c) => ({
         id: nextConflictId(),
-        type: c.type || 'feature_mismatch',
-        severity: c.isPlotDriven ? 'info' : c.severity || 'warning',
+        type: (c.type as ConsistencyConflict['type']) || 'feature_mismatch',
+        severity: (c.isPlotDriven
+          ? 'info'
+          : c.severity || 'warning') as ConsistencyConflict['severity'],
         characterId: char.id,
         characterName: char.name,
         shotIds: Array.isArray(c.shotIds) ? c.shotIds : [],
@@ -171,8 +194,8 @@ export const checkCharacterConsistency = async (
       `✅ 角色 ${char.name} 一致性检查完成: 评分 ${score}/10, 冲突 ${conflicts.length} 项`,
     );
     return result;
-  } catch (error: any) {
-    logger.warn(LogCategory.AI, `⚠️ 角色 ${char.name} 一致性检查失败:`, error?.message);
+  } catch (error: unknown) {
+    logger.warn(LogCategory.AI, `⚠️ 角色 ${char.name} 一致性检查失败:`, error);
     return {
       characterId: char.id,
       characterName: char.name,
@@ -200,7 +223,10 @@ export const checkAllCharactersConsistency = async (
       if (!charShotMap.has(charId)) {
         charShotMap.set(charId, []);
       }
-      charShotMap.get(charId)!.push({ shot, scene });
+      const list = charShotMap.get(charId);
+      if (list) {
+        list.push({ shot, scene });
+      }
     }
   }
 
@@ -264,10 +290,9 @@ ${shot.keyframes.find((k) => k.type === 'end')?.visualPrompt ? `结束帧：${sh
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.5, 2048, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.5, MAX_TOKENS_SHORT, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as { startPrompt?: string; endPrompt?: string };
 
     return {
       startPrompt:
@@ -279,8 +304,8 @@ ${shot.keyframes.find((k) => k.type === 'end')?.visualPrompt ? `结束帧：${sh
         shot.keyframes.find((k) => k.type === 'end')?.visualPrompt ||
         '',
     };
-  } catch (error: any) {
-    logger.error(LogCategory.AI, `❌ fixKeyframeConsistency 失败:`, error?.message);
-    throw new Error(`AI修复一致性失败: ${error?.message}`);
+  } catch (error: unknown) {
+    logger.error(LogCategory.AI, `❌ fixKeyframeConsistency 失败:`, error);
+    throw new Error(`AI修复一致性失败: ${getErrorMessage(error)}`);
   }
 };

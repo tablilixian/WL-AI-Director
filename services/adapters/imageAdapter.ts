@@ -30,6 +30,12 @@ import {
 } from '../../config/sizeConfig';
 import { logger, LogCategory } from '../logger.ts';
 
+/** Gemini 多模态请求中的单个 part（文本或内联图片数据） */
+interface GeminiPart {
+  text?: string;
+  inlineData?: { mimeType: string; data: string };
+}
+
 /**
  * 重试操作
  */
@@ -43,22 +49,23 @@ const retryOperation = async <T>(
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
-    } catch (error: any) {
-      lastError = error;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      lastError = err;
       // 400/401/403/422 错误不重试（客户端错误，重试无意义）
       // 429 限流错误会重试
       const isClientError =
-        error.message?.includes('400') ||
-        error.message?.includes('401') ||
-        error.message?.includes('403') ||
-        error.message?.includes('422') ||
-        error.message?.includes('不安全') ||
-        error.message?.includes('敏感') ||
-        error.message?.includes('违规');
+        err.message?.includes('400') ||
+        err.message?.includes('401') ||
+        err.message?.includes('403') ||
+        err.message?.includes('422') ||
+        err.message?.includes('不安全') ||
+        err.message?.includes('敏感') ||
+        err.message?.includes('违规');
 
       if (isClientError) {
-        logger.info(LogCategory.NETWORK, `[Retry] 检测到客户端错误，不再重试: ${error.message}`);
-        throw error;
+        logger.info(LogCategory.NETWORK, `[Retry] 检测到客户端错误，不再重试: ${err.message}`);
+        throw err;
       }
 
       if (i < maxRetries - 1) {
@@ -135,7 +142,7 @@ const callCogViewApi = async (
     `[I2I:${traceId}] ✨ Prompt 质量增强: ${finalPrompt !== options.prompt ? '已追加质量标签' : '用户已包含质量词，跳过'}`,
   );
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     model: apiModel,
     prompt: finalPrompt,
     size,
@@ -242,7 +249,7 @@ const callDramaBackendApi = async (
     }
   }
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: finalPrompt,
     width: size.width,
     height: size.height,
@@ -509,7 +516,7 @@ const callGeminiApi = async (
   }
 
   // 构建请求 parts
-  const parts: any[] = [{ text: finalPrompt }];
+  const parts: GeminiPart[] = [{ text: finalPrompt }];
 
   // 添加参考图片
   if (options.referenceImages) {
@@ -612,7 +619,7 @@ const callGeminiApi = async (
   }
 
   // 构建请求体
-  const requestBody: any = {
+  const requestBody = {
     contents: [
       {
         role: 'user',
@@ -621,14 +628,12 @@ const callGeminiApi = async (
     ],
     generationConfig: {
       responseModalities: ['TEXT', 'IMAGE'],
+      ...(aspectRatio !== '16:9' ? { imageConfig: { aspectRatio } } : {}),
     },
   };
 
   // 非默认宽高比需要添加 imageConfig
   if (aspectRatio !== '16:9') {
-    requestBody.generationConfig.imageConfig = {
-      aspectRatio: aspectRatio,
-    };
     logger.info(LogCategory.NETWORK, `[I2I:${traceId}] 设置宽高比: ${aspectRatio}`);
   }
 
@@ -856,7 +861,7 @@ const callDramaBackendStoryboardApi = async (
     );
   }
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     gridnum: options.gridnum || 4,
     width: options.itemWidth || STORYBOARD_ITEM_WIDTH,
@@ -966,7 +971,7 @@ export const callDramaBackendSpliteGridApi = async (
     throw new Error('图像分割网格需要提供参考图像');
   }
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     row: options.spliteGridRow || 2,
     column: options.spliteGridColumn || 2,
     target_width: options.spliteGridTargetWidth || IMAGE_SPLITE_GRID.targetWidth,
@@ -1087,7 +1092,7 @@ export const callDramaBackendInpaintApi = async (
     throw new Error('图像修复需要提供待修复的图像');
   }
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     image: imageFilename,
   };
@@ -1162,7 +1167,7 @@ export const callDramaBackend360HdriApi = async (
   logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 端点: /api/v1/generate/image2360hdri`);
   logger.info(LogCategory.NETWORK, `[HDRI:${tid}] API基础地址: ${apiBase}`);
 
-  const requestBody: any = {};
+  const requestBody: Record<string, unknown> = {};
 
   if (imageUrl) {
     logger.info(LogCategory.NETWORK, `[HDRI:${tid}] 上传参考图像到 Drama Backend...`);
@@ -1250,7 +1255,7 @@ export const callDramaBackendStyleTransferApi = async (
   const styleFilename = await uploadImageToDramaBackend(styleImageUrl, baseUrl, tid);
   logger.info(LogCategory.NETWORK, `[ST:${tid}] 风格参考图上传成功 -> filename: ${styleFilename}`);
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     image1: targetFilename,
     image2: styleFilename,
   };
@@ -1339,13 +1344,24 @@ export const callDramaBackendIPAStyleTransferApi = async (
     IMAGE_IPA_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_IPA_SIZE] ||
     IMAGE_IPA_FALLBACK;
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: size.width,
     height: size.height,
   };
 
+  if (options.negativePrompt) {
+    requestBody.negative_prompt = options.negativePrompt;
+  }
+
   if (options.referenceImages) {
+    // 后端 image2ipastyletransfer 最多支持 image1~image3 三个参考图字段
+    if (options.referenceImages.length > 3) {
+      logger.warn(
+        LogCategory.NETWORK,
+        `[IPA:${tid}] 参考图共 ${options.referenceImages.length} 张，超过 3 张上限，仅使用前 3 张（场景 + 前两个角色优先）。`,
+      );
+    }
     for (let i = 0; i < Math.min(options.referenceImages.length, 3); i++) {
       const imgKey = `image${i + 1}`;
       const imageUrl = options.referenceImages[i];
@@ -1446,7 +1462,7 @@ export const callDramaBackendAnimeApi = async (
     IMAGE_ANIME_SIZE[(options.aspectRatio || '16:9') as keyof typeof IMAGE_ANIME_SIZE] ||
     IMAGE_ANIME_FALLBACK;
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: size.width,
     height: size.height,
@@ -1539,7 +1555,7 @@ export const callDramaBackendVLApi = async (
     logger.info(LogCategory.NETWORK, `[VL:${tid}] 参考图上传成功 -> filename: ${imageFilename}`);
   }
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     system_prompt: options.systemPrompt || 'You are a helpful assistant.',
     prompt: options.prompt,
   };
@@ -1739,7 +1755,7 @@ export const callDramaBackendPromptEnhanceApi = async (
   logger.info(LogCategory.NETWORK, `[PE:${tid}] 端点: /api/v1/generate/image2promptenhance`);
   logger.info(LogCategory.NETWORK, `[PE:${tid}] API基础地址: ${apiBase}`);
 
-  const requestBody: any = { prompt };
+  const requestBody: Record<string, unknown> = { prompt };
 
   logger.info(LogCategory.NETWORK, `[PE:${tid}] 请求参数:`, JSON.stringify(requestBody, null, 2));
 
@@ -1800,7 +1816,7 @@ export const callDramaBackendVideoMsrApi = async (
   logger.info(LogCategory.NETWORK, `\n[VMSR:${tid}] 调用图像转视频 MSR API`);
   logger.info(LogCategory.NETWORK, `[VMSR:${tid}] 端点: /api/v1/generate/image2videomsr`);
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: options.videoMsrWidth || VIDEO_MSR_DEFAULT.width,
     height: options.videoMsrHeight || VIDEO_MSR_DEFAULT.height,
@@ -1871,7 +1887,7 @@ export const callDramaBackendVideoMsrApi = async (
         errorMessage = `HTTP ${res.status}`;
       }
       throw new Error(
-        `[MSR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height}`,
+        `[MSR] ${errorMessage}\n请求参数: prompt="${String(requestBody.prompt).slice(0, 50)}..." width=${String(requestBody.width)} height=${String(requestBody.height)}`,
       );
     }
 
@@ -1926,7 +1942,7 @@ export const callDramaBackendVideoMkrGridApi = async (
   logger.info(LogCategory.NETWORK, `\n[VMKRG:${tid}] 调用图像转视频 MKR Grid API`);
   logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 端点: /api/v1/generate/image2videomkrgrid`);
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: options.videoMkrGridWidth || VIDEO_MKR_GRID_DEFAULT.width,
     height: options.videoMkrGridHeight || VIDEO_MKR_GRID_DEFAULT.height,
@@ -1952,7 +1968,7 @@ export const callDramaBackendVideoMkrGridApi = async (
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时
 
-  let response: any;
+  let response: { full_url?: string };
   try {
     response = await retryOperation(async () => {
       const res = await fetch(`${baseUrl}/api/v1/generate/image2videomkrgrid`, {
@@ -1987,7 +2003,7 @@ export const callDramaBackendVideoMkrGridApi = async (
           errorMessage = `HTTP ${res.status}`;
         }
         throw new Error(
-          `[MKR Grid] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height} gridtype=${requestBody.gridtype}`,
+          `[MKR Grid] ${errorMessage}\n请求参数: prompt="${String(requestBody.prompt).slice(0, 50)}..." width=${String(requestBody.width)} height=${String(requestBody.height)} gridtype=${String(requestBody.gridtype)}`,
         );
       }
 
@@ -2025,12 +2041,9 @@ export const callDramaBackendVideoMkrGridApi = async (
     logger.info(LogCategory.NETWORK, `[VMKRG:${tid}] 视频保存到本地: ${videoId}`);
 
     return `video:${videoId}`;
-  } catch (downloadError: any) {
-    logger.warn(
-      LogCategory.NETWORK,
-      `[VMKRG:${tid}] 视频下载失败，使用外部 URL:`,
-      downloadError.message,
-    );
+  } catch (downloadError: unknown) {
+    const message = downloadError instanceof Error ? downloadError.message : String(downloadError);
+    logger.warn(LogCategory.NETWORK, `[VMKRG:${tid}] 视频下载失败，使用外部 URL:`, message);
     return videoUrl;
   }
 };
@@ -2052,7 +2065,7 @@ export const callDramaBackendVideoMkrApi = async (
   logger.info(LogCategory.NETWORK, `\n[VMKR:${tid}] 调用图像转视频 MKR API`);
   logger.info(LogCategory.NETWORK, `[VMKR:${tid}] 端点: /api/v1/generate/image2videomkr`);
 
-  const requestBody: any = {
+  const requestBody: Record<string, unknown> = {
     prompt: options.prompt,
     width: options.videoMkrWidth || VIDEO_MKR_DEFAULT.width,
     height: options.videoMkrHeight || VIDEO_MKR_DEFAULT.height,
@@ -2108,7 +2121,7 @@ export const callDramaBackendVideoMkrApi = async (
         errorMessage = `HTTP ${res.status}`;
       }
       throw new Error(
-        `[MKR] ${errorMessage}\n请求参数: prompt="${requestBody.prompt?.slice(0, 50)}..." width=${requestBody.width} height=${requestBody.height}`,
+        `[MKR] ${errorMessage}\n请求参数: prompt="${String(requestBody.prompt).slice(0, 50)}..." width=${String(requestBody.width)} height=${String(requestBody.height)}`,
       );
     }
 
@@ -2246,6 +2259,19 @@ export const callImageApi = async (
       );
       const refImage = options.referenceImages?.[0];
       return callDramaBackend360HdriApi(refImage, tid);
+    }
+
+    // 关键帧/分镜图片生成统一走 image2image（图生图）端点。
+    // 2026-08-12 修复：此前把 >=2 张参考图路由到 image2ipastyletransfer（IPA 风格迁移），
+    // 导致多角色场景被当成"风格融合"处理，人物被场景吞没（用户只看到纯场景，无角色）。
+    // image2image 端点以 image1 为底图、image2/image3 为参考，更贴合"场景+角色"的电影关键帧生成。
+    // 显式的 isIPAStyleTransfer 仍保留给风格迁移专用入口。
+    if (options.isIPAStyleTransfer) {
+      logger.info(
+        LogCategory.NETWORK,
+        `[I2I:${tid}] → 路由到: Drama Backend (IPA 风格迁移 image2ipastyletransfer 端点)`,
+      );
+      return callDramaBackendIPAStyleTransferApi(options, tid);
     }
 
     logger.info(

@@ -68,7 +68,7 @@ collections = [
         "type": "base",
         "schema": [
             {"name":"project_id","type":"relation","required":True,"maxSelect":1,"collectionId":"projects","unique":True},
-            {"name":"layers","type":"json","required":True},
+            {"name":"layers","type":"json","required":True,"maxSize":10485760},
             {"name":"canvas_offset","type":"json","required":False},
             {"name":"scale","type":"number","required":False},
             {"name":"version","type":"number","required":False},

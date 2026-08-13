@@ -189,18 +189,37 @@ export const buildKeyframePrompt = async (
 ${frameFocus}
 构图指导: ${cameraGuide}`;
 
-  // 角色外观描述（文字回退，当 API 不支持参考图时保证一致性）
+  // 角色外观描述（仅作为"无参考图"时的文字回退）。
+  // 注意：char.visualPrompt 是"角色定妆照/肖像"的生成提示词，内含专属机位、打光、标志性姿态等
+  // 生成指令，绝不应原样注入关键帧提示词——它会与镜头场景冲突，导致角色姿态/构图错乱。
+  // 当角色已提供参考图时，外观完全由参考图承载，【角色一致性要求】已强制"须与参考图完全一致"，
+  // 因此此处只保留角色名提示；仅对"无参考图"的角色，才用 visualPrompt 做文字回退。
   let characterDescriptionsSection = '';
   if (characterDescriptions && characterDescriptions.length > 0) {
-    const descLines = characterDescriptions
-      .map(
-        (c) =>
-          `- ${c.name}: ${c.visualPrompt || '未提供详细描述'}${c.hasImage ? '（已提供参考图）' : ''}`,
-      )
-      .join('\n');
-    characterDescriptionsSection = `\n\n【角色外观】CHARACTER APPEARANCE
-当前镜头涉及以下角色，外观描述必须严格遵循：
-${descLines}`;
+    const withoutImage = characterDescriptions.filter((c) => !c.hasImage);
+    const withImageNames = characterDescriptions.filter((c) => c.hasImage).map((c) => c.name);
+
+    const parts: string[] = [];
+
+    if (withoutImage.length > 0) {
+      const descLines = withoutImage
+        .map(
+          (c) =>
+            `- ${c.name}: ${c.visualPrompt || '未提供详细描述'}（无参考图，请严格按文字描述还原外观）`,
+        )
+        .join('\n');
+      parts.push(`【角色外观（文字回退）】CHARACTER APPEARANCE (TEXT FALLBACK)
+以下角色未提供参考图，画面中人物外观请严格依照下列文字描述还原：
+${descLines}`);
+    }
+
+    if (withImageNames.length > 0) {
+      parts.push(
+        `【角色外观】以下角色外观以参考图为准，人物须与各自参考图完全一致：${withImageNames.join('、')}`,
+      );
+    }
+
+    characterDescriptionsSection = parts.length > 0 ? '\n\n' + parts.join('\n\n') : '';
   }
 
   // 角色一致性要求
@@ -208,6 +227,15 @@ ${descLines}`;
 如果提供了角色参考图，画面中的人物外观必须严格遵循参考图：
 • 面部特征、发型、服装、体型必须与参考图完全一致
 • 这是最高优先级要求，不可妥协`;
+
+  // 多角色构图要求：强制所有出场角色都清晰入镜，避免图生图时次要角色被漏掉
+  const multiSubjectComposition =
+    characterDescriptions && characterDescriptions.length >= 2
+      ? `\n\n【多角色构图要求】MULTI-SUBJECT COMPOSITION
+本镜头必须同时包含以下全部 ${characterDescriptions.length} 名角色，缺一不可，且每名角色都须完整、清晰入镜（不可仅以局部特写或背影呈现）：
+${characterDescriptions.map((c) => `• ${c.name}`).join('\n')}
+请合理安排各角色在画面中的空间位置（如左/中/右、前/后景层次），确保所有角色都真实出现在最终画面中，不要遗漏任何一名角色。`
+      : '';
 
   // 道具一致性要求（仅在有道具时添加）
   let propConsistencyGuide = '';
@@ -254,7 +282,7 @@ ${stylePrompt}
 【构图】Composition
 ${compositionNote}
 ${domainKnowledgeBlock}
-${characterConsistencyGuide}${characterDescriptionsSection}${propConsistencyGuide}`;
+${characterConsistencyGuide}${multiSubjectComposition}${characterDescriptionsSection}${propConsistencyGuide}`;
 };
 
 /**
@@ -534,6 +562,15 @@ export const generateSubShotIds = (originalShotId: string, count: number): strin
   return ids;
 };
 
+/** AI 返回的镜头拆分子镜头数据结构 */
+interface SubShotData {
+  actionSummary: string;
+  cameraMovement: string;
+  shotSize?: string;
+  visualFocus?: string;
+  keyframes?: Array<{ type?: string; visualPrompt?: string }>;
+}
+
 /**
  * 创建子镜头对象
  * @param originalShot - 原始镜头对象
@@ -541,16 +578,22 @@ export const generateSubShotIds = (originalShotId: string, count: number): strin
  * @param subShotId - 子镜头ID
  * @returns 新的Shot对象
  */
-export const createSubShot = (originalShot: Shot, subShotData: any, subShotId: string): Shot => {
+export const createSubShot = (
+  originalShot: Shot,
+  subShotData: SubShotData,
+  subShotId: string,
+): Shot => {
   // 处理关键帧数组
-  const keyframes: any[] = [];
+  const keyframes: Keyframe[] = [];
   if (subShotData.keyframes && Array.isArray(subShotData.keyframes)) {
-    subShotData.keyframes.forEach((kf: any) => {
-      if (kf.type && kf.visualPrompt) {
+    subShotData.keyframes.forEach((kf) => {
+      const type = kf.type;
+      const visualPrompt = kf.visualPrompt;
+      if (type && visualPrompt) {
         keyframes.push({
-          id: `${subShotId}-${kf.type}`, // 如 "shot-1-1-start", "shot-1-1-end"
-          type: kf.type,
-          visualPrompt: kf.visualPrompt,
+          id: `${subShotId}-${type}`, // 如 "shot-1-1-start", "shot-1-1-end"
+          type: type as Keyframe['type'],
+          visualPrompt,
           status: 'pending', // 初始状态为pending，等待用户生成图像
         });
       }
@@ -746,4 +789,333 @@ export const cropPanelFromNineGrid = (
     };
     img.src = nineGridImageUrl;
   });
+};
+
+/**
+ * 判断关键帧是否启用 IPA 多参考融合。
+ *
+ * 决策：当参考图 >= 2 张（场景 + 至少一张角色/道具图）且镜头关联了角色时，
+ * 启用 image2ipastyletransfer（IPA）做多参考图融合。
+ *
+ * 原因：image2image 以 image1（场景图）为绝对底图、其余参考图仅为松散参考，
+ * 多角色场景下次要角色常被弱化/忽略；IPA 专为"多参考外貌融合"设计，
+ * 能保证场景 + 多个角色定妆照按要求合成进同一张画面。
+ *
+ * @param referenceImageCount 参考图数量（场景图 + 角色图 + 道具图）
+ * @param characterCount 镜头关联的角色数量
+ */
+export const shouldUseIPAFusion = (
+  referenceImageCount: number,
+  characterCount: number,
+): boolean => {
+  return referenceImageCount >= 2 && characterCount >= 1;
+};
+
+/**
+ * 为真人电影风格的关键帧 prompt 防御性追加"风格锁定"段。
+ *
+ * 用途：关键帧走 IPA 多参考融合时，参考图（定妆照/场景）可能携带非写实风格信号，
+ * 导致输出从"真人电影"漂移到插画/二次元。无论 prompt 来自基础版还是 AI 增强版，
+ * 都在末尾强制锚定项目的 live-action 写实风格，对抗漂移。
+ *
+ * 若 prompt 已包含真人写实关键词（photorealistic / real human actors 等），
+ * 说明风格段已生效，则不重复追加，避免提示词冗余。
+ *
+ * @param prompt 已构建的关键帧提示词
+ * @param visualStyle 视觉风格 key（如 'live-action'）
+ * @returns 追加风格锁定段后的提示词
+ */
+export const appendStyleAnchor = (prompt: string, visualStyle: string): string => {
+  const styleAnchor = VISUAL_STYLE_PROMPTS[visualStyle];
+  if (!styleAnchor) return prompt;
+  if (/photorealistic|real human actors|live-action photographic/i.test(prompt)) {
+    return prompt;
+  }
+  return `${prompt}\n\n【风格锁定】STYLE LOCK (最高优先级)\n${styleAnchor}`;
+};
+
+/**
+ * 取镜头的场景参考图（用于两阶段合成的第一阶段底图）。
+ * 与 getRefImagesForShot 不同，这里只关心场景，不混入角色/道具图。
+ */
+export const getSceneImageForShot = (
+  shot: Shot,
+  scriptData: ProjectState['scriptData'],
+): string | undefined => {
+  if (!scriptData) return undefined;
+  const scene = scriptData.scenes.find((s) => String(s.id) === String(shot.sceneId));
+  return scene?.imageUrl;
+};
+
+/**
+ * 为 N 个登场角色分配画面站位。
+ * inpaint 接口无遮罩、只能靠文字描述位置，因此预先给出离散站位描述。
+ */
+export const assignCharacterLayout = (count: number): string[] => {
+  const presets: Record<number, string[]> = {
+    1: ['center foreground'],
+    2: ['left side of the frame', 'right side of the frame'],
+    3: ['left side of the frame', 'center of the frame', 'right side of the frame'],
+  };
+  if (presets[count]) return presets[count];
+  // 超过 3 人：按从左到右均匀分布到左/中/右三栏
+  return Array.from({ length: count }, (_, i) => {
+    const third = Math.min(2, Math.floor((i / count) * 3));
+    return ['left side', 'center', 'right side'][third] + ' of the frame';
+  });
+};
+
+/**
+ * 肖像生成提示词中需要剥离的"专属指令"正则。
+ * 这些指令（full body / studio lighting / signature pose 等）是给"生成定妆照"用的，
+ * 放到 inpaint 补绘里会干扰"自然地嵌入场景"，须剔除。
+ */
+const APPEARANCE_STRIP_PATTERNS: RegExp[] = [
+  /full[\s-]?body(?:\s+portrait)?/gi,
+  /\bportrait\b/gi,
+  /studio\s+lighting/gi,
+  /signature\s+pose/gi,
+  /concept\s+art/gi,
+  /character\s+sheet/gi,
+  /white\s+background/gi,
+  /plain\s+background/gi,
+  /front(?:al)?\s+view/gi,
+  /\b8k\b|\b4k\b|uhd/gi,
+  /highly\s+detailed/gi,
+  /hyperrealistic\s+render/gi,
+];
+
+/**
+ * 从角色定妆照提示词中提取"外貌描述"，剥离肖像生成专属指令，
+ * 用于 inpaint 补绘时作为文字外貌依据（inpaint 接口无法接收参考图）。
+ */
+export const extractAppearanceText = (visualPrompt: string): string => {
+  if (!visualPrompt) return '';
+  let text = visualPrompt;
+  APPEARANCE_STRIP_PATTERNS.forEach((p) => {
+    text = text.replace(p, ' ');
+  });
+  text = text
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,，.])/g, '$1')
+    .trim();
+  return text || visualPrompt;
+};
+
+/**
+ * 构建"空场景"提示词：仅环境、无人物。
+ * 用于两阶段合成第一阶段，锁定真人电影风格，作为后续 inpaint 补绘角色的底图。
+ * 复用 buildKeyframePrompt 的构图/风格结构，但不含角色段落，并强制"无人"。
+ */
+export const buildEmptyScenePrompt = async (
+  basePrompt: string,
+  visualStyle: string,
+  cameraMovement: string,
+  frameType: 'start' | 'end',
+  propsInfo?: { name: string; description: string; hasImage: boolean }[],
+  eraContext?: string,
+  knowledgeBase?: string,
+): Promise<string> => {
+  const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
+  const cameraGuide = await getCameraMovementCompositionGuide(cameraMovement, frameType);
+  const isStart = frameType === 'start';
+  const frameTypeZh = isStart ? '起始帧' : '结束帧';
+  const frameFocus = isStart
+    ? '场景建立：侧重建构环境氛围、空间层次与光源方向，为即将入场的角色预留构图空间。'
+    : '动作收束：侧重环境的最终状态与情绪落点，画面定格在空镜环境。';
+  const compositionNote = `帧类型: ${frameTypeZh}帧，镜头运动: ${cameraMovement}\n${frameFocus}\n构图指导: ${cameraGuide}`;
+
+  let propConsistencyGuide = '';
+  if (propsInfo && propsInfo.length > 0) {
+    const list = propsInfo.map((p) => `- ${p.name}: ${p.description}`).join('\n');
+    propConsistencyGuide = `\n\n【道具】PROPS\n以下道具若出现于场景中须准确呈现：\n${list}`;
+  }
+
+  const domainKnowledgeSections: string[] = [];
+  if (eraContext) domainKnowledgeSections.push(`【时代背景】Era Context\n${eraContext}`);
+  if (knowledgeBase) domainKnowledgeSections.push(`【领域知识】Domain Knowledge\n${knowledgeBase}`);
+  const domainKnowledgeBlock =
+    domainKnowledgeSections.length > 0 ? '\n\n' + domainKnowledgeSections.join('\n\n') : '';
+
+  return `${basePrompt}
+
+【视觉风格】Visual Style
+${stylePrompt}
+
+【构图】Composition
+${compositionNote}${domainKnowledgeBlock}${propConsistencyGuide}
+
+【空场景指令】EMPTY SCENE (MANDATORY)
+This is an ESTABLISHING ENVIRONMENT shot. Render the scene COMPLETELY EMPTY with NO human figures, NO people, NO characters. Only environment, architecture, lighting, atmosphere and any inanimate props. Do not include any person.`;
+};
+
+/**
+ * 构建单个角色的 inpaint 补绘提示词。
+ * inpaint 接口无遮罩、无参考图，因此外貌完全由文字描述承载，
+ * 并显式要求"仅添加该角色、不改背景/光照/其他已有主体"，避免破坏底图。
+ */
+export const buildCharacterInpaintPrompt = (params: {
+  name: string;
+  appearanceText: string;
+  position: string;
+  visualStyle: string;
+  frameType: 'start' | 'end';
+}): string => {
+  const styleAnchor = VISUAL_STYLE_PROMPTS[params.visualStyle] || '';
+  const frameFocus =
+    params.frameType === 'start'
+      ? 'This is the establishing start frame: the character should show their initial posture and the beginning of their action.'
+      : 'This is the closing end frame: the character should show their resolved posture and final expression.';
+  return `Add the character "${params.name}" into the scene, positioned at the ${params.position}.
+The person must be rendered NATURALLY within this existing cinematic scene (ignore any standalone portrait / studio / background directives in the description below).
+
+Appearance to render: ${params.appearanceText}
+
+${frameFocus}
+Lighting must match the existing scene. Photorealistic, real human actor, live-action film look.
+Do NOT alter the background, environment, existing lighting, or any other subject already in the image — only add this one character.
+${styleAnchor ? `\nStyle anchor: ${styleAnchor}` : ''}`;
+};
+
+/** 两阶段合成所需的外部生成函数（注入以便单元测试 mock 真实 API） */
+export interface KeyframeCompositeDeps {
+  generateScene: (prompt: string, sceneRefs: string[], negativePrompt?: string) => Promise<string>;
+  inpaint: (image: string, prompt: string) => Promise<string>;
+  onStage?: (stage: string) => void;
+}
+
+export interface KeyframeCompositeParams {
+  basePrompt: string;
+  visualStyle: string;
+  cameraMovement: string;
+  frameType: 'start' | 'end';
+  sceneImage?: string;
+  characterDescriptions: { name: string; visualPrompt: string; hasImage: boolean }[];
+  propsInfo?: { name: string; description: string; hasImage: boolean }[];
+  eraContext?: string;
+  knowledgeBase?: string;
+  negativePrompt?: string;
+  deps: KeyframeCompositeDeps;
+}
+
+/**
+ * 关键帧两阶段合成（方案 B）：
+ *   阶段 1：生成"无人的真人空场景"底图（image2image / txt2image）；
+ *   阶段 2：对每个角色逐个 image2inpaint 把人补绘进画面。
+ *
+ * 设计要点：
+ * - Drama Backend 的 image2inpaint 是无遮罩、无参考图的提示词驱动接口，
+ *   故角色外貌由文字描述（visualPrompt 提炼）承载；
+ * - 底图为已锁定真人风格的场景，在其上叠加人物，风格漂移风险远低于 IPA 多参考融合；
+ * - 角色逐个可控、必入镜；通过 deps 注入生成函数，便于单元测试。
+ */
+export const generateKeyframeComposite = async (
+  params: KeyframeCompositeParams,
+): Promise<string> => {
+  const { characterDescriptions, sceneImage, deps } = params;
+
+  // 阶段 1：确定底图。
+  // 关键修正：如果用户已经生成好场景图（sceneImage 存在），直接复用它作为底图，
+  // 不再用 "EMPTY SCENE" 提示词把场景重新画一遍（那会浪费一次生成、还可能改掉用户
+  // 看中的场景效果）。仅当完全没有场景图时，才兜底生成"无人的真人空场景"。
+  let current: string;
+  if (sceneImage) {
+    deps.onStage?.(`直接使用已生成的场景图作为底图，开始补绘角色…`);
+    current = sceneImage;
+  } else {
+    const totalStages = characterDescriptions.length + 1;
+    deps.onStage?.(`阶段 1/${totalStages}：生成真人空场景…`);
+    current = await deps.generateScene(
+      await buildEmptyScenePrompt(
+        params.basePrompt,
+        params.visualStyle,
+        params.cameraMovement,
+        params.frameType,
+        params.propsInfo,
+        params.eraContext,
+        params.knowledgeBase,
+      ),
+      [],
+      params.negativePrompt,
+    );
+  }
+
+  const layout = assignCharacterLayout(characterDescriptions.length);
+  const totalStages = sceneImage ? characterDescriptions.length : characterDescriptions.length + 1;
+  for (let i = 0; i < characterDescriptions.length; i++) {
+    const c = characterDescriptions[i];
+    const appearance = extractAppearanceText(c.visualPrompt) || c.name;
+    const inpaintPrompt = buildCharacterInpaintPrompt({
+      name: c.name,
+      appearanceText: appearance,
+      position: layout[i],
+      visualStyle: params.visualStyle,
+      frameType: params.frameType,
+    });
+    // 有场景图时阶段编号从 1 开始（仅角色补绘）；无场景图时从 2 开始（含前面的生成阶段）
+    const stageNum = sceneImage ? i + 1 : i + 2;
+    deps.onStage?.(`阶段 ${stageNum}/${totalStages}：补绘角色「${c.name}」…`);
+    current = await deps.inpaint(current, inpaintPrompt);
+  }
+
+  return current;
+};
+
+/**
+ * IPA 关键帧验证：把"场景图 + 多张角色三视图"按指定分工送进 image2ipastyletransfer。
+ *
+ * 字段映射（对应 api.md 的 image2ipastyletransfer）：
+ *   image1  = 场景概念图
+ *   image2  = 角色1 三视图（无三视图时回退定妆照 imageUrl）
+ *   image3  = 角色2 三视图（无三视图时回退定妆照 imageUrl）
+ *   ref_image = 场景概念图（作为风格参考，与 image1 内容参考同源）
+ *
+ * 注意：不使用 getRefImagesForShot —— 它会把 turnaround / props 也塞进参考数组，
+ * 破坏 image2=角色1 / image3=角色2 的固定分工；此函数独立构造，顺序严格可控。
+ */
+export interface IPACharacterRef {
+  name: string;
+  threeViewImageUrl?: string;
+  imageUrl?: string;
+}
+
+export interface IPAKeyframeRequest {
+  prompt: string;
+  referenceImages: string[]; // [场景, 角色1, 角色2, ...]
+  refImage: string; // 场景概念图
+  negativePrompt?: string;
+  aspectRatio: AspectRatio;
+  resourceType: 'keyframe';
+  resourceId: string;
+  isIPAStyleTransfer: true;
+}
+
+export const buildIPAKeyframeRequest = (params: {
+  basePrompt: string;
+  sceneImage: string; // 场景概念图 → image1 + ref_image
+  characterRefs: IPACharacterRef[];
+  negativePrompt?: string;
+  aspectRatio?: AspectRatio;
+  visualStyle?: string;
+  shotId: string;
+}): IPAKeyframeRequest => {
+  const referenceImages = [
+    params.sceneImage,
+    ...params.characterRefs.map((c) => c.threeViewImageUrl || c.imageUrl || ''),
+  ].filter(Boolean);
+
+  // 真人电影风格锚定：对抗 IPA 对参考图风格的复制。
+  // 关键帧 prompt 一般已含 live-action 段，此处幂等加固。
+  const prompt = appendStyleAnchor(params.basePrompt, params.visualStyle || 'live-action');
+
+  return {
+    prompt,
+    referenceImages,
+    refImage: params.sceneImage,
+    negativePrompt: params.negativePrompt,
+    aspectRatio: params.aspectRatio || '16:9',
+    resourceType: 'keyframe',
+    resourceId: params.shotId,
+    isIPAStyleTransfer: true,
+  };
 };

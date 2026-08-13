@@ -20,6 +20,7 @@ import {
 import { logger, LogCategory } from '../../services/logger';
 import {
   generateImage,
+  generateInpaintImage,
   generateVideo,
   generateActionSuggestion,
   generateVisualLanguage,
@@ -50,6 +51,11 @@ import {
   replaceShotWithSubShots,
   buildPromptFromNineGridPanel,
   cropPanelFromNineGrid,
+  shouldUseIPAFusion,
+  appendStyleAnchor,
+  getSceneImageForShot,
+  generateKeyframeComposite,
+  buildIPAKeyframeRequest,
 } from './utils';
 import { unifiedImageService } from '../../services/unifiedImageService';
 import { DEFAULTS, CAMERA_MOVEMENT_TYPES } from './constants';
@@ -68,7 +74,7 @@ import { presetManager } from '../../services/videoPresetManager';
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
-  onApiKeyError?: (error: any) => boolean;
+  onApiKeyError?: (error: unknown) => boolean;
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
@@ -97,6 +103,13 @@ const StageDirector: React.FC<Props> = ({
     percent: number;
     message: string;
   } | null>(null);
+  // 关键帧两阶段合成的实时阶段文案：key = `${shotId}:${type}`，
+  // 用于在关键帧面板的加载区就地展示进度，替代原先需要点击关闭的模态弹窗。
+  const [keyframeStageMessages, setKeyframeStageMessages] = useState<Record<string, string>>({});
+  // IPA 关键帧验证开关：开启后，有角色的镜头改走 image2ipastyletransfer
+  // （image1=场景 / image2=角色1三视图 / image3=角色2三视图 / ref_image=场景），
+  // 用于验证 IPA 多参考融合能否压制风格漂移。默认关闭，关键帧默认仍走方案 B（composite）。
+  const [keyframeIPAVerify, setKeyframeIPAVerify] = useState(false);
 
   // 关键帧生成使用的横竖屏比例（优先读取工程级配置，向后兼容全局）
   const [keyframeAspectRatio, setKeyframeAspectRatioState] = useState<AspectRatio>(
@@ -368,17 +381,124 @@ const StageDirector: React.FC<Props> = ({
       const combinedNegativePrompt =
         shotNegativePrompts.length > 0 ? shotNegativePrompts.join('\n') : undefined;
 
-      // 使用当前设置的横竖屏比例生成关键帧，传递 hasTurnaround 标记
-      const url = await generateImage(
-        prompt,
-        refResult.images,
-        keyframeAspectRatio,
-        false,
-        refResult.hasTurnaround,
-        'keyframe',
-        shot.id,
-        combinedNegativePrompt,
-      );
+      // 后台确认：当前 Drama Backend 图像模型不支持 negative_prompt。
+      // 临时置 false 不向下传递负面提示词，验证是否会改善生成效果；
+      // 若后台后续支持，改回 true 即可恢复。
+      const ENABLE_NEGATIVE_PROMPT = false;
+      const effectiveNegativePrompt = ENABLE_NEGATIVE_PROMPT ? combinedNegativePrompt : undefined;
+
+      // 有角色关联时，走方案 B：把角色合成进场景。
+      // 背景：IPA 多参考融合会把参考图（定妆照/场景）的风格一起学，在当前参考图质量下
+      // 无法产出真人电影感（已实测两次漂移）。
+      // 正确做法：用户已经生成好场景图与角色图，直接复用已有场景图作为底图，
+      // 再逐个用 inpaint 把角色补绘进去（仅当完全没有场景图时才兜底生成空场景）。
+      // 这样不会重复生成场景、也不会改掉用户看中的场景效果。
+      const hasCharacters = (shot.characters?.length ?? 0) > 0;
+      let url: string;
+
+      if (hasCharacters && keyframeIPAVerify) {
+        // IPA 验证模式：image2ipastyletransfer
+        //   image1 = 场景概念图
+        //   image2 = 角色1 三视图（无三视图时回退定妆照）
+        //   image3 = 角色2 三视图（无三视图时回退定妆照）
+        //   ref_image = 场景概念图（风格参考）
+        // 用于验证 IPA 多参考融合能否压制风格漂移（此前两次实测漂移已回退，本次用对字段重测）。
+        const sceneImage = getSceneImageForShot(shot, project.scriptData);
+        if (!sceneImage) {
+          showAlert('IPA 验证需要先生成场景概念图', { type: 'error' });
+          return;
+        }
+        const characterRefs = (shot.characters || []).map((cid) => {
+          const c = project.scriptData?.characters.find((x) => String(x.id) === String(cid));
+          return {
+            name: c?.name || String(cid),
+            threeViewImageUrl: c?.threeViewImageUrl,
+            imageUrl: c?.imageUrl,
+          };
+        });
+        const ipaReq = buildIPAKeyframeRequest({
+          basePrompt: prompt,
+          sceneImage,
+          characterRefs,
+          negativePrompt: effectiveNegativePrompt,
+          aspectRatio: keyframeAspectRatio,
+          visualStyle,
+          shotId: shot.id,
+        });
+        url = await generateImage(
+          ipaReq.prompt,
+          ipaReq.referenceImages,
+          ipaReq.aspectRatio,
+          false,
+          false,
+          ipaReq.resourceType,
+          ipaReq.resourceId,
+          ipaReq.negativePrompt,
+          true, // useIPA
+          ipaReq.refImage, // refImage
+        );
+      } else if (hasCharacters) {
+        const sceneImage = getSceneImageForShot(shot, project.scriptData);
+        url = await generateKeyframeComposite({
+          basePrompt,
+          visualStyle,
+          cameraMovement: shot.cameraMovement,
+          frameType: type,
+          sceneImage,
+          characterDescriptions,
+          propsInfo,
+          eraContext: project.eraContext,
+          knowledgeBase: project.knowledgeBase,
+          negativePrompt: effectiveNegativePrompt,
+          deps: {
+            // 阶段1：空场景底图（仅用场景参考图，不用角色图，避免风格污染）
+            generateScene: (p, refs, np) =>
+              generateImage(
+                p,
+                refs,
+                keyframeAspectRatio,
+                false,
+                false,
+                'keyframe',
+                shot.id,
+                np,
+                false,
+              ),
+            // 阶段2：逐个把角色 inpaint 进底图
+            inpaint: (img, p) => generateInpaintImage(img, p, 'keyframe', shot.id),
+            // 阶段进度就地展示在关键帧面板加载区，不再弹需要点击的模态
+            onStage: (s) =>
+              setKeyframeStageMessages((prev) => ({
+                ...prev,
+                [`${shot.id}:${type}`]: s,
+              })),
+          },
+        });
+      } else {
+        // 无角色镜头：沿用原有单图路径（image2image / txt2image，必要时 IPA）
+        const useIPAFusion = shouldUseIPAFusion(
+          refResult.images.length,
+          shot.characters?.length ?? 0,
+        );
+
+        // IPA 多参考融合场景：参考图可能携带非写实风格信号，
+        // 在 prompt 末尾防御性追加真人电影风格锁定段，对抗风格漂移。
+        if (useIPAFusion) {
+          prompt = appendStyleAnchor(prompt, visualStyle);
+        }
+
+        url = await generateImage(
+          prompt,
+          refResult.images,
+          keyframeAspectRatio,
+          false,
+          refResult.hasTurnaround,
+          'keyframe',
+          shot.id,
+          effectiveNegativePrompt,
+          useIPAFusion,
+        );
+      }
 
       // 使用函数式更新，避免闭包问题
       updateProject((prevProject: ProjectState) => {
@@ -408,8 +528,9 @@ const StageDirector: React.FC<Props> = ({
 
       // 生成成功后关闭图片预览 Modal
       setPreviewImage(null);
-    } catch (e: any) {
-      logger.error(LogCategory.AI, e);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      logger.error(LogCategory.AI, errorMessage, e);
       updateProject((prevProject: ProjectState) => ({
         ...prevProject,
         shots: prevProject.shots.map((s) => {
@@ -423,7 +544,14 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`生成失败: ${errorMessage}`, { type: 'error' });
+    } finally {
+      // 生成结束（成功/失败）后清除该关键帧的阶段进度文案，避免残留
+      setKeyframeStageMessages((prev) => {
+        const next = { ...prev };
+        delete next[`${shot.id}:${type}`];
+        return next;
+      });
     }
   };
 
@@ -435,8 +563,8 @@ const StageDirector: React.FC<Props> = ({
     input.type = 'file';
     input.accept = 'image/*';
 
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       if (!file.type.startsWith('image/')) {
@@ -540,7 +668,7 @@ const StageDirector: React.FC<Props> = ({
     // 更新 shot 的 videoModel
     updateShot(shot.id, (s) => ({
       ...s,
-      videoModel: selectedModel as any,
+      videoModel: selectedModel,
       interval: s.interval
         ? { ...s.interval, status: 'generating', videoPrompt }
         : {
@@ -614,7 +742,8 @@ const StageDirector: React.FC<Props> = ({
       } catch (error) {
         logger.error(LogCategory.AI, '❌ 保存视频失败:', error);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, '', e);
       updateShot(shot.id, (s) => ({
         ...s,
@@ -622,7 +751,7 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`视频生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`视频生成失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -682,7 +811,7 @@ const StageDirector: React.FC<Props> = ({
     // 写回 shot.interval（含高级参数）
     updateShot(shot.id, (s) => ({
       ...s,
-      videoModel: params.modelId as any,
+      videoModel: params.modelId,
       interval: {
         id: intervalId,
         startKeyframeId: sKf?.id || '',
@@ -861,7 +990,8 @@ const StageDirector: React.FC<Props> = ({
       } catch (error) {
         logger.error(LogCategory.AI, '❌ 保存视频失败:', error);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       setGenerationProgress(null);
       logger.error(LogCategory.AI, '', e);
       updateShot(shot.id, (s) => ({
@@ -869,7 +999,7 @@ const StageDirector: React.FC<Props> = ({
         interval: s.interval ? { ...s.interval, status: 'failed' } : undefined,
       }));
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`高级视频生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`高级视频生成失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -972,7 +1102,7 @@ const StageDirector: React.FC<Props> = ({
     const migrated = presetManager.loadPreset(preset);
     updateShot(activeShot.id, (s) => ({
       ...s,
-      videoModel: migrated.params.modelId as any,
+      videoModel: migrated.params.modelId,
       interval: s.interval
         ? {
             ...s.interval,
@@ -1023,7 +1153,7 @@ const StageDirector: React.FC<Props> = ({
     await executeBatchGenerate(shotsToProcess, isRegenerate);
   };
 
-  const executeBatchGenerate = async (shotsToProcess: any[], isRegenerate: boolean) => {
+  const executeBatchGenerate = async (shotsToProcess: Shot[], isRegenerate: boolean) => {
     setBatchProgress({
       current: 0,
       total: shotsToProcess.length,
@@ -1042,7 +1172,7 @@ const StageDirector: React.FC<Props> = ({
 
       try {
         await handleGenerateKeyframe(shot, 'start');
-      } catch (e: any) {
+      } catch (e: unknown) {
         logger.error(LogCategory.AI, `Failed to generate for shot ${shot.id}`, e);
         if (onApiKeyError && onApiKeyError(e)) {
           setBatchProgress(null);
@@ -1222,10 +1352,11 @@ const StageDirector: React.FC<Props> = ({
       if (editModal && editModal.type === 'action') {
         setEditModal({ ...editModal, value: suggestion });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, 'AI动作生成失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`AI动作生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`AI动作生成失败: ${errorMessage}`, { type: 'error' });
     } finally {
       setIsAIGenerating(false);
     }
@@ -1298,10 +1429,11 @@ const StageDirector: React.FC<Props> = ({
       });
 
       showAlert(`${type === 'start' ? '起始帧' : '结束帧'}提示词已优化`, { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, 'AI优化失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`AI优化失败: ${e.message}`, { type: 'error' });
+      showAlert(`AI优化失败: ${errorMessage}`, { type: 'error' });
     } finally {
       setIsAIGenerating(false);
     }
@@ -1394,10 +1526,11 @@ const StageDirector: React.FC<Props> = ({
         `起始帧和结束帧提示词已优化${skippedFrames.length > 0 ? `（${skippedFrames.join('、')}已锁定已跳过）` : ''}`,
         { type: 'success' },
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, 'AI优化失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`AI优化失败: ${e.message}`, { type: 'error' });
+      showAlert(`AI优化失败: ${errorMessage}`, { type: 'error' });
     } finally {
       setIsAIGenerating(false);
     }
@@ -1488,10 +1621,11 @@ const StageDirector: React.FC<Props> = ({
       // 6. 关闭工作台，显示成功提示
       setActiveShotId(null);
       showAlert(`镜头已拆分为 ${subShots.length} 个子镜头`, { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, '镜头拆分失败:', e);
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`拆分失败: ${e.message}`, { type: 'error' });
+      showAlert(`拆分失败: ${errorMessage}`, { type: 'error' });
     } finally {
       setIsSplittingShot(false);
     }
@@ -1565,7 +1699,8 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       showAlert('9个镜头描述已生成，请检查并编辑后确认生成图片', { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, '九宫格镜头描述生成失败:', e);
       updateShot(shot.id, (s) => ({
         ...s,
@@ -1576,7 +1711,7 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`镜头描述生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`镜头描述生成失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -1695,7 +1830,8 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       showAlert('V2 九宫格分镜生成完成！（风格帧→分格）', { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, 'V2 九宫格分镜生成失败:', e);
       updateShot(shot.id, (s) => ({
         ...s,
@@ -1705,7 +1841,7 @@ const StageDirector: React.FC<Props> = ({
         },
       }));
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`V2 九宫格分镜生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`V2 九宫格分镜生成失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -1752,7 +1888,8 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       showAlert('九宫格分镜图片生成完成！', { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, '九宫格图片生成失败:', e);
       updateShot(activeShot.id, (s) => ({
         ...s,
@@ -1763,7 +1900,7 @@ const StageDirector: React.FC<Props> = ({
       }));
 
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`九宫格图片生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`九宫格图片生成失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -1849,9 +1986,10 @@ const StageDirector: React.FC<Props> = ({
       // 4. 关闭弹窗
       setShowNineGrid(false);
       showAlert(`已将「${panel.shotSize}/${panel.cameraAngle}」视角设为首帧`, { type: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.AI, '裁剪九宫格面板失败:', e);
-      showAlert(`裁剪失败: ${e.message}`, { type: 'error' });
+      showAlert(`裁剪失败: ${errorMessage}`, { type: 'error' });
     }
   };
 
@@ -2020,6 +2158,9 @@ const StageDirector: React.FC<Props> = ({
             }
             isAIOptimizing={isAIGenerating}
             isSplittingShot={isSplittingShot}
+            keyframeStageMessages={keyframeStageMessages}
+            keyframeIPAVerify={keyframeIPAVerify}
+            onToggleKeyframeIPAVerify={() => setKeyframeIPAVerify((v) => !v)}
             onClose={() => setActiveShotId(null)}
             onPrevious={() => setActiveShotId(project.shots[activeShotIndex - 1].id)}
             onNext={() => setActiveShotId(project.shots[activeShotIndex + 1].id)}
@@ -2101,7 +2242,7 @@ const StageDirector: React.FC<Props> = ({
               setToastMessage(lines.join('\n'));
               updateShot(activeShot.id, (s) => ({
                 ...s,
-                videoModel: modelId as any,
+                videoModel: modelId,
               }));
             }}
             onSaveAdvancedParams={(params) => {
@@ -2279,9 +2420,8 @@ const StageDirector: React.FC<Props> = ({
               ...s,
               cameraChoreography: choreography,
               cameraMovement: choreography
-                ? CAMERA_MOVEMENT_TYPES.find((m) => m.id === (choreography as any).movementType)
-                    ?.label ||
-                  (choreography as any).movementType ||
+                ? CAMERA_MOVEMENT_TYPES.find((m) => m.id === choreography.movementType)?.label ||
+                  choreography.movementType ||
                   s.cameraMovement
                 : s.cameraMovement,
               shotSize: choreography?.startShotSize || s.shotSize,

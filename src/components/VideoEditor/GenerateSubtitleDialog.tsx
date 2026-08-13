@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { X, Loader2, Sparkles, Check, AlertCircle } from 'lucide-react';
 import { useTimelineStore } from '../../stores/timelineStore';
 import { TextClip } from '../../types/editor';
-import { chatCompletion } from '../../../services/ai/apiCore';
+import { chatCompletion, parseLlmJson } from '../../../services/ai/apiCore';
 import { Shot } from '../../../types';
 import { logger, LogCategory } from '../../../services/logger.ts';
 
@@ -84,8 +84,7 @@ ${clipTable}
       setProgress('正在分析片段内容并生成字幕...');
       const response = await chatCompletion(prompt, 'glm-4-flash', 0.8, 4096, 'json_object');
       logger.info(LogCategory.VIDEO, '[GenerateSubtitle] LLM 返回:', response);
-      const cleaned = response.replace(/```json\s*|\s*```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
+      const parsed = parseLlmJson(response);
       let subtitles: { index: number; text: string }[];
       if (Array.isArray(parsed)) {
         subtitles = parsed;
@@ -137,9 +136,9 @@ ${clipTable}
 
       setProgress(`成功生成 ${createdCount} 条字幕`);
       setResult('done');
-    } catch (e: any) {
+    } catch (e: unknown) {
       logger.error(LogCategory.VIDEO, '[GenerateSubtitle] 失败:', e);
-      setProgress(`生成失败: ${e.message}`);
+      setProgress(`生成失败: ${e instanceof Error ? e.message : String(e)}`);
       setResult('error');
     } finally {
       setGenerating(false);

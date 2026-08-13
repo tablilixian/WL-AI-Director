@@ -15,11 +15,14 @@ import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
-  cleanJsonString,
   chatCompletion,
   getActiveModel,
   logScriptProgress,
   getDefaultChatModelId,
+  getErrorMessage,
+  parseLlmJson,
+  MAX_TOKENS_LONG,
+  MAX_TOKENS_SHORT,
 } from './apiCore';
 import { getStylePrompt, VISUAL_STYLE_PROMPTS_CN } from './promptConstants';
 import {
@@ -35,6 +38,25 @@ import {
   callDramaBackend360HdriApi,
 } from '../adapters/imageAdapter';
 import { buildEraContextBlock } from './eraContext';
+import { buildArtDirectionBlock } from './promptLayers/photographyLayer';
+import type { PromptIntent } from '../../types/prompt';
+import { PromptBuilder } from './promptBuilder';
+
+interface VisualPromptPair {
+  visualPrompt?: string;
+  negativePrompt?: string;
+}
+
+interface VisualPromptBatch {
+  results: VisualPromptPair[];
+}
+
+interface StyleSuggestionResponse {
+  suggestedStyle?: string;
+  isCustom?: boolean;
+  confidence?: string;
+  reason?: string;
+}
 
 // ============================================
 // 美术指导文档生成
@@ -116,10 +138,9 @@ Output ONLY valid JSON with this exact structure:
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as ArtDirection;
 
     const artDirection: ArtDirection = {
       colorPalette: parsed.colorPalette,
@@ -132,9 +153,9 @@ Output ONLY valid JSON with this exact structure:
 
     logger.debug(LogCategory.AI, '✅ 美术指导文档生成完成');
     return artDirection;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 美术指导文档生成失败:', error);
-    throw new Error(`美术指导文档生成失败: ${error.message}`);
+    throw new Error(`美术指导文档生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -155,6 +176,8 @@ export const generateImage = async (
   resourceType?: string,
   resourceId?: string,
   negativePrompt?: string,
+  useIPA?: boolean,
+  refImage?: string,
 ): Promise<string> => {
   const startTime = Date.now();
 
@@ -208,6 +231,8 @@ Scene consistency requirements:
       resourceType,
       resourceId,
       negativePrompt,
+      isIPAStyleTransfer: useIPA,
+      refImage,
     });
 
     addRenderLogWithTokens({
@@ -221,7 +246,7 @@ Scene consistency requirements:
     });
 
     return imageUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'image-' + Date.now(),
@@ -229,7 +254,7 @@ Scene consistency requirements:
       status: 'failed',
       model: imageModelId,
       prompt: prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
@@ -355,16 +380,15 @@ Write all descriptions in ${language}.`;
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as { panels: CharacterTurnaroundPanel[] };
 
     if (!parsed.panels || parsed.panels.length !== 9) {
       throw new Error('生成的九宫格面板数量不正确');
     }
 
-    const panels: CharacterTurnaroundPanel[] = parsed.panels.map((p: any) => ({
+    const panels: CharacterTurnaroundPanel[] = parsed.panels.map((p) => ({
       index: p.index,
       viewAngle: p.viewAngle,
       shotSize: p.shotSize,
@@ -373,9 +397,9 @@ Write all descriptions in ${language}.`;
 
     logger.debug(LogCategory.AI, '✅ 角色九宫格造型设计生成完成');
     return panels;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 角色九宫格造型设计生成失败:', error);
-    throw new Error(`角色九宫格造型设计生成失败: ${error.message}`);
+    throw new Error(`角色九宫格造型设计生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -447,51 +471,15 @@ Generate ONE square image with a perfect3x3 grid of 9 equal-sized panels.`;
 
     logger.debug(LogCategory.AI, '✅ 角色九宫格图片生成完成');
     return imageUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 角色九宫格图片生成失败:', error);
-    throw new Error(`角色九宫格图片生成失败: ${error.message}`);
+    throw new Error(`角色九宫格图片生成失败: ${getErrorMessage(error)}`);
   }
 };
 
 // ============================================
 // 视觉提示词生成
 // ============================================
-
-/**
- * 生成角色视觉提示词
- * 基于角色信息和美术指导，生成详细的视觉描述
- */
-function buildArtDirectionBlock(
-  artDirection: ArtDirection | undefined,
-  designLabel: string,
-): string {
-  if (!artDirection) {
-    return '## Art Direction\n(未配置全局美术指导，沿用默认风格约束)';
-  }
-  return `## Art Direction Guidelines
-${artDirection.consistencyAnchors}
-
-## ${designLabel} Design Rules
-${artDirection.characterDesignRules.proportions}
-${artDirection.characterDesignRules.eyeStyle}
-${artDirection.characterDesignRules.lineWeight}
-${artDirection.characterDesignRules.detailLevel}
-
-## Color Palette Guidelines
-- Primary: ${artDirection.colorPalette.primary}
-- Secondary: ${artDirection.colorPalette.secondary}
-- Accent: ${artDirection.colorPalette.accent}
-- Skin Tones: ${artDirection.colorPalette.skinTones}
-- Saturation: ${artDirection.colorPalette.saturation}
-- Temperature: ${artDirection.colorPalette.temperature}
-
-## Lighting & Texture
-- Lighting Style: ${artDirection.lightingStyle}
-- Texture Style: ${artDirection.textureStyle}
-
-## Mood Keywords
-${artDirection.moodKeywords.join(', ')}`;
-}
 
 export const generateCharacterVisualPrompt = async (
   character: Character,
@@ -507,73 +495,79 @@ export const generateCharacterVisualPrompt = async (
   );
   logScriptProgress('正在生成角色视觉提示词...');
 
-  const stylePrompt = getStylePrompt(visualStyle);
+  const signaturePose =
+    character.signaturePose?.polished || character.signaturePose?.original || undefined;
+  const microAction =
+    character.microAction?.polished || character.microAction?.original || undefined;
 
-  const prompt = `You are a world-class visual prompt engineer for ${visualStyle} productions.
-Your task is to create a detailed visual prompt for generating a character image.
+  const intent: PromptIntent = {
+    target: 'character-design',
+    visualStyle,
+    outputFormat: 'json',
+    outputSchema:
+      '{\n  "visualPrompt": "detailed visual prompt text...",\n  "negativePrompt": "things to avoid..."\n}',
+    language,
+    wordCountRange: { min: 200, max: 400 },
+    cinematographyTermsRule: true,
+  };
 
-## Character Information
-- Name: ${character.name}
-- Gender: ${character.gender}
-- Age: ${character.age}
-- Personality: ${character.personality}
-- Visual Style: ${visualStyle} (${stylePrompt})
-- Base Visual Prompt: ${character.visualPrompt || 'Not provided'}
+  // 目标专属要求放入 system prompt 的意图层（L1）
+  const taskRequirements = [
+    '## Your Task',
+    'Create a comprehensive visual prompt that will be used to generate a character image.',
+    '',
+    'CRITICAL REQUIREMENTS:',
+    "1. Describe the character's appearance in DETAIL:",
+    '   - Facial features (eyes, nose, mouth, eyebrows, expression)',
+    '   - Hair (length, color, texture, style, accessories)',
+    '   - Body type and proportions',
+    '   - Clothing/outfit (style, color, materials, accessories)',
+    "   - 【MANDATORY】Include signature pose: Must showcase the character's iconic posture from their signaturePose description",
+    "   - 【MANDATORY】Include micro-actions: Must incorporate the character's distinctive micro-movements from their microAction description",
+    '   - 【MANDATORY】Silhouette & Linework: Describe S-grade silhouette, body curves, and line aesthetics',
+    '   - 【MANDATORY】Body Part Close-ups: Include specific body part details (eyes, lips, fingers, ankles, etc.)',
+    '   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions',
+    '',
+    '2. Apply Art Direction:',
+    '   - Follow the color palette guidelines',
+    '   - Use the specified lighting style',
+    '   - Apply the texture style',
+    '   - Incorporate the mood keywords',
+    '',
+    '3. Be Specific and Actionable:',
+    '   - Use concrete, descriptive language suitable for image generation AI',
+    '   - Include specific details about materials, textures, and lighting',
+    '   - Describe the pose and composition',
+  ].join('\n');
 
-## Character Visual Constraints
-【标志性姿态】必须展现角色的标志性姿态：${character.signaturePose?.polished || character.signaturePose?.original || '待补充'}
-【微动作特征】角色必须携带其微动作特征：${character.microAction?.polished || character.microAction?.original || '无特殊微动作'}
+  const builder = new PromptBuilder(intent).withAssets({ characters: [character] }).withAction({
+    signaturePoses: signaturePose ? [signaturePose] : [],
+    microActions: microAction ? [microAction] : [],
+  });
 
-${buildArtDirectionBlock(artDirection, 'Character')}
+  if (artDirection) {
+    builder.withPhotography(artDirection);
+  }
 
-## Your Task
-Create a comprehensive visual prompt that will be used to generate a character image.
+  const systemPrompt = builder.buildSystemPrompt(taskRequirements);
+  const userPrompt = builder.buildUserPrompt();
 
-CRITICAL REQUIREMENTS:
-1. Describe the character's appearance in DETAIL:
-   - Facial features (eyes, nose, mouth, eyebrows, expression)
-   - Hair (length, color, texture, style, accessories)
-   - Body type and proportions
-   - Clothing/outfit (style, color, materials, accessories)
-   - 【MANDATORY】Include signature pose: Must showcase the character's iconic posture from their signaturePose description
-   - 【MANDATORY】Include micro-actions: Must incorporate the character's distinctive micro-movements from their microAction description
-   - 【MANDATORY】Silhouette & Linework: Describe S-grade silhouette, body curves, and line aesthetics
-   - 【MANDATORY】Body Part Close-ups: Include specific body part details (eyes, lips, fingers, ankles, etc.)
-   - 【MANDATORY】Dynamic Motion: Describe walking, turning, hair-flipping, or other movement actions
-   
-2. Apply Art Direction:
-   - Follow the color palette guidelines
-   - Use the specified lighting style
-   - Apply the texture style
-   - Incorporate the mood keywords
-   
-3. Be Specific and Actionable:
-   - Use concrete, descriptive language suitable for image generation AI
-   - Include specific details about materials, textures, and lighting
-    - Describe the pose and composition
-    
-4. Language:
-    - Write the prompt in ${language}
-    - Use natural, flowing language
-    - CRITICAL: Preserve English cinematography terms untranslated (e.g., Rembrandt lighting, chiaroscuro, deep focus, Dutch angle, dolly zoom, steadicam, crane shot, POV, bokeh, lens flare, anamorphic)
-
-Output JSON format:
-{
-  "visualPrompt": "detailed visual prompt text...",
-  "negativePrompt": "things to avoid..."
-}
-
-- visualPrompt: Length 200-400 words. Describe the character appearance in ${language}.
-- negativePrompt: Describe what should NOT appear (unwanted styles, distortions, etc.) in ${language}.`;
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 4096),
+      chatCompletion(
+        userPrompt,
+        resolvedModel,
+        0.4,
+        MAX_TOKENS_LONG,
+        undefined,
+        600000,
+        systemPrompt,
+      ),
     );
     let visualPrompt = responseText.trim();
     let negativePrompt = '';
     try {
-      const cleaned = cleanJsonString(responseText);
-      const parsed = JSON.parse(cleaned);
+      const parsed = parseLlmJson(responseText) as VisualPromptPair;
       if (parsed.visualPrompt) visualPrompt = parsed.visualPrompt;
       if (parsed.negativePrompt) negativePrompt = parsed.negativePrompt;
     } catch {
@@ -581,9 +575,9 @@ Output JSON format:
     }
     logger.debug(LogCategory.AI, '✅ 角色视觉提示词生成完成');
     return { visualPrompt, negativePrompt };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 角色视觉提示词生成失败:', error);
-    throw new Error(`角色视觉提示词生成失败: ${error.message}`);
+    throw new Error(`角色视觉提示词生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -664,13 +658,12 @@ Output JSON format:
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 4096),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG),
     );
     let visualPrompt = responseText.trim();
     let negativePrompt = '';
     try {
-      const cleaned = cleanJsonString(responseText);
-      const parsed = JSON.parse(cleaned);
+      const parsed = parseLlmJson(responseText) as VisualPromptPair;
       if (parsed.visualPrompt) visualPrompt = parsed.visualPrompt;
       if (parsed.negativePrompt) negativePrompt = parsed.negativePrompt;
     } catch {
@@ -678,9 +671,9 @@ Output JSON format:
     }
     logger.debug(LogCategory.AI, '✅ 场景视觉提示词生成完成');
     return { visualPrompt, negativePrompt };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 场景视觉提示词生成失败:', error);
-    throw new Error(`场景视觉提示词生成失败: ${error.message}`);
+    throw new Error(`场景视觉提示词生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -785,23 +778,24 @@ Output the result in the following JSON format:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096));
-    const cleanedText = cleanJsonString(responseText);
-    const result = JSON.parse(cleanedText);
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, model, 0.4, MAX_TOKENS_LONG),
+    );
+    const result = parseLlmJson(responseText) as VisualPromptPair;
 
     logger.debug(LogCategory.AI, `✅ ${type === 'character' ? '角色' : '场景'}视觉提示词生成完成`);
     return {
       visualPrompt: result.visualPrompt || '',
       negativePrompt: result.negativePrompt || '',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(
       LogCategory.AI,
       `❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`,
       error,
     );
     throw new Error(
-      `${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`,
+      `${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${getErrorMessage(error)}`,
     );
   }
 };
@@ -832,9 +826,9 @@ export const generateCharacterFromDesignImage = async (
 
     logger.debug(LogCategory.AI, '✅ 角色立绘图生成完成');
     return imageUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 角色立绘图生成失败:', error);
-    throw new Error(`角色立绘图生成失败: ${error.message}`);
+    throw new Error(`角色立绘图生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -880,7 +874,7 @@ export const generateStoryboardImage = async (
 
     logger.debug(LogCategory.AI, '✅ 分镜图像生成完成');
     return imageUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'storyboard-' + Date.now(),
@@ -888,11 +882,11 @@ export const generateStoryboardImage = async (
       status: 'failed',
       model: imageModelId,
       prompt: prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`分镜图像生成失败: ${error.message}`);
+    throw new Error(`分镜图像生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -950,7 +944,7 @@ export const generateSpliteGridImage = async (
 
     logger.debug(LogCategory.AI, `✅ 图像分割网格完成，共 ${localUrls.length} 张图片`);
     return localUrls;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'splitegrid-' + Date.now(),
@@ -958,11 +952,11 @@ export const generateSpliteGridImage = async (
       status: 'failed',
       model: imageModelId,
       prompt: `split image into ${row}x${column} grid`,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`图像分割网格失败: ${error.message}`);
+    throw new Error(`图像分割网格失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1005,7 +999,7 @@ export const generateInpaintImage = async (
 
     logger.debug(LogCategory.AI, `✅ 图像修复完成: ${localUrl}`);
     return localUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'inpaint-' + Date.now(),
@@ -1013,11 +1007,11 @@ export const generateInpaintImage = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`图像修复失败: ${error.message}`);
+    throw new Error(`图像修复失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1053,7 +1047,7 @@ export const generate360HdriImage = async (
 
     logger.debug(LogCategory.AI, `✅ 360° HDRI 全景生成完成: ${localUrl}`);
     return localUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: '360hdri-' + Date.now(),
@@ -1061,11 +1055,11 @@ export const generate360HdriImage = async (
       status: 'failed',
       model: imageModelId,
       prompt: '360 HDRI generation',
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`360° HDRI 全景生成失败: ${error.message}`);
+    throw new Error(`360° HDRI 全景生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1111,7 +1105,7 @@ export const generateStyleTransferImage = async (
 
     logger.debug(LogCategory.AI, `✅ 风格迁移完成: ${localUrl}`);
     return localUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'styletransfer-' + Date.now(),
@@ -1119,11 +1113,11 @@ export const generateStyleTransferImage = async (
       status: 'failed',
       model: imageModelId,
       prompt: 'style transfer',
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`风格迁移失败: ${error.message}`);
+    throw new Error(`风格迁移失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1167,7 +1161,7 @@ export const generateIPAStyleTransferImage = async (
 
     logger.debug(LogCategory.AI, `✅ IPA 风格迁移完成: ${localUrl}`);
     return localUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'ipastyletransfer-' + Date.now(),
@@ -1175,11 +1169,11 @@ export const generateIPAStyleTransferImage = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`IPA 风格迁移失败: ${error.message}`);
+    throw new Error(`IPA 风格迁移失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1220,7 +1214,7 @@ export const generateAnimeImage = async (
 
     logger.debug(LogCategory.AI, `✅ 动漫风格生成完成: ${localUrl}`);
     return localUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'anime-' + Date.now(),
@@ -1228,11 +1222,11 @@ export const generateAnimeImage = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`动漫风格生成失败: ${error.message}`);
+    throw new Error(`动漫风格生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1277,7 +1271,7 @@ export const generateVisualLanguage = async (
 
     logger.debug(LogCategory.AI, '✅ 视觉语言推理完成');
     return output;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'vl-' + Date.now(),
@@ -1285,11 +1279,11 @@ export const generateVisualLanguage = async (
       status: 'failed',
       model: imageModelId,
       prompt: prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`视觉语言推理失败: ${error.message}`);
+    throw new Error(`视觉语言推理失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1324,7 +1318,7 @@ export const generatePromptEnhanceImage = async (
 
     logger.debug(LogCategory.AI, `✅ 提示词增强完成，长度: ${enhancedPrompt.length} 字符`);
     return enhancedPrompt;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'promptenhance-' + Date.now(),
@@ -1332,11 +1326,11 @@ export const generatePromptEnhanceImage = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`提示词增强失败: ${error.message}`);
+    throw new Error(`提示词增强失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1459,25 +1453,24 @@ Output ONLY valid JSON with this exact structure:
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as VisualPromptBatch;
 
     if (!parsed.results || !Array.isArray(parsed.results)) {
       throw new Error('批量生成结果格式不正确');
     }
 
-    const results = parsed.results.map((r: any) => ({
+    const results = parsed.results.map((r) => ({
       visualPrompt: r.visualPrompt || '',
       negativePrompt: r.negativePrompt || '',
     }));
 
     logger.debug(LogCategory.AI, '✅ 批量角色视觉提示词生成完成');
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 批量角色视觉提示词生成失败:', error);
-    throw new Error(`批量角色视觉提示词生成失败: ${error.message}`);
+    throw new Error(`批量角色视觉提示词生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1529,10 +1522,9 @@ Compare your extracted keywords against them. Ask yourself: is this an EXACT sem
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.3, 1024, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.3, MAX_TOKENS_SHORT, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as StyleSuggestionResponse;
 
     const result = {
       suggestedStyle: parsed.suggestedStyle || 'live-action',
@@ -1546,9 +1538,9 @@ Compare your extracted keywords against them. Ask yourself: is this an EXACT sem
       `✅ 风格检测完成: ${result.suggestedStyle} (${result.confidence})`,
     );
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 风格检测失败:', error);
-    throw new Error(`视觉风格检测失败: ${error.message}`);
+    throw new Error(`视觉风格检测失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1634,25 +1626,24 @@ Output ONLY valid JSON with this exact structure:
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as VisualPromptBatch;
 
     if (!parsed.results || !Array.isArray(parsed.results)) {
       throw new Error('批量道具提示词生成结果格式不正确');
     }
 
-    const results = parsed.results.map((r: any) => ({
+    const results = parsed.results.map((r) => ({
       visualPrompt: r.visualPrompt || '',
       negativePrompt: r.negativePrompt || '',
     }));
 
     logger.debug(LogCategory.AI, '✅ 批量道具视觉提示词生成完成');
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 批量道具视觉提示词生成失败:', error);
-    throw new Error(`批量道具视觉提示词生成失败: ${error.message}`);
+    throw new Error(`批量道具视觉提示词生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1707,7 +1698,7 @@ export const generateVideoMsr = async (
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MSR 完成: ${localVideoUrl}`);
     return localVideoUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'videomsr-' + Date.now(),
@@ -1715,11 +1706,11 @@ export const generateVideoMsr = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`图像转视频 MSR 失败: ${error.message}`);
+    throw new Error(`图像转视频 MSR 失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1772,7 +1763,7 @@ export const generateVideoMkr = async (
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MKR 完成: ${localVideoUrl}`);
     return localVideoUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'videomkr-' + Date.now(),
@@ -1780,11 +1771,11 @@ export const generateVideoMkr = async (
       status: 'failed',
       model: imageModelId,
       prompt,
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`图像转视频 MKR 失败: ${error.message}`);
+    throw new Error(`图像转视频 MKR 失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -1836,7 +1827,7 @@ export const generateVideoMkrGrid = async (
 
     logger.debug(LogCategory.AI, `✅ 图像转视频 MKR Grid 完成: ${localVideoUrl}`);
     return localVideoUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'keyframe',
       resourceId: 'videomkrgrid-' + Date.now(),
@@ -1847,6 +1838,6 @@ export const generateVideoMkrGrid = async (
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`图像转视频 MKR Grid 失败: ${error.message}`);
+    throw new Error(`图像转视频 MKR Grid 失败: ${getErrorMessage(error)}`);
   }
 };

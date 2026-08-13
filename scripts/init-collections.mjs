@@ -73,7 +73,7 @@ async function main() {
       type: 'base',
       schema: [
         { name: 'project_id', type: 'relation', required: true, collectionId: null, maxSelect: 1 },
-        { name: 'layers', type: 'json', required: true },
+        { name: 'layers', type: 'json', required: true, maxSize: 10485760 },
         { name: 'canvas_offset', type: 'json', required: false },
         { name: 'scale', type: 'number', required: false },
         { name: 'version', type: 'number', required: false },

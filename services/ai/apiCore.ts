@@ -24,6 +24,15 @@ import { VIDEO_SORA_SIZE } from '../../config/sizeConfig';
 import { withConcurrencyLimit } from './concurrencyLimiter';
 
 /**
+ * LLM 输出 token 上限档位。
+ * - MAX_TOKENS_LONG：长 JSON 数组 / 长文本（分镜、剧本解析、批量视觉提示词等），8192 可覆盖 3000 字剧本级别。
+ * - MAX_TOKENS_SHORT：镜头级 / 单条生成（关键帧优化、动作、角色视觉 prompt 等），4096 充裕。
+ * 所有 chatCompletion 调用点的 max_tokens 都应使用这两个常量，避免再次散落硬编码（尤其禁止 1024 这类易截断值）。
+ */
+export const MAX_TOKENS_LONG = 8192;
+export const MAX_TOKENS_SHORT = 4096;
+
+/**
  * 检查是否为 BigModel 模型
  */
 const isBigModelModel = (modelId: string): boolean => {
@@ -264,6 +273,11 @@ export { getActiveModel, getActiveChatModel, getActiveVideoModel, getActiveImage
 // ============================================
 
 /**
+ * 统一从 unknown 类型的错误中提取可读信息（catch 块中 error 默认是 unknown）。
+ */
+export const getErrorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/**
  * 重试操作辅助函数，用于处理429限流、超时、服务器错误等临时性错误
  * 采用指数退避策略
  */
@@ -272,34 +286,36 @@ export const retryOperation = async <T>(
   maxRetries: number = 3,
   baseDelay: number = 2000,
 ): Promise<T> => {
-  let lastError;
+  let lastError: unknown;
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
-    } catch (e: any) {
+    } catch (e: unknown) {
       lastError = e;
+      const err = e as { status?: number; code?: number; message?: string };
+      const message = err.message ?? '';
       const isRetryableError =
-        e.status === 429 ||
-        e.code === 429 ||
-        e.status === 504 ||
-        e.message?.includes('429') ||
-        e.message?.includes('quota') ||
-        e.message?.includes('RESOURCE_EXHAUSTED') ||
-        e.message?.includes('超时') ||
-        e.message?.includes('timeout') ||
-        e.message?.includes('Gateway Timeout') ||
-        e.message?.includes('504') ||
-        e.message?.includes('ECONNRESET') ||
-        e.message?.includes('ETIMEDOUT') ||
-        e.message?.includes('network') ||
-        e.message?.includes('openai_error') ||
-        e.status >= 500;
+        err.status === 429 ||
+        err.code === 429 ||
+        err.status === 504 ||
+        message.includes('429') ||
+        message.includes('quota') ||
+        message.includes('RESOURCE_EXHAUSTED') ||
+        message.includes('超时') ||
+        message.includes('timeout') ||
+        message.includes('Gateway Timeout') ||
+        message.includes('504') ||
+        message.includes('ECONNRESET') ||
+        message.includes('ETIMEDOUT') ||
+        message.includes('network') ||
+        message.includes('openai_error') ||
+        (typeof err.status === 'number' && err.status >= 500);
 
       if (isRetryableError && i < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, i);
         logger.warn(
           LogCategory.AI,
-          `请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试) ${e.message}`,
+          `请求失败，正在重试... (第 ${i + 1}/${maxRetries} 次，${delay}ms后重试) ${message}`,
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
@@ -329,6 +345,195 @@ export const cleanJsonString = (str: string): string => {
 };
 
 /**
+ * 字符级遍历：转义字符串值内部的原始换行/制表符，并修正未转义双引号。
+ * 通过结构状态机区分三种引号语义，避免把「键名闭合引号」误判为「值内嵌引号」：
+ *  - 当前字符串是 key  → 遇到的 " 一律视为键名闭合
+ *  - 当前字符串是 value → 向前看：若后面紧跟 , } ] 视为值闭合，否则视为内嵌引号转义
+ */
+const escapeStringInternals = (s: string): string => {
+  let out = '';
+  let inString = false;
+  let currentStringType: 'key' | 'value' | null = null;
+  // 下一个顶层 " 打开的是 key 还是 value（由结构上下文决定）
+  let mode: 'key' | 'value' = 'key';
+  const containerStack: Array<'obj' | 'arr'> = [];
+  // 与 containerStack 平行：栈顶标记「当前容器内是否已出现至少一个元素」。
+  // 用于修复 LLM 漏写数组分隔符（如 [{"a":1}{"b":2}]），仅在 arr 容器内、元素之后补 ','，
+  // 绝不动 obj 容器（对象靠 key:"..." 区分，补逗号会破坏结构）。
+  const expectComma: boolean[] = [];
+  let escaped = false;
+
+  const topContainer = (): 'obj' | 'arr' | null =>
+    containerStack.length > 0 ? containerStack[containerStack.length - 1] : null;
+  // 在「容器内已存在元素、且之后出现新值起点」时补一个 ','，并标记已有元素。
+  // 仅在数组(arr)容器内补逗号：对象(obj)靠 key:"..." 区分元素，补逗号会破坏结构。
+  const markElementStart = (): void => {
+    if (expectComma.length === 0) return;
+    const i = expectComma.length - 1;
+    if (expectComma[i] && topContainer() === 'arr') out += ',';
+    expectComma[i] = true;
+  };
+
+  const modeAfterContainer = (): 'key' | 'value' => (topContainer() === 'obj' ? 'key' : 'value');
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      if (!inString) {
+        markElementStart();
+        inString = true;
+        currentStringType = mode;
+        out += ch;
+      } else if (currentStringType === 'key') {
+        // 键名闭合：总是真正的闭合
+        inString = false;
+        currentStringType = null;
+        mode = 'value'; // 键名之后是 : value
+        out += ch;
+      } else {
+        // 值字符串：判断是否真正闭合。
+        // 跳过空白后，若遇到 , } ]（结构分隔）或 " [ { 数字/字面量（下一个值起点），
+        // 即视为当前字符串已自然闭合（覆盖 "a" "b" 漏逗号、字符串后跟新值等）。
+        // 否则（后面紧跟普通字符）视为字符串内未转义引号 → 转义，避免过早闭合。
+        const rest = s.slice(i + 1);
+        if (/^\s*([,}\]]|"|\[|\{|[-0-9]|t|f|n)/.test(rest)) {
+          inString = false;
+          currentStringType = null;
+          mode = modeAfterContainer();
+          out += ch;
+        } else {
+          // 值内部的未转义引号 → 转义，避免字符串过早闭合
+          out += '\\"';
+        }
+      }
+      continue;
+    }
+    if (inString) {
+      if (ch === '\n') {
+        out += '\\n';
+        continue;
+      }
+      if (ch === '\r') {
+        out += '\\r';
+        continue;
+      }
+      if (ch === '\t') {
+        out += '\\t';
+        continue;
+      }
+    } else {
+      // 结构令牌推动 mode 与容器栈
+      if (ch === '{') {
+        markElementStart();
+        containerStack.push('obj');
+        expectComma.push(false);
+        mode = 'key';
+      } else if (ch === '[') {
+        markElementStart();
+        containerStack.push('arr');
+        expectComma.push(false);
+        mode = 'value';
+      } else if (ch === '}') {
+        containerStack.pop();
+        expectComma.pop();
+        mode = modeAfterContainer();
+      } else if (ch === ']') {
+        containerStack.pop();
+        expectComma.pop();
+        mode = modeAfterContainer();
+      } else if (ch === ':') {
+        mode = 'value';
+      } else if (ch === ',') {
+        mode = modeAfterContainer();
+      } else if (ch === '-' || (ch >= '0' && ch <= '9')) {
+        // 数字值起点（覆盖整数/小数/负数/科学计数法），补缺失的数组分隔符
+        markElementStart();
+      } else if (
+        (ch === 't' || ch === 'f' || ch === 'n') &&
+        /^(true|false|null)/.test(s.slice(i))
+      ) {
+        // 字面量值起点（true/false/null），补缺失的数组分隔符
+        markElementStart();
+      }
+    }
+    out += ch;
+  }
+  return out;
+};
+
+/**
+ * 在 JSON.parse 失败时对「接近合法」的 LLM JSON 做尽力修复。
+ * 仅作为兜底，不改动正常解析路径。覆盖四类最常见缺陷：
+ *  1) 字符串值内部的未转义换行/制表符（V8 报 Bad control character）
+ *  2) 字符串值内部的未转义双引号（导致字符串过早闭合 → Expected ',' or '}'）
+ *  3) 对象/数组末尾的多余逗号
+ *  4) 数组元素之间漏写的逗号（如 [{"a":1}{"b":2}] → Expected ',' or ']'）
+ */
+export const repairBrokenJson = (raw: string): string => {
+  if (!raw) return '{}';
+  let s = raw.trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+
+  // 截取最外层对象或数组
+  const objStart = s.indexOf('{');
+  const arrStart = s.indexOf('[');
+  let start = -1;
+  let endChar = '';
+  if (objStart === -1 && arrStart === -1) return s;
+  if (objStart !== -1 && (arrStart === -1 || objStart < arrStart)) {
+    start = objStart;
+    endChar = '}';
+  } else {
+    start = arrStart;
+    endChar = ']';
+  }
+  const end = s.lastIndexOf(endChar);
+  if (start === -1 || end === -1 || end < start) return s;
+  s = s.slice(start, end + 1);
+
+  s = escapeStringInternals(s);
+  // 去除对象/数组末尾的多余逗号
+  s = s.replace(/,(\s*[}\]])/g, '$1');
+  return s;
+};
+
+/**
+ * 健壮解析 LLM 返回的 JSON：三级兜底，正常路径零影响。
+ *  1) 直接 JSON.parse(原始串)
+ *  2) JSON.parse(cleanJsonString(原始串))  —— 去 markdown 围栏、截 {…}
+ *  3) JSON.parse(repairBrokenJson(原始串)) —— 修复未转义引号/换行/尾随逗号/数组漏逗号
+ * 全部失败才抛出带上下文的错误。合法 JSON 走第 1 步，行为与 JSON.parse 完全一致。
+ */
+export const parseLlmJson = <T = unknown>(raw: string, context?: string): T => {
+  const tryParse = (s: string): T => JSON.parse(s) as T;
+  try {
+    return tryParse(raw);
+  } catch {
+    try {
+      return tryParse(cleanJsonString(raw));
+    } catch {
+      try {
+        return tryParse(repairBrokenJson(raw));
+      } catch (e) {
+        throw new Error(
+          `LLM JSON 解析失败${context ? ` (${context})` : ''}: ${(e as Error).message}`,
+        );
+      }
+    }
+  }
+};
+
+/**
  * 从 HTTP 错误响应中解析错误信息，返回带 status 属性的 Error
  */
 export const parseHttpError = async (response: Response): Promise<Error> => {
@@ -345,7 +550,7 @@ export const parseHttpError = async (response: Response): Promise<Error> => {
       // ignore
     }
   }
-  const err: any = new Error(errorMessage);
+  const err = new Error(errorMessage) as Error & { status: number };
   err.status = httpStatus;
   return err;
 };
@@ -354,6 +559,15 @@ export const parseHttpError = async (response: Response): Promise<Error> => {
 // Chat Completion API
 // ============================================
 
+interface ChatCompletionRequest {
+  model: string;
+  messages: { role: string; content: string }[];
+  max_tokens: number;
+  temperature?: number;
+  response_format?: { type: string };
+  stream?: boolean;
+}
+
 /**
  * 调用聊天完成API（非流式）
  */
@@ -361,9 +575,10 @@ export const chatCompletion = async (
   prompt: string,
   model?: string,
   temperature: number = 0.7,
-  maxTokens: number = 8192,
+  maxTokens: number = MAX_TOKENS_LONG,
   responseFormat?: 'json_object',
   timeout: number = 600000,
+  systemPrompt?: string,
 ): Promise<string> => {
   const resolvedModel = model || getDefaultChatModelId();
   const apiKey = checkApiKey('chat', resolvedModel);
@@ -371,9 +586,18 @@ export const chatCompletion = async (
 
   const resolved = resolveModel('chat', resolvedModel);
 
-  const requestBody: any = {
+  // 七层提示词架构：systemPrompt 承载不变约束层(L1+L5+L6+L7)，
+  // 与每次变化的 user prompt 分离，降低 token 消耗并提升稳定性。
+  const messages: { role: 'system' | 'user'; content: string }[] = systemPrompt
+    ? [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ]
+    : [{ role: 'user', content: prompt }];
+
+  const requestBody: ChatCompletionRequest = {
     model: requestModel,
-    messages: [{ role: 'user', content: prompt }],
+    messages,
     max_tokens: maxTokens,
   };
 
@@ -415,9 +639,10 @@ export const chatCompletion = async (
 
       const data = await response.json();
       return data.choices?.[0]?.message?.content || '';
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      const err = error as { name?: string };
+      if (err.name === 'AbortError') {
         throw new Error(`请求超时（${timeout}ms）`);
       }
       throw error;
@@ -432,7 +657,7 @@ export const chatCompletionStream = async (
   prompt: string,
   model?: string,
   temperature: number = 0.7,
-  maxTokens: number = 8192,
+  maxTokens: number = MAX_TOKENS_LONG,
   responseFormat: 'json_object' | undefined = undefined,
   timeout: number = 600000,
   onDelta?: (delta: string) => void,
@@ -441,7 +666,7 @@ export const chatCompletionStream = async (
   const apiKey = checkApiKey('chat', resolvedModel);
   const requestModel = resolveRequestModel('chat', resolvedModel);
   const resolved = resolveModel('chat', resolvedModel);
-  const requestBody: any = {
+  const requestBody: ChatCompletionRequest = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
     max_tokens: maxTokens,
@@ -538,9 +763,10 @@ export const chatCompletionStream = async (
 
       clearTimeout(timeoutId);
       return fullText;
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      const err = error as { name?: string };
+      if (err.name === 'AbortError') {
         throw new Error(`请求超时（${timeout}ms）`);
       }
       throw error;
@@ -595,8 +821,8 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
     } else {
       return { success: false, message: '返回格式异常' };
     }
-  } catch (error: any) {
-    return { success: false, message: error.message || '网络错误' };
+  } catch (error: unknown) {
+    return { success: false, message: error instanceof Error ? error.message : '网络错误' };
   }
 };
 
@@ -684,14 +910,15 @@ export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
       };
       reader.readAsDataURL(blob);
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.error(LogCategory.VIDEO, '视频URL转base64失败:', error);
 
     // 如果是 CORS 错误，给出更明确的提示
-    if (error.message?.includes('Failed to fetch') || error.message?.includes('CORS')) {
+    if (message.includes('Failed to fetch') || message.includes('CORS')) {
       throw new Error(`视频下载失败: 存在 CORS 跨域问题，请确保视频服务器允许跨域访问`);
     }
-    throw new Error(`视频转换失败: ${error.message}`);
+    throw new Error(`视频转换失败: ${message}`);
   }
 };
 

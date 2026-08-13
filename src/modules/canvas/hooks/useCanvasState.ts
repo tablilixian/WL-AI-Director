@@ -29,6 +29,7 @@ import {
 } from '../types/canvas';
 import { autoLayout } from '../utils/autoLayout';
 import { logger, LogCategory } from '../../../../services/logger.ts';
+import type { IntegrityIssue } from '../services/canvasIntegrity';
 
 const MAX_HISTORY = 20;
 
@@ -52,6 +53,9 @@ interface CanvasState {
   activeTool: DrawingTool;
   strokeColor: string;
   strokeWidth: number;
+  // 数据完整性 / 保存状态（供 UI 告警条使用）
+  integrityIssues: IntegrityIssue[];
+  lastSaveError: string | null;
 }
 
 interface CanvasActions {
@@ -104,6 +108,8 @@ interface CanvasActions {
   setActiveTool: (tool: DrawingTool) => void;
   setStrokeColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
+  setIntegrityIssues: (issues: IntegrityIssue[]) => void;
+  setLastSaveError: (message: string | null) => void;
 }
 
 const initialState: CanvasState = {
@@ -121,6 +127,8 @@ const initialState: CanvasState = {
   activeTool: 'select',
   strokeColor: '#ffffff',
   strokeWidth: 4,
+  integrityIssues: [],
+  lastSaveError: null,
 };
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) => ({
@@ -815,7 +823,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
       newConfig.nodeColor = PROMPT_MODE_COLORS[config.mode];
     }
 
-    const updates: any = {
+    const updates: Partial<LayerData> & { promptConfig?: PromptLayerConfig } = {
       promptConfig: newConfig,
       color: newConfig.nodeColor,
     };
@@ -878,5 +886,13 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
 
   setStrokeWidth: (width) => {
     set({ strokeWidth: width });
+  },
+
+  setIntegrityIssues: (issues) => {
+    set({ integrityIssues: issues });
+  },
+
+  setLastSaveError: (message) => {
+    set({ lastSaveError: message });
   },
 }));

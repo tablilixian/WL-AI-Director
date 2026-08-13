@@ -3,15 +3,18 @@
  * 包含关键帧优化、动作生成、镜头拆分、九宫格分镜等功能
  */
 
-import { AspectRatio, NineGridPanel } from '../../types';
+import { AspectRatio, NineGridPanel, Shot } from '../../types';
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
-  cleanJsonString,
   chatCompletion,
   resolveModel,
   getDefaultChatModelId,
+  getErrorMessage,
+  parseLlmJson,
+  MAX_TOKENS_LONG,
+  MAX_TOKENS_SHORT,
 } from './apiCore';
 import { STORYBOARD_ITEM_WIDTH } from '../../config/sizeConfig';
 import { getStylePromptCN, getStylePrompt } from './promptConstants';
@@ -153,12 +156,11 @@ ${styleDesc}
 
   try {
     const result = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.7, 2048, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.7, MAX_TOKENS_SHORT, 'json_object'),
     );
     const duration = Date.now() - startTime;
 
-    const cleaned = cleanJsonString(result);
-    const parsed = JSON.parse(cleaned);
+    const parsed = parseLlmJson(result) as { startFrame?: string; endFrame?: string };
 
     if (!parsed.startFrame || !parsed.endFrame) {
       throw new Error('AI返回的JSON格式不正确');
@@ -170,9 +172,9 @@ ${styleDesc}
       startPrompt: parsed.startFrame.trim(),
       endPrompt: parsed.endFrame.trim(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ AI关键帧优化失败:', error);
-    throw new Error(`AI关键帧优化失败: ${error.message}`);
+    throw new Error(`AI关键帧优化失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -305,15 +307,17 @@ ${
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 1024));
+    const result = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.7, MAX_TOKENS_SHORT),
+    );
     const duration = Date.now() - startTime;
 
     logger.info(LogCategory.AI, `✅ AI ${frameLabel}优化成功，耗时:`, [duration, 'ms']);
 
     return result.trim();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, `❌ AI ${frameLabel}优化失败:`, error);
-    throw new Error(`AI ${frameLabel}优化失败: ${error.message}`);
+    throw new Error(`AI ${frameLabel}优化失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -419,15 +423,15 @@ ${
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.8, 2048));
+    const result = await retryOperation(() => chatCompletion(prompt, model, 0.8, MAX_TOKENS_SHORT));
     const duration = Date.now() - startTime;
 
     logger.info(LogCategory.AI, '✅ AI动作生成成功，耗时:', [duration, 'ms']);
 
     return result.trim();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ AI动作生成失败:', error);
-    throw new Error(`AI动作生成失败: ${error.message}`);
+    throw new Error(`AI动作生成失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -439,12 +443,12 @@ ${
  * AI镜头拆分功能 - 将单个镜头拆分为多个细致的子镜头
  */
 export const splitShotIntoSubShots = async (
-  shot: any,
+  shot: Shot,
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterNames: string[],
   visualStyle: string,
   model?: string,
-): Promise<{ subShots: any[] }> => {
+): Promise<{ subShots: Shot[] }> => {
   const resolvedModel = model || getDefaultChatModelId();
   logger.info(LogCategory.AI, '✂️ splitShotIntoSubShots 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
@@ -560,12 +564,11 @@ ${
 
   try {
     const result = await retryOperation(() =>
-      chatCompletion(prompt, model, 0.7, 4096, 'json_object'),
+      chatCompletion(prompt, model, 0.7, MAX_TOKENS_LONG, 'json_object'),
     );
     const duration = Date.now() - startTime;
 
-    const cleaned = cleanJsonString(result);
-    const parsed = JSON.parse(cleaned);
+    const parsed = parseLlmJson(result) as { subShots: Array<Shot & { visualFocus?: string }> };
 
     if (!parsed.subShots || !Array.isArray(parsed.subShots) || parsed.subShots.length === 0) {
       throw new Error('AI返回的JSON格式不正确或子镜头数组为空');
@@ -616,7 +619,7 @@ ${
     });
 
     return parsed;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 镜头拆分失败:', error);
 
     addRenderLogWithTokens({
@@ -626,11 +629,11 @@ ${
       status: 'failed',
       model: model ?? '',
       prompt: prompt.substring(0, 200) + '...',
-      error: error.message,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
 
-    throw new Error(`镜头拆分失败: ${error.message}`);
+    throw new Error(`镜头拆分失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -728,13 +731,15 @@ Output now:
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 3072));
+    const result = await retryOperation(() =>
+      chatCompletion(prompt, resolvedModel, 0.7, MAX_TOKENS_SHORT),
+    );
     const duration = Date.now() - startTime;
 
     logger.info(LogCategory.AI, `✅ AI ${frameLabel}增强成功，耗时:`, [duration, 'ms']);
 
     return result.trim();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, `❌ AI ${frameLabel}增强失败:`, error);
     logger.warn(LogCategory.AI, '⚠️ 回退到基础提示词');
     const fallbackStyle = getStylePrompt(visualStyle);
@@ -817,12 +822,11 @@ export const generateNineGridPanels = async (
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(fullPrompt, resolvedModel, 0.7, 4096, 'json_object'),
+      chatCompletion(fullPrompt, resolvedModel, 0.7, MAX_TOKENS_LONG, 'json_object'),
     );
     const duration = Date.now() - startTime;
 
-    const cleaned = cleanJsonString(responseText);
-    const parsed = JSON.parse(cleaned);
+    const parsed = parseLlmJson(responseText) as { panels?: NineGridPanel[] };
 
     let panels: NineGridPanel[] = parsed.panels || [];
 
@@ -843,9 +847,9 @@ export const generateNineGridPanels = async (
 
     logger.info(LogCategory.AI, `✅ 九宫格分镜 - AI拆分完成，耗时: ${duration}ms`);
     return panels;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 九宫格分镜 - AI拆分失败:', error);
-    throw new Error(`九宫格视角拆分失败: ${error.message}`);
+    throw new Error(`九宫格视角拆分失败: ${getErrorMessage(error)}`);
   }
 };
 
@@ -885,8 +889,8 @@ export const generateNineGridImage = async (
 
     logger.info(LogCategory.AI, `✅ 九宫格分镜 - 图片生成完成，耗时: ${duration}ms`);
     return imageUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(LogCategory.AI, '❌ 九宫格分镜 - 图片生成失败:', error);
-    throw new Error(`九宫格图片生成失败: ${error.message}`);
+    throw new Error(`九宫格图片生成失败: ${getErrorMessage(error)}`);
   }
 };

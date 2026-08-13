@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2, Lock, Unlock } from 'lucide-react';
+import {
+  Loader2,
+  Edit2,
+  Upload,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Wand2,
+  Lock,
+  Unlock,
+} from 'lucide-react';
 import { Keyframe, AspectRatio } from '../../types';
 import { unifiedImageService } from '../../services/unifiedImageService';
 import { getImageAspectRatio } from './utils';
@@ -23,6 +33,12 @@ interface KeyframeEditorProps {
   onCopyNext: () => void; // 复制下一镜头首帧到当前尾帧
   onImageClick: (url: string, title: string) => void;
   onToggleLock?: (type: 'start' | 'end') => void;
+  /** 两阶段合成实时阶段文案（start/end 各自），用于在加载区就地展示，替代模态弹窗 */
+  startStageMessage?: string;
+  endStageMessage?: string;
+  /** IPA 关键帧验证开关：开启后有关联角色的镜头改走 image2ipastyletransfer（多参考融合） */
+  ipaVerify?: boolean;
+  onToggleIPAVerify?: () => void;
 }
 
 const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
@@ -43,14 +59,20 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   onCopyPrevious,
   onCopyNext,
   onImageClick,
-  onToggleLock
+  onToggleLock,
+  startStageMessage,
+  endStageMessage,
+  ipaVerify = false,
+  onToggleIPAVerify,
 }) => {
   const [startImageUrl, setStartImageUrl] = useState<string | null>(null);
   const [endImageUrl, setEndImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (startKeyframe?.imageUrl) {
-      unifiedImageService.resolveForDisplay(startKeyframe.imageUrl).then(url => setStartImageUrl(url));
+      unifiedImageService
+        .resolveForDisplay(startKeyframe.imageUrl)
+        .then((url) => setStartImageUrl(url));
     } else {
       setStartImageUrl(null);
     }
@@ -58,21 +80,20 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
 
   useEffect(() => {
     if (endKeyframe?.imageUrl) {
-      unifiedImageService.resolveForDisplay(endKeyframe.imageUrl).then(url => setEndImageUrl(url));
+      unifiedImageService
+        .resolveForDisplay(endKeyframe.imageUrl)
+        .then((url) => setEndImageUrl(url));
     } else {
       setEndImageUrl(null);
     }
   }, [endKeyframe?.imageUrl]);
 
-  const renderKeyframePanel = (
-    type: 'start' | 'end',
-    label: string,
-    keyframe?: Keyframe
-  ) => {
+  const renderKeyframePanel = (type: 'start' | 'end', label: string, keyframe?: Keyframe) => {
     const isGenerating = keyframe?.status === 'generating';
     const hasFailed = keyframe?.status === 'failed';
     const imageUrl = type === 'start' ? startImageUrl : endImageUrl;
-    
+    const stageMessage = type === 'start' ? startStageMessage : endStageMessage;
+
     return (
       <div className="space-y-2">
         <div className="flex justify-between items-center">
@@ -96,14 +117,22 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
               <button
                 onClick={() => onToggleLock?.(type)}
                 className={`p-1 transition-colors ${keyframe.visualPromptSource === 'manual' ? 'text-[var(--error-text)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                title={keyframe.visualPromptSource === 'manual' ? '提示词已锁定，点击解锁（允许AI覆盖）' : '点击锁定（禁止AI覆盖）'}
+                title={
+                  keyframe.visualPromptSource === 'manual'
+                    ? '提示词已锁定，点击解锁（允许AI覆盖）'
+                    : '点击锁定（禁止AI覆盖）'
+                }
               >
-                {keyframe.visualPromptSource === 'manual' ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                {keyframe.visualPromptSource === 'manual' ? (
+                  <Lock className="w-3 h-3" />
+                ) : (
+                  <Unlock className="w-3 h-3" />
+                )}
               </button>
             )}
             {keyframe?.visualPrompt && (
               <button
-                onClick={() => onEditPrompt(type, keyframe.visualPrompt!)}
+                onClick={() => onEditPrompt(type, keyframe.visualPrompt)}
                 className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
                 title="编辑提示词"
               >
@@ -112,14 +141,19 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
             )}
           </div>
         </div>
-        
-        <div className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden relative group" style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}>
+
+        <div
+          className="bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden relative group"
+          style={{ aspectRatio: getImageAspectRatio(aspectRatio) }}
+        >
           {imageUrl ? (
             <>
               <img
                 src={imageUrl}
                 className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                onClick={() => keyframe?.imageUrl && onImageClick(keyframe.imageUrl, `${label} - 关键帧`)}
+                onClick={() =>
+                  keyframe?.imageUrl && onImageClick(keyframe.imageUrl, `${label} - 关键帧`)
+                }
                 alt={label}
               />
               <div className="absolute inset-0 bg-[var(--bg-base)]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
@@ -131,7 +165,9 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
               {isGenerating ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin mb-2 text-[var(--accent)]" />
-                  <span className="text-[10px] text-[var(--text-tertiary)]">生成中...</span>
+                  <span className="text-[10px] text-[var(--text-tertiary)] text-center px-1 leading-relaxed">
+                    {stageMessage || '生成中...'}
+                  </span>
                 </>
               ) : hasFailed ? (
                 <>
@@ -203,18 +239,20 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
         <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-widest flex-1">
           视觉制作 (Visual Production)
         </span>
-        
+
         {/* AI 增强开关 */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[var(--text-tertiary)]">
-            AI增强提示词
-          </span>
+          <span className="text-[10px] text-[var(--text-tertiary)]">AI增强提示词</span>
           <button
             onClick={onToggleAIEnhancement}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
               useAIEnhancement ? 'bg-[var(--accent)]' : 'bg-[var(--border-secondary)]'
             }`}
-            title={useAIEnhancement ? '关闭AI增强：使用基础提示词快速生成' : '开启AI增强：自动扩展为专业电影级描述'}
+            title={
+              useAIEnhancement
+                ? '关闭AI增强：使用基础提示词快速生成'
+                : '开启AI增强：自动扩展为专业电影级描述'
+            }
           >
             <span
               className={`inline-block h-3.5 w-3.5 transform rounded-full bg-[var(--btn-primary-bg)] transition-transform ${
@@ -223,7 +261,33 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
             />
           </button>
         </div>
-        
+
+        {/* IPA 关键帧验证开关（实验性） */}
+        <div
+          className="flex items-center gap-2"
+          title="实验性功能：开启后有关联角色的镜头改走 image2ipastyletransfer（image1=场景 / image2=角色1三视图 / image3=角色2三视图 / ref_image=场景）。2026-08-13 实测仍会风格漂移至插画/绘画质感，且多角色入镜不稳定，不建议日常使用；默认关闭，稳定链路请使用方案 B（两阶段合成）。"
+        >
+          <span
+            className={`text-[10px] ${
+              ipaVerify ? 'text-[var(--warning-text)] font-bold' : 'text-[var(--text-tertiary)]'
+            }`}
+          >
+            IPA验证（实验）
+          </span>
+          <button
+            onClick={onToggleIPAVerify}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              ipaVerify ? 'bg-[var(--warning)]' : 'bg-[var(--border-secondary)]'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-[var(--btn-primary-bg)] transition-transform ${
+                ipaVerify ? 'translate-x-5' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
         {/* 一次性优化两帧按钮 */}
         {showEndFrame && (
           <button

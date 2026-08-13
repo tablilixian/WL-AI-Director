@@ -25,6 +25,7 @@ import { SaveToLibraryDialog } from './SaveToLibraryDialog';
 import { ImageActionMenu } from './ImageActionMenu';
 import { FlowOperationCard } from './FlowOperationCard';
 import { StoryDeductionFlowPanel } from './StoryDeductionFlowPanel';
+import { CanvasIntegrityBanner } from './CanvasIntegrityBanner';
 import { GenerateVideoPanel, type GenerationConfig } from './GenerateVideoPanel';
 import { VideoNodePanel } from './VideoNodePanel';
 import { StyleTemplatePanel } from './StyleTemplatePanel';
@@ -219,7 +220,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         if (typeof result === 'string') {
           panoramaSrc = result;
         } else if (result && typeof result === 'object' && 'images' in result) {
-          panoramaSrc = (result as any).images?.[0]?.url || (result as any).images?.[0] || '';
+          const images = (result as { images?: Array<{ url?: string } | string> }).images;
+          const first = images?.[0];
+          panoramaSrc = (typeof first === 'string' ? first : first?.url) || '';
         }
 
         if (!panoramaSrc) throw new Error('生成结果为空');
@@ -380,7 +383,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
       try {
         const config = JSON.parse(target.generationPrompt);
         if (config.mkr?.frames) {
-          config.mkr.frames = config.mkr.frames.filter((f: any) => f.layerId !== sourceId);
+          config.mkr.frames = config.mkr.frames.filter(
+            (f: { layerId?: string }) => f.layerId !== sourceId,
+          );
           updates.generationPrompt = JSON.stringify(config);
         }
       } catch {
@@ -885,6 +890,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
 
   return (
     <div className={`relative w-full h-full overflow-hidden bg-gray-900 ${className}`}>
+      <CanvasIntegrityBanner />
       <CanvasToolbar />
 
       <div

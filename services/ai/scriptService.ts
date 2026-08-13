@@ -3,16 +3,19 @@
  * 包含剧本解析、分镜生成、续写、改写等功能
  */
 
-import { ScriptData, Shot, Scene, ArtDirection, Prop } from '../../types';
+import { ScriptData, Shot, Scene, Character, ArtDirection, Prop } from '../../types';
 import { addRenderLogWithTokens } from '../renderLogService';
 import { logger, LogCategory } from '../logger';
 import {
   retryOperation,
-  cleanJsonString,
   chatCompletion,
   chatCompletionStream,
   logScriptProgress,
   getDefaultChatModelId,
+  getErrorMessage,
+  parseLlmJson,
+  MAX_TOKENS_LONG,
+  MAX_TOKENS_SHORT,
 } from './apiCore';
 import { getStylePrompt } from './promptConstants';
 import {
@@ -30,6 +33,16 @@ import {
 
 // Re-export 日志回调函数（保持外部 API 兼容）
 export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from './apiCore';
+
+interface RawProp {
+  name?: string;
+  category?: string;
+  description?: string;
+  ownerCharacterId?: string | null;
+  sceneIds?: unknown[];
+}
+
+type ShotListResponse = { shots?: Shot[] } | Shot[];
 
 // ============================================
 // 剧本解析
@@ -64,17 +77,20 @@ export const parseScriptToData = async (
 
     // Enforce String IDs for consistency and init variations
     const characters = Array.isArray(parsed.characters)
-      ? parsed.characters.map((c: any) => ({
+      ? (parsed.characters as Character[]).map((c) => ({
           ...c,
           id: String(c.id),
-          variations: [],
+          variations: [] as Character['variations'],
         }))
       : [];
     const scenes = Array.isArray(parsed.scenes)
-      ? parsed.scenes.map((s: any) => ({ ...s, id: String(s.id) }))
+      ? (parsed.scenes as Scene[]).map((s) => ({ ...s, id: String(s.id) }))
       : [];
     let storyParagraphs = Array.isArray(parsed.storyParagraphs)
-      ? parsed.storyParagraphs.map((p: any) => ({ ...p, sceneRefId: String(p.sceneRefId) }))
+      ? (parsed.storyParagraphs as ScriptData['storyParagraphs']).map((p) => ({
+          ...p,
+          sceneRefId: String(p.sceneRefId),
+        }))
       : [];
 
     // B01 后处理: 校验 sceneRefId 映射，修复无效引用
@@ -111,13 +127,13 @@ export const parseScriptToData = async (
         parsed.title || '未命名剧本',
         genre,
         parsed.logline || '',
-        characters.map((c: any) => ({
+        characters.map((c) => ({
           name: c.name,
           gender: c.gender,
           age: c.age,
           personality: c.personality,
         })),
-        scenes.map((s: any) => ({ location: s.location, time: s.time, atmosphere: s.atmosphere })),
+        scenes.map((s) => ({ location: s.location, time: s.time, atmosphere: s.atmosphere })),
         visualStyle,
         language,
         model,
@@ -152,7 +168,7 @@ export const parseScriptToData = async (
         }
 
         // Fallback: individually generate failed characters
-        const failedCharacters = characters.filter((c: any) => !c.visualPrompt);
+        const failedCharacters = characters.filter((c) => !c.visualPrompt);
         if (failedCharacters.length > 0) {
           logger.debug(
             LogCategory.AI,
@@ -299,15 +315,15 @@ export const parseScriptToData = async (
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     addRenderLogWithTokens({
       type: 'script-parsing',
       resourceId: 'script-parse-' + Date.now(),
       resourceName: '剧本解析',
       status: 'failed',
       model: model ?? '',
-      prompt: `ScriptParserSkill v${SCRIPT_PARSER_SKILL_DESCRIPTION.version} | error=${error.message}`,
-      error: error.message,
+      prompt: `ScriptParserSkill v${SCRIPT_PARSER_SKILL_DESCRIPTION.version} | error=${getErrorMessage(error)}`,
+      error: getErrorMessage(error),
       duration: Date.now() - startTime,
     });
     throw error;
@@ -383,21 +399,22 @@ ${paragraphsText}
 
   try {
     const responseText = await retryOperation(() =>
-      chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'),
+      chatCompletion(prompt, resolvedModel, 0.4, MAX_TOKENS_LONG, 'json_object'),
     );
-    const text = cleanJsonString(responseText);
-    const parsed = JSON.parse(text);
+    const parsed = parseLlmJson(responseText) as { props?: RawProp[] };
 
     const rawProps = Array.isArray(parsed.props) ? parsed.props : [];
 
     const props: Prop[] = rawProps
-      .filter((p: any) => p && p.name && p.name.trim())
-      .map((p: any, idx: number) => ({
+      .filter((p) => p && p.name && p.name.trim())
+      .map((p, idx: number) => ({
         id: `prop-${Date.now()}-${idx}`,
-        name: p.name.trim(),
-        category: ['武器', '文件', '饰品', '工具', '交通工具', '衣物', '其他'].includes(p.category)
-          ? p.category
-          : '其他',
+        name: p.name?.trim() ?? '',
+        category:
+          p.category &&
+          ['武器', '文件', '饰品', '工具', '交通工具', '衣物', '其他'].includes(p.category)
+            ? p.category
+            : '其他',
         description: (p.description || '').trim(),
         visualPrompt: '',
         negativePrompt: '',
@@ -408,8 +425,8 @@ ${paragraphsText}
     logger.debug(LogCategory.AI, `✅ 道具提取完成：共 ${props.length} 项`);
     logScriptProgress(`提取到 ${props.length} 个道具`);
     return props;
-  } catch (error: any) {
-    logger.warn(LogCategory.AI, '⚠️ 道具提取失败，将使用空列表:', error?.message);
+  } catch (error: unknown) {
+    logger.warn(LogCategory.AI, '⚠️ 道具提取失败，将使用空列表:', error);
     return [];
   }
 };
@@ -598,19 +615,16 @@ ${artDirectionBlock}
     try {
       logger.debug(LogCategory.AI, `  📡 场景 ${index + 1} API调用 - 模型: ${resolvedModel}`);
       responseText = await retryOperation(() =>
-        chatCompletion(prompt, resolvedModel, 0.5, 8192, 'json_object'),
+        chatCompletion(prompt, resolvedModel, 0.5, MAX_TOKENS_LONG, 'json_object'),
       );
-      const text = cleanJsonString(responseText);
-      const parsed = JSON.parse(text);
+      const parsed = parseLlmJson(responseText) as ShotListResponse;
 
-      const shots = Array.isArray(parsed)
+      const validShots = Array.isArray(parsed)
         ? parsed
-        : parsed && Array.isArray((parsed as any).shots)
-          ? (parsed as any).shots
+        : Array.isArray(parsed.shots)
+          ? parsed.shots
           : [];
-
-      const validShots = Array.isArray(shots) ? shots : [];
-      const result = validShots.map((s: any) => ({
+      const result = validShots.map((s) => ({
         ...s,
         sceneId: String(scene.id),
       }));
@@ -626,7 +640,7 @@ ${artDirectionBlock}
       });
 
       return result;
-    } catch (e: any) {
+    } catch (e: unknown) {
       logger.error(LogCategory.AI, `Failed to generate shots for scene ${scene.id}`, e);
       try {
         logger.error(
@@ -645,7 +659,7 @@ ${artDirectionBlock}
         status: 'failed',
         model: model ?? '',
         prompt: prompt.substring(0, 200) + '...',
-        error: e.message || String(e),
+        error: getErrorMessage(e),
         duration: Date.now() - sceneStartTime,
       });
 
@@ -693,7 +707,7 @@ ${artDirectionBlock}
     id: `shot-${idx + 1}`,
     characters: (s.characters || []).map((charRef: string) => charNameToId.get(charRef) || charRef),
     keyframes: Array.isArray(s.keyframes)
-      ? s.keyframes.map((k: any) => ({
+      ? s.keyframes.map((k) => ({
           ...k,
           id: `kf-${idx + 1}-${k.type}`,
           status: 'pending',
@@ -737,7 +751,7 @@ ${existingScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.8, 4096));
+    const result = await retryOperation(() => chatCompletion(prompt, model, 0.8, MAX_TOKENS_LONG));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
@@ -790,7 +804,15 @@ ${existingScript}
 
   try {
     const result = await retryOperation(() =>
-      chatCompletionStream(prompt, resolvedModel, 0.8, 4096, undefined, 600000, onDelta),
+      chatCompletionStream(
+        prompt,
+        resolvedModel,
+        0.8,
+        MAX_TOKENS_SHORT,
+        undefined,
+        600000,
+        onDelta,
+      ),
     );
     const duration = Date.now() - startTime;
 
@@ -846,7 +868,7 @@ ${originalScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, 8192));
+    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, MAX_TOKENS_LONG));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
@@ -903,7 +925,7 @@ ${originalScript}
 
   try {
     const result = await retryOperation(() =>
-      chatCompletionStream(prompt, resolvedModel, 0.7, 8192, undefined, 600000, onDelta),
+      chatCompletionStream(prompt, resolvedModel, 0.7, MAX_TOKENS_LONG, undefined, 600000, onDelta),
     );
     const duration = Date.now() - startTime;
 

@@ -15,6 +15,7 @@ import { logger, LogCategory } from '../../../../services/logger';
 import { unifiedImageService } from '../../../../services/unifiedImageService';
 import { CanvasData } from '../../../../services/canvasStorageService';
 import { canvasSyncService } from '../../../../services/canvasSyncService';
+import { validateCanvasIntegrity } from './canvasIntegrity';
 interface ImportOptions {
   layout?: 'grid' | 'timeline';
   columns?: number;
@@ -443,8 +444,16 @@ export class CanvasIntegrationService {
       }
     }
 
-    // 图片已保存成功：保留 imageId 用于 IndexedDB 恢复，src 保持持久引用(非 blob)
-    return { ...layer, imageId };
+    // 图片已保存成功：src 改为 local: 持久引用，不再携带 data: base64。
+    // 这样 IndexedDB 与云端都不会存几 MB 的 base64（云端 json 字段默认上限 1MB，
+    // 超出会 400），渲染层通过 unifiedImageService 按 imageId 解析本地图片。
+    const safeSrc =
+      src && !src.startsWith('data:') && !src.startsWith('blob:')
+        ? src
+        : imageId
+          ? `local:${imageId}`
+          : src;
+    return { ...layer, imageId, src: safeSrc };
   }
 
   /**
@@ -477,8 +486,12 @@ export class CanvasIntegrationService {
     try {
       await canvasSyncService.saveNow(this.currentProjectId, layersToSave, offset, scale);
       logger.info(LogCategory.CANVAS, '[CanvasIntegration] 即时保存画布成功');
+      useCanvasStore.getState().setLastSaveError(null);
     } catch (e) {
-      logger.warn(LogCategory.CANVAS, '[CanvasIntegration] 即时保存画布失败:', e);
+      logger.error(LogCategory.CANVAS, '[CanvasIntegration] 即时保存画布失败', e);
+      useCanvasStore
+        .getState()
+        .setLastSaveError('即时保存失败，最近的修改可能未备份，请检查存储权限或空间');
     }
   }
 
@@ -502,8 +515,12 @@ export class CanvasIntegrationService {
 
     try {
       await canvasSyncService.save(this.currentProjectId, layersToSave, offset, scale);
+      useCanvasStore.getState().setLastSaveError(null);
     } catch (error) {
-      logger.error(LogCategory.CANVAS, `[CanvasIntegration] 保存画布状态失败: ${error}`);
+      logger.error(LogCategory.CANVAS, '[CanvasIntegration] 保存画布状态失败', error);
+      useCanvasStore
+        .getState()
+        .setLastSaveError('自动保存失败，最近的修改可能未备份，请检查存储权限或空间');
     }
   }
 
@@ -904,6 +921,22 @@ export class CanvasIntegrationService {
 
       await this.importCanvasData(canvasData);
       logger.debug(LogCategory.CANVAS, '[CanvasIntegration] 画布状态已恢复');
+
+      // 只读完整性校验（R4）：不修改数据，只把问题暴露给用户
+      const issues = validateCanvasIntegrity(canvasData.layers);
+      if (issues.length > 0) {
+        for (const issue of issues) {
+          logger.warn(
+            LogCategory.CANVAS,
+            `[Integrity] ${issue.code} (${issue.severity}): ${issue.message}`,
+            issue.layerId ? [issue.layerId] : [],
+          );
+        }
+        useCanvasStore.getState().setIntegrityIssues(issues);
+      } else {
+        useCanvasStore.getState().setIntegrityIssues([]);
+      }
+
       return true;
     } catch (error) {
       logger.error(LogCategory.CANVAS, '[CanvasIntegration] 恢复画布状态失败', error);

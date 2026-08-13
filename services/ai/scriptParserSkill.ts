@@ -1,6 +1,6 @@
-import { Character, CharacterVariation, Scene } from "../../types";
+import { Character, CharacterVariation, Scene } from '../../types';
 import { logger, LogCategory } from '../logger';
-import { cleanJsonString, chatCompletion, retryOperation } from './apiCore';
+import { chatCompletion, parseLlmJson, retryOperation, MAX_TOKENS_LONG } from './apiCore';
 
 export type ScriptFormat = 'professional' | 'freeform' | 'minimal';
 export type ScriptFormatDetection = {
@@ -8,6 +8,41 @@ export type ScriptFormatDetection = {
   confidence: number;
   reason: string;
 };
+
+export interface ParsedScriptCharacter {
+  id?: unknown;
+  name?: string;
+  gender?: string;
+  age?: string;
+  personality?: string;
+}
+
+export interface ParsedScriptScene {
+  id?: unknown;
+  location?: string;
+  time?: string;
+  atmosphere?: string;
+}
+
+export interface ParsedScriptParagraph {
+  id?: unknown;
+  text?: string;
+  sceneRefId?: unknown;
+}
+
+export interface ParsedScriptData {
+  title?: string;
+  genre?: string;
+  logline?: string;
+  characters?: ParsedScriptCharacter[];
+  scenes?: ParsedScriptScene[];
+  storyParagraphs?: ParsedScriptParagraph[];
+}
+
+interface CharacterVariationEntry {
+  characterId?: string;
+  variations?: Array<{ name?: string; visualPrompt?: string }>;
+}
 
 const CN_NUM = '[一二三四五六七八九十百千]+';
 const ARABIC_OR_CN = `(?:\\d+|${CN_NUM})`;
@@ -28,9 +63,18 @@ export const SCENE_BOUNDARY_REGEXES = [
 ];
 
 const CN_NUM_MAP: Record<string, number> = {
-  '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-  '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
-  '百': 100, '千': 1000,
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+  十: 10,
+  百: 100,
+  千: 1000,
 };
 
 function parseChineseNumber(s: string): number {
@@ -72,7 +116,7 @@ export function detectScriptFormat(rawText: string): ScriptFormatDetection {
     professionalScore += 2;
   }
 
-  const lines = textBlock.split('\n').filter(l => l.trim());
+  const lines = textBlock.split('\n').filter((l) => l.trim());
   const avgLineLen = lines.reduce((s, l) => s + l.length, 0) / (lines.length || 1);
   if (lines.length >= 10 && avgLineLen > 80) {
     freeformScore += 2;
@@ -82,7 +126,7 @@ export function detectScriptFormat(rawText: string): ScriptFormatDetection {
     return {
       format: 'professional',
       confidence: Math.min(1, professionalScore / 6),
-      reason: `检测到${professionalScore}个专业剧本特征`
+      reason: `检测到${professionalScore}个专业剧本特征`,
     };
   }
 
@@ -90,14 +134,14 @@ export function detectScriptFormat(rawText: string): ScriptFormatDetection {
     return {
       format: 'freeform',
       confidence: Math.min(1, freeformScore / 4),
-      reason: '未检测到场景标记，符合自由格式特征'
+      reason: '未检测到场景标记，符合自由格式特征',
     };
   }
 
   return {
     format: 'minimal',
     confidence: 0.5,
-    reason: '文本特征不明显，按最小结构处理'
+    reason: '文本特征不明显，按最小结构处理',
   };
 }
 
@@ -114,12 +158,12 @@ export function extractScenesByRegex(rawText: string): {
     let matchCount = 0;
 
     while ((match = regexGlobal.exec(rawText)) !== null) {
-      const sceneNum = match[1] ? parseChineseNumber(match[1]) || (matchCount + 1) : matchCount + 1;
+      const sceneNum = match[1] ? parseChineseNumber(match[1]) || matchCount + 1 : matchCount + 1;
       const title = (match[2] || match[3] || '').trim();
       boundaries.push({
         sceneNumber: sceneNum,
         startOffset: match.index,
-        title
+        title,
       });
       matchCount++;
       if (match.index === lastIndex) regexGlobal.lastIndex++;
@@ -134,11 +178,11 @@ export function extractScenesByRegex(rawText: string): {
 
 export function validateSceneRefMapping(
   storyParagraphs: { id: number; text: string; sceneRefId: string }[],
-  scenes: { id: string; location: string }[]
+  scenes: { id: string; location: string }[],
 ): { id: number; text: string; sceneRefId: string }[] {
   if (scenes.length === 0) return storyParagraphs;
 
-  const validSceneIds = new Set(scenes.map(s => s.id));
+  const validSceneIds = new Set(scenes.map((s) => s.id));
   let fixedCount = 0;
 
   const validated = storyParagraphs.map((p, idx) => {
@@ -146,14 +190,20 @@ export function validateSceneRefMapping(
       const nearestSceneIndex = Math.min(idx, scenes.length - 1);
       const originalRef = p.sceneRefId;
       p.sceneRefId = scenes[nearestSceneIndex]?.id || String(scenes[0]?.id || '1');
-      logger.warn(LogCategory.AI, `⚠️ B01 场景映射修复: paragraph ${p.id} sceneRefId="${originalRef}" → "${p.sceneRefId}" (无效引用，自动修正到最近场景)`);
+      logger.warn(
+        LogCategory.AI,
+        `⚠️ B01 场景映射修复: paragraph ${p.id} sceneRefId="${originalRef}" → "${p.sceneRefId}" (无效引用，自动修正到最近场景)`,
+      );
       fixedCount++;
     }
     return p;
   });
 
   if (fixedCount > 0) {
-    logger.warn(LogCategory.AI, `⚠️ B01 场景映射后处理: 共修复 ${fixedCount}/${storyParagraphs.length} 个段落引用`);
+    logger.warn(
+      LogCategory.AI,
+      `⚠️ B01 场景映射后处理: 共修复 ${fixedCount}/${storyParagraphs.length} 个段落引用`,
+    );
   }
 
   return validated;
@@ -225,28 +275,35 @@ export async function parseWithSkill(
   language: string = '中文',
   model: string,
 ): Promise<{
-  parsed: any;
+  parsed: ParsedScriptData;
   format: ScriptFormat;
   detection: ScriptFormatDetection;
 }> {
   const detection = detectScriptFormat(rawText);
-  logger.debug(LogCategory.AI, `📋 B01 剧本格式检测: ${detection.format} (置信度: ${detection.confidence}, 原因: ${detection.reason})`);
+  logger.debug(
+    LogCategory.AI,
+    `📋 B01 剧本格式检测: ${detection.format} (置信度: ${detection.confidence}, 原因: ${detection.reason})`,
+  );
 
   let prompt: string;
   if (detection.format === 'professional') {
     const sceneBoundaries = extractScenesByRegex(rawText);
-    logger.debug(LogCategory.AI, `📋 B01 正则检测到 ${sceneBoundaries.boundaries.length} 个场景边界`);
+    logger.debug(
+      LogCategory.AI,
+      `📋 B01 正则检测到 ${sceneBoundaries.boundaries.length} 个场景边界`,
+    );
     prompt = PARSE_SCRIPT_PROMPT_PROFESSIONAL(rawText, language);
   } else {
     prompt = PARSE_SCRIPT_PROMPT_FREEFORM(rawText, language);
   }
 
-  const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.7, 8192, 'json_object'));
+  const responseText = await retryOperation(() =>
+    chatCompletion(prompt, model, 0.7, MAX_TOKENS_LONG, 'json_object'),
+  );
 
-  let parsed: any = {};
+  let parsed: ParsedScriptData = {};
   try {
-    const text = cleanJsonString(responseText);
-    parsed = JSON.parse(text);
+    parsed = parseLlmJson<ParsedScriptData>(responseText, 'B01 剧本解析');
   } catch (e) {
     logger.error(LogCategory.AI, 'B01 parseWithSkill JSON parse failed:', e);
     parsed = {};
@@ -263,21 +320,23 @@ export const CHARACTER_VARIATION_PROMPT = (
   characters: Character[],
   scenes: Scene[],
   storyParagraphs: { id: number; text: string; sceneRefId: string }[],
-  language: string
+  language: string,
 ) => `
 Analyze the script to detect outfit, appearance, or state changes for each character across different scenes.
 
 Characters:
-${JSON.stringify(characters.map(c => ({ id: c.id, name: c.name, gender: c.gender, age: c.age })))}
+${JSON.stringify(characters.map((c) => ({ id: c.id, name: c.name, gender: c.gender, age: c.age })))}
 
 Scenes and their story content:
-${scenes.map(s => {
-  const sceneParagraphs = storyParagraphs
-    .filter(p => String(p.sceneRefId) === String(s.id))
-    .map(p => p.text)
-    .join('\n');
-  return `Scene ${s.id} (${s.location}, ${s.time}, ${s.atmosphere}):\n${sceneParagraphs.slice(0, 500)}`;
-}).join('\n\n')}
+${scenes
+  .map((s) => {
+    const sceneParagraphs = storyParagraphs
+      .filter((p) => String(p.sceneRefId) === String(s.id))
+      .map((p) => p.text)
+      .join('\n');
+    return `Scene ${s.id} (${s.location}, ${s.time}, ${s.atmosphere}):\n${sceneParagraphs.slice(0, 500)}`;
+  })
+  .join('\n\n')}
 
 For each character, determine:
 1. If they appear in a scene
@@ -315,13 +374,17 @@ export async function analyzeCharacterVariations(
     return characters;
   }
 
-  logger.debug(LogCategory.AI, `👗 B10 分析角色跨场景变装: ${characters.length} 角色, ${scenes.length} 场景`);
+  logger.debug(
+    LogCategory.AI,
+    `👗 B10 分析角色跨场景变装: ${characters.length} 角色, ${scenes.length} 场景`,
+  );
   const prompt = CHARACTER_VARIATION_PROMPT(characters, scenes, storyParagraphs, language);
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.5, 4096, 'json_object'));
-    const text = cleanJsonString(responseText);
-    const parsed: any[] = JSON.parse(text);
+    const responseText = await retryOperation(() =>
+      chatCompletion(prompt, model, 0.5, MAX_TOKENS_LONG, 'json_object'),
+    );
+    const parsed: CharacterVariationEntry[] = parseLlmJson(responseText, 'B10 变装分析');
 
     if (!Array.isArray(parsed)) {
       logger.warn(LogCategory.AI, '⚠️ B10 变装分析结果格式异常（非数组），跳过');
@@ -331,12 +394,15 @@ export async function analyzeCharacterVariations(
     const variationMap = new Map<string, CharacterVariation[]>();
     for (const entry of parsed) {
       if (entry.characterId && Array.isArray(entry.variations)) {
-        variationMap.set(entry.characterId, entry.variations.map((v: any, i: number) => ({
-          id: `var-${entry.characterId}-${i + 1}`,
-          name: v.name || `变体${i + 1}`,
-          visualPrompt: v.visualPrompt || '',
-          status: 'pending' as const,
-        })));
+        variationMap.set(
+          entry.characterId,
+          entry.variations.map((v, i: number) => ({
+            id: `var-${entry.characterId}-${i + 1}`,
+            name: v.name || `变体${i + 1}`,
+            visualPrompt: v.visualPrompt || '',
+            status: 'pending' as const,
+          })),
+        );
       }
     }
 
@@ -346,7 +412,10 @@ export async function analyzeCharacterVariations(
       if (variations && variations.length > 0) {
         char.variations = variations;
         totalVariations += variations.length;
-        logger.debug(LogCategory.AI, `👗 B10 角色 "${char.name}" 检测到 ${variations.length} 种变体: ${variations.map(v => v.name).join(', ')}`);
+        logger.debug(
+          LogCategory.AI,
+          `👗 B10 角色 "${char.name}" 检测到 ${variations.length} 种变体: ${variations.map((v) => v.name).join(', ')}`,
+        );
       }
     }
 

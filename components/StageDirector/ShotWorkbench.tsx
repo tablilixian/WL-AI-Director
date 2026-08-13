@@ -99,6 +99,11 @@ interface ShotWorkbenchProps {
   }) => void;
   onImageClick: (url: string, title: string) => void;
   onToggleKeyframeLock?: (type: 'start' | 'end') => void;
+  /** 关键帧两阶段合成的实时阶段文案：key = `${shotId}:${type}`，用于在面板加载区就地展示 */
+  keyframeStageMessages?: Record<string, string>;
+  /** IPA 关键帧验证开关：开启后有关联角色的镜头改走 image2ipastyletransfer（多参考融合） */
+  keyframeIPAVerify?: boolean;
+  onToggleKeyframeIPAVerify?: () => void;
   /** 保存四宫格推演数据到 shot.fourGrid */
   onSaveFourGrid?: (fourGrid: FourGridDeduction) => void;
   /** 视频生成实时进度 */
@@ -158,6 +163,9 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onVideoModelChange,
   onImageClick,
   onToggleKeyframeLock,
+  keyframeStageMessages,
+  keyframeIPAVerify,
+  onToggleKeyframeIPAVerify,
   onGenerateNineGrid,
   nineGrid,
   onShowNineGrid,
@@ -184,6 +192,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
     startKf?.imageUrl === shot.nineGrid.imageUrl
   );
   const endKf = shot.keyframes?.find((k) => k.type === 'end');
+  const startStageMessage = keyframeStageMessages?.[`${shot.id}:start`];
+  const endStageMessage = keyframeStageMessages?.[`${shot.id}:end`];
   const [localVideoModelId, setLocalVideoModelId] = useState(currentVideoModelId);
   const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
   const [, setStyleFrameDisplayUrl] = useState<string | null>(null);
@@ -416,6 +426,10 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onCopyNext={onCopyNextStartFrame}
           onImageClick={onImageClick}
           onToggleLock={onToggleKeyframeLock}
+          startStageMessage={startStageMessage}
+          endStageMessage={endStageMessage}
+          ipaVerify={keyframeIPAVerify}
+          onToggleIPAVerify={onToggleKeyframeIPAVerify}
         />
 
         {/* Narrative Section - 叙事动作作为视频提示词，放在视觉制作之后、视频生成之前 */}

@@ -1,40 +1,56 @@
 // UI样式常量
 export const STYLES = {
   // 容器样式
-  mainContainer: "flex flex-col h-full bg-[var(--bg-secondary)] relative overflow-hidden",
-  toolbar: "h-16 border-b border-[var(--border-primary)] bg-[var(--bg-elevated)] px-6 flex items-center justify-between shrink-0",
-  workbench: "w-[480px] bg-[var(--bg-deep)] flex flex-col h-full shadow-2xl animate-in slide-in-from-right-10 duration-300 relative z-20",
-  workbenchHeader: "h-16 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0",
-  workbenchContent: "flex-1 overflow-y-auto p-6 space-y-8",
-  
+  mainContainer: 'flex flex-col h-full bg-[var(--bg-secondary)] relative overflow-hidden',
+  toolbar:
+    'h-16 border-b border-[var(--border-primary)] bg-[var(--bg-elevated)] px-6 flex items-center justify-between shrink-0',
+  workbench:
+    'w-[480px] bg-[var(--bg-deep)] flex flex-col h-full shadow-2xl animate-in slide-in-from-right-10 duration-300 relative z-20',
+  workbenchHeader:
+    'h-16 px-6 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-surface)] shrink-0',
+  workbenchContent: 'flex-1 overflow-y-auto p-6 space-y-8',
+
   // 卡片样式
-  card: "group relative flex flex-col bg-[var(--bg-elevated)] border rounded-xl overflow-hidden cursor-pointer transition-all duration-200",
-  cardActive: "border-[var(--accent)] ring-1 ring-[var(--accent-border)] shadow-xl scale-[0.98]",
-  cardInactive: "border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:shadow-lg",
-  
+  card: 'group relative flex flex-col bg-[var(--bg-elevated)] border rounded-xl overflow-hidden cursor-pointer transition-all duration-200',
+  cardActive: 'border-[var(--accent)] ring-1 ring-[var(--accent-border)] shadow-xl scale-[0.98]',
+  cardInactive:
+    'border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:shadow-lg',
+
   // 按钮样式
-  primaryButton: "px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 shadow-lg shadow-[var(--btn-primary-shadow)]",
-  secondaryButton: "px-4 py-2 bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-primary)] rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2",
-  iconButton: "p-2 hover:bg-[var(--bg-hover)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors",
-  
+  primaryButton:
+    'px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 shadow-lg shadow-[var(--btn-primary-shadow)]',
+  secondaryButton:
+    'px-4 py-2 bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-primary)] rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2',
+  iconButton:
+    'p-2 hover:bg-[var(--bg-hover)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors',
+
   // 模态框样式
-  modalOverlay: "fixed inset-0 z-50 bg-[var(--overlay-heavy)] backdrop-blur-sm flex items-center justify-center p-4",
-  modalContainer: "bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl p-6 max-w-2xl w-full space-y-4 shadow-2xl",
-  modalTextarea: "w-full h-64 bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg p-4 text-sm outline-none focus:border-[var(--accent)] transition-colors resize-none",
-  
+  modalOverlay:
+    'fixed inset-0 z-50 bg-[var(--overlay-heavy)] backdrop-blur-sm flex items-center justify-center p-4',
+  modalContainer:
+    'bg-[var(--bg-elevated)] border border-[var(--border-secondary)] rounded-xl p-6 max-w-2xl w-full space-y-4 shadow-2xl',
+  modalTextarea:
+    'w-full h-64 bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg p-4 text-sm outline-none focus:border-[var(--accent)] transition-colors resize-none',
+
   // 内容区域
-  sectionHeader: "flex items-center gap-2 border-b border-[var(--border-primary)] pb-2",
-  contentBox: "bg-[var(--bg-surface)] p-5 rounded-xl border border-[var(--border-primary)]",
+  sectionHeader: 'flex items-center gap-2 border-b border-[var(--border-primary)] pb-2',
+  contentBox: 'bg-[var(--bg-surface)] p-5 rounded-xl border border-[var(--border-primary)]',
 };
 
 // 视觉风格配置
 export const VISUAL_STYLE_PROMPTS: Record<string, string> = {
-  'live-action': 'photorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution',
-  'anime': 'Japanese anime style, cel-shaded, vibrant colors, expressive eyes, dynamic poses, Studio Ghibli/Makoto Shinkai quality',
-  '2d-animation': 'classic 2D animation, hand-drawn style, Disney/Pixar quality, smooth lines, expressive characters, painterly backgrounds',
-  '3d-animation': 'high-quality 3D CGI animation, Pixar/DreamWorks style, subsurface scattering, detailed textures, stylized characters',
-  'cyberpunk': 'cyberpunk aesthetic, neon-lit, rain-soaked streets, holographic displays, high-tech low-life, Blade Runner style',
-  'oil-painting': 'oil painting style, visible brushstrokes, rich textures, classical art composition, museum quality fine art',
+  'live-action':
+    'photorealistic, cinematic film quality, real human actors, professional cinematography, natural lighting, 8K resolution, live-action photographic realism — strictly no cartoon, anime, illustration, 2D/3D stylized, or painting look',
+  anime:
+    'Japanese anime style, cel-shaded, vibrant colors, expressive eyes, dynamic poses, Studio Ghibli/Makoto Shinkai quality',
+  '2d-animation':
+    'classic 2D animation, hand-drawn style, Disney/Pixar quality, smooth lines, expressive characters, painterly backgrounds',
+  '3d-animation':
+    'high-quality 3D CGI animation, Pixar/DreamWorks style, subsurface scattering, detailed textures, stylized characters',
+  cyberpunk:
+    'cyberpunk aesthetic, neon-lit, rain-soaked streets, holographic displays, high-tech low-life, Blade Runner style',
+  'oil-painting':
+    'oil painting style, visible brushstrokes, rich textures, classical art composition, museum quality fine art',
 };
 
 // 视频提示词模板
@@ -51,7 +67,7 @@ export const VIDEO_PROMPT_TEMPLATES = {
 - 视觉风格：电影质感，全程保持一致的光照和色调
 - 细节：保持角色外观和场景环境的全程一致性
 - 语言：配音和字幕使用中文`,
-    
+
     english: `Generate a video based on the provided reference image.
 
 Action Description: {actionSummary}
@@ -62,9 +78,9 @@ Technical Requirements:
 - Motion: Ensure smooth and natural movement, avoid abrupt jumps or discontinuities
 - Visual Style: Cinematic quality with consistent lighting and color tone throughout
 - Details: Maintain character appearance and scene environment consistency throughout
-- Language: Use {language} for voiceover and subtitles`
+- Language: Use {language} for voiceover and subtitles`,
   },
-  
+
   // 九宫格分镜模式的视频提示词（异步模型专用，精简版，避免超过8192字符限制）
   // 保留9个面板的景别/角度顺序，但description截断控制总长度
   sora2NineGrid: {
@@ -90,15 +106,15 @@ Storyboard shot sequence (reference grid, left-to-right, top-to-bottom):
 
 Start video with Panel 1 full-screen, transition through 1→9 as a montage.
 ~{secondsPerPanel}s per angle. Camera: {cameraMovement}
-Maintain character consistency, cinematic quality. Language: {language}.`
+Maintain character consistency, cinematic quality. Language: {language}.`,
   },
 
   veo: {
     simple: `{actionSummary}
 
 镜头运动：{cameraMovement}
-配音语言：使用{language}配音`
-  }
+配音语言：使用{language}配音`,
+  },
 };
 
 // 默认配置
@@ -111,11 +127,38 @@ export const DEFAULTS = {
 // 运镜编排选项（供 UI 下拉菜单使用）
 // ============================================
 
-export const CAMERA_SHOT_SIZES = ['大远景', '远景', '全景', '中全景', '中景', '中近景', '近景', '特写', '大特写'] as const;
+export const CAMERA_SHOT_SIZES = [
+  '大远景',
+  '远景',
+  '全景',
+  '中全景',
+  '中景',
+  '中近景',
+  '近景',
+  '特写',
+  '大特写',
+] as const;
 
-export const CAMERA_ANGLES = ['平视', '仰拍', '俯拍', '鸟瞰', '斜拍', '正面', '侧面', '背面', '低角度'] as const;
+export const CAMERA_ANGLES = [
+  '平视',
+  '仰拍',
+  '俯拍',
+  '鸟瞰',
+  '斜拍',
+  '正面',
+  '侧面',
+  '背面',
+  '低角度',
+] as const;
 
-export const CAMERA_SUBJECT_POSITIONS = ['居中', '左侧1/3', '右侧1/3', '黄金分割左', '黄金分割右', '边缘'] as const;
+export const CAMERA_SUBJECT_POSITIONS = [
+  '居中',
+  '左侧1/3',
+  '右侧1/3',
+  '黄金分割左',
+  '黄金分割右',
+  '边缘',
+] as const;
 
 export const CAMERA_FOCUS_TYPES = ['浅景深', '深焦', '全景清晰', '柔焦', '移轴'] as const;
 
@@ -123,24 +166,93 @@ export const CAMERA_MOVEMENT_SPEEDS = ['极慢', '慢速', '中速', '快速', '
 
 export const CAMERA_MOVEMENT_TYPES = [
   { id: 'none', label: '固定镜头', promptEn: 'Static shot, camera remains fixed, no movement.' },
-  { id: 'push-in', label: '推镜头', promptEn: 'Camera slowly pushes in towards the subject, gradual dolly forward, intensifying focus.' },
-  { id: 'pull-out', label: '拉镜头', promptEn: 'Camera slowly pulls out, dolly backward, revealing the surrounding environment.' },
-  { id: 'pan-left', label: '左摇摄', promptEn: 'Camera pans left, horizontal rotation from left to right, revealing the scene.' },
-  { id: 'pan-right', label: '右摇摄', promptEn: 'Camera pans right, horizontal rotation, revealing the scene dynamically.' },
-  { id: 'tilt-up', label: '上仰摄', promptEn: 'Camera tilts upward, revealing the upper part of the scene or subject.' },
-  { id: 'tilt-down', label: '下俯摄', promptEn: 'Camera tilts downward, revealing the lower part of the scene or subject.' },
-  { id: 'follow', label: '跟拍', promptEn: 'Camera follows the subject, tracking movement smoothly, maintaining framing.' },
-  { id: 'orbit', label: '环绕', promptEn: 'Camera orbits around the subject, circular movement, 360-degree rotational shot.' },
-  { id: 'shake', label: '手持抖动', promptEn: 'Handheld camera effect, slight shake and vibration, adding realism and tension.' },
-  { id: 'crane-up', label: '升降上', promptEn: 'Crane shot, camera rises upward, revealing the scene from an elevated perspective.' },
-  { id: 'crane-down', label: '升降下', promptEn: 'Crane shot, camera descends downward, narrowing the view.' },
-  { id: 'tracking', label: '轨道跟焦', promptEn: 'Camera tracks alongside the subject, maintaining precise distance and focus.' },
-  { id: 'dolly-zoom', label: '推拉变焦', promptEn: 'Dolly zoom effect, camera moves while zooming, creating a vertigo-like perspective distortion.' },
-  { id: 'rotating', label: '旋转镜头', promptEn: 'Camera rotates around its axis, creating a dynamic spinning effect.' },
+  {
+    id: 'push-in',
+    label: '推镜头',
+    promptEn:
+      'Camera slowly pushes in towards the subject, gradual dolly forward, intensifying focus.',
+  },
+  {
+    id: 'pull-out',
+    label: '拉镜头',
+    promptEn: 'Camera slowly pulls out, dolly backward, revealing the surrounding environment.',
+  },
+  {
+    id: 'pan-left',
+    label: '左摇摄',
+    promptEn: 'Camera pans left, horizontal rotation from left to right, revealing the scene.',
+  },
+  {
+    id: 'pan-right',
+    label: '右摇摄',
+    promptEn: 'Camera pans right, horizontal rotation, revealing the scene dynamically.',
+  },
+  {
+    id: 'tilt-up',
+    label: '上仰摄',
+    promptEn: 'Camera tilts upward, revealing the upper part of the scene or subject.',
+  },
+  {
+    id: 'tilt-down',
+    label: '下俯摄',
+    promptEn: 'Camera tilts downward, revealing the lower part of the scene or subject.',
+  },
+  {
+    id: 'follow',
+    label: '跟拍',
+    promptEn: 'Camera follows the subject, tracking movement smoothly, maintaining framing.',
+  },
+  {
+    id: 'orbit',
+    label: '环绕',
+    promptEn: 'Camera orbits around the subject, circular movement, 360-degree rotational shot.',
+  },
+  {
+    id: 'shake',
+    label: '手持抖动',
+    promptEn: 'Handheld camera effect, slight shake and vibration, adding realism and tension.',
+  },
+  {
+    id: 'crane-up',
+    label: '升降上',
+    promptEn: 'Crane shot, camera rises upward, revealing the scene from an elevated perspective.',
+  },
+  {
+    id: 'crane-down',
+    label: '升降下',
+    promptEn: 'Crane shot, camera descends downward, narrowing the view.',
+  },
+  {
+    id: 'tracking',
+    label: '轨道跟焦',
+    promptEn: 'Camera tracks alongside the subject, maintaining precise distance and focus.',
+  },
+  {
+    id: 'dolly-zoom',
+    label: '推拉变焦',
+    promptEn:
+      'Dolly zoom effect, camera moves while zooming, creating a vertigo-like perspective distortion.',
+  },
+  {
+    id: 'rotating',
+    label: '旋转镜头',
+    promptEn: 'Camera rotates around its axis, creating a dynamic spinning effect.',
+  },
   { id: 'custom', label: '自定义', promptEn: '' },
 ];
 
-export const MOVEMENT_INTENSITY_LABELS = ['轻微', '', '', '', '适中', '', '', '', '', '强烈'] as const;
+export const MOVEMENT_INTENSITY_LABELS = [
+  '轻微',
+  '',
+  '',
+  '',
+  '适中',
+  '',
+  '',
+  '',
+  '',
+  '强烈',
+] as const;
 
 // ============================================
 // 九宫格分镜预览相关常量（高级功能）
@@ -149,14 +261,30 @@ export const MOVEMENT_INTENSITY_LABELS = ['轻微', '', '', '', '适中', '', ''
 export const NINE_GRID = {
   panelCount: 9,
   // 典型景别列表
-  defaultShotSizes: ['远景', '全景', '中全景', '中景', '中近景', '近景', '特写', '大特写', '极端特写'],
+  defaultShotSizes: [
+    '远景',
+    '全景',
+    '中全景',
+    '中景',
+    '中近景',
+    '近景',
+    '特写',
+    '大特写',
+    '极端特写',
+  ],
   // 典型机位角度列表
   defaultCameraAngles: ['俯拍', '平视', '仰拍', '侧面', '正面', '背面', '斜拍', '鸟瞰', '低角度'],
   // 九宫格位置标签
   positionLabels: [
-    '左上 (Top-Left)', '中上 (Top-Center)', '右上 (Top-Right)',
-    '左中 (Middle-Left)', '正中 (Center)', '右中 (Middle-Right)',
-    '左下 (Bottom-Left)', '中下 (Bottom-Center)', '右下 (Bottom-Right)'
+    '左上 (Top-Left)',
+    '中上 (Top-Center)',
+    '右上 (Top-Right)',
+    '左中 (Middle-Left)',
+    '正中 (Center)',
+    '右中 (Middle-Right)',
+    '左下 (Bottom-Left)',
+    '中下 (Bottom-Center)',
+    '右下 (Bottom-Right)',
   ],
 };
 
@@ -197,7 +325,7 @@ export const NINE_GRID_SPLIT_PROMPT = {
   ]
 }
 
-注意：必须恰好返回9个panel（index 0-8），按照九宫格从左到右、从上到下的顺序排列。`
+注意：必须恰好返回9个panel（index 0-8），按照九宫格从左到右、从上到下的顺序排列。`,
 };
 
 // 九宫格图片生成提示词模板（Gemini Image 使用）
@@ -219,5 +347,5 @@ Grid Layout (left to right, top to bottom):`,
 - Maintain STRICT character consistency across ALL panels (same face, hair, clothing, body proportions)
 - Maintain consistent lighting, color palette, and atmosphere across all panels
 - Each panel should be a complete, well-composed frame suitable for use as a keyframe
-- The overall image should read as a professional cinematographer's shot planning board`
+- The overall image should read as a professional cinematographer's shot planning board`,
 };
