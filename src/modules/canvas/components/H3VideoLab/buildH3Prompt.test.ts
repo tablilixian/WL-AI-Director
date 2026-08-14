@@ -69,4 +69,28 @@ describe('buildH3Prompt (官方 base 模式)', () => {
     expect(formatH3ShotTime(3.5)).toBe('At 00:03.500');
     expect(formatH3ShotTime(65.25)).toBe('At 01:05.250');
   });
+
+  it('对白时间越界（> durationSec / < 0）会被 clamp 到 [0, durationSec]', () => {
+    const p = buildH3Prompt({
+      ...base([{ role: 'first' }]),
+      dialogues: [
+        { id: '1', timestamp: 25, character: 'Boy', text: '越界时间应被收敛到 8s' },
+        { id: '2', timestamp: -3, character: 'Girl', text: '负数应被收敛到 0s' },
+      ],
+    });
+    // dialogues 按时间升序排列：-3（Girl）在前 → Shot 2；25（Boy）在后 → Shot 3
+    expect(p).toContain('[Shot 2] At 00:00.000, Girl says: <d>[Chinese] 负数应被收敛到 0s</d>');
+    expect(p).toContain('[Shot 3] At 00:08.000, Boy says: <d>[Chinese] 越界时间应被收敛到 8s</d>');
+    // 越界值不得原样出现在提示词中
+    expect(p).not.toContain('At 00:25.000');
+  });
+
+  it('对白时间在合法区间内保持原值', () => {
+    const p = buildH3Prompt({
+      ...base([{ role: 'first' }]),
+      durationSec: 10,
+      dialogues: [{ id: '1', timestamp: 6.25, character: '', text: '合法时间' }],
+    });
+    expect(p).toContain('[Shot 2] At 00:06.250, A voice says: <d>[Chinese] 合法时间</d>');
+  });
 });

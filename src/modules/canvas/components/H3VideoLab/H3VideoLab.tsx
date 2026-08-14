@@ -27,7 +27,7 @@ import {
 import { buildH3Prompt } from './buildH3Prompt';
 import { parseJsonSafe } from './h3SynopsisParse';
 import { H3_SPEC_SYSTEM, H3_RULES, buildSynopsisPrompt } from './h3Spec';
-import { X, Plus, Trash2, Wand2, Copy, Sparkles, Film, BookOpen } from 'lucide-react';
+import { X, Plus, Trash2, Wand2, Copy, Sparkles, Film, BookOpen, CheckCircle2 } from 'lucide-react';
 
 interface H3VideoLabProps {
   layerIds: string[];
@@ -89,6 +89,9 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
   const [showSynopsis, setShowSynopsis] = useState(false);
   const [synopsisText, setSynopsisText] = useState('');
   const [isAssisting, setIsAssisting] = useState(false);
+
+  // ── 生成完成态（成功后不自动关闭，可「完成」或「继续编辑」）──
+  const [genDone, setGenDone] = useState(false);
 
   const meta = H3_MODE_META[mode];
 
@@ -292,9 +295,8 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
         onProgress: (p) => setProgress(p),
       });
 
-      setProgressLabel('处理视频文件...');
-      setProgress(90);
-
+      // 进度已由 generateVideo 的 onProgress 报到 100，这里不再倒退；
+      // 仅做本地落盘与预览，随后进入成功态（不自动关闭面板）。
       let finalSrc = videoUrl;
       let videoId: string | undefined;
       if (videoUrl.startsWith('local:')) {
@@ -358,7 +360,7 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
 
       setProgress(100);
       setProgressLabel('生成完成！');
-      setTimeout(() => onClose(), 1000);
+      setGenDone(true);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       logger.error(LogCategory.CANVAS, 'H3 视频生成失败:', e);
@@ -680,48 +682,55 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
         {activeTab === 'dialogue' && (
           <Section title="对白 (<d> 标签，按时间自动转为镜头行)">
             {dialogues.map((d) => (
-              <div key={d.id} className="flex gap-2 items-start">
-                <input
-                  type="number"
-                  step="0.1"
-                  value={d.timestamp}
-                  onChange={(e) =>
-                    setDialogues((p) =>
-                      p.map((x) =>
-                        x.id === d.id ? { ...x, timestamp: Number(e.target.value) } : x,
-                      ),
-                    )
-                  }
-                  placeholder="秒"
-                  className="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                />
-                <input
-                  value={d.character}
-                  onChange={(e) =>
-                    setDialogues((p) =>
-                      p.map((x) => (x.id === d.id ? { ...x, character: e.target.value } : x)),
-                    )
-                  }
-                  placeholder="角色"
-                  className="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                />
-                <input
-                  value={d.text}
-                  onChange={(e) =>
-                    setDialogues((p) =>
-                      p.map((x) => (x.id === d.id ? { ...x, text: e.target.value } : x)),
-                    )
-                  }
-                  placeholder={H3_PLACEHOLDERS.dialogueText}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                />
-                <button
-                  onClick={() => setDialogues((p) => p.filter((x) => x.id !== d.id))}
-                  className="text-gray-500 hover:text-red-400"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              <React.Fragment key={d.id}>
+                <div className="flex gap-2 items-start">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={d.timestamp}
+                    onChange={(e) =>
+                      setDialogues((p) =>
+                        p.map((x) =>
+                          x.id === d.id ? { ...x, timestamp: Number(e.target.value) } : x,
+                        ),
+                      )
+                    }
+                    placeholder="秒"
+                    className="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                  />
+                  <input
+                    value={d.character}
+                    onChange={(e) =>
+                      setDialogues((p) =>
+                        p.map((x) => (x.id === d.id ? { ...x, character: e.target.value } : x)),
+                      )
+                    }
+                    placeholder="角色"
+                    className="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                  />
+                  <input
+                    value={d.text}
+                    onChange={(e) =>
+                      setDialogues((p) =>
+                        p.map((x) => (x.id === d.id ? { ...x, text: e.target.value } : x)),
+                      )
+                    }
+                    placeholder={H3_PLACEHOLDERS.dialogueText}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                  />
+                  <button
+                    onClick={() => setDialogues((p) => p.filter((x) => x.id !== d.id))}
+                    className="text-gray-500 hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                {(d.timestamp > durationSec || d.timestamp < 0) && (
+                  <div className="text-[10px] text-red-400 mt-0.5 mb-1">
+                    时间 {d.timestamp}s 超出视频时长 {durationSec}s，生成时将被收敛到边界
+                  </div>
+                )}
+              </React.Fragment>
             ))}
             <button
               onClick={() =>
@@ -825,7 +834,7 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
         )}
       </div>
 
-      {/* 底部：AI 助手 + 生成 */}
+      {/* 底部：AI 助手 + 生成 + 完成反馈 */}
       <div className="border-t border-gray-800 p-3 bg-gray-900">
         {isGenerating && (
           <div className="mb-2">
@@ -838,51 +847,84 @@ export const H3VideoLab: React.FC<H3VideoLabProps> = ({ layerIds, onClose }) => 
             <div className="text-[11px] text-gray-400 mt-1">{progressLabel}</div>
           </div>
         )}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowSynopsis((v) => !v)}
-            disabled={isGenerating}
-            className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 disabled:opacity-50"
-          >
-            <Wand2 className="w-4 h-4 text-violet-400" /> 从梗概生成
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !hasRequired}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium disabled:opacity-50"
-          >
-            <Film className="w-4 h-4" /> {isGenerating ? '生成中...' : '生成视频'}
-          </button>
-        </div>
 
-        {showSynopsis && (
-          <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-gray-700">
-            <div className="text-xs text-gray-400 mb-1">
-              输入剧情梗概，AI 按 H3 官方协议生成各段字段（{meta.label}）
+        {genDone ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-emerald-300 text-sm">
+              <CheckCircle2 className="w-4 h-4" /> 已生成并添加到画布
             </div>
-            <textarea
-              value={synopsisText}
-              onChange={(e) => setSynopsisText(e.target.value)}
-              placeholder="例如：一对年轻情侣在午后咖啡厅依偎，男孩握住女孩的手说时间能停下就好了，最后两人靠在一起"
-              rows={3}
-              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm resize-none"
-            />
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2">
               <button
-                onClick={handleAssist}
-                disabled={isAssisting || !synopsisText.trim()}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
+                onClick={onClose}
+                className="flex-1 flex items-center justify-center px-3 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium"
               >
-                <Sparkles className="w-4 h-4" /> {isAssisting ? '生成中...' : '生成'}
+                完成
               </button>
               <button
-                onClick={() => setShowSynopsis(false)}
-                className="px-3 py-1.5 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-200"
+                onClick={() => setGenDone(false)}
+                className="px-3 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200"
               >
-                取消
+                继续编辑
               </button>
+            </div>
+            <div className="text-[11px] text-gray-500">
+              生成结果已作为新视频图层落到画布；可「继续编辑」调整参数后再生成其他版本。
             </div>
           </div>
+        ) : (
+          <>
+            {!description.trim() && (
+              <div className="text-[11px] text-amber-400 mb-2">
+                综合描述为空的将使用通用占位描述（效果可能不佳），建议先填写或用「从梗概生成」。
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSynopsis((v) => !v)}
+                disabled={isGenerating}
+                className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 disabled:opacity-50"
+              >
+                <Wand2 className="w-4 h-4 text-violet-400" /> 从梗概生成
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !hasRequired}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium disabled:opacity-50"
+              >
+                <Film className="w-4 h-4" /> {isGenerating ? '生成中...' : '生成视频'}
+              </button>
+            </div>
+
+            {showSynopsis && !genDone && (
+              <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                <div className="text-xs text-gray-400 mb-1">
+                  输入剧情梗概，AI 按 H3 官方协议生成各段字段（{meta.label}）
+                </div>
+                <textarea
+                  value={synopsisText}
+                  onChange={(e) => setSynopsisText(e.target.value)}
+                  placeholder="例如：一对年轻情侣在午后咖啡厅依偎，男孩握住女孩的手说时间能停下就好了，最后两人靠在一起"
+                  rows={3}
+                  className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm resize-none"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={handleAssist}
+                    disabled={isAssisting || !synopsisText.trim()}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
+                  >
+                    <Sparkles className="w-4 h-4" /> {isAssisting ? '生成中...' : '生成'}
+                  </button>
+                  <button
+                    onClick={() => setShowSynopsis(false)}
+                    className="px-3 py-1.5 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-200"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

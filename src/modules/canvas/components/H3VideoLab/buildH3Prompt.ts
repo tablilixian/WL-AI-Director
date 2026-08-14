@@ -89,8 +89,11 @@ export function buildH3Prompt(c: H3LabConfig): string {
   dialogues.forEach((d) => {
     shotN += 1;
     const who = d.character.trim() ? `${d.character.trim()} says: ` : 'A voice says: ';
+    // 时间轴保护：对白时间必须落在视频时长内，否则会生成非法分镜时间
+    // （如视频仅 8s 却标 At 00:25.000）。越界一律 clamp 到 [0, durationSec]。
+    const ts = Math.min(Math.max(0, d.timestamp), c.durationSec);
     out.push(
-      `[Shot ${shotN}] ${formatH3ShotTime(d.timestamp)}, ${who}<d>[${c.dialogueLang}] ${d.text.trim()}</d>`,
+      `[Shot ${shotN}] ${formatH3ShotTime(ts)}, ${who}<d>[${c.dialogueLang}] ${d.text.trim()}</d>`,
     );
   });
   out.push('');
