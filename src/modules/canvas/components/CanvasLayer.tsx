@@ -5,7 +5,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { LayerData, PromptLayerData } from '../types/canvas';
+import { LayerData, PanoramaLayerData, PromptLayerData } from '../types/canvas';
 import { useCanvasStore } from '../hooks/useCanvasState';
 import { useSnapAlignment } from '../hooks/useSnapAlignment';
 import { ResizeHandle } from './ResizeHandle';
@@ -59,7 +59,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [showPanorama, setShowPanorama] = useState(false);
   const [inline3d, setInline3d] = useState(
-    layer.type === 'panorama' ? (layer as any).displayMode === '3d' : false,
+    layer.type === 'panorama' ? (layer as PanoramaLayerData).displayMode === '3d' : false,
   );
   const [isProbablyPanorama, setIsProbablyPanorama] = useState(false);
   const imgNaturalRef = useRef({ w: 0, h: 0 });
@@ -222,12 +222,14 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      selectLayer(layer.id);
+      // 右键只弹出上下文菜单，不切换选区：
+      // 否则会把图层设为「已选中」，导致图片上方的选择标签/工具条（本应左键才出现）也跟着弹出。
+      // 上下文菜单通过 layer.id 直接操作，无需依赖选中态。
       if (onContextMenuRequest) {
         onContextMenuRequest(layer.id, e.clientX, e.clientY);
       }
     },
-    [layer.id, selectLayer, onContextMenuRequest],
+    [layer.id, onContextMenuRequest],
   );
 
   const handleRenameSubmit = useCallback(() => {
@@ -672,7 +674,7 @@ export const CanvasLayer: React.FC<CanvasLayerProps> = ({
           <PanoramaViewer
             panoramaSrc={resolvedSrc}
             layerId={layer.type === 'panorama' ? layer.id : undefined}
-            initialCamera={(layer as any).cameraState}
+            initialCamera={(layer as PanoramaLayerData).cameraState}
             onClose={() => setShowPanorama(false)}
             onScreenshots={async (results) => {
               const store = useCanvasStore.getState();

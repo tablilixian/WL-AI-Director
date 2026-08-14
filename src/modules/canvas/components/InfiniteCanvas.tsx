@@ -27,6 +27,7 @@ import { FlowOperationCard } from './FlowOperationCard';
 import { StoryDeductionFlowPanel } from './StoryDeductionFlowPanel';
 import { CanvasIntegrityBanner } from './CanvasIntegrityBanner';
 import { GenerateVideoPanel, type GenerationConfig } from './GenerateVideoPanel';
+import { H3VideoLab } from './H3VideoLab/H3VideoLab';
 import { VideoNodePanel } from './VideoNodePanel';
 import { StyleTemplatePanel } from './StyleTemplatePanel';
 import type { LayerData } from '../types/canvas';
@@ -99,6 +100,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
   const [showSaveToLibraryDialog, setShowSaveToLibraryDialog] = useState(false);
   const [saveToLibraryLayer, setSaveToLibraryLayer] = useState<LayerData | null>(null);
   const [generateVideoLayerIds, setGenerateVideoLayerIds] = useState<string[] | null>(null);
+  const [h3LabLayerIds, setH3LabLayerIds] = useState<string[] | null>(null);
   const [regenerateVideoConfig, setRegenerateVideoConfig] = useState<{
     sourceLayerIds: string[];
     config: GenerationConfig;
@@ -1243,6 +1245,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
                 AI 生成视频
               </button>
               <button
+                onClick={() => setH3LabLayerIds(selectedImages)}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-violet-600 hover:bg-violet-500 rounded-lg transition-colors font-medium"
+              >
+                🎬 H3 工作室
+              </button>
+              <button
                 onClick={() => stitchPanorama(selectedImages)}
                 disabled={stitchLoading}
                 className="flex items-center gap-2 px-5 py-2 text-sm text-white bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 rounded-lg transition-colors font-medium"
@@ -1352,6 +1360,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
         </ErrorBoundary>
       )}
 
+      {h3LabLayerIds && (
+        <ErrorBoundary name="H3VideoLab">
+          <H3VideoLab layerIds={h3LabLayerIds} onClose={() => setH3LabLayerIds(null)} />
+        </ErrorBoundary>
+      )}
+
       {contextMenu && (
         <div
           className="fixed z-[200] bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 min-w-[160px]"
@@ -1436,6 +1450,23 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ className = '', 
               >
                 <span>💾</span>
                 <span>保存到资产库</span>
+              </button>
+            </>
+          )}
+
+          {/* H3 提示词工作室 - 仅对图片图层显示 */}
+          {layers.find((l) => l.id === contextMenu.layerId)?.type === 'image' && (
+            <>
+              <div className="border-t border-gray-700 my-1" />
+              <button
+                onClick={() => {
+                  setContextMenu(null);
+                  setH3LabLayerIds([contextMenu.layerId]);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+              >
+                <span>🎬</span>
+                <span>H3 提示词工作室</span>
               </button>
             </>
           )}

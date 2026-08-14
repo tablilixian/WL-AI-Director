@@ -562,7 +562,9 @@ export const parseHttpError = async (response: Response): Promise<Error> => {
 interface ChatCompletionRequest {
   model: string;
   messages: { role: string; content: string }[];
-  max_tokens: number;
+  // 结构化输出（json_object）模式下按阿里云百炼官方建议不设置 max_tokens，
+  // 否则 JSON 可能在输出中途被截断 → 改为可选。
+  max_tokens?: number;
   temperature?: number;
   response_format?: { type: string };
   stream?: boolean;
@@ -598,14 +600,23 @@ export const chatCompletion = async (
   const requestBody: ChatCompletionRequest = {
     model: requestModel,
     messages,
-    max_tokens: maxTokens,
   };
+
+  const wantsJson = responseFormat === 'json_object';
+  // wldramallm（Drama backend，localhost:3005）实测会拒绝 response_format 参数（返回 400），
+  // 且不接受 temperature——因此该 provider 永远不转发这两个字段，只能靠调用方自行容错解析。
+  // 其余 provider 开启 json_object 模式时，按阿里云百炼官方建议启用结构化输出，并省略
+  // max_tokens 以避免 JSON 被截断（结构化输出仅在此时真正生效）。
+  const structuredOutputActive = wantsJson && resolved?.providerId !== 'wldramallm';
 
   if (resolved?.providerId !== 'wldramallm') {
     requestBody.temperature = temperature;
   }
-  if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
+  if (structuredOutputActive) {
     requestBody.response_format = { type: 'json_object' };
+  }
+  if (!structuredOutputActive) {
+    requestBody.max_tokens = maxTokens;
   }
   const maxConcurrency =
     (resolved?.type === 'chat' ? resolved.params.maxConcurrency : undefined) ?? 5;
@@ -669,15 +680,22 @@ export const chatCompletionStream = async (
   const requestBody: ChatCompletionRequest = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: maxTokens,
     stream: true,
   };
+
+  const wantsJson = responseFormat === 'json_object';
+  // 同 chatCompletion：wldramallm 拒绝 response_format（400）且不接受 temperature；
+  // 仅在其余 provider 开启 json_object 时启用结构化输出并省略 max_tokens。
+  const structuredOutputActive = wantsJson && resolved?.providerId !== 'wldramallm';
 
   if (resolved?.providerId !== 'wldramallm') {
     requestBody.temperature = temperature;
   }
-  if (responseFormat === 'json_object' && resolved?.providerId !== 'wldramallm') {
+  if (structuredOutputActive) {
     requestBody.response_format = { type: 'json_object' };
+  }
+  if (!structuredOutputActive) {
+    requestBody.max_tokens = maxTokens;
   }
   const maxConcurrency =
     (resolved?.type === 'chat' ? resolved.params.maxConcurrency : undefined) ?? 5;
